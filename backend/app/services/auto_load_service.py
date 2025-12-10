@@ -112,8 +112,11 @@ class AutoLoadService:
         date_from = today + timedelta(days=template.auto_load_date_from_offset)
         date_to = today + timedelta(days=template.auto_load_date_to_offset)
         
-        # Для date_to устанавливаем конец дня
-        date_to = date_to.replace(hour=23, minute=59, second=59)
+        # Если offset = 0, используем текущее время, иначе - конец дня
+        if template.auto_load_date_to_offset == 0:
+            date_to = datetime.now()
+        else:
+            date_to = date_to.replace(hour=23, minute=59, second=59)
 
         logger.info("Вычислены даты для автоматической загрузки", extra={
             "template_id": template.id,

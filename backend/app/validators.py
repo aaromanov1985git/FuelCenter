@@ -158,3 +158,51 @@ def validate_vehicle_data(garage_number: Optional[str], license_plate: Optional[
         "warnings": warnings
     }
 
+
+def validate_azs_number(azs_number: str) -> Tuple[bool, Optional[str]]:
+    """
+    Валидация номера АЗС
+    """
+    if not azs_number:
+        return False, "Номер АЗС не указан"
+    
+    azs_number = azs_number.strip()
+    
+    # Номер АЗС обычно содержит цифры и может содержать буквы
+    if not re.match(r'^[А-Яа-яA-Za-z0-9\s\-_]+$', azs_number):
+        return False, f"Неверный формат номера АЗС: {azs_number}"
+    
+    return True, None
+
+
+def validate_gas_station_data(
+    azs_number: Optional[str] = None,
+    location: Optional[str] = None,
+    region: Optional[str] = None,
+    settlement: Optional[str] = None
+) -> Dict[str, any]:
+    """
+    Валидация данных автозаправочной станции
+    
+    Возвращает словарь с результатами валидации
+    """
+    errors = []
+    warnings = []
+    
+    # Валидация номера АЗС
+    if azs_number:
+        is_valid, error = validate_azs_number(azs_number)
+        if not is_valid:
+            errors.append(f"Номер АЗС: {error}")
+    else:
+        warnings.append("Номер АЗС не указан")
+    
+    # Проверка местоположения
+    if not location and not region and not settlement:
+        warnings.append("Местоположение не указано")
+    
+    return {
+        "is_valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings
+    }

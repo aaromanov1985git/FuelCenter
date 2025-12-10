@@ -27,6 +27,7 @@ const MaskedInput = ({
   type = 'text',
   disabled = false,
   required = false,
+  maskType, // Извлекаем maskType отдельно, чтобы не передавать в DOM
   ...props
 }) => {
   // Предопределенные маски
@@ -93,8 +94,8 @@ const MaskedInput = ({
   let finalFormatChars = formatChars
   let finalPlaceholder = placeholder
 
-  if (props.maskType && predefinedMasks[props.maskType]) {
-    const predefined = predefinedMasks[props.maskType]
+  if (maskType && predefinedMasks[maskType]) {
+    const predefined = predefinedMasks[maskType]
     finalMask = predefined.mask
     finalFormatChars = predefined.formatChars
     if (!finalPlaceholder) {

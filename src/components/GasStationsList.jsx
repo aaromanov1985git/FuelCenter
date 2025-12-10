@@ -1,21 +1,26 @@
 import React, { useState, useEffect } from 'react'
 import IconButton from './IconButton'
 import StatusBadge from './StatusBadge'
-import MaskedInput from './MaskedInput'
 import { SkeletonTable, SkeletonCard } from './Skeleton'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
-import './VehiclesList.css'
+import './GasStationsList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-const VehiclesList = () => {
-  const { error: showError } = useToast()
-  const [vehicles, setVehicles] = useState([])
+const GasStationsList = () => {
+  const { error: showError, success } = useToast()
+  const [gasStations, setGasStations] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [editingId, setEditingId] = useState(null)
-  const [editForm, setEditForm] = useState({ garage_number: '', license_plate: '' })
+  const [editForm, setEditForm] = useState({ 
+    original_name: '', 
+    azs_number: '', 
+    location: '', 
+    region: '', 
+    settlement: '' 
+  })
   const [filter, setFilter] = useState('all') // all, pending, valid, invalid
   
   // Пагинация
@@ -23,11 +28,11 @@ const VehiclesList = () => {
   const [total, setTotal] = useState(0)
   const [limit] = useState(50) // Количество записей на странице
 
-  // Состояния для компактного дашборда
-  const [errorsWarnings, setErrorsWarnings] = useState(null)
-  const [errorsLoading, setErrorsLoading] = useState(false)
+  // Состояния для дашборда
+  const [stats, setStats] = useState(null)
+  const [statsLoading, setStatsLoading] = useState(false)
 
-  const loadVehicles = async () => {
+  const loadGasStations = async () => {
     setLoading(true)
     setError('')
     
@@ -39,33 +44,33 @@ const VehiclesList = () => {
       params.append('skip', ((currentPage - 1) * limit).toString())
       params.append('limit', limit.toString())
       
-      const response = await authFetch(`${API_URL}/api/v1/vehicles?${params}`)
+      const response = await authFetch(`${API_URL}/api/v1/gas-stations?${params}`)
       if (!response.ok) throw new Error('Ошибка загрузки данных')
       
       const result = await response.json()
-      setVehicles(result.items)
+      setGasStations(result.items)
       setTotal(result.total)
     } catch (err) {
       setError('Ошибка загрузки: ' + err.message)
+      showError('Ошибка загрузки АЗС: ' + err.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const loadErrorsWarnings = async () => {
-    setErrorsLoading(true)
+  const loadStats = async () => {
+    setStatsLoading(true)
     
     try {
-      const response = await authFetch(`${API_URL}/api/v1/dashboard/errors-warnings`)
-      if (!response.ok) throw new Error('Ошибка загрузки данных')
+      const response = await authFetch(`${API_URL}/api/v1/gas-stations/stats`)
+      if (!response.ok) throw new Error('Ошибка загрузки статистики')
       
       const result = await response.json()
-      setErrorsWarnings(result)
+      setStats(result)
     } catch (err) {
-      const errorMessage = 'Ошибка загрузки статистики по ошибкам: ' + err.message
-      showError(errorMessage)
+      showError('Ошибка загрузки статистики: ' + err.message)
     } finally {
-      setErrorsLoading(false)
+      setStatsLoading(false)
     }
   }
 
@@ -74,22 +79,25 @@ const VehiclesList = () => {
   }, [filter])
 
   useEffect(() => {
-    loadVehicles()
-    loadErrorsWarnings()
+    loadGasStations()
+    loadStats()
   }, [filter, currentPage])
 
-  const handleEdit = (vehicle) => {
-    setEditingId(vehicle.id)
+  const handleEdit = (gasStation) => {
+    setEditingId(gasStation.id)
     setEditForm({
-      garage_number: vehicle.garage_number || '',
-      license_plate: vehicle.license_plate || ''
+      original_name: gasStation.original_name || '',
+      azs_number: gasStation.azs_number || '',
+      location: gasStation.location || '',
+      region: gasStation.region || '',
+      settlement: gasStation.settlement || ''
     })
   }
 
-  const handleSave = async (vehicleId) => {
+  const handleSave = async (gasStationId) => {
     try {
       setLoading(true)
-      const response = await authFetch(`${API_URL}/api/v1/vehicles/${vehicleId}`, {
+      const response = await authFetch(`${API_URL}/api/v1/gas-stations/${gasStationId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -103,10 +111,14 @@ const VehiclesList = () => {
       }
 
       setEditingId(null)
-      await loadVehicles()
+      await loadGasStations()
+      await loadStats()
       setError('')
+      success('АЗС успешно обновлена')
     } catch (err) {
-      setError('Ошибка сохранения: ' + err.message)
+      const errorMessage = 'Ошибка сохранения: ' + err.message
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -121,7 +133,7 @@ const VehiclesList = () => {
 
   const handleCancel = () => {
     setEditingId(null)
-    setEditForm({ garage_number: '', license_plate: '' })
+    setEditForm({ original_name: '', azs_number: '', location: '', region: '', settlement: '' })
   }
 
   const getStatusBadge = (status) => {
@@ -134,99 +146,74 @@ const VehiclesList = () => {
   }
 
   return (
-    <div className="vehicles-list">
-      {/* Компактный дашборд ошибок и предупреждений */}
-      {errorsWarnings && (
+    <div className="gas-stations-list">
+      {/* Дашборд статистики */}
+      {stats && (
         <div className="dashboard-section errors-warnings-section">
-          <h3>Ошибки и предупреждения</h3>
+          <h3>Статистика по АЗС</h3>
           
           <div className="errors-warnings-grid">
-            {/* Статистика по транспортным средствам */}
             <div className="errors-warnings-card">
               <div className="errors-warnings-card-header">
-                <span className="errors-warnings-icon">🚗</span>
-                <h4>Транспорт</h4>
+                <span className="errors-warnings-icon">⛽</span>
+                <h4>Автозаправочные станции</h4>
               </div>
               <div className="errors-warnings-stats">
                 <div className="stat-item stat-error">
-                  <span className="stat-value">{errorsWarnings.vehicles.invalid}</span>
+                  <span className="stat-value">{stats.invalid}</span>
                   <span className="stat-label">С ошибками</span>
                 </div>
                 <div className="stat-item stat-warning">
-                  <span className="stat-value">{errorsWarnings.vehicles.pending}</span>
+                  <span className="stat-value">{stats.pending}</span>
                   <span className="stat-label">Требуют проверки</span>
                 </div>
                 <div className="stat-item stat-success">
-                  <span className="stat-value">{errorsWarnings.vehicles.valid}</span>
+                  <span className="stat-value">{stats.valid}</span>
                   <span className="stat-label">Валидные</span>
                 </div>
                 <div className="stat-item stat-total">
-                  <span className="stat-value">{errorsWarnings.vehicles.total}</span>
+                  <span className="stat-value">{stats.total}</span>
                   <span className="stat-label">Всего</span>
                 </div>
               </div>
             </div>
-
-            {/* Транзакции с ошибками */}
-            <div className="errors-warnings-card">
-              <div className="errors-warnings-card-header">
-                <span className="errors-warnings-icon">⚠️</span>
-                <h4>Транзакции</h4>
-              </div>
-              <div className="errors-warnings-stats">
-                <div className="stat-item stat-error">
-                  <span className="stat-value">{errorsWarnings.transactions_with_errors}</span>
-                  <span className="stat-label">С проблемными ТС</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}
 
-      {errorsLoading && (
+      {statsLoading && (
         <div className="dashboard-section">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-            {Array.from({ length: 2 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
+            <SkeletonCard />
           </div>
         </div>
       )}
 
-      <div className="vehicles-header">
-        <h2>Справочник транспортных средств</h2>
+      <div className="gas-stations-header">
+        <h2>Справочник автозаправочных станций</h2>
         <div className="filter-buttons">
           <button 
             className={filter === 'all' ? 'active' : ''} 
             onClick={() => setFilter('all')}
-            title="Показать все транспортные средства"
           >
-            <span className="filter-icon">📋</span>
             Все
           </button>
           <button 
             className={filter === 'pending' ? 'active' : ''} 
             onClick={() => setFilter('pending')}
-            title="Показать транспортные средства, требующие проверки"
           >
-            <span className="filter-icon">⚠️</span>
             Требуют проверки
           </button>
           <button 
             className={filter === 'valid' ? 'active' : ''} 
             onClick={() => setFilter('valid')}
-            title="Показать валидные транспортные средства"
           >
-            <span className="filter-icon">✅</span>
             Валидные
           </button>
           <button 
             className={filter === 'invalid' ? 'active' : ''} 
             onClick={() => setFilter('invalid')}
-            title="Показать транспортные средства с ошибками"
           >
-            <span className="filter-icon">❌</span>
             С ошибками
           </button>
         </div>
@@ -234,68 +221,108 @@ const VehiclesList = () => {
 
       {error && <div className="error-message">{error}</div>}
 
-      {loading && vehicles.length === 0 ? (
-        <SkeletonTable rows={10} columns={6} />
+      {loading && gasStations.length === 0 ? (
+        <SkeletonTable rows={10} columns={7} />
       ) : (
-        <div className="vehicles-table-wrapper">
-          <table className="vehicles-table">
+        <div className="gas-stations-table-wrapper">
+          <table className="gas-stations-table">
             <thead>
               <tr>
                 <th>Исходное наименование</th>
-                <th>Гаражный номер</th>
-                <th>Госномер</th>
+                <th>Номер АЗС</th>
+                <th>Местоположение</th>
+                <th>Регион</th>
+                <th>Населенный пункт</th>
                 <th>Статус</th>
                 <th>Ошибки</th>
                 <th>Действия</th>
               </tr>
             </thead>
             <tbody>
-              {vehicles.map(vehicle => (
-                <tr key={vehicle.id}>
-                  <td>{vehicle.original_name}</td>
+              {gasStations.map(gasStation => (
+                <tr key={gasStation.id}>
                   <td>
-                    {editingId === vehicle.id ? (
+                    {editingId === gasStation.id ? (
                       <input
                         type="text"
-                        value={editForm.garage_number}
-                        onChange={(e) => setEditForm({...editForm, garage_number: e.target.value})}
+                        value={editForm.original_name}
+                        onChange={(e) => setEditForm({...editForm, original_name: e.target.value})}
                         className="edit-input"
-                        placeholder="Гаражный номер (необязательно)"
+                        placeholder="Исходное наименование"
                       />
                     ) : (
-                      vehicle.garage_number || '-'
+                      gasStation.original_name
                     )}
                   </td>
                   <td>
-                    {editingId === vehicle.id ? (
-                      <MaskedInput
-                        maskType="licensePlate"
-                        value={editForm.license_plate}
-                        onChange={(e) => setEditForm({...editForm, license_plate: e.target.value.toUpperCase()})}
+                    {editingId === gasStation.id ? (
+                      <input
+                        type="text"
+                        value={editForm.azs_number}
+                        onChange={(e) => setEditForm({...editForm, azs_number: e.target.value})}
                         className="edit-input"
-                        placeholder="А123ВС77"
+                        placeholder="Номер АЗС"
                       />
                     ) : (
-                      vehicle.license_plate || '-'
+                      gasStation.azs_number || '-'
                     )}
                   </td>
-                  <td>{getStatusBadge(vehicle.is_validated)}</td>
+                  <td>
+                    {editingId === gasStation.id ? (
+                      <input
+                        type="text"
+                        value={editForm.location}
+                        onChange={(e) => setEditForm({...editForm, location: e.target.value})}
+                        className="edit-input"
+                        placeholder="Местоположение"
+                      />
+                    ) : (
+                      gasStation.location || '-'
+                    )}
+                  </td>
+                  <td>
+                    {editingId === gasStation.id ? (
+                      <input
+                        type="text"
+                        value={editForm.region}
+                        onChange={(e) => setEditForm({...editForm, region: e.target.value})}
+                        className="edit-input"
+                        placeholder="Регион"
+                      />
+                    ) : (
+                      gasStation.region || '-'
+                    )}
+                  </td>
+                  <td>
+                    {editingId === gasStation.id ? (
+                      <input
+                        type="text"
+                        value={editForm.settlement}
+                        onChange={(e) => setEditForm({...editForm, settlement: e.target.value})}
+                        className="edit-input"
+                        placeholder="Населенный пункт"
+                      />
+                    ) : (
+                      gasStation.settlement || '-'
+                    )}
+                  </td>
+                  <td>{getStatusBadge(gasStation.is_validated)}</td>
                   <td className="errors-cell">
-                    {vehicle.validation_errors ? (
-                      <span className="error-text" title={vehicle.validation_errors}>
-                        {vehicle.validation_errors}
+                    {gasStation.validation_errors ? (
+                      <span className="error-text" title={gasStation.validation_errors}>
+                        {gasStation.validation_errors}
                       </span>
                     ) : (
                       '-'
                     )}
                   </td>
                   <td>
-                    {editingId === vehicle.id ? (
+                    {editingId === gasStation.id ? (
                       <div className="action-buttons">
                         <IconButton 
                           icon="save" 
                           variant="success" 
-                          onClick={() => handleSave(vehicle.id)}
+                          onClick={() => handleSave(gasStation.id)}
                           disabled={loading}
                           title="Сохранить"
                           size="small"
@@ -313,7 +340,7 @@ const VehiclesList = () => {
                       <IconButton 
                         icon="edit" 
                         variant="primary" 
-                        onClick={() => handleEdit(vehicle)}
+                        onClick={() => handleEdit(gasStation)}
                         title="Редактировать"
                         size="small"
                       />
@@ -323,7 +350,7 @@ const VehiclesList = () => {
               ))}
             </tbody>
           </table>
-          {vehicles.length === 0 && (
+          {gasStations.length === 0 && (
             <div className="empty-state">Нет данных для отображения</div>
           )}
         </div>
@@ -355,5 +382,5 @@ const VehiclesList = () => {
   )
 }
 
-export default VehiclesList
+export default GasStationsList
 

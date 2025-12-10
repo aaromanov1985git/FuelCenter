@@ -476,6 +476,18 @@ h1 {
   gap: 12px;
   transition: all 0.3s ease;
   border: 2px dashed transparent;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .upload-section.drag-active {
@@ -510,11 +522,32 @@ h1 {
   transition: all 0.3s ease;
   min-height: 70px;
   width: 100%;
+  position: relative;
+}
+
+.drag-drop-label::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 2px dashed transparent;
+  border-radius: 12px;
+  pointer-events: none;
+  transition: all 0.3s ease;
 }
 
 .drag-drop-label:hover {
   border-color: var(--color-primary);
   background: var(--color-primary-light);
+}
+
+.drag-drop-label:hover::before {
+  border-color: var(--color-primary);
+  border-style: dashed;
+  border-width: 2px;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
 }
 
 .upload-section.drag-active .drag-drop-label {
@@ -549,10 +582,11 @@ h1 {
 }
 
 .drag-drop-hint {
-  font-size: 0.6875rem;
+  font-size: 0.875rem;
   color: var(--color-text-secondary);
   margin-top: 4px;
-  opacity: 0.7;
+  font-weight: var(--font-weight-medium);
+  opacity: 0.85;
 }
 
 .file-info {
@@ -718,6 +752,31 @@ h1 {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--color-primary);
+}
+
+/* Разные цвета для разных типов метрик */
+.upload-dashboard-card.stat-primary .upload-dashboard-value {
+  color: var(--color-info);
+}
+
+.upload-dashboard-card.stat-success .upload-dashboard-value {
+  color: var(--color-success);
+}
+
+.upload-dashboard-card.stat-secondary .upload-dashboard-value {
+  color: var(--color-text-secondary);
+}
+
+.upload-dashboard-card.stat-primary {
+  border-left: 4px solid var(--color-info);
+}
+
+.upload-dashboard-card.stat-success {
+  border-left: 4px solid var(--color-success);
+}
+
+.upload-dashboard-card.stat-secondary {
+  border-left: 4px solid var(--color-text-secondary);
 }
 
 .upload-dashboard-value-small {
@@ -1005,10 +1064,15 @@ h1 {
 
 .data-table th.sortable {
   transition: background-color 0.2s;
+  position: relative;
 }
 
 .data-table th.sortable:hover {
   background-color: var(--color-bg-hover);
+}
+
+.data-table th.sortable:hover .th-content {
+  color: var(--color-primary);
 }
 
 .data-table th .th-content {
@@ -1020,13 +1084,22 @@ h1 {
 
 .data-table th .sort-icon {
   font-size: 0.875rem;
-  color: var(--color-text-tertiary);
-  transition: color 0.2s;
+  opacity: 0.6;
+  transition: all 0.2s;
+  margin-left: var(--spacing-tiny);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-secondary);
+}
+
+.data-table th.sortable:hover .sort-icon {
+  opacity: 1;
+  color: var(--color-primary);
 }
 
 .data-table th .sort-icon.active {
+  opacity: 1;
   color: var(--color-primary);
-  font-weight: bold;
+  font-size: 1rem;
 }
 
 .data-table td {

@@ -21,6 +21,7 @@ class Transaction(Base):
     vehicle = Column(String(200), comment="Закреплена за (транспортное средство) - исходное название")
     vehicle_id = Column(Integer, index=True, comment="ID транспортного средства из справочника")
     azs_number = Column(String(100), index=True, comment="Номер АЗС")
+    gas_station_id = Column(Integer, ForeignKey("gas_stations.id"), index=True, comment="ID АЗС из справочника")
     provider_id = Column(Integer, ForeignKey("providers.id"), index=True, comment="ID провайдера")
     
     # Географические данные
@@ -214,6 +215,37 @@ class FuelCard(Base):
     # Индекс для проверки пересечений карт
     __table_args__ = (
         Index('idx_fuel_card_active', 'card_number', 'is_active_assignment', 'assignment_start_date', 'assignment_end_date'),
+    )
+
+
+class GasStation(Base):
+    """
+    Справочник автозаправочных станций (АЗС)
+    """
+    __tablename__ = "gas_stations"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    
+    # Исходное наименование из файла
+    original_name = Column(String(200), nullable=False, index=True, comment="Исходное наименование АЗС")
+    
+    # Нормализованные данные
+    azs_number = Column(String(50), index=True, comment="Номер АЗС")
+    location = Column(String(500), comment="Местоположение")
+    region = Column(String(200), comment="Регион")
+    settlement = Column(String(200), comment="Населенный пункт")
+    
+    # Статус валидации
+    is_validated = Column(String(10), default="pending", comment="Статус: pending, valid, invalid")
+    validation_errors = Column(String(500), comment="Ошибки валидации")
+    
+    # Метаданные
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления")
+    
+    # Уникальность по исходному наименованию
+    __table_args__ = (
+        Index('idx_gas_station_original', 'original_name', unique=True),
     )
 
 

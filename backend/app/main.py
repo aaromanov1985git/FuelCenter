@@ -21,6 +21,7 @@ from app.routers import (
     transactions,
     vehicles,
     fuel_cards,
+    gas_stations,
     providers,
     templates,
     dashboard,
@@ -160,6 +161,7 @@ app.include_router(auth.router)
 app.include_router(transactions.router)
 app.include_router(vehicles.router)
 app.include_router(fuel_cards.router)
+app.include_router(gas_stations.router)
 app.include_router(providers.router)
 app.include_router(templates.router)
 app.include_router(dashboard.router)
@@ -220,6 +222,60 @@ async def startup_event():
             except Exception as e:
                 db.rollback()
                 logger.warning("Не удалось добавить колонку is_blocked (возможно, уже существует или нет прав)", extra={"error": str(e)})
+
+        # Проверяем наличие таблицы gas_stations и колонки gas_station_id в transactions
+        try:
+            columns_transactions = [col["name"] for col in inspector.get_columns("transactions")]
+            
+            # Проверяем наличие колонки gas_station_id в transactions
+            if "gas_station_id" not in columns_transactions:
+                try:
+                    db.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS gas_station_id INTEGER"))
+                    db.commit()
+                    logger.info("Добавлена колонка gas_station_id в transactions (fallback)")
+                except Exception as e:
+                    db.rollback()
+                    logger.warning("Не удалось добавить колонку gas_station_id (возможно, уже существует или нет прав)", extra={"error": str(e)})
+            
+            # Проверяем наличие таблицы gas_stations
+            if "gas_stations" not in inspector.get_table_names():
+                try:
+                    db.execute(text("""
+                        CREATE TABLE IF NOT EXISTS gas_stations (
+                            id SERIAL PRIMARY KEY,
+                            original_name VARCHAR(200) NOT NULL,
+                            azs_number VARCHAR(50),
+                            location VARCHAR(500),
+                            region VARCHAR(200),
+                            settlement VARCHAR(200),
+                            is_validated VARCHAR(10) DEFAULT 'pending',
+                            validation_errors VARCHAR(500),
+                            created_at TIMESTAMP DEFAULT NOW(),
+                            updated_at TIMESTAMP DEFAULT NOW()
+                        )
+                    """))
+                    db.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_gas_station_original ON gas_stations(original_name)"))
+                    db.execute(text("CREATE INDEX IF NOT EXISTS ix_gas_stations_id ON gas_stations(id)"))
+                    db.execute(text("CREATE INDEX IF NOT EXISTS ix_gas_stations_original_name ON gas_stations(original_name)"))
+                    db.execute(text("CREATE INDEX IF NOT EXISTS ix_gas_stations_azs_number ON gas_stations(azs_number)"))
+                    db.commit()
+                    logger.info("Создана таблица gas_stations (fallback)")
+                except Exception as e:
+                    db.rollback()
+                    logger.warning("Не удалось создать таблицу gas_stations (возможно, уже существует или нет прав)", extra={"error": str(e)})
+            else:
+                # Если таблица существует, проверяем наличие индекса для gas_station_id в transactions
+                try:
+                    indexes = [idx["name"] for idx in inspector.get_indexes("transactions")]
+                    if "ix_transactions_gas_station_id" not in indexes:
+                        db.execute(text("CREATE INDEX IF NOT EXISTS ix_transactions_gas_station_id ON transactions(gas_station_id)"))
+                        db.commit()
+                        logger.info("Создан индекс ix_transactions_gas_station_id (fallback)")
+                except Exception as e:
+                    db.rollback()
+                    logger.warning("Не удалось создать индекс для gas_station_id (возможно, уже существует)", extra={"error": str(e)})
+        except Exception as e:
+            logger.warning("Ошибка при проверке таблицы gas_stations и колонки gas_station_id", extra={"error": str(e)})
 
         # Проверяем, существует ли провайдер "РП-газпром"
         provider = db.query(Provider).filter(Provider.code == "RP-GAZPROM").first()

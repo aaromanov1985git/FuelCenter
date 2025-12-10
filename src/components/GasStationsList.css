@@ -1,0 +1,416 @@
+.gas-stations-list {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-large);
+  box-shadow: var(--shadow-lg);
+  padding: var(--padding-card);
+  margin-bottom: var(--spacing-section);
+}
+
+.gas-stations-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-block);
+  flex-wrap: wrap;
+  gap: var(--spacing-element);
+}
+
+.gas-stations-header h2 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.filter-buttons {
+  display: flex;
+  gap: var(--spacing-small);
+  flex-wrap: wrap;
+}
+
+.filter-buttons button {
+  padding: var(--padding-tiny) var(--padding-element);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  transition: all 0.2s;
+}
+
+.filter-buttons button:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+}
+
+.filter-buttons button.active {
+  background: var(--color-primary);
+  color: var(--color-bg-card);
+  border-color: var(--color-primary);
+}
+
+.gas-stations-table-wrapper {
+  overflow-x: auto;
+}
+
+.gas-stations-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.gas-stations-table thead {
+  background: var(--color-bg-hover);
+}
+
+.gas-stations-table th {
+  padding: var(--padding-small) var(--padding-element);
+  text-align: left;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--color-border-light);
+  background: var(--color-bg-hover);
+}
+
+[data-theme="midnight"] .gas-stations-table th,
+[data-theme="amber-glow"] .gas-stations-table th {
+  color: var(--color-text-primary);
+  background: var(--color-bg-hover);
+}
+
+.gas-stations-table td {
+  padding: var(--padding-small) var(--padding-element);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  border-bottom: 1px solid var(--color-border);
+}
+
+[data-theme="midnight"] .gas-stations-table td,
+[data-theme="amber-glow"] .gas-stations-table td {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.gas-stations-table tbody tr:hover {
+  background: var(--color-bg-secondary);
+}
+
+.edit-input {
+  padding: var(--spacing-tiny) var(--padding-small);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-sm);
+  width: 100%;
+  max-width: 200px;
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+}
+
+.edit-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.action-buttons {
+  display: flex;
+  gap: var(--spacing-small);
+}
+
+.errors-cell {
+  max-width: 300px;
+}
+
+.error-text {
+  color: #dc2626;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+[data-theme="midnight"] .error-text,
+[data-theme="amber-glow"] .error-text {
+  color: #fca5a5;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.error-message {
+  padding: var(--padding-small) var(--padding-element);
+  background: #fee2e2;
+  color: #991b1b;
+  font-weight: var(--font-weight-bold);
+  border-radius: var(--radius-medium);
+  margin-bottom: var(--spacing-element);
+  border: 2px solid #dc2626;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+}
+
+[data-theme="midnight"] .error-message,
+[data-theme="amber-glow"] .error-message {
+  background: #7f1d1d;
+  color: #fca5a5;
+  border-color: #ef4444;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-normal);
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-element);
+  margin-top: var(--spacing-block);
+  padding-top: var(--spacing-block);
+  border-top: 1px solid var(--color-border);
+}
+
+.pagination-btn {
+  padding: var(--padding-tiny) var(--padding-element);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-normal);
+}
+
+/* Стили для компактного дашборда ошибок и предупреждений */
+.dashboard-section {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-medium);
+  padding: var(--padding-section);
+  margin-bottom: var(--spacing-block);
+  box-shadow: var(--shadow-md);
+}
+
+.dashboard-section h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.errors-warnings-section {
+  border-left: 4px solid var(--color-error);
+  background: var(--color-bg-card);
+}
+
+.errors-warnings-section h3 {
+  color: var(--color-error);
+  margin-bottom: var(--spacing-block);
+}
+
+.errors-warnings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--spacing-element);
+  margin-bottom: var(--spacing-block);
+}
+
+.errors-warnings-card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  padding: var(--padding-element);
+}
+
+.errors-warnings-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+  margin-bottom: var(--spacing-element);
+}
+
+.errors-warnings-icon {
+  font-size: var(--font-size-xl);
+}
+
+.errors-warnings-card-header h4 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.errors-warnings-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-small);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--padding-small);
+  border-radius: var(--radius-small);
+  background: var(--color-bg-card);
+}
+
+.stat-item.stat-error {
+  border: 1px solid var(--color-error);
+  background: var(--color-error-light);
+}
+
+.stat-item.stat-warning {
+  border: 1px solid var(--color-warning);
+  background: var(--color-warning-light);
+}
+
+.stat-item.stat-success {
+  border: 1px solid var(--color-success);
+  background: var(--color-success-light);
+}
+
+.stat-item.stat-total {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+}
+
+.stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-tiny);
+}
+
+.stat-item.stat-error .stat-value {
+  color: var(--color-error-dark);
+}
+
+.stat-item.stat-warning .stat-value {
+  color: var(--color-warning-dark);
+}
+
+.stat-item.stat-success .stat-value {
+  color: var(--color-success-dark);
+}
+
+.stat-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+  .gas-stations-list {
+    padding: var(--padding-element);
+    margin-bottom: var(--spacing-element);
+  }
+
+  .gas-stations-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-small);
+  }
+
+  .gas-stations-header h2 {
+    font-size: var(--font-size-lg);
+  }
+
+  .filter-buttons {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .filter-buttons button {
+    flex: 1;
+    min-width: 80px;
+    padding: var(--padding-small);
+    font-size: var(--font-size-xs);
+  }
+
+  .gas-stations-table {
+    font-size: var(--font-size-xs);
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .gas-stations-table thead,
+  .gas-stations-table tbody,
+  .gas-stations-table tr {
+    display: block;
+  }
+
+  .gas-stations-table thead {
+    display: none; /* Скрываем заголовки на мобильных */
+  }
+
+  .gas-stations-table tr {
+    margin-bottom: var(--spacing-element);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-medium);
+    padding: var(--padding-small);
+    background: var(--color-bg-card);
+  }
+
+  .gas-stations-table td {
+    display: block;
+    text-align: right;
+    padding: var(--spacing-tiny) var(--padding-small);
+    border-bottom: 1px solid var(--color-border-light);
+  }
+
+  .gas-stations-table td:before {
+    content: attr(data-label);
+    float: left;
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    font-size: var(--font-size-xs);
+  }
+
+  .gas-stations-table td:last-child {
+    border-bottom: none;
+  }
+
+  .action-buttons {
+    justify-content: flex-end;
+    margin-top: var(--spacing-small);
+  }
+
+  .errors-warnings-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .errors-warnings-stats {
+    grid-template-columns: 1fr;
+  }
+}
+

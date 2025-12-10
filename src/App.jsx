@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 import VehiclesList from './components/VehiclesList'
+import GasStationsList from './components/GasStationsList'
 import FuelCardsList from './components/FuelCardsList'
 import ProvidersList from './components/ProvidersList'
 import TemplatesList from './components/TemplatesList'
@@ -65,7 +66,7 @@ const App = () => {
     order: 'desc'
   })
   const [showClearConfirm, setShowClearConfirm] = useState(false)
-  const [activeTab, setActiveTab] = useState('transactions') // transactions, vehicles, cards, providers, templates, period-lock
+  const [activeTab, setActiveTab] = useState('transactions') // transactions, vehicles, cards, gas-stations, providers, templates, period-lock
   const [providers, setProviders] = useState([])
   const [selectedProviderTab, setSelectedProviderTab] = useState(null) // null = "Все", иначе ID провайдера
   const [dragActive, setDragActive] = useState(false)
@@ -1078,7 +1079,7 @@ const App = () => {
           aria-label={sidebarVisible ? 'Закрыть меню' : 'Открыть меню'}
           aria-expanded={sidebarVisible}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="icon" viewBox="0 0 20 20" fill="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             {sidebarVisible ? (
               <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
             ) : (
@@ -1122,6 +1123,12 @@ const App = () => {
               onClick={() => setActiveTab('cards')}
             >
               Топливные карты
+            </button>
+            <button 
+              className={`nav-item ${activeTab === 'gas-stations' ? 'active' : ''}`}
+              onClick={() => setActiveTab('gas-stations')}
+            >
+              АЗС
             </button>
             <button 
               className={`nav-item ${activeTab === 'providers' ? 'active' : ''}`}
@@ -1219,6 +1226,7 @@ const App = () => {
                 ...(activeTab === 'transactions' ? [{ label: 'Транзакции' }] : []),
                 ...(activeTab === 'vehicles' ? [{ label: 'Транспорт' }] : []),
                 ...(activeTab === 'cards' ? [{ label: 'Топливные карты' }] : []),
+                ...(activeTab === 'gas-stations' ? [{ label: 'АЗС' }] : []),
                 ...(activeTab === 'providers' ? [{ label: 'Провайдеры' }] : []),
                 ...(activeTab === 'templates' ? [{ label: 'Шаблоны' }] : []),
                 ...(activeTab === 'users' ? [{ label: 'Пользователи' }] : []),
@@ -1232,6 +1240,7 @@ const App = () => {
         {/* Контент вкладок */}
         {activeTab === 'vehicles' && <VehiclesList />}
         {activeTab === 'cards' && <FuelCardsList />}
+        {activeTab === 'gas-stations' && <GasStationsList />}
         {activeTab === 'providers' && <ProvidersList />}
         {activeTab === 'templates' && <TemplatesList />}
         {activeTab === 'users' && <UsersList />}
@@ -1257,7 +1266,7 @@ const App = () => {
               id="file-upload-input"
             />
             <label htmlFor="file-upload-input" className="drag-drop-label">
-              <svg xmlns="http://www.w3.org/2000/svg" className="icon-large" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="icon-large" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
               <div className="drag-drop-text">
@@ -1314,23 +1323,23 @@ const App = () => {
         <div className="upload-dashboard">
           <h3 className="upload-dashboard-title">Дашборд загрузки</h3>
           <div className="upload-dashboard-grid">
-            <div className="upload-dashboard-card">
+            <div className="upload-dashboard-card stat-primary">
               <div className="upload-dashboard-label">Всего транзакций</div>
               <div className="upload-dashboard-value">{stats?.total_transactions || 0}</div>
             </div>
-            <div className="upload-dashboard-card">
+            <div className="upload-dashboard-card stat-success">
               <div className="upload-dashboard-label">Всего литров</div>
               <div className="upload-dashboard-value">
                 {stats?.total_quantity ? stats.total_quantity.toFixed(2) : '0.00'}
               </div>
             </div>
-            <div className="upload-dashboard-card">
+            <div className="upload-dashboard-card stat-secondary">
               <div className="upload-dashboard-label">Видов топлива</div>
               <div className="upload-dashboard-value">
                 {stats?.products ? Object.keys(stats.products).length : 0}
               </div>
             </div>
-            <div className="upload-dashboard-card">
+            <div className="upload-dashboard-card stat-secondary">
               <div className="upload-dashboard-label">Провайдеров</div>
               <div className="upload-dashboard-value">
                 {stats?.provider_count || (selectedProviderTab ? 1 : providers.length)}
@@ -1487,6 +1496,15 @@ const App = () => {
                           onClick={() => isSortable && handleSort(field)}
                           style={{ cursor: isSortable ? 'pointer' : 'default' }}
                           data-label={h}
+                          role={isSortable ? 'columnheader button' : 'columnheader'}
+                          aria-sort={isSortable ? (isActive ? (sortConfig.order === 'asc' ? 'ascending' : 'descending') : 'none') : undefined}
+                          tabIndex={isSortable ? 0 : undefined}
+                          onKeyDown={(e) => {
+                            if (isSortable && (e.key === 'Enter' || e.key === ' ')) {
+                              e.preventDefault()
+                              handleSort(field)
+                            }
+                          }}
                         >
                           <span className="th-content">
                             {h}

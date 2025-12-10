@@ -149,8 +149,8 @@ const FuelCardEditModal = ({
             </select>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">
+          <div className="form-group form-group-checkbox">
+            <label className="form-label form-label-checkbox">
               <input
                 type="checkbox"
                 checked={isBlocked}

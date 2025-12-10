@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/v1/fuel-cards", tags=["fuel-cards"])
 @router.get("", response_model=FuelCardListResponse)
 async def get_fuel_cards(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(100, ge=1, le=10000),
     vehicle_id: Optional[int] = Query(None, description="Фильтр по ID ТС"),
     is_blocked: Optional[bool] = Query(None, description="Фильтр по статусу блокировки (true - только заблокированные, false - только незаблокированные)"),
     db: Session = Depends(get_db)

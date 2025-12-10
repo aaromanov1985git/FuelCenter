@@ -8,7 +8,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 from app.database import get_db
 from app.logger import logger
-from app.models import Transaction, Provider, Vehicle
+from app.models import Transaction, Provider, Vehicle, ProviderTemplate
 
 router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"])
 
@@ -485,4 +485,117 @@ async def get_vehicles_dashboard(
         "top_vehicles_by_transactions": top_vehicles_list,
         "vehicles_pending": pending_vehicles_list,
         "vehicles_errors": errors_vehicles_list
+    }
+
+
+@router.get("/auto-load-stats")
+async def get_auto_load_stats(
+    db: Session = Depends(get_db)
+):
+    """
+    Получение статистики автоматических загрузок за последние 24 часа
+    Оптимизированная версия с агрегацией на уровне БД
+    """
+    from sqlalchemy import or_, and_
+    
+    # Вычисляем дату 24 часа назад
+    now = datetime.now()
+    last_24_hours = now - timedelta(hours=24)
+    
+    # Базовый запрос для автоматических загрузок
+    base_query = db.query(Transaction).filter(
+        Transaction.created_at >= last_24_hours,
+        or_(
+            Transaction.source_file.like("Firebird:%"),
+            Transaction.source_file.like("API:%")
+        )
+    )
+    
+    # Если не нашли по source_file, проверяем по last_auto_load_date шаблонов
+    auto_load_count = base_query.count()
+    if auto_load_count == 0:
+        # Получаем все шаблоны с включенной автозагрузкой
+        templates = db.query(ProviderTemplate).filter(
+            ProviderTemplate.auto_load_enabled == True,
+            ProviderTemplate.last_auto_load_date.isnot(None),
+            ProviderTemplate.last_auto_load_date >= last_24_hours
+        ).all()
+        
+        # Находим транзакции, созданные после last_auto_load_date для каждого шаблона
+        template_provider_ids = [t.provider_id for t in templates]
+        if template_provider_ids:
+            base_query = db.query(Transaction).filter(
+                Transaction.created_at >= last_24_hours,
+                Transaction.provider_id.in_(template_provider_ids)
+            )
+        else:
+            # Нет данных для автоматических загрузок
+            return {
+                "period_hours": 24,
+                "total_transactions": 0,
+                "total_liters": 0,
+                "providers": [],
+                "has_errors": False,
+                "transactions_with_errors": 0
+            }
+    
+    # Подсчитываем общую статистику через агрегацию БД
+    total_stats = base_query.with_entities(
+        func.count(Transaction.id).label('total_transactions'),
+        func.sum(Transaction.quantity).label('total_liters')
+    ).first()
+    
+    total_transactions = total_stats.total_transactions or 0
+    total_liters = float(total_stats.total_liters) if total_stats.total_liters else 0
+    
+    # Статистика по провайдерам через агрегацию БД с JOIN
+    providers_stats = base_query.join(
+        Provider, Transaction.provider_id == Provider.id, isouter=False
+    ).with_entities(
+        Provider.name,
+        func.count(Transaction.id).label('transactions_count'),
+        func.sum(Transaction.quantity).label('liters')
+    ).group_by(Provider.name).order_by(
+        func.count(Transaction.id).desc()
+    ).all()
+    
+    providers_list = [
+        {
+            "name": stat.name,
+            "transactions_count": stat.transactions_count,
+            "liters": round(float(stat.liters) if stat.liters else 0, 2)
+        }
+        for stat in providers_stats
+    ]
+    
+    # Проверяем наличие ошибок
+    # Ошибки - это транзакции, связанные с ТС, имеющими статус invalid или pending
+    # Используем тот же базовый фильтр, что и для основного запроса
+    error_query = base_query.join(
+        Vehicle, Transaction.vehicle == Vehicle.original_name, isouter=True
+    ).filter(
+        or_(
+            Vehicle.is_validated == "invalid",
+            Vehicle.is_validated == "pending"
+        )
+    )
+    
+    transactions_with_errors = error_query.count()
+    
+    has_errors = transactions_with_errors > 0
+    
+    logger.debug("Статистика автоматических загрузок загружена", extra={
+        "total_transactions": total_transactions,
+        "total_liters": total_liters,
+        "providers_count": len(providers_list),
+        "has_errors": has_errors
+    })
+    
+    return {
+        "period_hours": 24,
+        "total_transactions": total_transactions,
+        "total_liters": round(total_liters, 2),
+        "providers": providers_list,
+        "has_errors": has_errors,
+        "transactions_with_errors": transactions_with_errors
     }

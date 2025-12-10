@@ -181,6 +181,58 @@ class VehicleListResponse(BaseModel):
     items: list[VehicleResponse]
 
 
+class GasStationBase(BaseModel):
+    """
+    Базовая схема автозаправочной станции
+    """
+    original_name: str = Field(..., max_length=200, description="Исходное наименование АЗС")
+    azs_number: Optional[str] = Field(None, max_length=50, description="Номер АЗС")
+    location: Optional[str] = Field(None, max_length=500, description="Местоположение")
+    region: Optional[str] = Field(None, max_length=200, description="Регион")
+    settlement: Optional[str] = Field(None, max_length=200, description="Населенный пункт")
+
+
+class GasStationCreate(GasStationBase):
+    """
+    Схема для создания АЗС
+    """
+    pass
+
+
+class GasStationUpdate(BaseModel):
+    """
+    Схема для обновления АЗС
+    """
+    original_name: Optional[str] = Field(None, max_length=200)
+    azs_number: Optional[str] = Field(None, max_length=50)
+    location: Optional[str] = Field(None, max_length=500)
+    region: Optional[str] = Field(None, max_length=200)
+    settlement: Optional[str] = Field(None, max_length=200)
+    is_validated: Optional[str] = Field(None, max_length=10)
+
+
+class GasStationResponse(GasStationBase):
+    """
+    Схема ответа с АЗС
+    """
+    id: int
+    is_validated: str = "pending"
+    validation_errors: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class GasStationListResponse(BaseModel):
+    """
+    Схема ответа со списком АЗС
+    """
+    total: int
+    items: list[GasStationResponse]
+
+
 class FuelCardBase(BaseModel):
     """
     Базовая схема топливной карты
