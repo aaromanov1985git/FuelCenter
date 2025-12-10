@@ -1,0 +1,178 @@
+.file-preview-modal {
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-large);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 8px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.file-preview-body {
+  overflow-y: auto;
+  max-height: calc(90vh - 140px);
+  padding: var(--padding-section);
+}
+
+.file-preview-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-element);
+  margin-bottom: var(--spacing-block);
+  padding: var(--padding-element);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-medium);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.file-preview-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-tiny);
+}
+
+.file-preview-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.file-preview-value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  word-break: break-word;
+}
+
+.file-preview-error {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+  padding: var(--padding-element);
+  background: var(--color-error-light);
+  color: var(--color-error-dark);
+  border-radius: var(--radius-medium);
+  margin-bottom: var(--spacing-block);
+}
+
+.file-preview-error-icon {
+  font-size: 1.2rem;
+}
+
+.file-preview-content {
+  margin-top: var(--spacing-block);
+}
+
+.file-preview-content h4 {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-element);
+}
+
+.file-preview-csv {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.file-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-xs);
+}
+
+.file-preview-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border-light);
+  border-right: 1px solid var(--color-border-light);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.file-preview-table tr:last-child td {
+  border-bottom: none;
+}
+
+.file-preview-table td:last-child {
+  border-right: none;
+}
+
+.file-preview-table tr:nth-child(1) {
+  background: var(--color-bg-secondary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.file-preview-text {
+  padding: var(--padding-element);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  font-size: var(--font-size-xs);
+  font-family: 'Courier New', monospace;
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+
+.file-preview-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-element);
+  padding: var(--padding-section);
+  background: linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-bg-card) 100%);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-medium);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+  font-weight: var(--font-weight-semibold);
+}
+
+.file-preview-icon {
+  font-size: 2rem;
+}
+
+.file-preview-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-element);
+  padding: var(--padding-section);
+  color: var(--color-text-secondary);
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+  .file-preview-modal {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+
+  .file-preview-info {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-small);
+  }
+
+  .file-preview-table td {
+    max-width: 100px;
+    font-size: 0.65rem;
+    padding: 4px 6px;
+  }
+
+  .file-preview-text {
+    font-size: 0.7rem;
+    max-height: 300px;
+  }
+}
+

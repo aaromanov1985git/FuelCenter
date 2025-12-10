@@ -1,0 +1,118 @@
+.export-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.export-menu-button-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+
+.export-menu-icon-button {
+  position: relative;
+  margin: 0;
+}
+
+.export-menu-arrow {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  transition: transform 0.2s ease;
+  pointer-events: none;
+  z-index: 10;
+  fill: var(--color-text-primary);
+  opacity: 0.9;
+}
+
+/* Для темной темы делаем стрелку светлее */
+[data-theme="midnight"] .export-menu-arrow,
+[data-theme="amber"] .export-menu-arrow {
+  fill: var(--color-text-primary);
+  opacity: 0.9;
+}
+
+.export-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  min-width: 180px;
+  padding: 4px;
+  animation: exportMenuFadeIn 0.15s ease-out;
+}
+
+@keyframes exportMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.export-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-element);
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+
+.export-menu-item:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-primary);
+}
+
+.export-menu-item:active {
+  background: var(--color-primary-light);
+}
+
+.export-menu-icon {
+  font-size: 1rem;
+  width: 20px;
+  text-align: center;
+}
+
+.export-menu-label {
+  flex: 1;
+}
+
+.export-menu.dropdown-open .export-menu-arrow {
+  transform: rotate(180deg);
+}
+
+/* Улучшаем видимость стрелки на hover */
+.export-menu-button-wrapper:hover .export-menu-arrow {
+  opacity: 1;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+  .export-menu-dropdown {
+    right: auto;
+    left: 0;
+    min-width: 160px;
+  }
+}
+

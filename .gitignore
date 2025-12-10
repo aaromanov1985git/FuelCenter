@@ -1,0 +1,54 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+*.egg-info/
+*.egg
+
+# Docker
+.dockerignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Excel files with data (шаблоны можно коммитить)
+Отпуск*.xlsx
+*данные*.xlsx
+
+# DLL files (библиотеки)
+*.dll
+*.dylib
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.fdb
+
+# Alembic
+alembic.ini.local
+
+# Logs
+*.log
+logs/
+

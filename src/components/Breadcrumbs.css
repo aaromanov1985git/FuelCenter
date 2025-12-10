@@ -1,0 +1,111 @@
+.breadcrumbs {
+  margin-bottom: var(--spacing-block);
+  padding: var(--spacing-element) var(--spacing-block);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+}
+
+.breadcrumbs-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-small);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadcrumbs-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+}
+
+.breadcrumbs-separator {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  user-select: none;
+  margin: 0 var(--spacing-tiny);
+}
+
+.breadcrumbs-link {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.breadcrumbs-link:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+.breadcrumbs-link:active {
+  transform: scale(0.95);
+}
+
+.breadcrumbs-text {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.breadcrumbs-current {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  padding: 4px 8px;
+}
+
+/* Иконка дома для первого элемента */
+.breadcrumbs-item:first-child .breadcrumbs-link::before {
+  content: '🏠';
+  margin-right: 6px;
+  font-size: 0.875rem;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+  .breadcrumbs {
+    padding: var(--spacing-element);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .breadcrumbs-list {
+    min-width: max-content;
+  }
+
+  .breadcrumbs-item {
+    white-space: nowrap;
+  }
+
+  .breadcrumbs-link,
+  .breadcrumbs-text,
+  .breadcrumbs-current {
+    font-size: var(--font-size-xs);
+  }
+
+  /* Скрываем промежуточные элементы на очень маленьких экранах */
+  @media (max-width: 480px) {
+    .breadcrumbs-item:not(:first-child):not(:last-child) {
+      display: none;
+    }
+
+    .breadcrumbs-item:not(:first-child)::before {
+      content: '...';
+      color: var(--color-text-tertiary);
+      margin-right: var(--spacing-small);
+    }
+  }
+}
+

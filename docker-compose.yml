@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: gsm_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gsm_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gsm_password}
+      POSTGRES_DB: ${POSTGRES_DB:-gsm_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gsm_user} -d ${POSTGRES_DB:-gsm_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gsm_backend
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://gsm_user:gsm_password@db:5432/gsm_db}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-52428800}
+      # Настройки аутентификации
+      ENABLE_AUTH: ${ENABLE_AUTH:-true}
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-here-change-in-production}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-30}
+      # Ключ для шифрования чувствительных данных (пароли Firebird, API ключи)
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      # Настройки администратора по умолчанию
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      # Настройки Rate Limiting (защита от DDoS)
+      ENABLE_RATE_LIMIT: ${ENABLE_RATE_LIMIT:-true}
+      RATE_LIMIT_DEFAULT: ${RATE_LIMIT_DEFAULT:-100/minute}
+      RATE_LIMIT_STRICT: ${RATE_LIMIT_STRICT:-10/minute}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
+      - ./backend/alembic.ini:/app/alembic.ini
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:
+

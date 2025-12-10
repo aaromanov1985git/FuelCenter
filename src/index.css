@@ -1,0 +1,230 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  /* Тема Sunrise (светлая) - по умолчанию */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-bg-card: #ffffff;
+  --color-bg-hover: #f3f4f6;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #9ca3af;
+  --color-border: #e5e7eb;
+  --color-border-light: #d1d5db;
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-light: #eef2ff;
+  --color-success: #10b981;
+  --color-success-light: #d1fae5;
+  --color-success-dark: #059669;
+  --color-error: #ef4444;
+  --color-error-light: #fee2e2;
+  --color-error-dark: #dc2626;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fef3c7;
+  --color-warning-dark: #d97706;
+  --color-info: #3b82f6;
+  --color-info-light: #dbeafe;
+  --color-gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  /* Система отступов (8px grid system) */
+  --spacing-section: 32px;        /* 4x = 32px - отступы между секциями */
+  --spacing-block: 24px;          /* 3x = 24px - отступы между блоками */
+  --spacing-element: 16px;        /* 2x = 16px - отступы между элементами */
+  --spacing-small: 8px;           /* 1x = 8px - маленькие отступы */
+  --spacing-tiny: 4px;            /* 0.5x = 4px - минимальные отступы */
+
+  /* Внутренние отступы компонентов */
+  --padding-card: 24px;           /* 3x = 24px - внутренний отступ карточек */
+  --padding-section: 20px;        /* 2.5x = 20px - внутренний отступ секций */
+  --padding-element: 16px;        /* 2x = 16px - внутренний отступ элементов */
+  --padding-small: 12px;          /* 1.5x = 12px - маленький внутренний отступ */
+  --padding-tiny: 8px;            /* 1x = 8px - минимальный внутренний отступ */
+
+  /* Радиусы скругления */
+  --radius-tiny: 4px;            /* Минимальные элементы */
+  --radius-small: 6px;           /* Маленькие элементы (кнопки, инпуты) */
+  --radius-medium: 8px;          /* Средние элементы (карточки) */
+  --radius-large: 12px;          /* Большие элементы (модальные окна) */
+  --radius-badge: 12px;          /* Бейджи статусов */
+
+  /* Тени */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.15);
+
+  /* Типографика */
+  --font-size-xs: 0.75rem;       /* 12px - мелкий текст */
+  --font-size-sm: 0.875rem;      /* 14px - маленький текст */
+  --font-size-base: 1rem;        /* 16px - базовый текст */
+  --font-size-lg: 1.125rem;       /* 18px - большой текст */
+  --font-size-xl: 1.5rem;        /* 24px - заголовки секций */
+  --font-size-2xl: 2rem;         /* 32px - главные заголовки */
+
+  --font-weight-normal: 500;     /* Обычный текст */
+  --font-weight-medium: 550;     /* Средний текст */
+  --font-weight-semibold: 600;   /* Акцентный текст */
+  --font-weight-bold: 700;       /* Заголовки */
+
+  --line-height-tight: 1.2;       /* Заголовки */
+  --line-height-normal: 1.5;     /* Обычный текст */
+  --line-height-relaxed: 1.75;   /* Длинный текст */
+}
+
+[data-theme="midnight"] {
+  /* Тема Midnight (темная) */
+  --color-bg-primary: #111827;
+  --color-bg-secondary: #1f2937;
+  --color-bg-card: #374151;
+  --color-bg-hover: #4b5563;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #e5e7eb;
+  --color-text-tertiary: #d1d5db;
+  --color-border: #4b5563;
+  --color-border-light: #6b7280;
+  --color-primary: #818cf8;
+  --color-primary-hover: #a5b4fc;
+  --color-primary-light: #4338ca;
+  --color-success: #34d399;
+  --color-success-light: #064e3b;
+  --color-success-dark: #10b981;
+  --color-error: #f87171;
+  --color-error-light: #7f1d1d;
+  --color-error-dark: #ef4444;
+  --color-warning: #fbbf24;
+  --color-warning-light: #78350f;
+  --color-warning-dark: #f59e0b;
+  --color-info: #60a5fa;
+  --color-info-light: #1e3a8a;
+  --color-gradient-primary: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+[data-theme="amber-glow"] {
+  /* Тема Amber Glow (темная с акцентами) */
+  --color-bg-primary: #1c1917;
+  --color-bg-secondary: #292524;
+  --color-bg-card: #44403c;
+  --color-bg-hover: #57534e;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #e7e5e4;
+  --color-text-tertiary: #d6d3d1;
+  --color-border: #57534e;
+  --color-border-light: #78716c;
+  --color-primary: #fbbf24;
+  --color-primary-hover: #fcd34d;
+  --color-primary-light: #92400e;
+  --color-success: #34d399;
+  --color-success-light: #064e3b;
+  --color-success-dark: #10b981;
+  --color-error: #f87171;
+  --color-error-light: #7f1d1d;
+  --color-error-dark: #ef4444;
+  --color-warning: #fbbf24;
+  --color-warning-light: #78350f;
+  --color-warning-dark: #f59e0b;
+  --color-info: #60a5fa;
+  --color-info-light: #1e3a8a;
+  --color-gradient-primary: linear-gradient(135deg, #78350f 0%, #451a03 100%);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  /* Улучшенная прокрутка на мобильных */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Улучшенная работа с touch-устройствами */
+* {
+  /* Убираем задержку на touch-устройствах */
+  touch-action: manipulation;
+}
+
+/* Исключения для элементов, которым нужна стандартная touch-обработка */
+input, textarea, select, [contenteditable] {
+  touch-action: auto;
+}
+
+/* Улучшенная прокрутка для мобильных */
+@media (max-width: 768px) {
+  .table-wrapper, .modal-body, .advanced-search-content {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
+  /* Убираем эффект "резиновой ленты" при прокрутке */
+  body {
+    overscroll-behavior-y: none;
+  }
+}
+
+/* Плавное переключение темы только когда явно переключается */
+html.theme-transitioning,
+html.theme-transitioning * {
+  transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Исключения для анимаций */
+html.theme-transitioning .spinner,
+html.theme-transitioning .spinner-small,
+html.theme-transitioning .toast,
+html.theme-transitioning .status-dot,
+html.theme-transitioning .progress-bar {
+  transition: none !important;
+}
+
+/* Улучшение контрастности текста на темных темах */
+[data-theme="midnight"] *,
+[data-theme="amber-glow"] * {
+  color: inherit;
+}
+
+[data-theme="midnight"] h1,
+[data-theme="midnight"] h2,
+[data-theme="midnight"] h3,
+[data-theme="midnight"] h4,
+[data-theme="midnight"] h5,
+[data-theme="midnight"] h6,
+[data-theme="amber-glow"] h1,
+[data-theme="amber-glow"] h2,
+[data-theme="amber-glow"] h3,
+[data-theme="amber-glow"] h4,
+[data-theme="amber-glow"] h5,
+[data-theme="amber-glow"] h6 {
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+[data-theme="midnight"] p,
+[data-theme="midnight"] span,
+[data-theme="midnight"] div,
+[data-theme="amber-glow"] p,
+[data-theme="amber-glow"] span,
+[data-theme="amber-glow"] div {
+  color: var(--color-text-primary);
+}
+
+[data-theme="midnight"] .subtitle,
+[data-theme="amber-glow"] .subtitle {
+  color: var(--color-text-secondary);
+}
+
+#root {
+  min-height: 100vh;
+}
+

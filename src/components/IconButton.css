@@ -1,0 +1,95 @@
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon-button-small {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+}
+
+.icon-button-medium {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+}
+
+.icon-button-large {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+}
+
+.icon-button-primary {
+  background: var(--color-primary);
+  color: var(--color-bg-card);
+}
+
+.icon-button-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.icon-button-success {
+  background: var(--color-success);
+  color: var(--color-bg-card);
+}
+
+.icon-button-success:hover:not(:disabled) {
+  background: var(--color-success-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.icon-button-error {
+  background: var(--color-error);
+  color: var(--color-bg-card);
+}
+
+.icon-button-error:hover:not(:disabled) {
+  background: var(--color-error-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.icon-button-secondary {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
+.icon-button-secondary:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-light);
+}
+
+/* Для маленьких кнопок уменьшаем размер иконки */
+.icon-button-small svg {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-button-medium svg {
+  width: 20px;
+  height: 20px;
+}
+
+.icon-button-large svg {
+  width: 24px;
+  height: 24px;
+}

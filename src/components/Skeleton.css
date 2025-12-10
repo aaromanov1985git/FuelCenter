@@ -1,0 +1,131 @@
+/* Base Skeleton */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-secondary) 0%,
+    var(--color-border-light) 50%,
+    var(--color-bg-secondary) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+}
+
+.skeleton-animated {
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Variants */
+.skeleton-rectangular {
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-circular {
+  border-radius: 50%;
+}
+
+.skeleton-text {
+  height: 1em;
+  border-radius: var(--radius-sm);
+}
+
+/* Text Container */
+.skeleton-text-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-small);
+  width: 100%;
+}
+
+.skeleton-text-line {
+  width: 100%;
+}
+
+.skeleton-text-last-line {
+  width: 75%;
+}
+
+/* Table Skeleton */
+.skeleton-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.skeleton-table-header {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--spacing-small);
+  margin-bottom: var(--spacing-element);
+  padding: var(--spacing-element);
+}
+
+.skeleton-table-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--spacing-small);
+  margin-bottom: var(--spacing-small);
+  padding: var(--spacing-element);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+/* Card Skeleton */
+.skeleton-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.skeleton-card-content {
+  padding: var(--spacing-block);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-element);
+}
+
+/* List Skeleton */
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-element);
+}
+
+.skeleton-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-block);
+  padding: var(--spacing-block);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+}
+
+.skeleton-list-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-small);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .skeleton-table-header,
+  .skeleton-table-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .skeleton-list-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+

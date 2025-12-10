@@ -1,0 +1,94 @@
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-small);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
+  transition: all 0.3s ease;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse 2s infinite;
+}
+
+.status-text {
+  color: var(--color-text-secondary);
+}
+
+/* Статус онлайн */
+.status-online {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.status-online .status-dot {
+  background: var(--color-success);
+  box-shadow: 0 0 8px var(--color-success);
+}
+
+.status-online .status-text {
+  color: var(--color-success-dark);
+}
+
+/* Статус офлайн */
+.status-offline {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+.status-offline .status-dot {
+  background: var(--color-error);
+  box-shadow: 0 0 8px var(--color-error);
+}
+
+.status-offline .status-text {
+  color: var(--color-error-dark);
+}
+
+/* Статус проверки */
+.status-checking {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.status-checking .status-dot {
+  background: var(--color-warning);
+  animation: pulse 1s infinite;
+}
+
+.status-checking .status-text {
+  color: var(--color-warning-dark);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(0.9);
+  }
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+  .status-indicator {
+    padding: 3px 8px;
+    font-size: var(--font-size-xs);
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+  }
+}
+

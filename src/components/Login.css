@@ -1,0 +1,105 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  background: var(--color-bg-primary);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border);
+}
+
+.login-title {
+  margin: 0 0 8px 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  text-align: center;
+}
+
+.login-subtitle {
+  margin: 0 0 24px 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.login-form .form-field-input {
+  padding: 16px 18px;
+  font-size: var(--font-size-base);
+  min-height: 52px;
+}
+
+.login-button {
+  width: 100%;
+  padding: 16px 24px;
+  margin-top: 8px;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-medium);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 52px;
+}
+
+.login-button:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.login-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-footer {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+}
+
+.login-hint {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.login-hint strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Адаптивность */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 24px;
+  }
+
+  .login-title {
+    font-size: var(--font-size-xl);
+  }
+}
+

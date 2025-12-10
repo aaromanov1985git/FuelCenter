@@ -1,0 +1,108 @@
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.status-badge-small {
+  padding: 2px 8px;
+  font-size: 0.625rem;
+  gap: 4px;
+}
+
+.status-badge-medium {
+  padding: 4px 10px;
+  font-size: var(--font-size-xs);
+}
+
+.status-badge-large {
+  padding: 6px 12px;
+  font-size: var(--font-size-sm);
+  gap: 8px;
+}
+
+.status-badge-icon {
+  font-size: 1em;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.status-badge-text {
+  line-height: 1;
+}
+
+/* Статус: Валидно */
+.status-valid {
+  background: var(--color-success-light);
+  color: var(--color-success-dark);
+  border: 1px solid var(--color-success);
+}
+
+/* Статус: Ошибки */
+.status-invalid {
+  background: var(--color-error-light);
+  color: var(--color-error-dark);
+  border: 1px solid var(--color-error);
+}
+
+/* Статус: Требует проверки */
+.status-pending {
+  background: var(--color-warning-light);
+  color: var(--color-warning-dark);
+  border: 1px solid var(--color-warning);
+}
+
+/* Статус: Активен */
+.status-active {
+  background: var(--color-success-light);
+  color: var(--color-success-dark);
+  border: 1px solid var(--color-success);
+}
+
+/* Статус: Неактивен */
+.status-inactive {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-tertiary);
+  border: 1px solid var(--color-border);
+}
+
+/* Статус: Заблокировано */
+.status-locked {
+  background: var(--color-error-light);
+  color: var(--color-error-dark);
+  border: 1px solid var(--color-error);
+}
+
+/* Анимация для pending статуса */
+.status-pending {
+  animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+  .status-badge {
+    padding: 3px 8px;
+    font-size: 0.625rem;
+  }
+
+  .status-badge-icon {
+    font-size: 0.875em;
+  }
+}
+

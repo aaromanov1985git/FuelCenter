@@ -1,0 +1,145 @@
+.form-field {
+  margin-bottom: var(--spacing-block);
+}
+
+.form-field-label {
+  display: block;
+  margin-bottom: var(--spacing-small);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.required-mark {
+  color: var(--color-error);
+  font-weight: var(--font-weight-bold);
+}
+
+.form-field-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.form-field-input {
+  width: 100%;
+  padding: 14px 16px;
+  padding-right: 40px; /* Место для иконки */
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  transition: all 0.2s ease;
+  min-height: 48px;
+  line-height: 1.5;
+}
+
+.form-field-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.form-field-input-error {
+  border-color: var(--color-error);
+  padding-right: 40px;
+}
+
+.form-field-input-error:focus {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 3px var(--color-error-light);
+}
+
+.form-field-input-valid {
+  border-color: var(--color-success);
+  padding-right: 40px;
+}
+
+.form-field-input-valid:focus {
+  border-color: var(--color-success);
+  box-shadow: 0 0 0 3px var(--color-success-light);
+}
+
+/* Иконки состояния */
+.form-field-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-field-icon-valid {
+  color: var(--color-success);
+}
+
+.form-field-icon-error {
+  color: var(--color-error);
+}
+
+.form-field-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Сообщения */
+.form-field-error-message {
+  margin-top: var(--spacing-small);
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-field-help {
+  margin-top: var(--spacing-small);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Состояния формы */
+.form-field-error .form-field-label {
+  color: var(--color-error);
+}
+
+.form-field-valid .form-field-label {
+  color: var(--color-success);
+}
+
+/* Для select и textarea */
+.form-field-input-wrapper select,
+.form-field-input-wrapper textarea {
+  padding: 14px 16px;
+  min-height: 48px;
+  line-height: 1.5;
+}
+
+.form-field-input-wrapper select.form-field-input-error,
+.form-field-input-wrapper textarea.form-field-input-error {
+  padding-right: 40px;
+}
+
+.form-field-input-wrapper select.form-field-input-valid,
+.form-field-input-wrapper textarea.form-field-input-valid {
+  padding-right: 40px;
+}
+

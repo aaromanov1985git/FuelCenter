@@ -1,0 +1,123 @@
+.tooltip-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 10000;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.9);
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.4;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  word-wrap: break-word;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.tooltip-title {
+  padding: 8px 12px 6px 12px;
+  font-weight: var(--font-weight-semibold);
+  font-size: 0.9375rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 4px;
+}
+
+.tooltip-content {
+  padding: 6px 12px 8px 12px;
+  line-height: 1.5;
+}
+
+.tooltip-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Стрелка tooltip */
+.tooltip-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+/* Стрелка для позиции top */
+.tooltip-arrow-top {
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0 6px;
+  border-color: rgba(0, 0, 0, 0.9) transparent transparent transparent;
+}
+
+/* Стрелка для позиции bottom */
+.tooltip-arrow-bottom {
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 0 6px 6px 6px;
+  border-color: transparent transparent rgba(0, 0, 0, 0.9) transparent;
+}
+
+/* Стрелка для позиции left */
+.tooltip-arrow-left {
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px 0 6px 6px;
+  border-color: transparent transparent transparent rgba(0, 0, 0, 0.9);
+}
+
+/* Стрелка для позиции right */
+.tooltip-arrow-right {
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px 6px 6px 0;
+  border-color: transparent rgba(0, 0, 0, 0.9) transparent transparent;
+}
+
+/* Адаптация для темной темы */
+[data-theme="midnight"] .tooltip,
+[data-theme="amber-glow"] .tooltip {
+  background: rgba(30, 30, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="midnight"] .tooltip-arrow-top,
+[data-theme="amber-glow"] .tooltip-arrow-top {
+  border-color: rgba(30, 30, 30, 0.95) transparent transparent transparent;
+}
+
+[data-theme="midnight"] .tooltip-arrow-bottom,
+[data-theme="amber-glow"] .tooltip-arrow-bottom {
+  border-color: transparent transparent rgba(30, 30, 30, 0.95) transparent;
+}
+
+[data-theme="midnight"] .tooltip-arrow-left,
+[data-theme="amber-glow"] .tooltip-arrow-left {
+  border-color: transparent transparent transparent rgba(30, 30, 30, 0.95);
+}
+
+[data-theme="midnight"] .tooltip-arrow-right,
+[data-theme="amber-glow"] .tooltip-arrow-right {
+  border-color: transparent rgba(30, 30, 30, 0.95) transparent transparent;
+}
+
+/* Мобильные устройства */
+@media (max-width: 768px) {
+  .tooltip {
+    max-width: 200px;
+    font-size: 0.8125rem;
+    padding: 6px 10px;
+  }
+}
+

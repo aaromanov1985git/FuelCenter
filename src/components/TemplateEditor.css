@@ -1,0 +1,817 @@
+.template-editor {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-medium);
+  padding: var(--padding-card);
+  margin-bottom: var(--spacing-block);
+  box-shadow: var(--shadow-md);
+  min-width: 0; /* Позволяет редактору сжиматься */
+  width: 100%; /* Занимает всю доступную ширину */
+  box-sizing: border-box; /* Учитывает padding и border в ширине */
+  overflow: hidden; /* Предотвращает выход содержимого за границы */
+}
+
+.template-editor-header {
+  margin-bottom: var(--spacing-block);
+}
+
+.template-editor-header h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.template-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-block);
+  min-width: 0; /* Позволяет форме сжиматься */
+  width: 100%; /* Занимает всю доступную ширину */
+  box-sizing: border-box; /* Учитывает padding и border в ширине */
+}
+
+.form-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  padding: var(--padding-card);
+  background: var(--color-bg-secondary);
+  min-width: 0; /* Позволяет секции сжиматься */
+  overflow: hidden; /* Предотвращает выход содержимого за границы */
+}
+
+.form-section:not(:last-child) {
+  margin-bottom: 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--padding-small);
+  margin: 0 0 var(--spacing-small) 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--color-primary);
+  color: var(--color-bg-card);
+  border-radius: 50%;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.section-description {
+  margin: 0 0 var(--spacing-element) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.file-upload-section {
+  background: var(--color-info-light);
+  border-color: var(--color-info);
+}
+
+.file-upload-group {
+  margin-top: 12px;
+}
+
+.file-upload-label {
+  display: block;
+  cursor: pointer;
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.file-upload-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-small);
+  padding: var(--padding-small) var(--padding-section);
+  background: var(--color-bg-card);
+  border: 2px dashed var(--color-primary);
+  border-radius: var(--radius-medium);
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.file-upload-button:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary-hover);
+}
+
+.file-upload-button .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.spinner-small {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-primary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.analysis-result {
+  margin-top: var(--padding-small);
+}
+
+.success-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-small);
+  padding: var(--padding-tiny) var(--padding-small);
+  background: var(--color-success-light);
+  color: var(--color-success-dark);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+}
+
+.success-badge .icon-small {
+  width: 16px;
+  height: 16px;
+}
+
+.auto-mapping-info {
+  margin-top: var(--padding-tiny);
+  padding: var(--spacing-tiny) var(--padding-small);
+  background: var(--color-info-light);
+  color: var(--color-info);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-xs);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0; /* Позволяет полям сжиматься в grid */
+  width: 100%; /* Занимает всю доступную ширину */
+  box-sizing: border-box; /* Учитывает padding и border в ширине */
+}
+
+.form-group label {
+  font-size: 0.95rem;
+  color: var(--color-text-primary);
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-tiny);
+  min-width: 0; /* Позволяет label сжиматься */
+  width: 100%; /* Занимает всю доступную ширину */
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="password"],
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  min-width: 0; /* Позволяет полям сжиматься */
+  max-width: 100%; /* Предотвращает выход за границы */
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
+.form-group input[type="password"]:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* Стили для select в тёмной теме */
+.form-group select {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+}
+
+.form-group select option {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+}
+
+/* Специальные стили для поля пути к базе данных */
+.form-group input[type="text"][placeholder*="database"],
+.form-group input[type="text"][placeholder*="базы"] {
+  word-break: break-all; /* Переносит длинные пути */
+  overflow-wrap: break-word; /* Переносит длинные слова */
+}
+
+.form-group input[type="text"] {
+  min-width: 0; /* Убираем фиксированную минимальную ширину для лучшей адаптивности */
+}
+
+.form-group input[type="number"] {
+  min-width: 120px;
+  max-width: 200px;
+  -moz-appearance: textfield;
+}
+
+.form-group input[type="number"]::-webkit-outer-spin-button,
+.form-group input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Специальные стили для числовых полей */
+.form-row-numbers {
+  grid-template-columns: 1fr 1fr;
+}
+
+.form-group-number {
+  display: flex;
+  flex-direction: column;
+}
+
+.input-number {
+  width: 100%;
+  min-width: 150px;
+  max-width: 250px;
+  text-align: left;
+  padding: 10px 14px;
+}
+
+/* На мобильных устройствах числовые поля занимают всю ширину */
+@media (max-width: 768px) {
+  .input-number {
+    max-width: 100%;
+  }
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+  min-width: 100%;
+  font-family: inherit;
+}
+
+.file-input {
+  padding: 6px;
+  font-size: 14px;
+}
+
+.analyzing {
+  margin-left: var(--spacing-small);
+  color: var(--color-primary);
+  font-size: var(--font-size-xs);
+}
+
+.columns-info {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-tiny);
+}
+
+.mapping-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  padding: var(--padding-element);
+  background: var(--color-bg-secondary);
+}
+
+.mapping-section h4 {
+  margin: 0 0 var(--spacing-small) 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+}
+
+.mapping-help {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--padding-element) 0;
+}
+
+.mapping-table {
+  overflow-x: auto;
+}
+
+.mapping-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-bg-card);
+  border-radius: 4px;
+}
+
+.mapping-table th {
+  background: var(--color-bg-hover);
+  padding: 12px;
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  border-bottom: 2px solid var(--color-border-light);
+}
+
+.mapping-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  min-height: 40px;
+  background: var(--color-bg-card);
+  vertical-align: middle;
+}
+
+.mapping-table tr.required {
+  background: rgba(255, 193, 7, 0.12);
+}
+
+.mapping-table tr.auto-mapped {
+  background: var(--color-success-light);
+}
+
+.mapping-table tr.missing-required {
+  background: rgba(220, 53, 69, 0.15);
+}
+
+.mapping-table tr.missing-required td {
+  border-left: 3px solid var(--color-error);
+  color: var(--color-text-primary);
+}
+
+.mapping-status-cell {
+  text-align: center;
+  width: 120px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.status-auto {
+  background: var(--color-success-light);
+  color: var(--color-success-dark);
+}
+
+.status-manual {
+  background: var(--color-info-light);
+  color: var(--color-info);
+}
+
+.status-empty {
+  background: var(--color-bg-hover);
+  color: var(--color-text-secondary);
+}
+
+.icon-tiny {
+  width: 12px;
+  height: 12px;
+}
+
+.auto-mapped-select {
+  border-color: var(--color-success);
+  background: var(--color-success-light);
+}
+
+.missing-required-select {
+  border-color: var(--color-error);
+  background: var(--color-error-light);
+}
+
+.field-label {
+  font-weight: var(--font-weight-normal);
+}
+
+.mapping-table tr:hover {
+  background: var(--color-bg-secondary);
+}
+
+.mapping-table tr:hover td {
+  background: transparent;
+}
+
+.required-mark {
+  color: var(--color-error);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Стили для select и input внутри таблицы маппинга */
+.mapping-table .mapping-select,
+.mapping-table select.mapping-select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  font-size: 0.95rem;
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  min-height: 40px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.mapping-table .mapping-select:focus,
+.mapping-table select.mapping-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.mapping-table .mapping-select option {
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+}
+
+.mapped-badge {
+  margin-left: var(--spacing-small);
+  color: var(--color-success);
+  font-weight: var(--font-weight-semibold);
+}
+
+.checkbox-group {
+  margin-top: 10px;
+}
+
+.checkbox-label {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+  font-weight: normal;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.btn-save {
+  padding: var(--padding-small) var(--padding-section);
+  background: var(--color-success);
+  color: var(--color-bg-card);
+  border: none;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  transition: all 0.2s;
+}
+
+.btn-save:hover {
+  background: var(--color-success-dark);
+}
+
+.btn-cancel {
+  padding: var(--padding-small) var(--padding-section);
+  background: var(--color-text-secondary);
+  color: var(--color-bg-card);
+  border: none;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+  background: var(--color-text-primary);
+}
+
+/* Стили для Firebird подключения */
+.form-group-test-connection {
+  margin-top: var(--spacing-small);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-small);
+}
+
+.btn-test-connection {
+  padding: var(--padding-small) var(--padding-section);
+  background: var(--color-primary);
+  color: var(--color-bg-card);
+  border: none;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  transition: all 0.2s;
+  width: 100%;
+  max-width: 100%;
+  white-space: normal; /* Позволяет тексту переноситься на новую строку */
+  word-wrap: break-word; /* Переносит длинные слова */
+  box-sizing: border-box;
+  display: inline-block;
+  text-align: center;
+  min-height: 38px; /* Минимальная высота для читаемости */
+  line-height: 1.4;
+}
+
+.btn-test-connection:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.btn-test-connection:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.connection-test-result {
+  margin-top: var(--spacing-small);
+  padding: var(--padding-small);
+  border-radius: var(--radius-small);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--padding-small);
+  font-size: var(--font-size-sm);
+}
+
+.connection-test-result.success {
+  background: var(--color-success-light);
+  color: var(--color-success-dark);
+  border: 1px solid var(--color-success);
+}
+
+.connection-test-result.error {
+  background: var(--color-error-light);
+  color: var(--color-error-dark);
+  border: 1px solid var(--color-error);
+}
+
+.connection-test-result .icon-small {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.tables-list {
+  margin-top: var(--padding-small);
+  font-size: var(--font-size-xs);
+  opacity: 0.8;
+}
+
+/* Старые стили .mapping-input удалены - используются специфичные стили для таблицы выше */
+
+/* Стили для загрузки таблиц Firebird */
+.btn-load-tables {
+  padding: var(--padding-small);
+  background: var(--color-primary);
+  color: var(--color-bg-card);
+  border: none;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: var(--font-size-lg);
+  min-width: 40px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-load-tables:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.btn-load-tables:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-load-columns {
+  padding: var(--padding-small) var(--padding-section);
+  background: var(--color-success);
+  color: var(--color-bg-card);
+  border: none;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-load-columns:hover:not(:disabled) {
+  background: var(--color-success-dark);
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+.btn-load-columns:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--color-text-secondary);
+}
+
+.table-columns-info {
+  margin-top: var(--spacing-small);
+  padding: var(--padding-small);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-small);
+  border: 1px solid var(--color-border);
+}
+
+.columns-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--padding-small);
+  margin-top: var(--padding-small);
+}
+
+.column-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-xs);
+  font-family: monospace;
+}
+
+.error-message {
+  background: var(--color-error-light);
+  color: var(--color-error-dark);
+  padding: var(--padding-small);
+  border-radius: var(--radius-small);
+  margin-bottom: var(--padding-element);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  border: 1px solid var(--color-error);
+}
+
+.export-settings-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  padding: var(--padding-element);
+  background: var(--color-bg-secondary);
+  margin-top: var(--spacing-small);
+}
+
+.export-settings-section h4 {
+  margin: 0 0 var(--spacing-small) 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+}
+
+.export-help {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--padding-element) 0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 12px;
+  align-items: start;
+  min-width: 0; /* Позволяет grid сжиматься */
+}
+
+/* Улучшаем отображение полей в form-row */
+.form-row .form-group {
+  min-width: 0; /* Позволяет полям сжиматься */
+  overflow: hidden; /* Предотвращает выход за границы */
+}
+
+.form-row .form-group input,
+.form-row .form-group select {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Для секции основной информации делаем первую колонку шире */
+/* Специальные стили для секции основной информации */
+.form-row-basic-info {
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+}
+
+.form-group-name input[type="text"],
+.form-group-description textarea {
+  width: 100%;
+}
+
+.input-full-width {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.textarea-full-width {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+/* Улучшаем визуальное выравнивание всех полей */
+.form-group label {
+  line-height: 1.5;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group textarea {
+  line-height: 1.5;
+}
+
+/* Улучшаем отступы между секциями */
+.template-form > .form-section + .form-section {
+  margin-top: 0;
+}
+
+.field-help {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-tiny);
+  font-style: normal;
+  line-height: var(--line-height-normal);
+  font-weight: var(--font-weight-normal);
+}
+
+.checkbox-group .field-help {
+  margin-left: 0;
+  margin-top: 6px;
+}
+
+/* Улучшаем отображение на мобильных устройствах */
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .form-group input[type="text"],
+  .form-group input[type="number"] {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  .form-section:has(.form-group:first-child input[type="text"]) .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .btn-test-connection {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* Улучшаем отображение на средних экранах */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .form-section:has(.form-group:first-child input[type="text"]) .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
