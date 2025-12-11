@@ -100,14 +100,14 @@
 .pagination-button-active {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: #ffffff;
+  color: var(--color-text-on-primary);
   font-weight: var(--font-weight-semibold);
 }
 
 .pagination-button-active:hover:not(:disabled) {
   background: var(--color-primary-hover);
   border-color: var(--color-primary-hover);
-  color: #ffffff;
+  color: var(--color-text-on-primary);
 }
 
 .pagination-pages {

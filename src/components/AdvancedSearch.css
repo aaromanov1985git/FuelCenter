@@ -56,7 +56,7 @@
 
 .advanced-search-badge {
   background: var(--color-primary);
-  color: #ffffff;
+  color: var(--color-text-on-primary);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   padding: 2px 8px;

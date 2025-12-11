@@ -62,18 +62,57 @@
   --font-size-xs: 0.75rem;       /* 12px - мелкий текст */
   --font-size-sm: 0.875rem;      /* 14px - маленький текст */
   --font-size-base: 1rem;        /* 16px - базовый текст */
-  --font-size-lg: 1.125rem;       /* 18px - большой текст */
+  --font-size-lg: 1.125rem;      /* 18px - большой текст */
   --font-size-xl: 1.5rem;        /* 24px - заголовки секций */
   --font-size-2xl: 2rem;         /* 32px - главные заголовки */
+  --font-size-3xl: 2.5rem;       /* 40px - крупные заголовки */
+  --font-size-4xl: 3rem;         /* 48px - экстра крупные заголовки */
 
   --font-weight-normal: 500;     /* Обычный текст */
   --font-weight-medium: 550;     /* Средний текст */
   --font-weight-semibold: 600;   /* Акцентный текст */
   --font-weight-bold: 700;       /* Заголовки */
 
-  --line-height-tight: 1.2;       /* Заголовки */
+  --line-height-tight: 1.2;      /* Заголовки */
   --line-height-normal: 1.5;     /* Обычный текст */
   --line-height-relaxed: 1.75;   /* Длинный текст */
+
+  /* Letter spacing */
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+
+  /* Цвета для типов топлива */
+  --color-fuel-gasoline: #f59e0b;  /* Бензин - оранжевый */
+  --color-fuel-diesel: #6366f1;    /* Дизель - индиго */
+  --color-fuel-gas: #10b981;       /* Газ - зеленый */
+
+  /* Цвета для data visualization */
+  --color-chart-1: #4f46e5;
+  --color-chart-2: #06b6d4;
+  --color-chart-3: #10b981;
+  --color-chart-4: #f59e0b;
+  --color-chart-5: #ef4444;
+  --color-chart-6: #8b5cf6;
+
+  /* Анимации */
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* Z-index */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
 }
 
 [data-theme="midnight"] {

@@ -1,0 +1,77 @@
+.card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-medium);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Variants */
+.card-default {
+  border: 1px solid var(--color-border);
+}
+
+.card-elevated {
+  box-shadow: var(--shadow-md);
+}
+
+.card-outlined {
+  border: 2px solid var(--color-border-light);
+}
+
+/* Padding sizes */
+.card-padding-sm {
+  padding: var(--padding-small);
+}
+
+.card-padding-md {
+  padding: var(--padding-card);
+}
+
+.card-padding-lg {
+  padding: var(--padding-section);
+}
+
+/* Hoverable */
+.card-hoverable:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.card-clickable {
+  cursor: pointer;
+}
+
+/* Card sections */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-element);
+  padding-bottom: var(--spacing-element);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.card-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.card-body {
+  flex: 1;
+}
+
+.card-footer {
+  margin-top: var(--spacing-element);
+  padding-top: var(--spacing-element);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-small);
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-small);
+  align-items: center;
+}

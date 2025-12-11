@@ -1,0 +1,219 @@
+.select-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-tiny);
+  width: 300px;
+}
+
+.select-full-width {
+  width: 100%;
+}
+
+.select-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.select-required {
+  color: var(--color-error);
+  margin-left: 2px;
+}
+
+.select-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 var(--padding-small);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-small);
+  background: var(--color-bg-card);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-in-out);
+  user-select: none;
+}
+
+.select-control:hover:not(.select-disabled .select-control) {
+  border-color: var(--color-border);
+}
+
+.select-control:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.select-open {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.select-value {
+  flex: 1;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.select-control:not(:has(.select-option-selected)) .select-value {
+  color: var(--color-text-tertiary);
+}
+
+.select-icons {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-tiny);
+  margin-left: var(--spacing-small);
+}
+
+.select-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  transition: all var(--duration-fast);
+  padding: 0;
+}
+
+.select-clear:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.select-arrow {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  transition: transform var(--duration-normal) var(--ease-in-out);
+  display: inline-block;
+}
+
+.select-arrow-up {
+  transform: rotate(180deg);
+}
+
+.select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dropdown);
+  max-height: 300px;
+  overflow: hidden;
+  animation: dropdownSlideDown var(--duration-normal) var(--ease-out);
+}
+
+@keyframes dropdownSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.select-search {
+  padding: var(--spacing-small);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.select-search-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 var(--padding-small);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  transition: all var(--duration-normal);
+}
+
+.select-search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--color-bg-card);
+}
+
+.select-options {
+  max-height: 250px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--padding-small) var(--padding-element);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+
+.select-option:hover {
+  background: var(--color-bg-hover);
+}
+
+.select-option-selected {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.select-check {
+  font-size: var(--font-size-lg);
+  color: var(--color-primary);
+}
+
+.select-empty {
+  padding: var(--padding-section);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* States */
+.select-error .select-control {
+  border-color: var(--color-error);
+}
+
+.select-error .select-control:focus,
+.select-error .select-open {
+  box-shadow: 0 0 0 3px var(--color-error-light);
+}
+
+.select-disabled .select-control {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--color-bg-secondary);
+}
+
+.select-helper {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.select-helper-error {
+  color: var(--color-error-dark);
+}

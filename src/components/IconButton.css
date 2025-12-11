@@ -36,35 +36,35 @@
 
 .icon-button-primary {
   background: var(--color-primary);
-  color: var(--color-bg-card);
+  color: var(--color-text-on-primary);
 }
 
 .icon-button-primary:hover:not(:disabled) {
   background: var(--color-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-sm);
 }
 
 .icon-button-success {
   background: var(--color-success);
-  color: var(--color-bg-card);
+  color: var(--color-text-on-primary);
 }
 
 .icon-button-success:hover:not(:disabled) {
   background: var(--color-success-dark);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-sm);
 }
 
 .icon-button-error {
   background: var(--color-error);
-  color: var(--color-bg-card);
+  color: var(--color-text-on-primary);
 }
 
 .icon-button-error:hover:not(:disabled) {
   background: var(--color-error-dark);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-sm);
 }
 
 .icon-button-secondary {

@@ -1,0 +1,144 @@
+/* Базовый скелетон */
+.ui-skeleton {
+  background: var(--color-bg-secondary);
+  border-radius: var(--border-radius);
+  display: block;
+}
+
+/* Варианты */
+.ui-skeleton-text {
+  height: 16px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+
+.ui-skeleton-text:last-child {
+  margin-bottom: 0;
+}
+
+.ui-skeleton-rectangular {
+  width: 100%;
+  border-radius: var(--border-radius);
+}
+
+.ui-skeleton-circular {
+  border-radius: 50%;
+}
+
+.ui-skeleton-circle {
+  border-radius: 50%;
+}
+
+/* Анимации */
+.ui-skeleton-animation-pulse {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.ui-skeleton-animation-wave {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-bg-secondary);
+}
+
+.ui-skeleton-animation-wave::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-bg-hover),
+    transparent
+  );
+  animation: skeleton-wave 1.5s ease-in-out infinite;
+}
+
+.ui-skeleton-animation-none {
+  animation: none;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes skeleton-wave {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Группа скелетонов */
+.ui-skeleton-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Карточка скелетон */
+.ui-skeleton-card {
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  background: var(--color-bg-card);
+}
+
+/* Таблица скелетон */
+.ui-skeleton-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.ui-skeleton-table-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ui-skeleton-table-row:last-child {
+  border-bottom: none;
+}
+
+/* Список скелетон */
+.ui-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-element);
+}
+
+.ui-skeleton-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-element);
+  padding: var(--spacing-element);
+  border-radius: var(--border-radius);
+  background: var(--color-bg-card);
+}
+
+.ui-skeleton-list-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .ui-skeleton-table-row {
+    grid-template-columns: 1fr;
+  }
+}

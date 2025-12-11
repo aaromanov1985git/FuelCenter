@@ -1,0 +1,116 @@
+.input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-tiny);
+  width: 300px;
+}
+
+.input-full-width {
+  width: 100%;
+}
+
+.input-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.input-required {
+  color: var(--color-error);
+  margin-left: 2px;
+}
+
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-field {
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--padding-small);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  background: var(--color-bg-card);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.input-field::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* With icons */
+.input-container:has(.input-icon-left) .input-field {
+  padding-left: 40px;
+}
+
+.input-container:has(.input-icon-right) .input-field,
+.input-container:has(.input-password-toggle) .input-field {
+  padding-right: 40px;
+}
+
+.input-icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  color: var(--color-text-secondary);
+}
+
+.input-icon-left {
+  left: 0;
+}
+
+.input-icon-right {
+  right: 0;
+}
+
+.input-password-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s;
+  padding: 0;
+}
+
+.input-password-toggle:hover {
+  transform: scale(1.1);
+}
+
+/* States */
+.input-error .input-field {
+  border-color: var(--color-error);
+}
+
+.input-error .input-field:focus {
+  box-shadow: 0 0 0 3px var(--color-error-light);
+}
+
+.input-disabled .input-field {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--color-bg-secondary);
+}
+
+/* Helper text */
+.input-helper {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.input-helper-error {
+  color: var(--color-error-dark);
+}

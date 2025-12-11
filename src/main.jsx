@@ -4,6 +4,8 @@ import App from './App'
 import { ToastProvider } from './components/ToastContainer'
 import { AuthProvider } from './contexts/AuthContext'
 import './index.css'
+import './styles/animations.css'
+import './styles/utilities.css'
 
 // Применяем сохраненную тему сразу при загрузке страницы (до рендеринга React)
 // чтобы избежать мигания при переключении темы

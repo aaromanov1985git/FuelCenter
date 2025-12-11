@@ -1,0 +1,252 @@
+/* Toast Container - позиционирование */
+.ui-toast-container {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-element);
+  pointer-events: none;
+  max-width: 400px;
+}
+
+.ui-toast-container-top-right {
+  top: var(--spacing-section);
+  right: var(--spacing-section);
+}
+
+.ui-toast-container-top-left {
+  top: var(--spacing-section);
+  left: var(--spacing-section);
+}
+
+.ui-toast-container-bottom-right {
+  bottom: var(--spacing-section);
+  right: var(--spacing-section);
+}
+
+.ui-toast-container-bottom-left {
+  bottom: var(--spacing-section);
+  left: var(--spacing-section);
+}
+
+.ui-toast-container-top-center {
+  top: var(--spacing-section);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ui-toast-container-bottom-center {
+  bottom: var(--spacing-section);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Toast базовые стили */
+.ui-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-element);
+  padding: var(--spacing-element);
+  border-radius: var(--border-radius);
+  border: 1px solid;
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-lg);
+  min-width: 300px;
+  max-width: 400px;
+  position: relative;
+  pointer-events: auto;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.ui-toast-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.ui-toast-exiting {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+/* Для left позиций */
+.ui-toast-container-top-left .ui-toast,
+.ui-toast-container-bottom-left .ui-toast {
+  transform: translateX(-100%);
+}
+
+.ui-toast-container-top-left .ui-toast.ui-toast-visible,
+.ui-toast-container-bottom-left .ui-toast.ui-toast-visible {
+  transform: translateX(0);
+}
+
+.ui-toast-container-top-left .ui-toast.ui-toast-exiting,
+.ui-toast-container-bottom-left .ui-toast.ui-toast-exiting {
+  transform: translateX(-100%);
+}
+
+/* Для center позиций */
+.ui-toast-container-top-center .ui-toast,
+.ui-toast-container-bottom-center .ui-toast {
+  transform: translateY(-100%);
+}
+
+.ui-toast-container-top-center .ui-toast.ui-toast-visible,
+.ui-toast-container-bottom-center .ui-toast.ui-toast-visible {
+  transform: translateY(0);
+}
+
+.ui-toast-container-top-center .ui-toast.ui-toast-exiting,
+.ui-toast-container-bottom-center .ui-toast.ui-toast-exiting {
+  transform: translateY(-100%);
+}
+
+/* Toast иконка */
+.ui-toast-icon {
+  font-size: var(--font-size-xl);
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: var(--font-weight-bold);
+}
+
+/* Toast контент */
+.ui-toast-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ui-toast-title {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-md);
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text-primary);
+}
+
+.ui-toast-message {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+/* Toast кнопка закрытия */
+.ui-toast-close {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+  transition: opacity var(--duration-fast) var(--ease-in-out);
+  padding: 0;
+  line-height: 1;
+}
+
+.ui-toast-close:hover {
+  opacity: 1;
+}
+
+/* Progress bar */
+.ui-toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: currentColor;
+  opacity: 0.3;
+  transform-origin: left;
+  animation: toast-progress linear forwards;
+}
+
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* Варианты */
+.ui-toast-success {
+  border-color: var(--color-success);
+}
+
+.ui-toast-success .ui-toast-icon {
+  color: var(--color-success);
+}
+
+.ui-toast-success .ui-toast-progress {
+  background: var(--color-success);
+}
+
+.ui-toast-error {
+  border-color: var(--color-error);
+}
+
+.ui-toast-error .ui-toast-icon {
+  color: var(--color-error);
+}
+
+.ui-toast-error .ui-toast-progress {
+  background: var(--color-error);
+}
+
+.ui-toast-warning {
+  border-color: var(--color-warning);
+}
+
+.ui-toast-warning .ui-toast-icon {
+  color: var(--color-warning);
+}
+
+.ui-toast-warning .ui-toast-progress {
+  background: var(--color-warning);
+}
+
+.ui-toast-info {
+  border-color: var(--color-primary);
+}
+
+.ui-toast-info .ui-toast-icon {
+  color: var(--color-primary);
+}
+
+.ui-toast-info .ui-toast-progress {
+  background: var(--color-primary);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .ui-toast-container {
+    left: var(--spacing-element) !important;
+    right: var(--spacing-element) !important;
+    max-width: calc(100% - var(--spacing-element) * 2);
+    transform: none !important;
+  }
+
+  .ui-toast {
+    min-width: 100%;
+    max-width: 100%;
+  }
+
+  /* Для мобильных - всегда показываем снизу по центру */
+  .ui-toast-container-top-right,
+  .ui-toast-container-top-left,
+  .ui-toast-container-top-center {
+    top: auto;
+    bottom: var(--spacing-section);
+  }
+}

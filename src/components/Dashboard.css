@@ -854,6 +854,129 @@
   }
 }
 
+/* Стили для секции "Загрузка по расписанию" */
+.auto-load-section {
+  border-left: 4px solid var(--color-info);
+  background: var(--color-bg-card);
+}
+
+.auto-load-section h3 {
+  color: var(--color-info);
+  margin-bottom: var(--spacing-block);
+}
+
+.auto-load-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-element);
+}
+
+.auto-load-period {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--spacing-small);
+  padding-bottom: var(--spacing-small);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.auto-load-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-element);
+}
+
+.auto-load-card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  padding: var(--padding-element);
+  transition: all 0.2s;
+}
+
+.auto-load-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.auto-load-card-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-small);
+  font-weight: var(--font-weight-medium);
+}
+
+.auto-load-card-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+}
+
+.auto-load-card-value.has-errors {
+  color: var(--color-error);
+}
+
+.auto-load-card-value.no-errors {
+  color: var(--color-success);
+}
+
+.error-icon,
+.success-icon {
+  font-size: var(--font-size-lg);
+}
+
+.auto-load-card-providers {
+  grid-column: span 2;
+}
+
+.auto-load-providers-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-small);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.auto-load-provider-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--padding-tiny) var(--padding-small);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-sm);
+}
+
+.provider-name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.provider-stats {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.auto-load-no-data {
+  text-align: center;
+  padding: var(--padding-section);
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .auto-load-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .auto-load-card-providers {
+    grid-column: span 1;
+  }
+}
+
 /* Стили для дашборда транспортных средств */
 .vehicles-dashboard-section {
   border-left: 4px solid var(--color-primary);

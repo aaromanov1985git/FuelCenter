@@ -1,0 +1,129 @@
+/* Tooltip Trigger */
+.ui-tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Tooltip Container */
+.ui-tooltip {
+  position: absolute;
+  z-index: var(--z-tooltip);
+  max-width: 300px;
+  padding: var(--spacing-small) var(--spacing-element);
+  background: var(--color-text-primary);
+  color: var(--color-bg-card);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  opacity: 0;
+  animation: tooltipFadeIn var(--duration-fast) var(--ease-out) forwards;
+  word-wrap: break-word;
+}
+
+/* Tooltip Content */
+.ui-tooltip-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tooltip Arrow */
+.ui-tooltip-arrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--color-text-primary);
+  transform: rotate(45deg);
+}
+
+/* Arrow Positions */
+.ui-tooltip-top .ui-tooltip-arrow {
+  bottom: -4px;
+  left: 50%;
+  margin-left: -4px;
+}
+
+.ui-tooltip-bottom .ui-tooltip-arrow {
+  top: -4px;
+  left: 50%;
+  margin-left: -4px;
+}
+
+.ui-tooltip-left .ui-tooltip-arrow {
+  right: -4px;
+  top: 50%;
+  margin-top: -4px;
+}
+
+.ui-tooltip-right .ui-tooltip-arrow {
+  left: -4px;
+  top: 50%;
+  margin-top: -4px;
+}
+
+/* Animations */
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ui-tooltip-bottom {
+  animation-name: tooltipFadeInBottom;
+}
+
+@keyframes tooltipFadeInBottom {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ui-tooltip-left {
+  animation-name: tooltipFadeInLeft;
+}
+
+@keyframes tooltipFadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.ui-tooltip-right {
+  animation-name: tooltipFadeInRight;
+}
+
+@keyframes tooltipFadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .ui-tooltip {
+    animation: none;
+    opacity: 1;
+  }
+}
+

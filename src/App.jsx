@@ -24,6 +24,7 @@ import UsersList from './components/UsersList'
 import ExportMenu from './components/ExportMenu'
 import Login from './components/Login'
 import Register from './components/Register'
+import ComponentsDemo from './components/ComponentsDemo'
 import { useToast } from './components/ToastContainer'
 import { useAuth } from './contexts/AuthContext'
 import { useCopyToClipboard } from './hooks/useCopyToClipboard'
@@ -66,7 +67,7 @@ const App = () => {
     order: 'desc'
   })
   const [showClearConfirm, setShowClearConfirm] = useState(false)
-  const [activeTab, setActiveTab] = useState('transactions') // transactions, vehicles, cards, gas-stations, providers, templates, period-lock
+  const [activeTab, setActiveTab] = useState('transactions') // transactions, vehicles, cards, gas-stations, providers, templates, period-lock, ui-demo
   const [providers, setProviders] = useState([])
   const [selectedProviderTab, setSelectedProviderTab] = useState(null) // null = "Все", иначе ID провайдера
   const [dragActive, setDragActive] = useState(false)
@@ -1156,11 +1157,17 @@ const App = () => {
             >
               Дашборд
             </button>
-            <button 
+            <button
               className={`nav-item ${activeTab === 'period-lock' ? 'active' : ''}`}
               onClick={() => setActiveTab('period-lock')}
             >
               Закрытие периода
+            </button>
+            <button
+              className={`nav-item ${activeTab === 'ui-demo' ? 'active' : ''}`}
+              onClick={() => setActiveTab('ui-demo')}
+            >
+              UI Компоненты
             </button>
           </nav>
 
@@ -1220,7 +1227,7 @@ const App = () => {
         <main className="main-content">
           <div className="container">
             {/* Breadcrumbs навигация */}
-            <Breadcrumbs 
+            <Breadcrumbs
               items={[
                 { label: 'Главная', onClick: () => setActiveTab('dashboard') },
                 ...(activeTab === 'transactions' ? [{ label: 'Транзакции' }] : []),
@@ -1230,7 +1237,8 @@ const App = () => {
                 ...(activeTab === 'providers' ? [{ label: 'Провайдеры' }] : []),
                 ...(activeTab === 'templates' ? [{ label: 'Шаблоны' }] : []),
                 ...(activeTab === 'users' ? [{ label: 'Пользователи' }] : []),
-                ...(activeTab === 'period-lock' ? [{ label: 'Блокировка периода' }] : [])
+                ...(activeTab === 'period-lock' ? [{ label: 'Блокировка периода' }] : []),
+                ...(activeTab === 'ui-demo' ? [{ label: 'UI Компоненты' }] : [])
               ]}
             />
             
@@ -1246,6 +1254,7 @@ const App = () => {
         {activeTab === 'users' && <UsersList />}
         {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'period-lock' && <UploadPeriodLock />}
+        {activeTab === 'ui-demo' && <ComponentsDemo />}
         
         {activeTab === 'transactions' && (
           <>

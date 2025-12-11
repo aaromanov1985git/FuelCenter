@@ -60,7 +60,7 @@
   width: 28px;
   height: 28px;
   background: var(--color-primary);
-  color: var(--color-bg-card);
+  color: var(--color-text-on-primary);
   border-radius: 50%;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -343,7 +343,7 @@
 }
 
 .mapping-table tr.required {
-  background: rgba(255, 193, 7, 0.12);
+  background: var(--color-warning-light);
 }
 
 .mapping-table tr.auto-mapped {
@@ -351,7 +351,7 @@
 }
 
 .mapping-table tr.missing-required {
-  background: rgba(220, 53, 69, 0.15);
+  background: var(--color-error-light);
 }
 
 .mapping-table tr.missing-required td {
@@ -544,7 +544,7 @@
 .btn-test-connection:hover:not(:disabled) {
   background: var(--color-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-test-connection:disabled {
@@ -593,7 +593,7 @@
 .btn-load-tables {
   padding: var(--padding-small);
   background: var(--color-primary);
-  color: var(--color-bg-card);
+  color: var(--color-text-on-primary);
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -610,7 +610,7 @@
 .btn-load-tables:hover:not(:disabled) {
   background: var(--color-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-load-tables:disabled {
@@ -621,7 +621,7 @@
 .btn-load-columns {
   padding: var(--padding-small) var(--padding-section);
   background: var(--color-success);
-  color: var(--color-bg-card);
+  color: var(--color-text-on-primary);
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -641,7 +641,7 @@
   background: var(--color-success-dark);
   opacity: 0.9;
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-load-columns:disabled {

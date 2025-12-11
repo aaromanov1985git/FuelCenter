@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react'
 import Toast from './Toast'
-import './Toast.css'
 
 /**
  * Контейнер для управления Toast-уведомлениями

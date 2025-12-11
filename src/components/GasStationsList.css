@@ -47,7 +47,7 @@
 
 .filter-buttons button.active {
   background: var(--color-primary);
-  color: var(--color-bg-card);
+  color: var(--color-text-on-primary);
   border-color: var(--color-primary);
 }
 
@@ -77,24 +77,12 @@
   background: var(--color-bg-hover);
 }
 
-[data-theme="midnight"] .gas-stations-table th,
-[data-theme="amber-glow"] .gas-stations-table th {
-  color: var(--color-text-primary);
-  background: var(--color-bg-hover);
-}
-
 .gas-stations-table td {
   padding: var(--padding-small) var(--padding-element);
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-medium);
   border-bottom: 1px solid var(--color-border);
-}
-
-[data-theme="midnight"] .gas-stations-table td,
-[data-theme="amber-glow"] .gas-stations-table td {
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-medium);
 }
 
 .gas-stations-table tbody tr:hover {
@@ -128,39 +116,24 @@
 }
 
 .error-text {
-  color: #dc2626;
+  color: var(--color-error);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
-}
-
-[data-theme="midnight"] .error-text,
-[data-theme="amber-glow"] .error-text {
-  color: #fca5a5;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .error-message {
   padding: var(--padding-small) var(--padding-element);
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--color-error-light);
+  color: var(--color-error-dark);
   font-weight: var(--font-weight-bold);
   border-radius: var(--radius-medium);
   margin-bottom: var(--spacing-element);
-  border: 2px solid #dc2626;
-  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
-}
-
-[data-theme="midnight"] .error-message,
-[data-theme="amber-glow"] .error-message {
-  background: #7f1d1d;
-  color: #fca5a5;
-  border-color: #ef4444;
-  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  border: 2px solid var(--color-error);
+  box-shadow: var(--shadow-sm);
 }
 
 .empty-state {
