@@ -300,3 +300,48 @@ class User(Base):
         Index('idx_user_username', 'username', unique=True),
         Index('idx_user_email', 'email', unique=True),
     )
+
+
+class UploadEvent(Base):
+    """
+    История загрузок (ручных и регламентных)
+    """
+    __tablename__ = "upload_events"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+
+    # Источник и статус
+    source_type = Column(String(20), nullable=False, default="manual", comment="manual | auto")
+    status = Column(String(20), nullable=False, default="success", comment="success | failed | partial")
+    is_scheduled = Column(Boolean, default=False, comment="Регламентная загрузка")
+
+    # Связи
+    provider_id = Column(Integer, ForeignKey("providers.id"), index=True, nullable=True)
+    template_id = Column(Integer, ForeignKey("provider_templates.id"), index=True, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=True)
+
+    # Основные атрибуты
+    file_name = Column(String(500), comment="Имя файла/канал загрузки")
+    username = Column(String(100), comment="Имя пользователя инициатора")
+    transactions_total = Column(Integer, default=0, comment="Всего записей в загрузке")
+    transactions_created = Column(Integer, default=0, comment="Создано транзакций")
+    transactions_skipped = Column(Integer, default=0, comment="Пропущено транзакций")
+    transactions_failed = Column(Integer, default=0, comment="Ошибочных транзакций")
+    duration_ms = Column(Integer, comment="Длительность обработки, мс")
+    message = Column(Text, comment="Сообщение/предупреждения по загрузке")
+
+    # Метаданные
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания записи")
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления записи")
+
+    # Связи для удобства выборок
+    provider = relationship("Provider", lazy="joined")
+    template = relationship("ProviderTemplate", lazy="joined")
+    user = relationship("User", lazy="joined")
+
+    __table_args__ = (
+        Index('idx_upload_events_created_at', 'created_at'),
+        Index('idx_upload_events_status', 'status'),
+        Index('idx_upload_events_source', 'source_type'),
+        Index('idx_upload_events_scheduled', 'is_scheduled'),
+    )

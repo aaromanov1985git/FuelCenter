@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npm run dev)",
       "Bash(wc:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(grep:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(ls:*)"
     ]
   }
 }

@@ -11,7 +11,8 @@ import './ConfirmModal.css'
  * @param {function} onCancel - Обработчик отмены
  * @param {string} confirmText - Текст кнопки подтверждения (по умолчанию "Подтвердить")
  * @param {string} cancelText - Текст кнопки отмены (по умолчанию "Отмена")
- * @param {string} variant - Вариант стиля: "danger" | "warning" | "info" (по умолчанию "info")
+ * @param {string} variant - Вариант стиля: "danger" | "warning" | "info" | "success" (по умолчанию "info")
+ * @param {string|null} cancelText - Текст кнопки отмены. Если null, кнопка не отображается
  */
 const ConfirmModal = ({
   isOpen,
@@ -72,13 +73,15 @@ const ConfirmModal = ({
         </div>
         
         <div className="confirm-modal-footer">
-          <button
-            type="button"
-            className="confirm-modal-button confirm-modal-button-cancel"
-            onClick={onCancel}
-          >
-            {cancelText}
-          </button>
+          {cancelText !== null && (
+            <button
+              type="button"
+              className="confirm-modal-button confirm-modal-button-cancel"
+              onClick={onCancel}
+            >
+              {cancelText}
+            </button>
+          )}
           <button
             type="button"
             className={`confirm-modal-button confirm-modal-button-confirm variant-${variant}`}

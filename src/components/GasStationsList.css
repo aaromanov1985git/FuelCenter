@@ -68,8 +68,8 @@
 .gas-stations-table th {
   padding: var(--padding-small) var(--padding-element);
   text-align: left;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
+  font-size: 0.625rem;
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -79,9 +79,9 @@
 
 .gas-stations-table td {
   padding: var(--padding-small) var(--padding-element);
-  font-size: var(--font-size-sm);
+  font-size: 0.625rem;
   color: var(--color-text-primary);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-normal);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -117,8 +117,8 @@
 
 .error-text {
   color: var(--color-error);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
+  font-size: 0.625rem;
+  font-weight: var(--font-weight-normal);
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -129,7 +129,7 @@
   padding: var(--padding-small) var(--padding-element);
   background: var(--color-error-light);
   color: var(--color-error-dark);
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-weight-normal);
   border-radius: var(--radius-medium);
   margin-bottom: var(--spacing-element);
   border: 2px solid var(--color-error);
@@ -363,7 +363,7 @@
   .gas-stations-table td:before {
     content: attr(data-label);
     float: left;
-    font-weight: var(--font-weight-bold);
+    font-weight: var(--font-weight-semibold);
     color: var(--color-text-secondary);
     text-transform: uppercase;
     font-size: var(--font-size-xs);

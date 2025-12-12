@@ -28,20 +28,15 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
     setConnectionTestResult(null)
 
     try {
-      let response
-      if (template?.id) {
-        response = await fetch(`${API_URL}/api/v1/templates/${template.id}/test-firebird-connection`, {
-          method: 'POST'
-        })
-      } else {
-        response = await fetch(`${API_URL}/api/v1/templates/test-firebird-connection`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(connectionSettings)
-        })
-      }
+      // Всегда используем настройки из формы, чтобы тестировать актуальные значения
+      // (включая изменения, которые пользователь еще не сохранил)
+      const response = await fetch(`${API_URL}/api/v1/templates/test-firebird-connection`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(connectionSettings)
+      })
 
       const result = await response.json()
       setConnectionTestResult(result)
@@ -1442,7 +1437,10 @@ ORDER BY rg."Date" DESC`}
                     <input
                       type="number"
                       value={formData.auto_load_date_to_offset}
-                      onChange={(e) => setFormData({ ...formData, auto_load_date_to_offset: parseInt(e.target.value) || -1 })}
+                      onChange={(e) => {
+                        const value = e.target.value === '' ? -1 : parseInt(e.target.value);
+                        setFormData({ ...formData, auto_load_date_to_offset: isNaN(value) ? -1 : value });
+                      }}
                       className="input-full-width"
                       min="-365"
                       max="0"

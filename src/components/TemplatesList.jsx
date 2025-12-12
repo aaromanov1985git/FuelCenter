@@ -3,9 +3,7 @@ import TemplateEditor from './TemplateEditor'
 import ConfirmModal from './ConfirmModal'
 import LoadFirebirdModal from './LoadFirebirdModal'
 import LoadApiModal from './LoadApiModal'
-import IconButton from './IconButton'
-import { SkeletonTable } from './Skeleton'
-import { useToast } from './ToastContainer'
+import { Button, Card, Badge, Table, Alert, Skeleton, useToast } from './ui'
 import { logger } from '../utils/logger'
 import './TemplatesList.css'
 
@@ -30,6 +28,7 @@ const TemplatesList = () => {
   const [apiDateTo, setApiDateTo] = useState('')
   const [apiCardNumbers, setApiCardNumbers] = useState('')
   const [loadingApi, setLoadingApi] = useState(false)
+  const [successModal, setSuccessModal] = useState({ isOpen: false, message: '' })
   
   // Пагинация для шаблонов
   const [currentPage, setCurrentPage] = useState(1)
@@ -194,200 +193,169 @@ const TemplatesList = () => {
     setError('')
   }
 
+  const columns = [
+    { key: 'id', header: 'ID', width: '80px', align: 'center' },
+    { key: 'name', header: 'Название', sortable: true },
+    { key: 'description', header: 'Описание', sortable: false },
+    { key: 'header_row', header: 'Строка заголовков', width: '150px', align: 'center' },
+    { key: 'data_start_row', header: 'Строка начала данных', width: '180px', align: 'center' },
+    {
+      key: 'is_active',
+      header: 'Статус',
+      width: '140px',
+      render: (val) => (
+        <Badge size="sm" variant={val ? 'success' : 'neutral'}>
+          {val ? 'Активен' : 'Неактивен'}
+        </Badge>
+      )
+    },
+    {
+      key: 'actions',
+      header: 'Действия',
+      width: '260px',
+      render: (_, row) => (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {row.connection_type === 'firebird' && (
+            <Button
+              size="sm"
+              variant="success"
+              onClick={() => setLoadFirebirdModal({
+                isOpen: true,
+                templateId: row.id,
+                templateName: row.name
+              })}
+            >
+              Загрузить (Firebird)
+            </Button>
+          )}
+          {row.connection_type === 'api' && (
+            <Button
+              size="sm"
+              variant="success"
+              onClick={() => setLoadApiModal({
+                isOpen: true,
+                templateId: row.id,
+                templateName: row.name
+              })}
+            >
+              Загрузить (API)
+            </Button>
+          )}
+          <Button size="sm" variant="primary" onClick={() => handleEditTemplate(row)}>
+            Редактировать
+          </Button>
+          <Button size="sm" variant="error" onClick={() => handleDeleteTemplate(row.id)}>
+            Удалить
+          </Button>
+        </div>
+      )
+    }
+  ]
+
+  const tableData = templates.map((t) => ({
+    ...t,
+    description: t.description || '—'
+  }))
+
   return (
     <div className="templates-list">
-      <div className="templates-header">
-        <h2>Конструктор шаблонов</h2>
-        <p className="templates-subtitle">
-          Настройте шаблоны для преобразования файлов Excel в формат ЮПМ Газпром.
-          Выберите провайдера и создайте или отредактируйте шаблон.
-        </p>
-      </div>
+      <Card variant="elevated" padding="lg">
+        <Card.Header>
+          <Card.Title>Конструктор шаблонов</Card.Title>
+          <p className="templates-subtitle">
+            Настройте шаблоны для преобразования файлов Excel в формат ЮПМ Газпром. Выберите провайдера и создайте или отредактируйте шаблон.
+          </p>
+        </Card.Header>
 
-      {error && <div className="error-message">{error}</div>}
+        <Card.Body>
+          {error && (
+            <Alert variant="error" title="Ошибка">
+              {error}
+            </Alert>
+          )}
 
-      <div className="templates-content">
-        <div className="provider-selector-section">
-          <label className="provider-selector-label">
-            Провайдер:
-          </label>
           <div className="providers-list-form">
             {providers.length > 0 ? (
               providers.map(provider => (
-                <label 
-                  key={provider.id} 
-                  className={`provider-card ${selectedProviderId === provider.id ? 'provider-card-selected' : ''}`}
+                <Button
+                  key={provider.id}
+                  variant={selectedProviderId === provider.id ? 'primary' : 'secondary'}
+                  onClick={() => {
+                    setSelectedProviderId(provider.id)
+                    setShowTemplateEditor(false)
+                    setEditingTemplate(null)
+                  }}
+                  style={{ minWidth: 140 }}
                 >
-                  <input
-                    type="radio"
-                    name="provider"
-                    value={provider.id}
-                    checked={selectedProviderId === provider.id}
-                    onChange={(e) => {
-                      setSelectedProviderId(e.target.checked ? parseInt(e.target.value) : null)
-                      setShowTemplateEditor(false)
-                      setEditingTemplate(null)
-                    }}
-                    className="provider-radio"
-                  />
-                  <span className="provider-card-content">
-                    <span className="provider-name">{provider.name}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span>{provider.name}</span>
                     {provider.code && (
-                      <span className="provider-code">{provider.code}</span>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{provider.code}</span>
                     )}
-                  </span>
-                </label>
+                  </div>
+                </Button>
               ))
             ) : (
-              <div className="no-providers">
-                <p>Провайдеры не найдены. Добавьте провайдеров в разделе "Провайдеры".</p>
-              </div>
+              <Alert variant="info">Провайдеры не найдены. Добавьте провайдеров в разделе "Провайдеры".</Alert>
             )}
           </div>
+
           {selectedProviderId && (
-            <div className="provider-actions">
-              <IconButton 
-                icon="add" 
-                variant="success" 
-                onClick={handleAddTemplate}
-                title="Создать шаблон"
-                size="medium"
+            <div style={{ marginTop: 16, marginBottom: 16, display: 'flex', justifyContent: 'flex-start' }}>
+              <Button variant="success" onClick={handleAddTemplate}>
+                Создать шаблон
+              </Button>
+            </div>
+          )}
+
+          {showTemplateEditor && selectedProviderId && (
+            <div className="template-editor-section">
+              <TemplateEditor
+                providerId={selectedProviderId}
+                template={editingTemplate}
+                onSave={handleSaveTemplate}
+                onCancel={handleCancel}
               />
             </div>
           )}
-        </div>
 
-        {showTemplateEditor && selectedProviderId && (
-          <div className="template-editor-section">
-            <TemplateEditor
-              providerId={selectedProviderId}
-              template={editingTemplate}
-              onSave={handleSaveTemplate}
-              onCancel={handleCancel}
+          {!showTemplateEditor && selectedProviderId && (
+            <div className="templates-table-section">
+              {loading && templates.length === 0 ? (
+                <Skeleton variant="rectangular" height={200} />
+              ) : templates.length > 0 ? (
+                <Table
+                  columns={columns}
+                  data={tableData}
+                  striped
+                  hoverable
+                  stickyHeader
+                  compact
+                  defaultSortColumn="name"
+                />
+              ) : (
+                <Alert variant="info">
+                  Шаблоны не найдены для выбранного провайдера. Создайте первый шаблон.
+                </Alert>
+              )}
+            </div>
+          )}
+
+          {!selectedProviderId && (
+            <Alert variant="info">Выберите провайдера для просмотра и редактирования шаблонов.</Alert>
+          )}
+
+          {selectedProviderId && total > limit && (
+            <Table.Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(total / limit)}
+              total={total}
+              pageSize={limit}
+              onPageChange={(page) => setCurrentPage(page)}
             />
-          </div>
-        )}
-
-        {!showTemplateEditor && selectedProviderId && (
-          <div className="templates-table-section">
-            {loading && templates.length === 0 ? (
-              <SkeletonTable rows={10} columns={6} />
-            ) : templates.length > 0 ? (
-              <div className="templates-table-wrapper">
-                <table className="templates-table">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Название</th>
-                      <th>Описание</th>
-                      <th>Строка заголовков</th>
-                      <th>Строка начала данных</th>
-                      <th>Статус</th>
-                      <th>Действия</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {templates.map(template => (
-                      <tr key={template.id}>
-                        <td data-label="ID">{template.id}</td>
-                        <td data-label="Название" className="template-name-cell">{template.name}</td>
-                        <td data-label="Описание" className="template-description-cell">
-                          {template.description || <span className="no-description">—</span>}
-                        </td>
-                        <td data-label="Строка заголовков">{template.header_row}</td>
-                        <td data-label="Строка начала данных">{template.data_start_row}</td>
-                        <td data-label="Статус">
-                          <span className={`status-badge ${template.is_active ? 'status-active' : 'status-inactive'}`}>
-                            {template.is_active ? 'Активен' : 'Неактивен'}
-                          </span>
-                        </td>
-                        <td data-label="Действия">
-                          <div className="action-buttons">
-                            {template.connection_type === 'firebird' && (
-                              <IconButton 
-                                icon="download" 
-                                variant="success" 
-                                onClick={() => setLoadFirebirdModal({ 
-                                  isOpen: true, 
-                                  templateId: template.id, 
-                                  templateName: template.name 
-                                })}
-                                title="Загрузить транзакции из Firebird"
-                                size="small"
-                              />
-                            )}
-                            {template.connection_type === 'api' && (
-                              <IconButton 
-                                icon="download" 
-                                variant="success" 
-                                onClick={() => setLoadApiModal({ 
-                                  isOpen: true, 
-                                  templateId: template.id, 
-                                  templateName: template.name 
-                                })}
-                                title="Загрузить транзакции через API"
-                                size="small"
-                              />
-                            )}
-                            <IconButton 
-                              icon="edit" 
-                              variant="primary" 
-                              onClick={() => handleEditTemplate(template)}
-                              title="Редактировать"
-                              size="small"
-                            />
-                            <IconButton 
-                              icon="delete" 
-                              variant="error" 
-                              onClick={() => handleDeleteTemplate(template.id)}
-                              title="Удалить"
-                              size="small"
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="no-templates">
-                <p>Шаблоны не найдены для выбранного провайдера.</p>
-                <p>Создайте первый шаблон, используя кнопку "Создать шаблон".</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {!selectedProviderId && (
-          <div className="no-provider-selected">
-            <p>Выберите провайдера для просмотра и редактирования шаблонов.</p>
-          </div>
-        )}
-      </div>
-
-      {/* Пагинация для шаблонов */}
-      {selectedProviderId && total > limit && (
-        <div className="pagination">
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1 || loading}
-            className="pagination-btn"
-          >
-            Предыдущая
-          </button>
-          <span className="pagination-info">
-            Страница {currentPage} из {Math.ceil(total / limit)} (всего: {total})
-          </span>
-          <button
-            onClick={() => setCurrentPage(prev => Math.min(Math.ceil(total / limit), prev + 1))}
-            disabled={currentPage >= Math.ceil(total / limit) || loading}
-            className="pagination-btn"
-          >
-            Следующая
-          </button>
-        </div>
-      )}
+          )}
+        </Card.Body>
+      </Card>
 
       <ConfirmModal
         isOpen={deleteConfirm.isOpen}
@@ -452,10 +420,8 @@ const TemplatesList = () => {
               setError('')
             }
             
-            // Перезагружаем транзакции в главном окне (если есть доступ к функции)
-            if (window.loadTransactions) {
-              window.loadTransactions()
-            }
+            // Не перезагружаем транзакции автоматически, чтобы не переключать вкладку
+            // Пользователь может сам перейти на вкладку "Транзакции" для просмотра загруженных данных
           } catch (err) {
             setError('Ошибка загрузки из Firebird: ' + err.message)
             logger.error('Ошибка загрузки из Firebird', { error: err.message })
@@ -528,14 +494,13 @@ const TemplatesList = () => {
               message += `\n\n⚠️ Предупреждения валидации:\n${warningsText}`
               setError(message)
             } else {
-              alert(message)
+              // Показываем красивое модальное окно вместо alert()
+              setSuccessModal({ isOpen: true, message })
               setError('')
             }
             
-            // Перезагружаем транзакции в главном окне (если есть доступ к функции)
-            if (window.loadTransactions) {
-              window.loadTransactions()
-            }
+            // Не перезагружаем транзакции автоматически, чтобы не переключать вкладку
+            // Пользователь может сам перейти на вкладку "Транзакции" для просмотра загруженных данных
           } catch (err) {
             setError('Ошибка загрузки через API: ' + err.message)
             logger.error('Ошибка загрузки через API', { error: err.message })
@@ -550,6 +515,18 @@ const TemplatesList = () => {
           setApiCardNumbers('')
         }}
         loading={loadingApi}
+      />
+
+      {/* Модальное окно успешной загрузки */}
+      <ConfirmModal
+        isOpen={successModal.isOpen}
+        title="Загрузка завершена"
+        message={successModal.message}
+        onConfirm={() => setSuccessModal({ isOpen: false, message: '' })}
+        onCancel={() => setSuccessModal({ isOpen: false, message: '' })}
+        confirmText="OK"
+        cancelText={null}
+        variant="success"
       />
     </div>
   )

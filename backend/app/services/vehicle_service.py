@@ -8,6 +8,8 @@ from app.repositories.vehicle_repository import VehicleRepository
 from app.models import Vehicle
 from app.validators import validate_vehicle_data
 from app.logger import logger
+from app.services.normalization_service import normalize_vehicle_name
+from app.services.fuzzy_matching_service import find_similar_vehicles
 
 
 class VehicleService:
@@ -151,5 +153,104 @@ class VehicleService:
                 "cards_updated": cards_updated
             }
         )
-        
+
         return target_vehicle
+
+    def get_or_create_vehicle(
+        self,
+        original_name: str,
+        garage_number: Optional[str] = None,
+        license_plate: Optional[str] = None
+    ) -> Tuple[Vehicle, List[str]]:
+        """
+        Получить или создать транспортное средство в справочнике
+
+        Использует нормализацию для поиска дублей и fuzzy matching для похожих записей.
+        Возвращает ТС и список предупреждений.
+
+        Args:
+            original_name: Исходное название ТС
+            garage_number: Гаражный номер (опционально)
+            license_plate: Государственный номер (опционально)
+
+        Returns:
+            Tuple[Vehicle, List[str]]: ТС и список предупреждений
+
+        Examples:
+            >>> vehicle_service = VehicleService(db)
+            >>> vehicle, warnings = vehicle_service.get_or_create_vehicle("КАМАЗ 5490", garage_number="123")
+            >>> print(f"Vehicle: {vehicle.original_name}, Warnings: {warnings}")
+        """
+        warnings = []
+
+        # Нормализуем название для поиска
+        normalized_name = normalize_vehicle_name(original_name)
+
+        # Сначала ищем по точному совпадению исходного названия
+        vehicle = self.db.query(Vehicle).filter(Vehicle.original_name == original_name).first()
+
+        # Если не найдено, ищем по нормализованному названию
+        if not vehicle:
+            all_vehicles = self.db.query(Vehicle).all()
+            for v in all_vehicles:
+                if normalize_vehicle_name(v.original_name) == normalized_name:
+                    vehicle = v
+                    break
+
+        # Если все еще не найдено, проверяем на похожие записи
+        if not vehicle:
+            similar_vehicles = find_similar_vehicles(self.db, original_name, threshold=85)
+            if similar_vehicles:
+                # Берем самую похожую запись, если схожесть >= 95%
+                best_match, score = similar_vehicles[0]
+                if score >= 95:
+                    vehicle = best_match
+                    warnings.append(
+                        f"ТС '{original_name}' объединено с существующим '{best_match.original_name}' "
+                        f"(схожесть: {score}%)"
+                    )
+                elif score >= 85:
+                    # Предупреждаем о возможном дубле
+                    warnings.append(
+                        f"Возможный дубль ТС: найдена похожая запись '{best_match.original_name}' "
+                        f"(схожесть: {score}%). Проверьте вручную."
+                    )
+
+        if not vehicle:
+            # Создаем новое ТС
+            vehicle = Vehicle(
+                original_name=original_name,
+                garage_number=garage_number,
+                license_plate=license_plate,
+                is_validated="pending"
+            )
+            self.db.add(vehicle)
+            self.db.flush()
+        else:
+            # Обновляем данные, если они были пустыми
+            updated = False
+            if not vehicle.garage_number and garage_number:
+                vehicle.garage_number = garage_number
+                updated = True
+            if not vehicle.license_plate and license_plate:
+                vehicle.license_plate = license_plate
+                updated = True
+
+            if updated:
+                self.db.flush()
+
+        # Валидация данных
+        validation_result = validate_vehicle_data(vehicle.garage_number, vehicle.license_plate)
+
+        if validation_result["errors"]:
+            vehicle.is_validated = "invalid"
+            vehicle.validation_errors = "; ".join(validation_result["errors"])
+            warnings.extend([f"ТС '{original_name}': {err}" for err in validation_result["errors"]])
+        elif validation_result["warnings"]:
+            vehicle.is_validated = "pending"
+            warnings.extend([f"ТС '{original_name}': {warn}" for warn in validation_result["warnings"]])
+        else:
+            vehicle.is_validated = "valid"
+            vehicle.validation_errors = None
+
+        return vehicle, warnings

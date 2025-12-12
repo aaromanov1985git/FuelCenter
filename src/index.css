@@ -246,7 +246,7 @@ html.theme-transitioning .progress-bar {
 [data-theme="amber-glow"] h5,
 [data-theme="amber-glow"] h6 {
   color: var(--color-text-primary);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 [data-theme="midnight"] p,

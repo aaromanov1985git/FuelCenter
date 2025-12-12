@@ -12,7 +12,7 @@ from openpyxl.styles import Font, Alignment, PatternFill
 from app.database import get_db
 from app.logger import logger
 from app.config import get_settings
-from app.models import Transaction, Provider, UploadPeriodLock, ProviderTemplate
+from app.models import Transaction, Provider, UploadPeriodLock, ProviderTemplate, User
 from app.schemas import (
     TransactionResponse, TransactionListResponse, FileUploadResponse
 )
@@ -21,6 +21,7 @@ from app.services.transaction_service import TransactionService
 from app.services.excel_processor import ExcelProcessor
 from app.services.transaction_batch_processor import TransactionBatchProcessor
 from app.services.api_provider_service import ApiProviderService
+from app.services.upload_event_service import UploadEventService
 from app.utils import (
     parse_date_range,
     validate_excel_file,
@@ -44,7 +45,7 @@ async def upload_file(
     request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    _: None = Depends(require_auth_if_enabled)
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
 ):
     """
     Загрузка Excel файла и создание транзакций
@@ -59,6 +60,13 @@ async def upload_file(
             "path": request.url.path
         }
     )
+    start_time = datetime.now()
+    event_service = UploadEventService(db)
+    provider_id = None
+    template_id = None
+    transactions_total = 0
+    created_count = 0
+    skipped_count = 0
     
     # Валидация типа файла
     try:
@@ -167,6 +175,7 @@ async def upload_file(
             logger.warning("В файле не найдено транзакций", extra={"file_name": file.filename})
             raise HTTPException(status_code=400, detail="Не найдено транзакций в файле")
         
+        transactions_total = len(transactions_data)
         logger.info(f"Найдено транзакций в файле: {len(transactions_data)}", extra={"transactions_count": len(transactions_data)})
         
         # Проверяем дату закрытия периода загрузки
@@ -235,6 +244,23 @@ async def upload_file(
                 message += f" (шаблон: {match_info['template_name']})"
             if match_info.get("score", 0) > 0:
                 message += f" (совпадение: {match_info['score']}%)"
+
+        event_service.log_event(
+            source_type="manual",
+            status="success",
+            is_scheduled=False,
+            file_name=file.filename,
+            provider_id=provider_id,
+            template_id=template_id,
+            user_id=current_user.id if current_user else None,
+            username=current_user.username if current_user else None,
+            transactions_total=transactions_total,
+            transactions_created=created_count,
+            transactions_skipped=skipped_count,
+            transactions_failed=0,
+            duration_ms=int((datetime.now() - start_time).total_seconds() * 1000),
+            message="; ".join(warnings) if warnings else message
+        )
         
         return FileUploadResponse(
             message=message,
@@ -243,8 +269,24 @@ async def upload_file(
             file_name=file.filename,
             validation_warnings=warnings
         )
-    except HTTPException:
-        # Пробрасываем HTTP исключения дальше
+    except HTTPException as http_exc:
+        # Логируем событие неуспешной загрузки
+        event_service.log_event(
+            source_type="manual",
+            status="failed",
+            is_scheduled=False,
+            file_name=file.filename,
+            provider_id=provider_id,
+            template_id=template_id,
+            user_id=current_user.id if current_user else None,
+            username=current_user.username if current_user else None,
+            transactions_total=transactions_total,
+            transactions_created=created_count,
+            transactions_skipped=skipped_count,
+            transactions_failed=transactions_total - created_count - skipped_count if transactions_total else 0,
+            duration_ms=int((datetime.now() - start_time).total_seconds() * 1000),
+            message=str(http_exc.detail)
+        )
         raise
     except Exception as e:
         import traceback
@@ -258,6 +300,22 @@ async def upload_file(
                 "traceback": error_traceback
             },
             exc_info=True
+        )
+        event_service.log_event(
+            source_type="manual",
+            status="failed",
+            is_scheduled=False,
+            file_name=file.filename,
+            provider_id=provider_id,
+            template_id=template_id,
+            user_id=current_user.id if current_user else None,
+            username=current_user.username if current_user else None,
+            transactions_total=transactions_total,
+            transactions_created=created_count,
+            transactions_skipped=skipped_count,
+            transactions_failed=transactions_total - created_count - skipped_count if transactions_total else 0,
+            duration_ms=int((datetime.now() - start_time).total_seconds() * 1000),
+            message=str(e)
         )
         # Возвращаем более детальную информацию об ошибке
         error_detail = f"Ошибка при обработке файла: {str(e)}"

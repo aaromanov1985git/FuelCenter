@@ -170,9 +170,9 @@
 }
 
 .form-group label {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--color-text-primary);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-tiny);
@@ -186,10 +186,10 @@
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 12px;
+  padding: var(--padding-small);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-family: inherit;
   transition: border-color 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
@@ -276,8 +276,8 @@
 }
 
 .file-input {
-  padding: 6px;
-  font-size: 14px;
+  padding: var(--padding-tiny);
+  font-size: var(--font-size-sm);
 }
 
 .analyzing {
@@ -425,10 +425,10 @@
 .mapping-table .mapping-select,
 .mapping-table select.mapping-select {
   width: 100%;
-  padding: 10px;
+  padding: var(--padding-element);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   background: var(--color-bg-card);
   color: var(--color-text-primary);
   min-height: 40px;

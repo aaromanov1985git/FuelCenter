@@ -1,34 +1,44 @@
 .status-badge {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+  gap: var(--spacing-tiny) !important;
+  padding: 2px 8px !important;
+  border-radius: var(--radius-badge);
+  font-weight: var(--font-weight-bold) !important;
+  font-size: var(--font-size-sm) !important;
+  border: 1px solid transparent;
   white-space: nowrap;
   transition: all 0.2s ease;
+  height: 26px !important;
+  min-height: 26px !important;
+  line-height: 1.1 !important;
 }
 
 .status-badge-small {
-  padding: 2px 8px;
-  font-size: 0.625rem;
-  gap: 4px;
+  font-size: var(--font-size-xs) !important;
+  padding: 2px 8px !important;
+  font-weight: var(--font-weight-bold) !important;
+  height: 26px !important;
+  min-height: 26px !important;
 }
 
 .status-badge-medium {
-  padding: 4px 10px;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm) !important;
+  padding: 3px 10px !important;
+  height: 28px !important;
+  min-height: 28px !important;
 }
 
 .status-badge-large {
-  padding: 6px 12px;
-  font-size: var(--font-size-sm);
-  gap: 8px;
+  font-size: var(--font-size-base) !important;
+  padding: var(--spacing-small) var(--padding-element) !important;
+  height: 32px !important;
+  min-height: 32px !important;
 }
 
 .status-badge-icon {
-  font-size: 1em;
+  font-size: 1.1em;
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -39,50 +49,57 @@
 }
 
 /* Статус: Валидно */
-.status-valid {
-  background: var(--color-success-light);
-  color: var(--color-success-dark);
-  border: 1px solid var(--color-success);
+.status-badge.status-valid {
+  background: var(--color-success-light) !important;
+  color: var(--color-success-dark) !important;
+  border: 1px solid var(--color-success) !important;
+  font-weight: var(--font-weight-bold) !important;
 }
 
 /* Статус: Ошибки */
-.status-invalid {
-  background: var(--color-error-light);
-  color: var(--color-error-dark);
-  border: 1px solid var(--color-error);
+.status-badge.status-invalid {
+  background: var(--color-error-light) !important;
+  color: var(--color-error-dark) !important;
+  border: 1px solid var(--color-error) !important;
+  font-weight: var(--font-weight-bold) !important;
 }
 
 /* Статус: Требует проверки */
-.status-pending {
-  background: var(--color-warning-light);
-  color: var(--color-warning-dark);
-  border: 1px solid var(--color-warning);
+.status-badge.status-pending {
+  background: var(--color-warning-light) !important;
+  color: var(--color-warning-dark) !important;
+  border-color: var(--color-warning) !important;
+  font-weight: var(--font-weight-bold) !important;
+}
+
+/* Улучшенная читаемость для темной темы */
+[data-theme="midnight"] .status-badge.status-pending,
+[data-theme="amber-glow"] .status-badge.status-pending {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fcd34d; /* Более яркий желтый для темной темы */
+  border-color: #f59e0b;
+  text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.5);
 }
 
 /* Статус: Активен */
-.status-active {
+.status-badge.status-active {
   background: var(--color-success-light);
   color: var(--color-success-dark);
   border: 1px solid var(--color-success);
 }
 
 /* Статус: Неактивен */
-.status-inactive {
+.status-badge.status-inactive {
   background: var(--color-bg-secondary);
   color: var(--color-text-tertiary);
   border: 1px solid var(--color-border);
 }
 
 /* Статус: Заблокировано */
-.status-locked {
+.status-badge.status-locked {
   background: var(--color-error-light);
   color: var(--color-error-dark);
   border: 1px solid var(--color-error);
-}
-
-/* Анимация для pending статуса */
-.status-pending {
-  animation: pulse-badge 2s infinite;
 }
 
 @keyframes pulse-badge {
@@ -97,12 +114,12 @@
 /* Мобильная адаптация */
 @media (max-width: 768px) {
   .status-badge {
-    padding: 3px 8px;
-    font-size: 0.625rem;
+    padding: 2px 8px;
+    font-size: var(--font-size-xs);
   }
 
   .status-badge-icon {
-    font-size: 0.875em;
+    font-size: 1.1em;
   }
 }
 

@@ -24,7 +24,7 @@ services:
     container_name: gsm_backend
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://gsm_user:gsm_password@db:5432/gsm_db}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:5173}
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-52428800}
       # Настройки аутентификации
       ENABLE_AUTH: ${ENABLE_AUTH:-true}

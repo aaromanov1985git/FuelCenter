@@ -79,13 +79,39 @@ class FirebirdService:
         try:
             host = connection_settings.get("host", "localhost")
             database = connection_settings.get("database")
-            user = connection_settings.get("user", "SYSDBA")
-            password = connection_settings.get("password", "masterkey")
+            
+            # Обрабатываем user: если не указан или пустая строка, используем значение по умолчанию
+            user = connection_settings.get("user")
+            if not user or (isinstance(user, str) and not user.strip()):
+                user = "SYSDBA"
+            
+            # Обрабатываем password: если не указан (None), используем значение по умолчанию
+            # Если указана пустая строка "", используем её (это валидное значение для некоторых конфигураций)
+            password = connection_settings.get("password")
+            if password is None:
+                password = "masterkey"
+            # Если password - пустая строка, оставляем её как есть
+            
             port = connection_settings.get("port", 3050)
             charset = connection_settings.get("charset", "UTF8")
             
             if not database:
                 raise ValueError("Не указан путь к базе данных Firebird")
+            
+            # Проверяем, что user не пустой (после обработки)
+            if not user or not user.strip():
+                raise ValueError("Не указано имя пользователя для подключения к Firebird. Укажите 'user' в настройках подключения.")
+            
+            # Логируем информацию о настройках подключения (без пароля для безопасности)
+            logger.debug("Подключение к Firebird", extra={
+                "host": host,
+                "database": database,
+                "port": port,
+                "user": user,
+                "charset": charset,
+                "has_password": password is not None,
+                "password_is_empty": password == ""
+            })
             
             # Формируем строку подключения для Firebird
             # Формат DSN для Firebird:
@@ -133,6 +159,14 @@ class FirebirdService:
             
         except Exception as e:
             error_message = str(e)
+            error_code = None
+            
+            # Извлекаем SQLCODE из ошибки, если есть
+            if "SQLCODE" in error_message:
+                import re
+                match = re.search(r'SQLCODE:\s*(-?\d+)', error_message)
+                if match:
+                    error_code = int(match.group(1))
             
             # Проверяем специфическую ошибку отсутствия клиентской библиотеки
             if "Firebird Client Library" in error_message or "fbclient" in error_message.lower():
@@ -143,11 +177,49 @@ class FirebirdService:
                     "После установки убедитесь, что fbclient.dll находится в PATH или укажите путь через переменную окружения FIREBIRD_LIB.\n"
                     f"Оригинальная ошибка: {error_message}"
                 )
+            # Проверяем ошибку -902: имя пользователя и пароль не определены
+            elif error_code == -902 or "Your user name and password are not defined" in error_message:
+                # Проверяем, были ли указаны учетные данные в настройках
+                user_provided = connection_settings.get("user") and connection_settings.get("user").strip()
+                password_provided = connection_settings.get("password") is not None
+                
+                if not user_provided or not password_provided:
+                    # Учетные данные не указаны
+                    error_message = (
+                        "Ошибка аутентификации в Firebird (SQLCODE: -902).\n\n"
+                        "Имя пользователя и/или пароль не указаны в настройках подключения.\n\n"
+                        "Решение:\n"
+                        "1. В разделе 'Настройки подключения' укажите:\n"
+                        "   - Пользователь: имя пользователя (например, SYSDBA)\n"
+                        "   - Пароль: пароль пользователя\n"
+                        "2. Нажмите 'Тестировать подключение' для проверки\n"
+                        "3. Сохраните шаблон после успешного тестирования\n\n"
+                        f"Оригинальная ошибка: {error_message}"
+                    )
+                else:
+                    # Учетные данные указаны, но неверны
+                    error_message = (
+                        "Ошибка аутентификации в Firebird (SQLCODE: -902).\n\n"
+                        "Указанные имя пользователя и/или пароль неверны или пользователь не существует в базе данных.\n\n"
+                        "Возможные причины:\n"
+                        "1. Неверный пароль для указанного пользователя\n"
+                        "2. Пользователь не существует в базе данных Firebird\n"
+                        "3. Пользователь не имеет прав доступа к указанной базе данных\n\n"
+                        "Решение:\n"
+                        "1. Проверьте правильность имени пользователя и пароля\n"
+                        "2. Убедитесь, что пользователь существует в базе данных Firebird\n"
+                        "3. Проверьте права доступа пользователя к базе данных\n"
+                        "4. Обратитесь к администратору базы данных для настройки учетных данных\n\n"
+                        f"Оригинальная ошибка: {error_message}"
+                    )
             
             logger.error("Ошибка подключения к Firebird", extra={
                 "error": error_message,
+                "error_code": error_code,
                 "host": connection_settings.get("host"),
-                "database": connection_settings.get("database")
+                "database": connection_settings.get("database"),
+                "user_provided": bool(connection_settings.get("user")),
+                "password_provided": bool(connection_settings.get("password"))
             }, exc_info=True)
             
             # Преобразуем в более понятное исключение

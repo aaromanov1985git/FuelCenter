@@ -26,6 +26,7 @@ from app.routers import (
     templates,
     dashboard,
     upload_period_lock,
+    upload_events,
     auth,
     users
 )
@@ -166,6 +167,7 @@ app.include_router(providers.router)
 app.include_router(templates.router)
 app.include_router(dashboard.router)
 app.include_router(upload_period_lock.router)
+app.include_router(upload_events.router)
 app.include_router(users.router)
 
 

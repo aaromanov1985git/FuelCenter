@@ -1,5 +1,10 @@
 """
-Сервисы для обработки бизнес-логики
+Сервисы для обработки бизнес-логики (Legacy)
+DEPRECATED: Этот файл постепенно мигрируется в специализированные сервисы
+
+Используйте вместо этого:
+- app.services.normalization_service - для нормализации данных
+- app.services.fuzzy_matching_service - для нечёткого поиска
 """
 import pandas as pd
 import json
@@ -14,270 +19,90 @@ from rapidfuzz import fuzz, process
 from app.models import Transaction, Vehicle, FuelCard, Provider, ProviderTemplate, GasStation
 from app.schemas import TransactionCreate
 from app.validators import (
-    parse_vehicle_field, 
-    validate_vehicle_data, 
+    parse_vehicle_field,
+    validate_vehicle_data,
     detect_mixed_alphabet,
     validate_gas_station_data
 )
 
+# Импортируем из новых сервисов для обратной совместимости
+from app.services.normalization_service import (
+    normalize_fuel as _normalize_fuel,
+    normalize_vehicle_name as _normalize_vehicle_name,
+    normalize_card_number as _normalize_card_number,
+    extract_azs_number as _extract_azs_number
+)
+from app.services.fuzzy_matching_service import (
+    find_similar_vehicles as _find_similar_vehicles,
+    find_similar_cards as _find_similar_cards
+)
+from app.services.data_parsing_service import (
+    parse_excel_date as _parse_excel_date,
+    convert_to_decimal as _convert_to_decimal
+)
+from app.services.fuel_card_service import (
+    get_or_create_fuel_card as _get_or_create_fuel_card
+)
+from app.services.entity_management_service import (
+    check_card_overlap as _check_card_overlap,
+    assign_card_to_vehicle as _assign_card_to_vehicle
+)
 
+
+# DEPRECATED: Используйте app.services.normalization_service.normalize_fuel
 def normalize_fuel(fuel: str) -> str:
-    """
-    Нормализация вида топлива
-    """
-    if not fuel:
-        return ""
-    
-    fuel_str = str(fuel).strip()
-    fuel_lower = fuel_str.lower().replace(' ', '').replace('-', '')
-    
-    # Бензин
-    if 'аи95' in fuel_lower or 'ai95' in fuel_lower:
-        return "АИ-95"
-    if 'аи92' in fuel_lower or 'ai92' in fuel_lower:
-        return "АИ-92"
-    if 'аи98' in fuel_lower or 'ai98' in fuel_lower:
-        return "АИ-98"
-    
-    # Дизель
-    if 'дт' in fuel_lower or 'диз' in fuel_lower or 'diesel' in fuel_lower:
-        return "Дизельное топливо"
-    
-    # Газ
-    if 'газ' in fuel_lower or 'cng' in fuel_lower or 'lng' in fuel_lower or 'метан' in fuel_lower or 'пропан' in fuel_lower:
-        return "Газ"
-    
-    return fuel_str
+    """DEPRECATED: Используйте app.services.normalization_service.normalize_fuel"""
+    return _normalize_fuel(fuel)
 
 
+# DEPRECATED: Используйте app.services.normalization_service.normalize_vehicle_name
 def normalize_vehicle_name(vehicle_name: str) -> str:
-    """
-    Нормализация названия транспортного средства для поиска дублей
-    
-    Удаляет лишние пробелы, приводит к единому регистру,
-    нормализует госномера (удаление пробелов, дефисов)
-    """
-    if not vehicle_name:
-        return ""
-    
-    # Приводим к строке и удаляем лишние пробелы
-    normalized = str(vehicle_name).strip()
-    
-    # Удаляем множественные пробелы
-    normalized = re.sub(r'\s+', ' ', normalized)
-    
-    # Нормализуем госномер: удаляем пробелы и дефисы из номеров
-    # Паттерн для госномера: буквы, цифры, буквы, цифры
-    # Пример: "А 123 ВС 77" -> "А123ВС77"
-    license_pattern = r'([АВЕКМНОРСТУХABEKMHOPCTYXавекмнорстухabekmhopctx]{1,2})\s*(\d{3,4})\s*([АВЕКМНОРСТУХABEKMHOPCTYXавекмнорстухabekmhopctx]{2,3})\s*(\d{2,3})'
-    
-    def normalize_license(match):
-        letters1 = match.group(1).upper()
-        digits1 = match.group(2)
-        letters2 = match.group(3).upper()
-        digits2 = match.group(4)
-        return f"{letters1}{digits1}{letters2}{digits2}"
-    
-    normalized = re.sub(license_pattern, normalize_license, normalized, flags=re.IGNORECASE)
-    
-    return normalized
+    """DEPRECATED: Используйте app.services.normalization_service.normalize_vehicle_name"""
+    return _normalize_vehicle_name(vehicle_name)
 
 
+# DEPRECATED: Используйте app.services.normalization_service.normalize_card_number
 def normalize_card_number(card_number: str) -> str:
-    """
-    Нормализация номера топливной карты
-    
-    Удаляет пробелы, дефисы и другие разделители
-    """
-    if not card_number:
-        return ""
-    
-    # Преобразуем в строку, если передан как число
-    card_number_str = str(card_number).strip() if card_number else ""
-    
-    # Удаляем все пробелы, дефисы и другие разделители
-    normalized = re.sub(r'[\s\-_]+', '', card_number_str)
-    
-    return normalized
+    """DEPRECATED: Используйте app.services.normalization_service.normalize_card_number"""
+    return _normalize_card_number(card_number)
 
 
+# DEPRECATED: Используйте app.services.fuzzy_matching_service.find_similar_vehicles
 def find_similar_vehicles(
     db: Session,
     vehicle_name: str,
     threshold: int = 85
 ) -> List[Tuple[Vehicle, int]]:
-    """
-    Поиск похожих транспортных средств с использованием fuzzy matching
-    
-    Args:
-        db: Сессия БД
-        vehicle_name: Название ТС для поиска
-        threshold: Порог схожести (0-100), по умолчанию 85
-    
-    Returns:
-        Список кортежей (Vehicle, score) отсортированный по убыванию score
-    """
-    if not vehicle_name:
-        return []
-    
-    normalized_name = normalize_vehicle_name(vehicle_name)
-    
-    # Получаем все ТС из БД
-    all_vehicles = db.query(Vehicle).all()
-    
-    if not all_vehicles:
-        return []
-    
-    # Создаем словарь для быстрого доступа
-    vehicle_dict = {v.id: v for v in all_vehicles}
-    
-    # Используем rapidfuzz для поиска похожих
-    # process.extract работает со словарями {key: value}, где value - строка для сравнения
-    # Создаем словарь {vehicle_id: normalize_vehicle_name(...)} для поиска
-    choices = {v.id: normalize_vehicle_name(v.original_name) for v in all_vehicles}
-    
-    # Ищем похожие записи
-    # process.extract возвращает список кортежей (matched_key, score, index)
-    # где matched_key - это ключ из словаря choices (vehicle_id)
-    results = process.extract(
-        normalized_name,
-        choices,
-        scorer=fuzz.ratio,
-        limit=5
-    )
-    
-    # Фильтруем по порогу и возвращаем Vehicle объекты
-    # results содержит (vehicle_id, score, index)
-    similar = []
-    for vehicle_id, score, _ in results:
-        if score >= threshold and vehicle_id in vehicle_dict:
-            similar.append((vehicle_dict[vehicle_id], score))
-    
-    return similar
+    """DEPRECATED: Используйте app.services.fuzzy_matching_service.find_similar_vehicles"""
+    return _find_similar_vehicles(db, vehicle_name, threshold)
 
 
+# DEPRECATED: Используйте app.services.fuzzy_matching_service.find_similar_cards
 def find_similar_cards(
     db: Session,
     card_number: str,
     threshold: int = 90
 ) -> List[Tuple[FuelCard, int]]:
-    """
-    Поиск похожих топливных карт с использованием fuzzy matching
-    
-    Args:
-        db: Сессия БД
-        card_number: Номер карты для поиска
-        threshold: Порог схожести (0-100), по умолчанию 90
-    
-    Returns:
-        Список кортежей (FuelCard, score) отсортированный по убыванию score
-    """
-    if not card_number:
-        return []
-    
-    normalized_number = normalize_card_number(card_number)
-    
-    # Получаем все карты из БД
-    all_cards = db.query(FuelCard).all()
-    
-    if not all_cards:
-        return []
-    
-    # Создаем словарь для быстрого доступа
-    card_dict = {c.id: c for c in all_cards}
-    
-    # Используем rapidfuzz для поиска похожих
-    choices = {c.id: normalize_card_number(c.card_number) for c in all_cards}
-    
-    # Ищем похожие записи
-    results = process.extract(
-        normalized_number,
-        choices,
-        scorer=fuzz.ratio,
-        limit=5
-    )
-    
-    # Фильтруем по порогу и возвращаем FuelCard объекты
-    similar = [
-        (card_dict[card_id], score)
-        for card_id, score, _ in results
-        if score >= threshold
-    ]
-    
-    return similar
+    """DEPRECATED: Используйте app.services.fuzzy_matching_service.find_similar_cards"""
+    return _find_similar_cards(db, card_number, threshold)
 
 
+# DEPRECATED: Используйте app.services.normalization_service.extract_azs_number
 def extract_azs_number(kazs: str) -> str:
-    """
-    Извлечение номера АЗС из строки КАЗС
-    """
-    if not kazs:
-        return ""
-    
-    kazs_str = str(kazs).strip()
-    import re
-    match = re.search(r"КАЗС(\d+)", kazs_str, re.IGNORECASE)
-    return f"АЗС №{match.group(1)}" if match else kazs_str
+    """DEPRECATED: Используйте app.services.normalization_service.extract_azs_number"""
+    return _extract_azs_number(kazs)
 
 
+# DEPRECATED: Используйте app.services.data_parsing_service.parse_excel_date
 def parse_excel_date(date_value) -> datetime:
-    """
-    Парсинг даты из Excel файла
-    """
-    if not date_value:
-        return None
-    
-    # Если это уже datetime объект
-    if isinstance(date_value, datetime):
-        return date_value
-    
-    # Если это pandas Timestamp
-    if isinstance(date_value, pd.Timestamp):
-        return date_value.to_pydatetime()
-    
-    # Если это число (Excel дата)
-    if isinstance(date_value, (int, float)):
-        try:
-            return pd.to_datetime(date_value, origin="1899-12-30", unit="D").to_pydatetime()
-        except:
-            pass
-    
-    # Если это строка
-    if isinstance(date_value, str):
-        date_str = date_value.strip().replace("  ", " ")
-        try:
-            # Формат DD.MM.YYYY HH:mm:ss
-            return datetime.strptime(date_str, "%d.%m.%Y %H:%M:%S")
-        except:
-            try:
-                # Формат DD.MM.YYYY HH:mm
-                return datetime.strptime(date_str, "%d.%m.%Y %H:%M")
-            except:
-                try:
-                    # Стандартный формат
-                    return pd.to_datetime(date_str).to_pydatetime()
-                except:
-                    pass
-    
-    return None
+    """DEPRECATED: Используйте app.services.data_parsing_service.parse_excel_date"""
+    return _parse_excel_date(date_value)
 
 
+# DEPRECATED: Используйте app.services.data_parsing_service.convert_to_decimal
 def convert_to_decimal(value) -> Decimal:
-    """
-    Конвертация значения в Decimal
-    """
-    if value is None or value == "":
-        return None
-    
-    try:
-        if isinstance(value, (int, float)):
-            return Decimal(str(value))
-        if isinstance(value, str):
-            cleaned = value.replace(",", ".").strip()
-            return Decimal(cleaned) if cleaned else None
-        return Decimal(str(value))
-    except:
-        return None
+    """DEPRECATED: Используйте app.services.data_parsing_service.convert_to_decimal"""
+    return _convert_to_decimal(value)
 
 
 def analyze_template_structure(file_path: str) -> Dict[str, Any]:
@@ -721,92 +546,20 @@ def process_excel_file(
     return transactions
 
 
+# DEPRECATED: Используйте VehicleService.get_or_create_vehicle
 def get_or_create_vehicle(
-    db: Session, 
-    original_name: str, 
-    garage_number: Optional[str] = None, 
+    db: Session,
+    original_name: str,
+    garage_number: Optional[str] = None,
     license_plate: Optional[str] = None
 ) -> Tuple[Vehicle, List[str]]:
-    """
-    Получить или создать транспортное средство в справочнике
-    Использует нормализацию для поиска дублей и fuzzy matching для похожих записей
-    Возвращает ТС и список предупреждений
-    """
-    warnings = []
-    
-    # Нормализуем название для поиска
-    normalized_name = normalize_vehicle_name(original_name)
-    
-    # Сначала ищем по точному совпадению исходного названия
-    vehicle = db.query(Vehicle).filter(Vehicle.original_name == original_name).first()
-    
-    # Если не найдено, ищем по нормализованному названию
-    if not vehicle:
-        all_vehicles = db.query(Vehicle).all()
-        for v in all_vehicles:
-            if normalize_vehicle_name(v.original_name) == normalized_name:
-                vehicle = v
-                break
-    
-    # Если все еще не найдено, проверяем на похожие записи
-    if not vehicle:
-        similar_vehicles = find_similar_vehicles(db, original_name, threshold=85)
-        if similar_vehicles:
-            # Берем самую похожую запись, если схожесть >= 95%
-            best_match, score = similar_vehicles[0]
-            if score >= 95:
-                vehicle = best_match
-                warnings.append(
-                    f"ТС '{original_name}' объединено с существующим '{best_match.original_name}' "
-                    f"(схожесть: {score}%)"
-                )
-            elif score >= 85:
-                # Предупреждаем о возможном дубле
-                warnings.append(
-                    f"Возможный дубль ТС: найдена похожая запись '{best_match.original_name}' "
-                    f"(схожесть: {score}%). Проверьте вручную."
-                )
-    
-    if not vehicle:
-        # Создаем новое ТС
-        vehicle = Vehicle(
-            original_name=original_name,
-            garage_number=garage_number,
-            license_plate=license_plate,
-            is_validated="pending"
-        )
-        db.add(vehicle)
-        db.flush()
-    else:
-        # Обновляем данные, если они были пустыми
-        updated = False
-        if not vehicle.garage_number and garage_number:
-            vehicle.garage_number = garage_number
-            updated = True
-        if not vehicle.license_plate and license_plate:
-            vehicle.license_plate = license_plate
-            updated = True
-        
-        if updated:
-            db.flush()
-    
-    # Валидация данных
-    validation_result = validate_vehicle_data(vehicle.garage_number, vehicle.license_plate)
-    
-    if validation_result["errors"]:
-        vehicle.is_validated = "invalid"
-        vehicle.validation_errors = "; ".join(validation_result["errors"])
-        warnings.extend([f"ТС '{original_name}': {err}" for err in validation_result["errors"]])
-    elif validation_result["warnings"]:
-        vehicle.is_validated = "pending"
-        warnings.extend([f"ТС '{original_name}': {warn}" for warn in validation_result["warnings"]])
-    else:
-        vehicle.is_validated = "valid"
-        vehicle.validation_errors = None
-    
-    return vehicle, warnings
+    """DEPRECATED: Используйте VehicleService.get_or_create_vehicle"""
+    from app.services.vehicle_service import VehicleService
+    vehicle_service = VehicleService(db)
+    return vehicle_service.get_or_create_vehicle(original_name, garage_number, license_plate)
 
 
+# DEPRECATED: Используйте GasStationService.get_or_create_gas_station
 def get_or_create_gas_station(
     db: Session,
     original_name: str,
@@ -815,228 +568,26 @@ def get_or_create_gas_station(
     region: Optional[str] = None,
     settlement: Optional[str] = None
 ) -> Tuple[GasStation, List[str]]:
-    """
-    Получить или создать автозаправочную станцию в справочнике
-    Использует нормализацию для поиска дублей и fuzzy matching для похожих записей
-    Возвращает АЗС и список предупреждений
-    """
-    warnings = []
-    
-    # Нормализуем название для поиска (убираем лишние пробелы, приводим к нижнему регистру)
-    normalized_name = re.sub(r'\s+', ' ', original_name.strip()).lower()
-    
-    # Сначала ищем по точному совпадению исходного названия
-    gas_station = db.query(GasStation).filter(GasStation.original_name == original_name).first()
-    
-    # Если не найдено, ищем по нормализованному названию
-    if not gas_station:
-        all_gas_stations = db.query(GasStation).all()
-        for gs in all_gas_stations:
-            if re.sub(r'\s+', ' ', gs.original_name.strip()).lower() == normalized_name:
-                gas_station = gs
-                break
-    
-    # Если все еще не найдено, проверяем на похожие записи
-    if not gas_station:
-        similar_gas_stations = []
-        all_gas_stations = db.query(GasStation).all()
-        for gs in all_gas_stations:
-            score = fuzz.ratio(normalized_name, re.sub(r'\s+', ' ', gs.original_name.strip()).lower())
-            if score >= 85:
-                similar_gas_stations.append((gs, score))
-        
-        similar_gas_stations.sort(key=lambda x: x[1], reverse=True)
-        
-        if similar_gas_stations:
-            # Берем самую похожую запись, если схожесть >= 95%
-            best_match, score = similar_gas_stations[0]
-            if score >= 95:
-                gas_station = best_match
-                warnings.append(
-                    f"АЗС '{original_name}' объединена с существующей '{best_match.original_name}' "
-                    f"(схожесть: {score}%)"
-                )
-            elif score >= 85:
-                # Предупреждаем о возможном дубле
-                warnings.append(
-                    f"Возможный дубль АЗС: найдена похожая запись '{best_match.original_name}' "
-                    f"(схожесть: {score}%). Проверьте вручную."
-                )
-    
-    if not gas_station:
-        # Создаем новую АЗС
-        gas_station = GasStation(
-            original_name=original_name,
-            azs_number=azs_number,
-            location=location,
-            region=region,
-            settlement=settlement,
-            is_validated="pending"
-        )
-        db.add(gas_station)
-        db.flush()
-    else:
-        # Обновляем данные, если они были пустыми
-        updated = False
-        if not gas_station.azs_number and azs_number:
-            gas_station.azs_number = azs_number
-            updated = True
-        if not gas_station.location and location:
-            gas_station.location = location
-            updated = True
-        if not gas_station.region and region:
-            gas_station.region = region
-            updated = True
-        if not gas_station.settlement and settlement:
-            gas_station.settlement = settlement
-            updated = True
-        
-        if updated:
-            db.flush()
-    
-    # Валидация данных
-    validation_result = validate_gas_station_data(
-        azs_number=gas_station.azs_number,
-        location=gas_station.location,
-        region=gas_station.region,
-        settlement=gas_station.settlement
+    """DEPRECATED: Используйте GasStationService.get_or_create_gas_station"""
+    from app.services.gas_station_service import GasStationService
+    gas_station_service = GasStationService(db)
+    return gas_station_service.get_or_create_gas_station(
+        original_name, azs_number, location, region, settlement
     )
-    
-    if validation_result["errors"]:
-        gas_station.is_validated = "invalid"
-        gas_station.validation_errors = "; ".join(validation_result["errors"])
-        warnings.extend([f"АЗС '{original_name}': {err}" for err in validation_result["errors"]])
-    elif validation_result["warnings"]:
-        gas_station.is_validated = "pending"
-        warnings.extend([f"АЗС '{original_name}': {warn}" for warn in validation_result["warnings"]])
-    else:
-        gas_station.is_validated = "valid"
-        gas_station.validation_errors = None
-    
-    return gas_station, warnings
 
 
+# DEPRECATED: Используйте app.services.fuel_card_service.get_or_create_fuel_card
 def get_or_create_fuel_card(
-    db: Session, 
-    card_number: str, 
+    db: Session,
+    card_number: str,
     provider_id: Optional[int] = None,
     vehicle_id: Optional[int] = None
 ) -> Tuple[FuelCard, List[str]]:
-    """
-    Получить или создать топливную карту в справочнике
-    Использует нормализацию для поиска дублей и fuzzy matching для похожих записей
-    Возвращает карту и список предупреждений
-    """
-    warnings = []
-    
-    # Преобразуем номер карты в строку, если он передан как число
-    if card_number is not None:
-        card_number = str(card_number).strip() if card_number else None
-    else:
-        card_number = None
-    
-    if not card_number:
-        raise ValueError("Номер карты не может быть пустым")
-    
-    # Убеждаемся, что card_number - строка
-    card_number = str(card_number).strip()
-    
-    # Нормализуем номер карты для поиска
-    normalized_number = normalize_card_number(card_number)
-    
-    # Сначала ищем по точному совпадению номера карты
-    card = db.query(FuelCard).filter(FuelCard.card_number == card_number).first()
-    
-    # Если не найдено, ищем по нормализованному номеру
-    if not card:
-        all_cards = db.query(FuelCard).all()
-        for c in all_cards:
-            if c.card_number and normalize_card_number(c.card_number) == normalized_number:
-                card = c
-                break
-    
-    # Если все еще не найдено, проверяем на похожие записи
-    if not card:
-        similar_cards = find_similar_cards(db, card_number, threshold=90)
-        if similar_cards:
-            # Берем самую похожую запись, если схожесть >= 98%
-            best_match, score = similar_cards[0]
-            if score >= 98:
-                card = best_match
-                warnings.append(
-                    f"Карта '{card_number}' объединена с существующей '{best_match.card_number}' "
-                    f"(схожесть: {score}%)"
-                )
-            elif score >= 90:
-                # Предупреждаем о возможном дубле
-                warnings.append(
-                    f"Возможный дубль карты: найдена похожая запись '{best_match.card_number}' "
-                    f"(схожесть: {score}%). Проверьте вручную."
-                )
-    
-    if not card:
-        try:
-            card = FuelCard(
-                card_number=card_number, 
-                provider_id=provider_id,
-                vehicle_id=vehicle_id
-            )
-            db.add(card)
-            db.flush()
-        except IntegrityError as e:
-            # Если возникла ошибка уникальности, значит карта уже существует
-            # Откатываем транзакцию и ищем существующую карту
-            db.rollback()
-            
-            # Пытаемся найти карту по номеру (возможно, была создана в другой транзакции)
-            card = db.query(FuelCard).filter(FuelCard.card_number == card_number).first()
-            
-            if not card:
-                # Если не нашли по точному совпадению, пробуем найти по нормализованному номеру
-                all_cards = db.query(FuelCard).all()
-                for c in all_cards:
-                    if c.card_number and normalize_card_number(c.card_number) == normalized_number:
-                        card = c
-                        warnings.append(
-                            f"Карта '{card_number}' объединена с существующей '{c.card_number}' "
-                            f"(найдена по нормализованному номеру)"
-                        )
-                        break
-                
-                # Если все еще не нашли, пробуем найти похожую карту
-                if not card:
-                    similar_cards = find_similar_cards(db, card_number, threshold=95)
-                    if similar_cards:
-                        best_match, score = similar_cards[0]
-                        if score >= 95:
-                            card = best_match
-                            warnings.append(
-                                f"Карта '{card_number}' объединена с существующей '{best_match.card_number}' "
-                                f"(схожесть: {score}%, обнаружена при обработке конфликта уникальности)"
-                            )
-            
-            # Если карта все еще не найдена, это критическая ошибка
-            if not card:
-                raise ValueError(
-                    f"Не удалось создать карту '{card_number}' из-за конфликта уникальности, "
-                    f"но существующая карта не найдена. Ошибка БД: {str(e)}"
-                )
-    else:
-        # Обновляем данные, если они были пустыми
-        updated = False
-        if provider_id and not card.provider_id:
-            card.provider_id = provider_id
-            updated = True
-        if vehicle_id and not card.vehicle_id:
-            card.vehicle_id = vehicle_id
-            updated = True
-        
-        if updated:
-            db.flush()
-    
-    return card, warnings
+    """DEPRECATED: Используйте app.services.fuel_card_service.get_or_create_fuel_card"""
+    return _get_or_create_fuel_card(db, card_number, provider_id, vehicle_id)
 
 
+# DEPRECATED: Используйте app.services.entity_management_service.check_card_overlap
 def check_card_overlap(
     db: Session,
     card_id: int,
@@ -1044,64 +595,11 @@ def check_card_overlap(
     start_date: date,
     end_date: Optional[date] = None
 ) -> Tuple[bool, List[Dict[str, Any]]]:
-    """
-    Проверка пересечений закрепления карты за ТС
-    
-    Возвращает: (есть_пересечения, список_пересечений)
-    """
-    if end_date is None:
-        end_date = date(2099, 12, 31)  # Бессрочное закрепление
-    
-    # Ищем активные закрепления этой карты за другими ТС в указанном периоде
-    overlaps = db.query(FuelCard).filter(
-        FuelCard.id == card_id,
-        FuelCard.is_active_assignment == True,
-        FuelCard.vehicle_id.isnot(None),
-        FuelCard.vehicle_id != vehicle_id,
-        or_(
-            # Пересечение: начало нового периода внутри существующего
-            and_(
-                FuelCard.assignment_start_date <= start_date,
-                or_(
-                    FuelCard.assignment_end_date.is_(None),
-                    FuelCard.assignment_end_date >= start_date
-                )
-            ),
-            # Пересечение: конец нового периода внутри существующего
-            and_(
-                FuelCard.assignment_start_date <= end_date,
-                or_(
-                    FuelCard.assignment_end_date.is_(None),
-                    FuelCard.assignment_end_date >= end_date
-                )
-            ),
-            # Пересечение: новый период полностью содержит существующий
-            and_(
-                FuelCard.assignment_start_date >= start_date,
-                or_(
-                    FuelCard.assignment_end_date.is_(None),
-                    FuelCard.assignment_end_date <= end_date
-                )
-            )
-        )
-    ).all()
-    
-    if overlaps:
-        overlap_list = []
-        for overlap in overlaps:
-            vehicle = db.query(Vehicle).filter(Vehicle.id == overlap.vehicle_id).first()
-            overlap_list.append({
-                "card_id": overlap.id,
-                "vehicle_id": overlap.vehicle_id,
-                "vehicle_name": vehicle.original_name if vehicle else "Неизвестно",
-                "start_date": overlap.assignment_start_date.isoformat() if overlap.assignment_start_date else None,
-                "end_date": overlap.assignment_end_date.isoformat() if overlap.assignment_end_date else None
-            })
-        return True, overlap_list
-    
-    return False, []
+    """DEPRECATED: Используйте app.services.entity_management_service.check_card_overlap"""
+    return _check_card_overlap(db, card_id, vehicle_id, start_date, end_date)
 
 
+# DEPRECATED: Используйте app.services.entity_management_service.assign_card_to_vehicle
 def assign_card_to_vehicle(
     db: Session,
     card_id: int,
@@ -1110,40 +608,8 @@ def assign_card_to_vehicle(
     end_date: Optional[date] = None,
     check_overlap: bool = True
 ) -> Tuple[bool, str, Optional[List[Dict[str, Any]]]]:
-    """
-    Закрепление карты за ТС с проверкой пересечений
-    
-    Возвращает: (успех, сообщение, список_пересечений)
-    """
-    card = db.query(FuelCard).filter(FuelCard.id == card_id).first()
-    if not card:
-        return False, "Карта не найдена", None
-    
-    vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
-    if not vehicle:
-        return False, "Транспортное средство не найдено", None
-    
-    # Проверка пересечений
-    if check_overlap:
-        has_overlap, overlaps = check_card_overlap(db, card_id, vehicle_id, start_date, end_date)
-        if has_overlap:
-            return False, "Обнаружены пересечения с другими закреплениями", overlaps
-    
-    # Деактивируем предыдущие активные закрепления этой карты
-    db.query(FuelCard).filter(
-        FuelCard.id == card_id,
-        FuelCard.is_active_assignment == True
-    ).update({"is_active_assignment": False})
-    
-    # Создаем новое закрепление (или обновляем существующее)
-    card.vehicle_id = vehicle_id
-    card.assignment_start_date = start_date
-    card.assignment_end_date = end_date
-    card.is_active_assignment = True
-    
-    db.commit()
-    
-    return True, "Карта успешно закреплена за ТС", None
+    """DEPRECATED: Используйте app.services.entity_management_service.assign_card_to_vehicle"""
+    return _assign_card_to_vehicle(db, card_id, vehicle_id, start_date, end_date, check_overlap)
 
 
 def create_transactions(db: Session, transactions: List[Dict]) -> Tuple[int, int, List[str]]:

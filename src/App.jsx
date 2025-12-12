@@ -22,6 +22,7 @@ import ContextMenu from './components/ContextMenu'
 import FilePreviewModal from './components/FilePreviewModal'
 import UsersList from './components/UsersList'
 import ExportMenu from './components/ExportMenu'
+import UploadEventsList from './components/UploadEventsList'
 import Login from './components/Login'
 import Register from './components/Register'
 import ComponentsDemo from './components/ComponentsDemo'
@@ -67,7 +68,7 @@ const App = () => {
     order: 'desc'
   })
   const [showClearConfirm, setShowClearConfirm] = useState(false)
-  const [activeTab, setActiveTab] = useState('transactions') // transactions, vehicles, cards, gas-stations, providers, templates, period-lock, ui-demo
+  const [activeTab, setActiveTab] = useState('transactions') // transactions, vehicles, cards, gas-stations, providers, templates, period-lock, upload-events, ui-demo
   const [providers, setProviders] = useState([])
   const [selectedProviderTab, setSelectedProviderTab] = useState(null) // null = "Все", иначе ID провайдера
   const [dragActive, setDragActive] = useState(false)
@@ -485,6 +486,24 @@ const App = () => {
     } catch {
       return ''
     }
+  }
+
+  // Форматирование числа с разделителями
+  const formatNumber = (num) => {
+    return new Intl.NumberFormat('ru-RU', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    }).format(num)
+  }
+
+  // Форматирование литров: если >= 1000000, то в тысячах
+  const formatLiters = (num) => {
+    if (!num && num !== 0) return '0.00'
+    if (num >= 1000000) {
+      const thousands = num / 1000
+      return formatNumber(thousands) + ' тыс. л'
+    }
+    return formatNumber(num) + ' л'
   }
 
   // Загрузка списка провайдеров
@@ -1158,6 +1177,12 @@ const App = () => {
               Дашборд
             </button>
             <button
+              className={`nav-item ${activeTab === 'upload-events' ? 'active' : ''}`}
+              onClick={() => setActiveTab('upload-events')}
+            >
+              События загрузок
+            </button>
+            <button
               className={`nav-item ${activeTab === 'period-lock' ? 'active' : ''}`}
               onClick={() => setActiveTab('period-lock')}
             >
@@ -1237,6 +1262,7 @@ const App = () => {
                 ...(activeTab === 'providers' ? [{ label: 'Провайдеры' }] : []),
                 ...(activeTab === 'templates' ? [{ label: 'Шаблоны' }] : []),
                 ...(activeTab === 'users' ? [{ label: 'Пользователи' }] : []),
+                ...(activeTab === 'upload-events' ? [{ label: 'События загрузок' }] : []),
                 ...(activeTab === 'period-lock' ? [{ label: 'Блокировка периода' }] : []),
                 ...(activeTab === 'ui-demo' ? [{ label: 'UI Компоненты' }] : [])
               ]}
@@ -1253,6 +1279,7 @@ const App = () => {
         {activeTab === 'templates' && <TemplatesList />}
         {activeTab === 'users' && <UsersList />}
         {activeTab === 'dashboard' && <Dashboard />}
+        {activeTab === 'upload-events' && <UploadEventsList />}
         {activeTab === 'period-lock' && <UploadPeriodLock />}
         {activeTab === 'ui-demo' && <ComponentsDemo />}
         
@@ -1339,7 +1366,7 @@ const App = () => {
             <div className="upload-dashboard-card stat-success">
               <div className="upload-dashboard-label">Всего литров</div>
               <div className="upload-dashboard-value">
-                {stats?.total_quantity ? stats.total_quantity.toFixed(2) : '0.00'}
+                {stats?.total_quantity ? formatLiters(stats.total_quantity) : '0.00 л'}
               </div>
             </div>
             <div className="upload-dashboard-card stat-secondary">

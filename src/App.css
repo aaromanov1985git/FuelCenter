@@ -155,7 +155,7 @@ html, body {
 .sidebar-header h2 {
   margin: 0;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
 }
 
@@ -340,7 +340,7 @@ html, body {
   border: none;
   text-align: left;
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.2s;
@@ -371,7 +371,7 @@ html, body {
 .provider-tabs-header h3 {
   margin: 0;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -406,7 +406,7 @@ html, body {
   background: var(--color-primary-light);
   color: var(--color-primary);
   border-left-color: var(--color-primary);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .main-content {
@@ -572,7 +572,7 @@ h1 {
 
 .drag-drop-title {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
 
@@ -620,7 +620,7 @@ h1 {
 
 .match-value {
   color: var(--color-primary);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .match-template {
@@ -655,7 +655,7 @@ h1 {
   padding: 12px 16px;
   background: var(--color-error-light);
   color: var(--color-error-dark);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   border-radius: 8px;
   border: 1px solid var(--color-error);
 }
@@ -664,7 +664,7 @@ h1 {
   padding: 12px 16px;
   background: var(--color-success-light);
   color: var(--color-success-dark);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   border-radius: 8px;
   border: 1px solid var(--color-success);
 }
@@ -688,13 +688,13 @@ h1 {
 .stat-label {
   font-size: 0.875rem;
   color: var(--color-text-secondary);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   margin-bottom: 8px;
 }
 
 .stat-value {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
 }
 
@@ -709,7 +709,7 @@ h1 {
 
 .upload-dashboard-title {
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   margin-bottom: 16px;
   padding-bottom: 12px;
@@ -750,7 +750,7 @@ h1 {
 
 .upload-dashboard-value {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   color: var(--color-primary);
 }
 
@@ -781,7 +781,7 @@ h1 {
 
 .upload-dashboard-value-small {
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   word-break: break-word;
 }
@@ -833,7 +833,7 @@ h1 {
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
@@ -867,7 +867,7 @@ h1 {
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
@@ -916,7 +916,7 @@ h1 {
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   transition: all 0.2s ease;
 }
 
@@ -945,7 +945,7 @@ h1 {
 
 .result-header h2 {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   margin: 0;
 }
@@ -959,7 +959,7 @@ h1 {
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
@@ -1051,10 +1051,10 @@ h1 {
 }
 
 .data-table th {
-  padding: 12px 16px;
+  padding: var(--padding-small) var(--padding-element);
   text-align: left;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.625rem;
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1103,10 +1103,10 @@ h1 {
 }
 
 .data-table td {
-  padding: 12px 16px;
-  font-size: 0.875rem;
+  padding: var(--padding-small) var(--padding-element);
+  font-size: 0.625rem;
   color: var(--color-text-primary);
-  font-weight: 500;
+  font-weight: var(--font-weight-normal);
   border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
 }
@@ -1130,7 +1130,7 @@ h1 {
 [data-theme="midnight"] .data-table th,
 [data-theme="amber-glow"] .data-table th {
   color: var(--color-text-primary);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 /* Улучшение видимости всех текстовых элементов на темных темах */
@@ -1232,7 +1232,7 @@ h1 {
 
 .error-highlight {
   color: var(--color-error-dark);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   position: relative;
 }
 
@@ -1393,7 +1393,7 @@ h1 {
 
   .data-table {
     min-width: 1200px; /* Увеличена минимальная ширина для планшетов */
-    font-size: var(--font-size-xs);
+    font-size: 0.625rem;
   }
 
   .data-table th,

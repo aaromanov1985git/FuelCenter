@@ -2,7 +2,7 @@
 .ui-table-wrapper {
   width: 100%;
   overflow-x: auto;
-  border-radius: var(--border-radius-lg);
+  border-radius: var(--radius-large);
   background: var(--color-bg-card);
   box-shadow: var(--shadow-sm);
 }
@@ -34,7 +34,7 @@
 .ui-table-header-content {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-tiny);
 }
 
 /* Sortable Headers */
@@ -151,7 +151,7 @@
   justify-content: center;
   padding: var(--spacing-section);
   background: var(--color-bg-card);
-  border-radius: var(--border-radius-lg);
+  border-radius: var(--radius-large);
   border: 2px dashed var(--color-border);
   min-height: 300px;
 }
@@ -208,7 +208,7 @@
   padding: var(--spacing-element);
   background: var(--color-bg-secondary);
   border-top: 1px solid var(--color-border);
-  border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+  border-radius: 0 0 var(--radius-large) var(--radius-large);
   flex-wrap: wrap;
 }
 
@@ -225,9 +225,9 @@
 }
 
 .ui-table-pagination-select {
-  padding: var(--spacing-xs) var(--spacing-small);
+  padding: var(--spacing-tiny) var(--spacing-small);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-medium);
   background: var(--color-bg-card);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
@@ -248,7 +248,7 @@
 .ui-table-pagination-controls {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-tiny);
 }
 
 .ui-table-pagination-pages {
@@ -266,7 +266,7 @@
   height: 32px;
   padding: 0;
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-medium);
   background: var(--color-bg-card);
   color: var(--color-text-primary);
   font-size: var(--font-size-lg);
@@ -310,7 +310,7 @@
     display: block;
     margin-bottom: var(--spacing-element);
     border: 1px solid var(--color-border);
-    border-radius: var(--border-radius);
+    border-radius: var(--radius-medium);
     background: var(--color-bg-card);
   }
 

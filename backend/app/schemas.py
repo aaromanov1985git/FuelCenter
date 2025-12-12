@@ -648,3 +648,53 @@ class LoginRequest(BaseModel):
     """
     username: str = Field(..., description="Имя пользователя")
     password: str = Field(..., description="Пароль")
+
+
+class UploadEventResponse(BaseModel):
+    """
+    Событие загрузки (ручной или регламентной)
+    """
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    source_type: str
+    status: str
+    is_scheduled: bool
+    file_name: Optional[str] = None
+    provider_id: Optional[int] = None
+    provider_name: Optional[str] = None
+    template_id: Optional[int] = None
+    template_name: Optional[str] = None
+    user_id: Optional[int] = None
+    username: Optional[str] = None
+    transactions_total: int = 0
+    transactions_created: int = 0
+    transactions_skipped: int = 0
+    transactions_failed: int = 0
+    duration_ms: Optional[int] = None
+    message: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class UploadEventStats(BaseModel):
+    """
+    Агрегированная статистика по событиям загрузок
+    """
+    total_events: int = 0
+    total_records: int = 0
+    total_created: int = 0
+    total_skipped: int = 0
+    total_failed: int = 0
+    failed_events: int = 0
+    scheduled_events: int = 0
+
+
+class UploadEventListResponse(BaseModel):
+    """
+    Ответ списка событий загрузок с пагинацией
+    """
+    total: int
+    items: list[UploadEventResponse]
+    stats: UploadEventStats

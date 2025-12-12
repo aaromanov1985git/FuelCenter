@@ -1,0 +1,192 @@
+/* Компактный дашборд */
+.compact-dashboard {
+  width: 100%;
+}
+
+/* Секция статистики */
+.compact-stats-section {
+  margin-bottom: var(--spacing-block);
+}
+
+.compact-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-element);
+}
+
+.compact-stat-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  padding: var(--padding-element);
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-element);
+}
+
+.compact-stat-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.compact-stat-vehicles {
+  border-left: 4px solid var(--color-info);
+}
+
+.compact-stat-transactions {
+  border-left: 4px solid var(--color-primary);
+}
+
+.compact-stat-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+  margin-bottom: var(--spacing-small);
+}
+
+.compact-stat-icon {
+  font-size: var(--font-size-xl);
+}
+
+.compact-stat-header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.compact-stat-values {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-small);
+  flex: 1;
+}
+
+.compact-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--padding-tiny) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.compact-stat-row:last-child {
+  border-bottom: none;
+}
+
+.compact-stat-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.compact-stat-value {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.compact-stat-value-large {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.compact-stat-value.success {
+  color: var(--color-success);
+}
+
+.compact-stat-value.warning {
+  color: var(--color-warning);
+}
+
+.compact-stat-value.error {
+  color: var(--color-error);
+}
+
+.compact-stat-empty {
+  padding: var(--padding-section);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.compact-stat-action {
+  margin-top: var(--spacing-small);
+  padding: var(--padding-tiny) var(--padding-small);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.compact-stat-action:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+}
+
+/* Секция контента */
+.compact-section-content {
+  width: 100%;
+}
+
+.compact-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-element);
+  margin-bottom: var(--spacing-block);
+}
+
+.compact-back-button {
+  padding: var(--padding-tiny) var(--padding-small);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.compact-back-button:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-primary);
+}
+
+.compact-section-header h2 {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-primary);
+}
+
+.compact-placeholder {
+  padding: var(--padding-section);
+  text-align: center;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-medium);
+  border: 1px dashed var(--color-border);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .compact-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-stat-card {
+    padding: var(--padding-small);
+  }
+
+  .compact-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+

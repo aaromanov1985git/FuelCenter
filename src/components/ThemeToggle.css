@@ -44,9 +44,9 @@
   position: absolute;
   bottom: 2px;
   right: 2px;
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   color: var(--color-primary);
-  font-weight: bold;
+  font-weight: var(--font-weight-bold);
 }
 
 .theme-toggle-icon {

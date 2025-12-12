@@ -1,16 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import IconButton from './IconButton'
-import StatusBadge from './StatusBadge'
-import MaskedInput from './MaskedInput'
-import { SkeletonTable, SkeletonCard } from './Skeleton'
-import { useToast } from './ToastContainer'
+import { Button, Input, Card, Badge, Table, Alert, useToast } from './ui'
 import { authFetch } from '../utils/api'
 import './VehiclesList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const VehiclesList = () => {
-  const { error: showError } = useToast()
+  const { error: showError, success } = useToast()
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -125,232 +121,162 @@ const VehiclesList = () => {
   }
 
   const getStatusBadge = (status) => {
-    const statusMap = {
-      pending: 'pending',
-      valid: 'valid',
-      invalid: 'invalid'
+    const map = {
+      valid: { variant: 'success', label: 'Валидно' },
+      invalid: { variant: 'error', label: 'Ошибки' },
+      pending: { variant: 'warning', label: 'Требует проверки' }
     }
-    return <StatusBadge status={statusMap[status] || 'pending'} size="small" />
+    const conf = map[status] || map.pending
+    return (
+      <Badge size="sm" variant={conf.variant}>
+        {conf.label}
+      </Badge>
+    )
   }
+
+  const columns = [
+    { key: 'original_name', header: 'Исходное наименование', sortable: true },
+    {
+      key: 'garage_number',
+      header: 'Гаражный номер',
+      sortable: true,
+      render: (_, row) =>
+        editingId === row.id ? (
+          <Input
+            value={editForm.garage_number}
+            onChange={(e) => setEditForm({ ...editForm, garage_number: e.target.value })}
+            placeholder="Гаражный номер"
+            fullWidth
+          />
+        ) : (
+          row.garage_number || '-'
+        )
+    },
+    {
+      key: 'license_plate',
+      header: 'Госномер',
+      sortable: true,
+      render: (_, row) =>
+        editingId === row.id ? (
+          <Input
+            value={editForm.license_plate}
+            onChange={(e) => setEditForm({ ...editForm, license_plate: e.target.value.toUpperCase() })}
+            placeholder="А123ВС77"
+            fullWidth
+          />
+        ) : (
+          row.license_plate || '-'
+        )
+    },
+    {
+      key: 'is_validated',
+      header: 'Статус',
+      sortable: true,
+      render: (val) => getStatusBadge(val)
+    },
+    {
+      key: 'validation_errors',
+      header: 'Ошибки',
+      sortable: false,
+      render: (val) =>
+        val ? (
+          <span style={{ color: 'var(--color-error-dark)', fontWeight: 600 }} title={val}>
+            {val}
+          </span>
+        ) : (
+          '-'
+        )
+    },
+    {
+      key: 'actions',
+      header: 'Действия',
+      sortable: false,
+      render: (_, row) =>
+        editingId === row.id ? (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button
+              size="sm"
+              variant="success"
+              onClick={() => handleSave(row.id)}
+              disabled={loading}
+            >
+              Сохранить
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleCancel}
+              disabled={loading}
+            >
+              Отмена
+            </Button>
+          </div>
+        ) : (
+          <Button size="sm" variant="primary" onClick={() => handleEdit(row)}>
+            Редактировать
+          </Button>
+        )
+    }
+  ]
+
+  const tableData = vehicles.map((v) => ({
+    ...v,
+    id: v.id,
+    original_name: v.original_name || '-',
+    garage_number: v.garage_number,
+    license_plate: v.license_plate
+  }))
 
   return (
     <div className="vehicles-list">
-      {/* Компактный дашборд ошибок и предупреждений */}
-      {errorsWarnings && (
-        <div className="dashboard-section errors-warnings-section">
-          <h3>Ошибки и предупреждения</h3>
-          
-          <div className="errors-warnings-grid">
-            {/* Статистика по транспортным средствам */}
-            <div className="errors-warnings-card">
-              <div className="errors-warnings-card-header">
-                <span className="errors-warnings-icon">🚗</span>
-                <h4>Транспорт</h4>
-              </div>
-              <div className="errors-warnings-stats">
-                <div className="stat-item stat-error">
-                  <span className="stat-value">{errorsWarnings.vehicles.invalid}</span>
-                  <span className="stat-label">С ошибками</span>
-                </div>
-                <div className="stat-item stat-warning">
-                  <span className="stat-value">{errorsWarnings.vehicles.pending}</span>
-                  <span className="stat-label">Требуют проверки</span>
-                </div>
-                <div className="stat-item stat-success">
-                  <span className="stat-value">{errorsWarnings.vehicles.valid}</span>
-                  <span className="stat-label">Валидные</span>
-                </div>
-                <div className="stat-item stat-total">
-                  <span className="stat-value">{errorsWarnings.vehicles.total}</span>
-                  <span className="stat-label">Всего</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Транзакции с ошибками */}
-            <div className="errors-warnings-card">
-              <div className="errors-warnings-card-header">
-                <span className="errors-warnings-icon">⚠️</span>
-                <h4>Транзакции</h4>
-              </div>
-              <div className="errors-warnings-stats">
-                <div className="stat-item stat-error">
-                  <span className="stat-value">{errorsWarnings.transactions_with_errors}</span>
-                  <span className="stat-label">С проблемными ТС</span>
-                </div>
-              </div>
+      <Card variant="elevated" padding="lg">
+        <Card.Header>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <Card.Title>Справочник транспортных средств</Card.Title>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <Button size="sm" variant={filter === 'all' ? 'primary' : 'secondary'} onClick={() => setFilter('all')}>
+                Все
+              </Button>
+              <Button size="sm" variant={filter === 'pending' ? 'warning' : 'secondary'} onClick={() => setFilter('pending')}>
+                Требуют проверки
+              </Button>
+              <Button size="sm" variant={filter === 'valid' ? 'success' : 'secondary'} onClick={() => setFilter('valid')}>
+                Валидные
+              </Button>
+              <Button size="sm" variant={filter === 'invalid' ? 'error' : 'secondary'} onClick={() => setFilter('invalid')}>
+                С ошибками
+              </Button>
             </div>
           </div>
-        </div>
-      )}
-
-      {errorsLoading && (
-        <div className="dashboard-section">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-            {Array.from({ length: 2 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="vehicles-header">
-        <h2>Справочник транспортных средств</h2>
-        <div className="filter-buttons">
-          <button 
-            className={filter === 'all' ? 'active' : ''} 
-            onClick={() => setFilter('all')}
-            title="Показать все транспортные средства"
-          >
-            <span className="filter-icon">📋</span>
-            Все
-          </button>
-          <button 
-            className={filter === 'pending' ? 'active' : ''} 
-            onClick={() => setFilter('pending')}
-            title="Показать транспортные средства, требующие проверки"
-          >
-            <span className="filter-icon">⚠️</span>
-            Требуют проверки
-          </button>
-          <button 
-            className={filter === 'valid' ? 'active' : ''} 
-            onClick={() => setFilter('valid')}
-            title="Показать валидные транспортные средства"
-          >
-            <span className="filter-icon">✅</span>
-            Валидные
-          </button>
-          <button 
-            className={filter === 'invalid' ? 'active' : ''} 
-            onClick={() => setFilter('invalid')}
-            title="Показать транспортные средства с ошибками"
-          >
-            <span className="filter-icon">❌</span>
-            С ошибками
-          </button>
-        </div>
-      </div>
-
-      {error && <div className="error-message">{error}</div>}
-
-      {loading && vehicles.length === 0 ? (
-        <SkeletonTable rows={10} columns={6} />
-      ) : (
-        <div className="vehicles-table-wrapper">
-          <table className="vehicles-table">
-            <thead>
-              <tr>
-                <th>Исходное наименование</th>
-                <th>Гаражный номер</th>
-                <th>Госномер</th>
-                <th>Статус</th>
-                <th>Ошибки</th>
-                <th>Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vehicles.map(vehicle => (
-                <tr key={vehicle.id}>
-                  <td>{vehicle.original_name}</td>
-                  <td>
-                    {editingId === vehicle.id ? (
-                      <input
-                        type="text"
-                        value={editForm.garage_number}
-                        onChange={(e) => setEditForm({...editForm, garage_number: e.target.value})}
-                        className="edit-input"
-                        placeholder="Гаражный номер (необязательно)"
-                      />
-                    ) : (
-                      vehicle.garage_number || '-'
-                    )}
-                  </td>
-                  <td>
-                    {editingId === vehicle.id ? (
-                      <MaskedInput
-                        maskType="licensePlate"
-                        value={editForm.license_plate}
-                        onChange={(e) => setEditForm({...editForm, license_plate: e.target.value.toUpperCase()})}
-                        className="edit-input"
-                        placeholder="А123ВС77"
-                      />
-                    ) : (
-                      vehicle.license_plate || '-'
-                    )}
-                  </td>
-                  <td>{getStatusBadge(vehicle.is_validated)}</td>
-                  <td className="errors-cell">
-                    {vehicle.validation_errors ? (
-                      <span className="error-text" title={vehicle.validation_errors}>
-                        {vehicle.validation_errors}
-                      </span>
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                  <td>
-                    {editingId === vehicle.id ? (
-                      <div className="action-buttons">
-                        <IconButton 
-                          icon="save" 
-                          variant="success" 
-                          onClick={() => handleSave(vehicle.id)}
-                          disabled={loading}
-                          title="Сохранить"
-                          size="small"
-                        />
-                        <IconButton 
-                          icon="cancel" 
-                          variant="secondary" 
-                          onClick={handleCancel}
-                          disabled={loading}
-                          title="Отмена"
-                          size="small"
-                        />
-                      </div>
-                    ) : (
-                      <IconButton 
-                        icon="edit" 
-                        variant="primary" 
-                        onClick={() => handleEdit(vehicle)}
-                        title="Редактировать"
-                        size="small"
-                      />
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {vehicles.length === 0 && (
-            <div className="empty-state">Нет данных для отображения</div>
+        </Card.Header>
+        <Card.Body>
+          {error && (
+            <Alert variant="error" title="Ошибка загрузки">
+              {error}
+            </Alert>
           )}
-        </div>
-      )}
-      
-      {/* Пагинация */}
-      {total > limit && (
-        <div className="pagination">
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1 || loading}
-            className="pagination-btn"
-          >
-            Предыдущая
-          </button>
-          <span className="pagination-info">
-            Страница {currentPage} из {Math.ceil(total / limit)} (всего: {total})
-          </span>
-          <button
-            onClick={() => setCurrentPage(prev => Math.min(Math.ceil(total / limit), prev + 1))}
-            disabled={currentPage >= Math.ceil(total / limit) || loading}
-            className="pagination-btn"
-          >
-            Следующая
-          </button>
-        </div>
-      )}
+
+          <Table
+            columns={columns}
+            data={tableData}
+            loading={loading}
+            striped
+            hoverable
+            compact
+            defaultSortColumn="original_name"
+          />
+
+          {total > limit && (
+            <Table.Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(total / limit)}
+              total={total}
+              pageSize={limit}
+              onPageChange={(page) => setCurrentPage(page)}
+            />
+          )}
+        </Card.Body>
+      </Card>
     </div>
   )
 }

@@ -18,7 +18,7 @@
 
 .select-required {
   color: var(--color-error);
-  margin-left: 2px;
+  margin-left: var(--spacing-tiny);
 }
 
 .select-control {
@@ -94,7 +94,7 @@
 }
 
 .select-arrow {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   transition: transform var(--duration-normal) var(--ease-in-out);
   display: inline-block;
@@ -211,7 +211,7 @@
 .select-helper {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  margin-top: 2px;
+  margin-top: var(--spacing-tiny);
 }
 
 .select-helper-error {

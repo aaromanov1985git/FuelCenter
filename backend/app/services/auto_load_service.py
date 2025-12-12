@@ -12,6 +12,7 @@ from app.utils import (
     parse_date_range
 )
 from app.services.api_provider_service import ApiProviderService
+from app.services.upload_event_service import UploadEventService
 
 
 class AutoLoadService:
@@ -100,6 +101,15 @@ class AutoLoadService:
         Returns:
             Словарь с результатом загрузки
         """
+        start_time = datetime.now()
+        event_service = UploadEventService(self.db)
+        status = "failed"
+        message = None
+        transactions_total = 0
+        transactions_created = 0
+        transactions_skipped = 0
+        result: Dict[str, Any] = {}
+
         logger.info("Автоматическая загрузка для шаблона", extra={
             "template_id": template.id,
             "template_name": template.name,
@@ -128,18 +138,20 @@ class AutoLoadService:
 
         try:
             if template.connection_type == "firebird":
-                return self._load_from_firebird(template, date_from, date_to)
+                result = self._load_from_firebird(template, date_from, date_to)
             elif template.connection_type == "api":
-                return self._load_from_api(template, date_from, date_to)
+                result = self._load_from_api(template, date_from, date_to)
             else:
-                return {
+                result = {
                     "template_id": template.id,
                     "template_name": template.name,
                     "success": False,
                     "error": f"Тип подключения '{template.connection_type}' не поддерживает автоматическую загрузку",
                     "transactions_created": 0,
-                    "transactions_skipped": 0
+                    "transactions_skipped": 0,
+                    "transactions_total": 0
                 }
+            return result
         except Exception as e:
             logger.error("Ошибка при загрузке данных для шаблона", extra={
                 "template_id": template.id,
@@ -147,14 +159,45 @@ class AutoLoadService:
                 "error": str(e)
             }, exc_info=True)
             
-            return {
+            message = str(e)
+            result = {
                 "template_id": template.id,
                 "template_name": template.name,
                 "success": False,
                 "error": str(e),
                 "transactions_created": 0,
-                "transactions_skipped": 0
+                "transactions_skipped": 0,
+                "transactions_total": 0
             }
+            return result
+        finally:
+            try:
+                if result:
+                    transactions_created = int(result.get("transactions_created") or 0)
+                    transactions_skipped = int(result.get("transactions_skipped") or 0)
+                    transactions_total = int(result.get("transactions_total") or (transactions_created + transactions_skipped))
+                    status = "success" if result.get("success") else "failed"
+                    message = message or result.get("message") or result.get("error")
+                duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+                event_service.log_event(
+                    source_type="auto",
+                    status=status,
+                    is_scheduled=True,
+                    file_name=f"AutoLoad: {template.name}",
+                    provider_id=template.provider_id,
+                    template_id=template.id,
+                    user_id=None,
+                    username="system",
+                    transactions_total=transactions_total,
+                    transactions_created=transactions_created,
+                    transactions_skipped=transactions_skipped,
+                    transactions_failed=max(transactions_total - transactions_created - transactions_skipped, 0),
+                    duration_ms=duration_ms,
+                    message=message
+                )
+            except Exception:
+                # Не прерываем основной процесс из-за ошибок логирования событий
+                logger.warning("Не удалось зафиксировать событие автозагрузки", exc_info=True)
 
     def _load_from_firebird(
         self, 
@@ -212,6 +255,7 @@ class AutoLoadService:
                 "success": True,
                 "transactions_created": 0,
                 "transactions_skipped": 0,
+                "transactions_total": len(firebird_data),
                 "message": "Данные не найдены за указанный период"
             }
 
@@ -318,6 +362,7 @@ class AutoLoadService:
                 "success": True,
                 "transactions_created": 0,
                 "transactions_skipped": 0,
+                "transactions_total": len(transactions_data),
                 "warnings": warnings,
                 "message": "Не удалось преобразовать данные в транзакции"
             }
@@ -335,6 +380,7 @@ class AutoLoadService:
             "success": True,
             "transactions_created": created_count,
             "transactions_skipped": skipped_count,
+            "transactions_total": len(transactions_data),
             "warnings": warnings if warnings else None
         }
 
@@ -391,6 +437,7 @@ class AutoLoadService:
                 "success": True,
                 "transactions_created": 0,
                 "transactions_skipped": 0,
+                "transactions_total": len(api_data),
                 "message": "Данные не найдены за указанный период"
             }
 
@@ -433,6 +480,7 @@ class AutoLoadService:
                 "success": True,
                 "transactions_created": 0,
                 "transactions_skipped": 0,
+                "transactions_total": len(transactions_data),
                 "message": "Не удалось преобразовать данные в транзакции"
             }
 
@@ -448,6 +496,7 @@ class AutoLoadService:
             "template_name": template.name,
             "success": True,
             "transactions_created": created_count,
-            "transactions_skipped": skipped_count
+            "transactions_skipped": skipped_count,
+            "transactions_total": len(transactions_data)
         }
 

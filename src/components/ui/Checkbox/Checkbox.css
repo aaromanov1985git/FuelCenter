@@ -53,8 +53,8 @@
 .checkbox-check,
 .checkbox-indeterminate {
   color: white;
-  font-size: 14px;
-  font-weight: bold;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
   line-height: 1;
   animation: checkPop var(--duration-normal) var(--ease-bounce);
 }

@@ -137,7 +137,7 @@ async def test_firebird_connection_direct(
 ):
     """
     Тестирование подключения к Firebird без сохранения шаблона
-    Используется при создании нового шаблона
+    Используется при создании нового шаблона или тестировании с настройками из формы
     """
     firebird_service_class = get_firebird_service()
     
@@ -146,6 +146,17 @@ async def test_firebird_connection_direct(
             status_code=400,
             detail="Не указаны настройки подключения"
         )
+    
+    # Логируем настройки подключения (без пароля для безопасности)
+    logger.debug("Тестирование подключения к Firebird", extra={
+        "host": connection_settings.get("host"),
+        "database": connection_settings.get("database"),
+        "port": connection_settings.get("port"),
+        "user": connection_settings.get("user"),
+        "charset": connection_settings.get("charset"),
+        "has_password": bool(connection_settings.get("password")),
+        "password_length": len(connection_settings.get("password", "")) if connection_settings.get("password") else 0
+    })
     
     try:
         firebird_service = firebird_service_class(db)

@@ -89,8 +89,8 @@
 .cards-table th {
   padding: var(--padding-small) var(--padding-element);
   text-align: left;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
+  font-size: 0.625rem;
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -99,7 +99,7 @@
 
 .cards-table td {
   padding: var(--padding-small) var(--padding-element);
-  font-size: var(--font-size-sm);
+  font-size: 0.625rem;
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
   border-bottom: 1px solid var(--color-border);
@@ -115,7 +115,7 @@
   padding: var(--padding-small) var(--padding-element);
   background: var(--color-error-light);
   color: var(--color-error-dark);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-normal);
   border-radius: var(--radius-medium);
   margin-bottom: var(--spacing-element);
   border: 1px solid var(--color-error);
@@ -321,7 +321,7 @@
     left: var(--padding-small);
     width: 45%;
     text-align: left;
-    font-weight: var(--font-weight-bold);
+    font-weight: var(--font-weight-semibold);
     color: var(--color-text-secondary);
     text-transform: uppercase;
     font-size: var(--font-size-xs);

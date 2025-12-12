@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import FormField from './FormField'
+import { Card, Button, Input, Table, Modal, Select, Badge, Skeleton } from './ui'
 import ConfirmModal from './ConfirmModal'
 import StatusBadge from './StatusBadge'
 import IconButton from './IconButton'
@@ -22,6 +22,10 @@ const UsersList = () => {
   const [showModal, setShowModal] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, userId: null })
+
+  // Пагинация
+  const [currentPage, setCurrentPage] = useState(1)
+  const [limit] = useState(50) // Количество записей на странице
 
   const isAdmin = useMemo(
     () => currentUser && (currentUser.role === 'admin' || currentUser.is_superuser),
@@ -67,8 +71,8 @@ const UsersList = () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      params.append('skip', '0')
-      params.append('limit', '200')
+      params.append('skip', ((currentPage - 1) * limit).toString())
+      params.append('limit', limit.toString())
       if (search.trim()) {
         params.append('search', search.trim())
       }
@@ -89,10 +93,16 @@ const UsersList = () => {
     }
   }
 
+  // Сбрасываем на первую страницу при изменении поиска
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search])
+
+  // Загружаем пользователей при изменении страницы или поиска
   useEffect(() => {
     loadUsers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [currentPage, search])
 
   const openAddModal = () => {
     reset()
@@ -244,189 +254,216 @@ const UsersList = () => {
     }
   }
 
+  // Подготовка данных для таблицы
+  const tableColumns = [
+    { key: 'username', header: 'Имя', sortable: true },
+    { key: 'email', header: 'Email', sortable: true },
+    { key: 'role', header: 'Роль', sortable: true },
+    { key: 'status', header: 'Статус', sortable: true },
+    { key: 'last_login', header: 'Последний вход', sortable: true },
+    { key: 'actions', header: 'Действия', sortable: false }
+  ]
+
+  const tableData = users.map((u) => ({
+    id: u.id,
+    username: (
+      <div>
+        <div style={{ fontWeight: 'var(--font-weight-semibold)' }}>{u.username}</div>
+        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+          Создан: {new Date(u.created_at).toLocaleDateString()}
+        </div>
+      </div>
+    ),
+    email: u.email,
+    role: (
+      <Select
+        value={u.role}
+        onChange={(value) => handleRoleChange(u.id, value)}
+        options={[
+          { value: 'user', label: 'Пользователь' },
+          { value: 'admin', label: 'Администратор' },
+          { value: 'viewer', label: 'Наблюдатель' }
+        ]}
+        disabled={loading || currentUser?.id === u.id}
+      />
+    ),
+    status: (
+      <StatusBadge
+        status={u.is_active ? 'success' : 'error'}
+        text={u.is_active ? 'Активен' : 'Отключен'}
+      />
+    ),
+    last_login: u.last_login ? new Date(u.last_login).toLocaleString() : '—',
+    actions: (
+      <div style={{ display: 'flex', gap: 'var(--spacing-small)', justifyContent: 'flex-end' }}>
+        <IconButton
+          icon="edit"
+          variant="secondary"
+          size="small"
+          title="Редактировать"
+          disabled={loading}
+          onClick={() => openEditModal(u)}
+        />
+        <Button
+          variant={u.is_active ? 'error' : 'success'}
+          size="sm"
+          onClick={() => handleToggleActive(u)}
+          disabled={loading}
+        >
+          {u.is_active ? 'Отключить' : 'Включить'}
+        </Button>
+        <IconButton
+          icon="trash"
+          variant="danger"
+          size="small"
+          title="Удалить"
+          disabled={loading || currentUser?.id === u.id}
+          onClick={() => setDeleteConfirm({ isOpen: true, userId: u.id })}
+        />
+      </div>
+    )
+  }))
+
   if (!isAdmin) {
     return (
-      <div className="users-card">
-        <div className="users-empty">Управление пользователями доступно только администраторам</div>
-      </div>
+      <Card>
+        <Card.Body>
+          <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)', padding: 'var(--spacing-block)' }}>
+            Управление пользователями доступно только администраторам
+          </div>
+        </Card.Body>
+      </Card>
     )
   }
 
   return (
-    <div className="users-card">
-      <div className="users-header">
-        <div>
-          <h2>Пользователи</h2>
-          <p className="users-subtitle">Всего: {total}</p>
+    <Card>
+      <Card.Header>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div>
+            <Card.Title>Пользователи</Card.Title>
+            <p style={{ margin: 'var(--spacing-tiny) 0 0', color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+              Всего: {total}
+            </p>
+          </div>
+          <Card.Actions>
+            <Input
+              type="search"
+              placeholder="Поиск по имени или email"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && loadUsers()}
+              icon="🔍"
+              iconPosition="left"
+              style={{ minWidth: '240px' }}
+            />
+            <IconButton
+              icon="refresh"
+              variant="secondary"
+              title="Обновить"
+              onClick={loadUsers}
+              disabled={loading}
+            />
+            <Button
+              variant="primary"
+              onClick={openAddModal}
+              disabled={loading}
+            >
+              Добавить
+            </Button>
+          </Card.Actions>
         </div>
-        <div className="users-actions">
-          <input
-            type="search"
-            placeholder="Поиск по имени или email"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && loadUsers()}
-            className="users-search"
-          />
-          <IconButton
-            icon="refresh"
-            variant="secondary"
-            title="Обновить"
-            onClick={loadUsers}
-            disabled={loading}
-          />
-          <button
-            className="users-add-button"
-            onClick={openAddModal}
-            disabled={loading}
-          >
-            Добавить
-          </button>
-        </div>
-      </div>
+      </Card.Header>
+      <Card.Body>
 
-      <div className="users-table" role="table">
-        <div className="users-row users-head" role="row">
-          <div className="cell">Имя</div>
-          <div className="cell">Email</div>
-          <div className="cell">Роль</div>
-          <div className="cell">Статус</div>
-          <div className="cell">Последний вход</div>
-          <div className="cell actions">Действия</div>
-        </div>
-        {loading && (
-          <div className="users-row">
-            <div className="cell cell-full">Загрузка...</div>
-          </div>
+        {loading ? (
+          <Skeleton rows={6} columns={6} />
+        ) : (
+          <Table
+            columns={tableColumns}
+            data={tableData}
+            emptyMessage="Пользователи не найдены"
+            striped
+            hoverable
+            compact
+          />
         )}
-        {!loading && users.length === 0 && (
-          <div className="users-row">
-            <div className="cell cell-full">Пользователи не найдены</div>
-          </div>
-        )}
-        {!loading &&
-          users.map((u) => (
-            <div className="users-row" key={u.id} role="row">
-              <div className="cell">
-                <div className="users-name">{u.username}</div>
-                <div className="users-meta">Создан: {new Date(u.created_at).toLocaleDateString()}</div>
-              </div>
-              <div className="cell">{u.email}</div>
-              <div className="cell">
-                <select
-                  className="users-select small"
-                  value={u.role}
-                  onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                  disabled={loading || currentUser?.id === u.id}
-                >
-                  <option value="user">Пользователь</option>
-                  <option value="admin">Администратор</option>
-                  <option value="viewer">Наблюдатель</option>
-                </select>
-              </div>
-              <div className="cell">
-                <StatusBadge
-                  status={u.is_active ? 'success' : 'error'}
-                  text={u.is_active ? 'Активен' : 'Отключен'}
-                />
-              </div>
-              <div className="cell">
-                {u.last_login ? new Date(u.last_login).toLocaleString() : '—'}
-              </div>
-              <div className="cell actions">
-                <IconButton
-                  icon="edit"
-                  variant="secondary"
-                  size="small"
-                  title="Редактировать"
-                  disabled={loading}
-                  onClick={() => openEditModal(u)}
-                />
-                <button
-                  className={`users-toggle ${u.is_active ? 'off' : 'on'}`}
-                  onClick={() => handleToggleActive(u)}
-                  disabled={loading}
-                  title={u.is_active ? 'Отключить' : 'Включить'}
-                >
-                  {u.is_active ? 'Отключить' : 'Включить'}
-                </button>
-                <IconButton
-                  icon="trash"
-                  variant="danger"
-                  size="small"
-                  title="Удалить"
-                  disabled={loading || currentUser?.id === u.id}
-                  onClick={() => setDeleteConfirm({ isOpen: true, userId: u.id })}
-                />
-              </div>
-            </div>
-          ))}
-      </div>
 
-      {showModal && (
-        <div className="users-modal" role="dialog" aria-modal="true">
-          <div className="users-modal-overlay" onClick={closeModal} />
-          <div className="users-modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="users-modal-header">
-              <h3>{editingUser ? 'Редактирование пользователя' : 'Новый пользователь'}</h3>
-              <button className="users-modal-close" onClick={closeModal} aria-label="Закрыть">×</button>
-            </div>
-            <div className="users-modal-body">
-              <FormField
-                label="Имя пользователя"
-                name="username"
-                value={newUser.username}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.username && errors.username ? errors.username : ''}
-                required
-                disabled={!!editingUser}
-              />
-              <FormField
-                label="Email"
-                name="email"
-                type="email"
-                value={newUser.email}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.email && errors.email ? errors.email : ''}
-                required
-              />
-              <FormField
-                label={editingUser ? 'Новый пароль (не обязательно)' : 'Пароль'}
-                name="password"
-                type="password"
-                value={newUser.password}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.password && errors.password ? errors.password : ''}
-              />
-              <div className="users-field">
-                <label className="users-label">Роль</label>
-                <select
-                  name="role"
-                  value={newUser.role}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  className="users-select"
-                >
-                  <option value="user">Пользователь</option>
-                  <option value="admin">Администратор</option>
-                  <option value="viewer">Наблюдатель</option>
-                </select>
-              </div>
-            </div>
-            <div className="users-modal-footer">
-              <button className="users-cancel" onClick={closeModal} disabled={loading}>
-                Отмена
-              </button>
-              <button className="users-save" onClick={handleSave} disabled={loading}>
-                {editingUser ? 'Сохранить' : 'Создать'}
-              </button>
-            </div>
+      <Modal
+        isOpen={showModal}
+        onClose={closeModal}
+        title={editingUser ? 'Редактирование пользователя' : 'Новый пользователь'}
+        size="md"
+      >
+        <Modal.Body>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-section)' }}>
+            <Input
+              label="Имя пользователя"
+              name="username"
+              value={newUser.username}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={touched.username && errors.username ? errors.username : ''}
+              required
+              disabled={!!editingUser}
+              fullWidth
+            />
+            <Input
+              label="Email"
+              name="email"
+              type="email"
+              value={newUser.email}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={touched.email && errors.email ? errors.email : ''}
+              required
+              fullWidth
+            />
+            <Input
+              label={editingUser ? 'Новый пароль (не обязательно)' : 'Пароль'}
+              name="password"
+              type="password"
+              value={newUser.password}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={touched.password && errors.password ? errors.password : ''}
+              fullWidth
+            />
+            <Select
+              label="Роль"
+              name="role"
+              value={newUser.role}
+              onChange={(value) => handleChange({ target: { name: 'role', value } })}
+              options={[
+                { value: 'user', label: 'Пользователь' },
+                { value: 'admin', label: 'Администратор' },
+                { value: 'viewer', label: 'Наблюдатель' }
+              ]}
+              required
+              fullWidth
+            />
           </div>
-        </div>
-      )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={closeModal} disabled={loading}>
+            Отмена
+          </Button>
+          <Button variant="primary" onClick={handleSave} disabled={loading} loading={loading}>
+            {editingUser ? 'Сохранить' : 'Создать'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+        {total > limit && (
+          <Table.Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(total / limit)}
+            total={total}
+            pageSize={limit}
+            onPageChange={setCurrentPage}
+          />
+        )}
+      </Card.Body>
 
       {deleteConfirm.isOpen && (
         <ConfirmModal
@@ -436,7 +473,7 @@ const UsersList = () => {
           onCancel={() => setDeleteConfirm({ isOpen: false, userId: null })}
         />
       )}
-    </div>
+    </Card>
   )
 }
 

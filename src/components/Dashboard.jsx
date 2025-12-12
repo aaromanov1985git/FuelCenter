@@ -65,6 +65,18 @@ const Dashboard = () => {
     }).format(num)
   }
 
+  // Форматирование литров: если >= 1000000, то в тысячах
+  const formatLiters = (num) => {
+    if (num >= 1000000) {
+      const thousands = num / 1000
+      return new Intl.NumberFormat('ru-RU', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      }).format(thousands) + ' тыс. л'
+    }
+    return formatNumber(num) + ' л'
+  }
+
   const formatPeriodLabel = (periodStr, periodType) => {
     if (periodType === 'day') {
       // Формат: "01.12.2025" -> "01 дек"
@@ -257,7 +269,7 @@ const Dashboard = () => {
                       <div key={idx} className="auto-load-provider-item">
                         <span className="provider-name">{provider.name}</span>
                         <span className="provider-stats">
-                          {provider.transactions_count} транз., {formatNumber(provider.liters)} л
+                          {provider.transactions_count} транз., {formatLiters(provider.liters)}
                         </span>
                       </div>
                     ))
@@ -442,7 +454,7 @@ const Dashboard = () => {
                             />
                           )
                         })}
-                        <span className="chart-value">{formatNumber(totalQuantity)}</span>
+                        <span className="chart-value">{formatLiters(totalQuantity)}</span>
                       </div>
                       <div className="chart-label" title={period}>
                         {formatPeriodLabel(period, period)}
@@ -471,7 +483,7 @@ const Dashboard = () => {
                           backgroundImage: 'linear-gradient(to top, var(--color-primary), var(--color-primary-hover))'
                         }}
                       >
-                        <span className="chart-value">{formatNumber(quantity)}</span>
+                        <span className="chart-value">{formatLiters(quantity)}</span>
                       </div>
                       <div className="chart-label" title={item.period}>
                         {formatPeriodLabel(item.period, period)}
@@ -887,7 +899,7 @@ const Dashboard = () => {
           {stats.products.map((product, idx) => (
             <div key={idx} className="product-card">
               <div className="product-name">{product.product || 'Не указано'}</div>
-              <div className="product-quantity">{formatNumber(product.quantity)} л</div>
+              <div className="product-quantity">{formatLiters(product.quantity)}</div>
               <div className="product-count">{product.count} транзакций</div>
             </div>
           ))}
@@ -902,8 +914,7 @@ const Dashboard = () => {
             {stats.providers.map((provider, idx) => (
               <div key={idx} className="provider-card">
                 <div className="provider-name">{provider.provider_name || 'Не указано'}</div>
-                <div className="provider-quantity">{formatNumber(provider.quantity)} л</div>
-                <div className="provider-count">{provider.count} транзакций</div>
+                <div className="provider-quantity">{formatLiters(provider.quantity)}</div>
               </div>
             ))}
           </div>
@@ -1033,7 +1044,7 @@ const Dashboard = () => {
                           title={`${providerName}: ${formatNumber(quantity)} л`}
                         >
                           {quantity > 0 && (
-                            <span className="chart-value-small">{formatNumber(quantity)}</span>
+                            <span className="chart-value-small">{formatLiters(quantity)}</span>
                           )}
                         </div>
                       </div>

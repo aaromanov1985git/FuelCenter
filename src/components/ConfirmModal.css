@@ -11,7 +11,7 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 16px;
+  padding: var(--spacing-block);
   animation: fadeInOverlay 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -28,15 +28,15 @@
 
 .confirm-modal-content {
   background: var(--color-bg-card);
-  border-radius: 16px;
-  padding: 28px;
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-section);
   max-width: 500px;
   width: 100%;
   box-shadow: var(--shadow-xl);
   animation: slideUpScale 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--spacing-section);
   transform-origin: center;
   border: 1px solid var(--color-border-light);
 }
@@ -89,8 +89,8 @@
 
 .confirm-modal-title {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   line-height: 1.2;
 }
@@ -101,24 +101,30 @@
 
 .confirm-modal-message {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--font-size-base);
   color: var(--color-text-secondary);
   line-height: 1.5;
 }
 
 .confirm-modal-footer {
   display: flex;
-  gap: 12px;
+  gap: var(--spacing-section);
   justify-content: flex-end;
   flex-wrap: wrap;
 }
 
+/* Когда кнопка отмены скрыта, кнопка подтверждения занимает всю ширину */
+.confirm-modal-footer:has(.confirm-modal-button-cancel:only-child),
+.confirm-modal-footer:has(> :only-child) {
+  justify-content: flex-end;
+}
+
 .confirm-modal-button {
-  padding: 12px 24px;
+  padding: var(--padding-small) var(--padding-section);
   border: none;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 600;
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 100px;
@@ -183,6 +189,14 @@
 
 .confirm-modal-button-confirm.variant-danger:hover {
   background: var(--color-error-dark);
+}
+
+.confirm-modal-button-confirm.variant-success {
+  background: var(--color-success);
+}
+
+.confirm-modal-button-confirm.variant-success:hover {
+  background: var(--color-success-dark);
 }
 
 .confirm-modal-button:disabled {
