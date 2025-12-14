@@ -105,6 +105,11 @@ class FileUploadResponse(BaseModel):
     transactions_skipped: int = 0
     file_name: str
     validation_warnings: list[str] = Field(default_factory=list)
+    require_template_selection: bool = False
+    available_templates: Optional[list[dict]] = None
+    detected_provider_id: Optional[int] = None
+    detected_template_id: Optional[int] = None
+    match_info: Optional[dict] = None
 
 
 class VehicleBase(BaseModel):
@@ -114,6 +119,7 @@ class VehicleBase(BaseModel):
     original_name: str = Field(..., max_length=200, description="Исходное наименование ТС")
     garage_number: Optional[str] = Field(None, max_length=50, description="Гаражный номер")
     license_plate: Optional[str] = Field(None, max_length=20, description="Государственный номер")
+    organization_id: Optional[int] = Field(None, description="ID организации")
 
 
 class VehicleCreate(VehicleBase):
@@ -130,6 +136,7 @@ class VehicleUpdate(BaseModel):
     garage_number: Optional[str] = Field(None, max_length=50)
     license_plate: Optional[str] = Field(None, max_length=20)
     is_validated: Optional[str] = Field(None, max_length=10)
+    organization_id: Optional[int] = Field(None, description="ID организации")
     
     @field_validator('license_plate')
     @classmethod
@@ -185,11 +192,14 @@ class GasStationBase(BaseModel):
     """
     Базовая схема автозаправочной станции
     """
+    provider_id: Optional[int] = Field(None, description="ID провайдера")
     original_name: str = Field(..., max_length=200, description="Исходное наименование АЗС")
     azs_number: Optional[str] = Field(None, max_length=50, description="Номер АЗС")
     location: Optional[str] = Field(None, max_length=500, description="Местоположение")
     region: Optional[str] = Field(None, max_length=200, description="Регион")
     settlement: Optional[str] = Field(None, max_length=200, description="Населенный пункт")
+    latitude: Optional[float] = Field(None, description="Широта", ge=-90, le=90)
+    longitude: Optional[float] = Field(None, description="Долгота", ge=-180, le=180)
 
 
 class GasStationCreate(GasStationBase):
@@ -203,11 +213,14 @@ class GasStationUpdate(BaseModel):
     """
     Схема для обновления АЗС
     """
+    provider_id: Optional[int] = Field(None, description="ID провайдера")
     original_name: Optional[str] = Field(None, max_length=200)
     azs_number: Optional[str] = Field(None, max_length=50)
     location: Optional[str] = Field(None, max_length=500)
     region: Optional[str] = Field(None, max_length=200)
     settlement: Optional[str] = Field(None, max_length=200)
+    latitude: Optional[float] = Field(None, description="Широта", ge=-90, le=90)
+    longitude: Optional[float] = Field(None, description="Долгота", ge=-180, le=180)
     is_validated: Optional[str] = Field(None, max_length=10)
 
 
@@ -301,6 +314,7 @@ class ProviderBase(BaseModel):
     """
     name: str = Field(..., max_length=100, description="Название провайдера")
     code: str = Field(..., max_length=50, description="Код провайдера")
+    organization_id: Optional[int] = Field(None, description="ID организации")
     is_active: Optional[bool] = Field(True, description="Активен")
 
 
@@ -317,6 +331,7 @@ class ProviderUpdate(BaseModel):
     """
     name: Optional[str] = Field(None, max_length=100)
     code: Optional[str] = Field(None, max_length=50)
+    organization_id: Optional[int] = Field(None, description="ID организации")
     is_active: Optional[bool] = None
 
 
@@ -347,7 +362,7 @@ class ProviderTemplateBase(BaseModel):
     provider_id: int = Field(..., description="ID провайдера")
     name: str = Field(..., max_length=200, description="Название шаблона")
     description: Optional[str] = Field(None, max_length=500, description="Описание шаблона")
-    connection_type: Optional[str] = Field("file", max_length=50, description="Тип подключения: file, firebird, api")
+    connection_type: Optional[str] = Field("file", max_length=50, description="Тип подключения: file, firebird, api, web")
     connection_settings: Optional[Dict[str, Any]] = Field(None, description="Настройки подключения (для Firebird или API)")
     field_mapping: Dict[str, str] = Field(..., description="Маппинг полей шаблона")
     header_row: Optional[int] = Field(0, description="Номер строки с заголовками")
@@ -409,9 +424,19 @@ class ProviderTemplateResponse(ProviderTemplateBase):
         # Если это объект SQLAlchemy, преобразуем в словарь
         if hasattr(data, '__dict__'):
             data_dict = {}
+            # Используем __dict__ для получения всех атрибутов
             for key, value in data.__dict__.items():
                 if not key.startswith('_'):
                     data_dict[key] = value
+            # Также проверяем, есть ли у объекта метод для получения всех колонок
+            # Это нужно для случаев, когда некоторые поля не загружены в __dict__
+            if hasattr(data, '__table__'):
+                from sqlalchemy import inspect
+                mapper = inspect(data.__class__)
+                for column in mapper.columns:
+                    col_name = column.key
+                    if col_name not in data_dict and hasattr(data, col_name):
+                        data_dict[col_name] = getattr(data, col_name)
             data = data_dict
         
         if isinstance(data, dict):
@@ -611,6 +636,7 @@ class UserResponse(UserBase):
     is_superuser: bool
     created_at: datetime
     last_login: Optional[datetime] = None
+    organization_ids: Optional[list[int]] = Field(default_factory=list, description="ID организаций, к которым у пользователя есть доступ")
 
     class Config:
         from_attributes = True
@@ -698,3 +724,172 @@ class UploadEventListResponse(BaseModel):
     total: int
     items: list[UploadEventResponse]
     stats: UploadEventStats
+
+
+# ==================== Схемы организаций ====================
+
+class OrganizationBase(BaseModel):
+    """
+    Базовая схема организации
+    """
+    name: str = Field(..., max_length=200, description="Название организации")
+    code: str = Field(..., max_length=50, description="Код организации")
+    description: Optional[str] = Field(None, description="Описание организации")
+    
+    # Стандартные поля организации
+    inn: Optional[str] = Field(None, max_length=20, description="ИНН")
+    kpp: Optional[str] = Field(None, max_length=20, description="КПП")
+    ogrn: Optional[str] = Field(None, max_length=20, description="ОГРН")
+    legal_address: Optional[str] = Field(None, max_length=500, description="Юридический адрес")
+    actual_address: Optional[str] = Field(None, max_length=500, description="Фактический адрес")
+    phone: Optional[str] = Field(None, max_length=50, description="Телефон")
+    email: Optional[str] = Field(None, max_length=255, description="Email")
+    website: Optional[str] = Field(None, max_length=255, description="Веб-сайт")
+    contact_person: Optional[str] = Field(None, max_length=200, description="Контактное лицо")
+    contact_phone: Optional[str] = Field(None, max_length=50, description="Контактный телефон")
+    bank_name: Optional[str] = Field(None, max_length=200, description="Название банка")
+    bank_account: Optional[str] = Field(None, max_length=50, description="Расчетный счет")
+    bank_bik: Optional[str] = Field(None, max_length=20, description="БИК банка")
+    bank_correspondent_account: Optional[str] = Field(None, max_length=50, description="Корреспондентский счет")
+    
+    is_active: Optional[bool] = Field(True, description="Активна")
+
+
+class OrganizationCreate(OrganizationBase):
+    """
+    Схема для создания организации
+    """
+    pass
+
+
+class OrganizationUpdate(BaseModel):
+    """
+    Схема для обновления организации
+    """
+    name: Optional[str] = Field(None, max_length=200)
+    code: Optional[str] = Field(None, max_length=50)
+    description: Optional[str] = None
+    inn: Optional[str] = Field(None, max_length=20)
+    kpp: Optional[str] = Field(None, max_length=20)
+    ogrn: Optional[str] = Field(None, max_length=20)
+    legal_address: Optional[str] = Field(None, max_length=500)
+    actual_address: Optional[str] = Field(None, max_length=500)
+    phone: Optional[str] = Field(None, max_length=50)
+    email: Optional[str] = Field(None, max_length=255)
+    website: Optional[str] = Field(None, max_length=255)
+    contact_person: Optional[str] = Field(None, max_length=200)
+    contact_phone: Optional[str] = Field(None, max_length=50)
+    bank_name: Optional[str] = Field(None, max_length=200)
+    bank_account: Optional[str] = Field(None, max_length=50)
+    bank_bik: Optional[str] = Field(None, max_length=20)
+    bank_correspondent_account: Optional[str] = Field(None, max_length=50)
+    is_active: Optional[bool] = None
+
+
+class OrganizationResponse(OrganizationBase):
+    """
+    Схема ответа с организацией
+    """
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class OrganizationListResponse(BaseModel):
+    """
+    Схема ответа со списком организаций
+    """
+    total: int
+    items: list[OrganizationResponse]
+
+
+class UserOrganizationAssign(BaseModel):
+    """
+    Схема для назначения организаций пользователю
+    """
+    user_id: int = Field(..., description="ID пользователя")
+    organization_ids: list[int] = Field(..., description="Список ID организаций")
+
+
+class OrganizationUserResponse(BaseModel):
+    """
+    Схема ответа с пользователями организации
+    """
+    id: int
+    username: str
+    email: str
+    role: str
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+# ==================== Схемы для логирования ====================
+
+class SystemLogResponse(BaseModel):
+    """
+    Схема ответа с системным логом
+    """
+    id: int
+    level: str
+    message: str
+    module: Optional[str] = None
+    function: Optional[str] = None
+    line_number: Optional[int] = None
+    event_type: Optional[str] = None
+    event_category: Optional[str] = None
+    extra_data: Optional[str] = None
+    exception_type: Optional[str] = None
+    exception_message: Optional[str] = None
+    stack_trace: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SystemLogListResponse(BaseModel):
+    """
+    Схема ответа со списком системных логов
+    """
+    total: int
+    items: list[SystemLogResponse]
+
+
+class UserActionLogResponse(BaseModel):
+    """
+    Схема ответа с логом действия пользователя
+    """
+    id: int
+    user_id: Optional[int] = None
+    username: Optional[str] = None
+    action_type: str
+    action_category: Optional[str] = None
+    action_description: str
+    entity_type: Optional[str] = None
+    entity_id: Optional[int] = None
+    request_data: Optional[str] = None
+    response_data: Optional[str] = None
+    changes: Optional[str] = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    request_method: Optional[str] = None
+    request_path: Optional[str] = None
+    status: str
+    error_message: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class UserActionLogListResponse(BaseModel):
+    """
+    Схема ответа со списком логов действий пользователей
+    """
+    total: int
+    items: list[UserActionLogResponse]

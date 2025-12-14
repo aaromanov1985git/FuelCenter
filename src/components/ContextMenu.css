@@ -4,7 +4,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
-  padding: 4px;
+  padding: var(--spacing-tiny);
   z-index: 10000;
   min-width: 200px;
   animation: contextMenuFadeIn 0.15s ease-out;
@@ -26,7 +26,7 @@
   align-items: center;
   gap: var(--spacing-element);
   width: 100%;
-  padding: 8px 12px;
+  padding: var(--padding-tiny) var(--padding-small);
   border: none;
   background: none;
   text-align: left;
@@ -74,7 +74,7 @@
 .context-menu-divider {
   height: 1px;
   background: var(--color-border-light);
-  margin: 4px 0;
+  margin: var(--spacing-tiny) 0;
 }
 
 /* Мобильная адаптация */
@@ -85,7 +85,7 @@
   }
 
   .context-menu-item {
-    padding: 10px 12px;
+    padding: var(--padding-small) var(--padding-small);
   }
 }
 

@@ -1,7 +1,7 @@
 /* Базовый скелетон */
 .ui-skeleton {
   background: var(--color-bg-secondary);
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-medium);
   display: block;
 }
 
@@ -9,7 +9,7 @@
 .ui-skeleton-text {
   height: 16px;
   margin-bottom: 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-tiny);
 }
 
 .ui-skeleton-text:last-child {
@@ -18,7 +18,7 @@
 
 .ui-skeleton-rectangular {
   width: 100%;
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-medium);
 }
 
 .ui-skeleton-circular {
@@ -82,12 +82,12 @@
 .ui-skeleton-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--padding-tiny);
 }
 
 /* Карточка скелетон */
 .ui-skeleton-card {
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-medium);
   border: 1px solid var(--color-border);
   overflow: hidden;
   background: var(--color-bg-card);
@@ -97,15 +97,15 @@
 .ui-skeleton-table {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--spacing-tiny);
   width: 100%;
 }
 
 .ui-skeleton-table-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 8px;
-  padding: 8px;
+  gap: var(--padding-tiny);
+  padding: var(--padding-tiny);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -125,7 +125,7 @@
   align-items: center;
   gap: var(--spacing-element);
   padding: var(--spacing-element);
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-medium);
   background: var(--color-bg-card);
 }
 
@@ -133,7 +133,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--padding-tiny);
 }
 
 /* Адаптивность */

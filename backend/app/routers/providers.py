@@ -6,7 +6,9 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
 from app.logger import logger
-from app.models import Provider, ProviderTemplate
+from app.models import Provider, ProviderTemplate, User
+from app.auth import require_auth_if_enabled
+from app.services.logging_service import logging_service
 from app.schemas import (
     ProviderResponse, ProviderCreate, ProviderUpdate, ProviderListResponse,
     ProviderTemplateResponse, ProviderTemplateCreate, ProviderTemplateListResponse
@@ -54,7 +56,8 @@ async def get_provider(provider_id: int, db: Session = Depends(get_db)):
 @router.post("", response_model=ProviderResponse)
 async def create_provider(
     provider: ProviderCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
 ):
     """
     Создание нового провайдера
@@ -64,8 +67,27 @@ async def create_provider(
         db_provider = provider_service.create_provider(
             name=provider.name,
             code=provider.code,
+            organization_id=provider.organization_id,
             is_active=provider.is_active
         )
+        
+        # Логируем действие пользователя
+        if current_user:
+            try:
+                logging_service.log_user_action(
+                    db=db,
+                    user_id=current_user.id,
+                    username=current_user.username,
+                    action_type="create",
+                    action_description=f"Создан провайдер: {db_provider.name}",
+                    action_category="provider",
+                    entity_type="Provider",
+                    entity_id=db_provider.id,
+                    status="success"
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+        
         return db_provider
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -75,7 +97,8 @@ async def create_provider(
 async def update_provider(
     provider_id: int,
     provider: ProviderUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
 ):
     """
     Обновление провайдера
@@ -86,24 +109,69 @@ async def update_provider(
             provider_id=provider_id,
             name=provider.name,
             code=provider.code,
+            organization_id=provider.organization_id,
             is_active=provider.is_active
         )
         if not db_provider:
             raise HTTPException(status_code=404, detail="Провайдер не найден")
+        
+        # Логируем действие пользователя
+        if current_user:
+            try:
+                logging_service.log_user_action(
+                    db=db,
+                    user_id=current_user.id,
+                    username=current_user.username,
+                    action_type="update",
+                    action_description=f"Обновлен провайдер: {db_provider.name}",
+                    action_category="provider",
+                    entity_type="Provider",
+                    entity_id=db_provider.id,
+                    status="success"
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+        
         return db_provider
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.delete("/{provider_id}")
-async def delete_provider(provider_id: int, db: Session = Depends(get_db)):
+async def delete_provider(
+    provider_id: int,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
+):
     """
     Удаление провайдера
     """
     provider_service = ProviderService(db)
+    # Получаем информацию о провайдере перед удалением для логирования
+    provider = provider_service.get_provider(provider_id)
+    provider_name = provider.name if provider else f"ID {provider_id}"
+    
     success = provider_service.delete_provider(provider_id)
     if not success:
         raise HTTPException(status_code=404, detail="Провайдер не найден")
+    
+    # Логируем действие пользователя
+    if current_user:
+        try:
+            logging_service.log_user_action(
+                db=db,
+                user_id=current_user.id,
+                username=current_user.username,
+                action_type="delete",
+                action_description=f"Удален провайдер: {provider_name}",
+                action_category="provider",
+                entity_type="Provider",
+                entity_id=provider_id,
+                status="success"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
     return {"message": "Провайдер успешно удален"}
 
 
@@ -138,7 +206,8 @@ async def get_provider_templates(
 async def create_template(
     provider_id: int,
     template: ProviderTemplateCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
 ):
     """
     Создание нового шаблона провайдера
@@ -197,4 +266,44 @@ async def create_template(
     
     logger.info("Шаблон создан", extra={"template_id": db_template.id, "provider_id": provider_id})
     
-    return db_template
+    # Логируем действие пользователя
+    if current_user:
+        try:
+            logging_service.log_user_action(
+                db=db,
+                user_id=current_user.id,
+                username=current_user.username,
+                action_type="create",
+                action_description=f"Создан шаблон: {db_template.name}",
+                action_category="template",
+                entity_type="ProviderTemplate",
+                entity_id=db_template.id,
+                status="success",
+                extra_data={"provider_id": provider_id}
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    # Перезагружаем расписания, если у нового шаблона включена автозагрузка
+    if db_template.auto_load_enabled and db_template.auto_load_schedule:
+        try:
+            from app.services.scheduler_service import SchedulerService
+            scheduler = SchedulerService.get_instance()
+            scheduler.reload_schedules()
+            logger.info("Расписания автоматической загрузки перезагружены после создания шаблона", extra={
+                "template_id": db_template.id
+            })
+        except Exception as e:
+            logger.warning("Не удалось перезагрузить расписания после создания шаблона", extra={
+                "template_id": db_template.id,
+                "error": str(e)
+            })
+    
+    # Явно преобразуем объект SQLAlchemy в Pydantic модель для корректной сериализации
+    try:
+        template_response = ProviderTemplateResponse.model_validate(db_template)
+        return template_response
+    except Exception as e:
+        logger.error(f"Ошибка при преобразовании шаблона в ответ: {e}", exc_info=True)
+        # Если преобразование не удалось, возвращаем объект напрямую (FastAPI попытается сериализовать)
+        return db_template

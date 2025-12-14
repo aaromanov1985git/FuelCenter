@@ -10,8 +10,9 @@ from sqlalchemy import or_, and_, func, case
 from app.database import get_db
 from app.models import UploadEvent, Provider, ProviderTemplate, User
 from app.schemas import UploadEventListResponse, UploadEventResponse, UploadEventStats
-from app.auth import require_auth_if_enabled
+from app.auth import require_auth_if_enabled, require_admin
 from app.logger import logger
+from app.services.logging_service import logging_service
 
 
 router = APIRouter(prefix="/api/v1/upload-events", tags=["upload-events"])
@@ -145,3 +146,55 @@ async def list_upload_events(
         items=items,
         stats=stats,
     )
+
+
+@router.delete("/clear")
+async def clear_all_upload_events(
+    confirm: Optional[str] = Query(None, description="Подтверждение удаления всех событий загрузок"),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_admin)
+):
+    """
+    Очистка всех событий загрузок из базы данных
+    """
+    confirm_bool = confirm and confirm.lower() in ("true", "1", "yes")
+    
+    if not confirm_bool:
+        raise HTTPException(
+            status_code=400, 
+            detail="Для очистки всех событий загрузок необходимо установить параметр confirm=true"
+        )
+    
+    try:
+        total_count = db.query(UploadEvent).count()
+        db.query(UploadEvent).delete()
+        db.commit()
+        
+        # Логируем действие пользователя
+        if current_user:
+            try:
+                logging_service.log_user_action(
+                    db=db,
+                    user_id=current_user.id,
+                    username=current_user.username,
+                    action_type="clear",
+                    action_description=f"Очищены все события загрузок ({total_count} записей)",
+                    action_category="upload_event",
+                    entity_type="UploadEvent",
+                    entity_id=None,
+                    status="success",
+                    extra_data={"deleted_count": total_count}
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+        
+        logger.info(f"Очищены все события загрузок", extra={"deleted_count": total_count})
+        
+        return {
+            "message": f"Все события загрузок успешно удалены",
+            "deleted_count": total_count
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Ошибка при очистке событий загрузок", extra={"error": str(e)}, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Ошибка при очистке событий загрузок: {str(e)}")

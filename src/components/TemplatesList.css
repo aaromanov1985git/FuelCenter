@@ -160,7 +160,7 @@
   width: 100%;
   border-collapse: collapse;
   background: var(--color-bg-card);
-  border-radius: 10px;
+  border-radius: var(--radius-medium);
   overflow: hidden;
   box-shadow: var(--shadow-md);
 }
@@ -170,19 +170,19 @@
 }
 
 .templates-table th {
-  padding: 14px 16px;
+  padding: var(--padding-small) var(--padding-element);
   text-align: left;
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   border-bottom: 2px solid var(--color-border-light);
   letter-spacing: 0.02em;
 }
 
 .templates-table td {
-  padding: 12px 16px;
+  padding: var(--padding-small) var(--padding-element);
   border-bottom: 1px solid var(--color-border);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
   background: var(--color-bg-card);
@@ -266,7 +266,7 @@
 }
 
 .no-templates {
-  padding: 48px var(--padding-card);
+  padding: calc(var(--spacing-section) * 1.5) var(--padding-card);
   text-align: center;
   color: var(--color-text-secondary);
 }
@@ -276,7 +276,7 @@
 }
 
 .no-provider-selected {
-  padding: 48px var(--padding-card);
+  padding: calc(var(--spacing-section) * 1.5) var(--padding-card);
   text-align: center;
   color: var(--color-text-secondary);
   background: var(--color-bg-secondary);

@@ -1,4 +1,5 @@
 import React from 'react'
+import { Button } from './ui'
 import './ConfirmModal.css'
 
 /**
@@ -50,6 +51,21 @@ const ConfirmModal = ({
     }
   }, [isOpen])
 
+  // Маппинг вариантов ConfirmModal на варианты Button
+  const getButtonVariant = () => {
+    switch (variant) {
+      case 'danger':
+        return 'error'
+      case 'warning':
+        return 'warning'
+      case 'success':
+        return 'success'
+      case 'info':
+      default:
+        return 'primary'
+    }
+  }
+
   return (
     <div 
       className="confirm-modal-overlay" 
@@ -74,21 +90,23 @@ const ConfirmModal = ({
         
         <div className="confirm-modal-footer">
           {cancelText !== null && (
-            <button
+            <Button
               type="button"
-              className="confirm-modal-button confirm-modal-button-cancel"
+              variant="secondary"
               onClick={onCancel}
+              className="confirm-modal-button-cancel"
             >
               {cancelText}
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
-            className={`confirm-modal-button confirm-modal-button-confirm variant-${variant}`}
+            variant={getButtonVariant()}
             onClick={onConfirm}
+            className="confirm-modal-button-confirm"
           >
             {confirmText}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

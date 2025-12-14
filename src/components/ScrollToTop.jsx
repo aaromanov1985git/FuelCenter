@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Button } from './ui'
 import './ScrollToTop.css'
 
 /**
@@ -56,17 +57,31 @@ const ScrollToTop = ({ showAfter = 300, scrollDuration = 500 }) => {
   }
 
   return (
-    <button
+    <Button
+      variant="primary"
+      size="lg"
       className="scroll-to-top"
       onClick={scrollToTop}
       aria-label="Наверх"
       title="Наверх"
+      style={{
+        position: 'fixed',
+        bottom: 'var(--spacing-block)',
+        right: 'var(--spacing-block)',
+        width: '48px',
+        height: '48px',
+        borderRadius: '50%',
+        zIndex: 999,
+        opacity: 0.9
+      }}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         className="scroll-to-top-icon"
         viewBox="0 0 20 20"
         fill="currentColor"
+        width="24"
+        height="24"
       >
         <path
           fillRule="evenodd"
@@ -74,7 +89,7 @@ const ScrollToTop = ({ showAfter = 300, scrollDuration = 500 }) => {
           clipRule="evenodd"
         />
       </svg>
-    </button>
+    </Button>
   )
 }
 

@@ -88,10 +88,10 @@ export const ToastProvider = ({ children }) => {
         errorTitle = 'Ошибка сервера'
         errorMessage = 'Произошла внутренняя ошибка сервера. Администратор уже уведомлен. Попробуйте позже.'
         duration = 8000
-      } else if (message.includes('401') || message.includes('Unauthorized')) {
-        errorTitle = 'Требуется авторизация'
-        errorMessage = 'Ваша сессия истекла. Пожалуйста, обновите страницу и войдите снова.'
-        duration = 7000
+      } else if (message.includes('401') || message.includes('Unauthorized') || message.includes('Требуется авторизация')) {
+        // Ошибка 401 обрабатывается централизованно - автоматическое перенаправление на логин
+        // Не показываем toast, так как пользователь будет перенаправлен
+        return null
       } else if (message.includes('Validation') || message.includes('валидац')) {
         errorTitle = 'Ошибка валидации'
         duration = 7000

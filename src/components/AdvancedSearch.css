@@ -18,27 +18,21 @@
   overflow: visible;
 }
 
-.advanced-search-toggle {
+.advanced-search-toggle-button {
   display: flex;
   align-items: center;
   gap: var(--spacing-small);
-  background: none;
-  border: none;
-  padding: 8px 12px;
-  margin: -8px -12px;
-  cursor: pointer;
-  color: var(--color-text-primary);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  transition: all 0.2s ease;
-  border-radius: var(--radius-sm);
-  flex: 1;
-  text-align: left;
+  justify-content: space-between;
+  width: 100%;
 }
 
-.advanced-search-toggle:hover {
-  background: var(--color-bg-hover);
+.advanced-search-toggle-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
 }
+
+/* Кнопка переключения теперь использует стандартный Button из ui библиотеки */
 
 .advanced-search-icon {
   font-size: var(--font-size-sm);
@@ -59,8 +53,8 @@
   color: var(--color-text-on-primary);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
-  padding: 2px 8px;
-  border-radius: 12px;
+  padding: 2px var(--padding-tiny);
+  border-radius: var(--radius-badge);
   min-width: 20px;
   text-align: center;
 }
@@ -69,7 +63,7 @@
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   color: var(--color-text-primary);
-  padding: 6px 12px;
+  padding: var(--padding-tiny) var(--padding-small);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
@@ -123,37 +117,7 @@
   color: var(--color-text-secondary);
 }
 
-.advanced-search-input-wrapper {
-  position: relative;
-  width: 100%;
-  z-index: 10;
-}
-
-.advanced-search-input,
-.advanced-search-select {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
-  transition: all 0.2s ease;
-  width: 100%;
-}
-
-.advanced-search-input:focus,
-.advanced-search-select:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
-}
-
-.advanced-search-input:disabled,
-.advanced-search-select:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background: var(--color-bg-secondary);
-}
+/* Input и Select теперь используют стандартные компоненты из ui библиотеки */
 
 /* История поиска */
 .advanced-search-history {
@@ -164,7 +128,7 @@
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
   z-index: 10001;
   max-height: 200px;
   overflow-y: auto;
@@ -177,7 +141,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: var(--padding-tiny) var(--padding-small);
   border-bottom: 1px solid var(--color-border-light);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
@@ -215,7 +179,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-small);
-  padding: 8px 12px;
+  padding: var(--padding-tiny) var(--padding-small);
   background: none;
   border: none;
   text-align: left;

@@ -219,7 +219,7 @@
 .chart-container {
   overflow-x: auto;
   overflow-y: visible;
-  padding: 48px var(--spacing-element) var(--spacing-block) 80px;
+  padding: calc(var(--spacing-section) * 1.5) var(--spacing-element) var(--spacing-block) 80px;
   margin: 0 calc(-1 * var(--spacing-element));
   position: relative;
 }
@@ -314,7 +314,7 @@
 .chart-bar-segment {
   transition: all 0.3s;
   cursor: pointer;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .chart-bar-segment:last-child {
@@ -326,14 +326,14 @@
   filter: brightness(1.2);
   transform: scaleY(1.05);
   z-index: 5;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .chart-bar:hover {
   opacity: 0.9;
   transform: scaleY(1.08);
   filter: brightness(1.15);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   z-index: 5;
 }
 
@@ -347,12 +347,12 @@
   white-space: nowrap;
   font-weight: var(--font-weight-semibold);
   background: var(--color-bg-card);
-  padding: 4px 8px;
+  padding: var(--spacing-tiny) var(--padding-tiny);
   border-radius: var(--radius-small);
   z-index: 10;
   opacity: 0;
   pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
   border: 1px solid var(--color-border);
   transition: opacity 0.2s ease, top 0.2s ease;
 }
@@ -378,12 +378,24 @@
 
 .chart-count {
   margin-top: var(--spacing-tiny);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   color: var(--color-text-tertiary);
   text-align: center;
   word-break: break-word;
   max-width: 100%;
   padding: 0 var(--spacing-tiny);
+}
+
+.auto-load-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-element);
+}
+
+.dashboard-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-element);
 }
 
 .dashboard-grid {
@@ -424,7 +436,7 @@
 .export-leaders-btn:hover {
   background: var(--color-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .leaders-table {
@@ -488,13 +500,13 @@
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   border-bottom: 2px solid var(--color-border-light);
-  font-size: 0.625rem; /* 10px */
+  font-size: var(--font-size-compact); /* 10px */
 }
 
 .leaders-table td {
   padding: var(--padding-small) var(--padding-element);
   border-bottom: 1px solid var(--color-border);
-  font-size: 0.625rem; /* 10px */
+  font-size: var(--font-size-compact); /* 10px */
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
 }
@@ -571,7 +583,7 @@
 
 .dashboard-loading {
   text-align: center;
-  padding: 48px;
+  padding: calc(var(--spacing-section) * 1.5);
   color: var(--color-text-secondary);
   font-weight: var(--font-weight-normal);
 }
@@ -631,7 +643,7 @@
 .chart-bars-group {
   display: flex;
   align-items: flex-end;
-  gap: 2px;
+  gap: var(--spacing-tiny);
   width: 100%;
   height: 100%;
 }
@@ -653,7 +665,7 @@
   white-space: nowrap;
   font-weight: var(--font-weight-semibold);
   background: var(--color-bg-card);
-  padding: 2px 4px;
+  padding: 2px var(--spacing-tiny);
   border-radius: var(--radius-tiny);
   z-index: 10;
   opacity: 0.9;
@@ -832,13 +844,13 @@
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   border-bottom: 2px solid var(--color-border-light);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
 }
 
 .errors-warnings-table td {
   padding: var(--padding-small) var(--padding-element);
   border-bottom: 1px solid var(--color-border);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
 }
@@ -875,13 +887,160 @@
   font-family: 'Courier New', monospace;
 }
 
+/* Адаптивность для мобильных устройств */
 @media (max-width: 768px) {
-  .errors-warnings-grid {
-    grid-template-columns: 1fr;
+  .dashboard {
+    padding: var(--spacing-responsive-element);
   }
-  
-  .errors-warnings-stats {
-    grid-template-columns: 1fr;
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: var(--spacing-responsive-block);
+  }
+
+  .dashboard-header h2 {
+    font-size: var(--font-responsive-h2);
+  }
+
+  .period-selector {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .period-selector button {
+    flex: 1;
+    min-width: 80px;
+    min-height: 44px; /* Touch-friendly */
+  }
+
+  .dashboard-section {
+    padding: var(--spacing-responsive-element);
+    margin-bottom: var(--spacing-responsive-block);
+  }
+
+  .dashboard-section h3 {
+    font-size: var(--font-size-base);
+    margin-bottom: var(--spacing-responsive-element);
+  }
+
+  /* Все grid на 1 колонку */
+  .errors-warnings-grid,
+  .errors-warnings-stats,
+  .dashboard-grid,
+  .auto-load-grid,
+  .vehicles-dashboard-grid,
+  .upload-dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: var(--spacing-responsive-element);
+  }
+
+  /* Компактные карточки */
+  .auto-load-card {
+    padding: var(--spacing-responsive-element);
+  }
+
+  .auto-load-card-value {
+    font-size: var(--font-size-xl);
+  }
+
+  /* Таблицы ошибок/предупреждений - карточный вид */
+  .errors-warnings-table {
+    overflow-x: visible;
+  }
+
+  .errors-warnings-table table {
+    display: block;
+    border: 0;
+  }
+
+  .errors-warnings-table thead {
+    display: none;
+  }
+
+  .errors-warnings-table tbody {
+    display: block;
+  }
+
+  .errors-warnings-table tr {
+    display: block;
+    margin-bottom: var(--spacing-element);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-medium);
+    padding: var(--spacing-element);
+    background: var(--color-bg-card);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .errors-warnings-table td {
+    display: block;
+    padding: var(--spacing-small);
+    border-bottom: 1px solid var(--color-border-light);
+    text-align: left;
+    position: relative;
+    padding-left: 45%;
+  }
+
+  .errors-warnings-table td:before {
+    content: attr(data-label);
+    position: absolute;
+    left: var(--spacing-small);
+    width: 40%;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    top: var(--spacing-small);
+  }
+
+  .errors-warnings-table td:last-child {
+    border-bottom: none;
+  }
+
+  .errors-warnings-table .number {
+    text-align: left;
+  }
+
+  /* Статистика */
+  .stat-item {
+    padding: var(--spacing-responsive-element);
+  }
+
+  .stat-value {
+    font-size: var(--font-size-xl);
+  }
+
+  .stat-label {
+    font-size: var(--font-size-xs);
+  }
+}
+
+/* Планшеты (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard {
+    padding: var(--spacing-responsive-block);
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .auto-load-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .errors-warnings-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Таблицы с горизонтальной прокруткой */
+  .errors-warnings-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .errors-warnings-table table {
+    min-width: 600px;
   }
 }
 
@@ -1113,14 +1272,14 @@
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   border-bottom: 2px solid var(--color-border-light);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   white-space: nowrap;
 }
 
 .vehicles-dashboard-table td {
   padding: var(--padding-small) var(--padding-element);
   border-bottom: 1px solid var(--color-border);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
 }
@@ -1131,7 +1290,7 @@
 
 .vehicles-dashboard-table .status-badge {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 2px var(--padding-tiny);
   border-radius: var(--radius-small);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-normal);

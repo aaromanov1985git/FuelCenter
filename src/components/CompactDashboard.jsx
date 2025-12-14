@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import VehiclesList from './VehiclesList'
 import { SkeletonCard } from './Skeleton'
+import { Button } from './ui'
 import { authFetch } from '../utils/api'
 import './CompactDashboard.css'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
 
 const CompactDashboard = ({ 
   stats, 
@@ -53,7 +54,9 @@ const CompactDashboard = ({
                 ) : (
                   <div className="compact-stat-empty">Нет данных</div>
                 )}
-                <button 
+                <Button 
+                  variant="ghost"
+                  size="sm"
                   className="compact-stat-action"
                   onClick={() => {
                     setActiveSection('vehicles')
@@ -61,7 +64,7 @@ const CompactDashboard = ({
                   }}
                 >
                   Перейти к транспорту →
-                </button>
+                </Button>
               </div>
 
               {/* Транзакции */}
@@ -98,7 +101,9 @@ const CompactDashboard = ({
                 ) : (
                   <div className="compact-stat-empty">Нет данных</div>
                 )}
-                <button 
+                <Button 
+                  variant="ghost"
+                  size="sm"
                   className="compact-stat-action"
                   onClick={() => {
                     setActiveSection('transactions')
@@ -106,7 +111,7 @@ const CompactDashboard = ({
                   }}
                 >
                   Перейти к транзакциям →
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -117,12 +122,14 @@ const CompactDashboard = ({
       {activeSection === 'vehicles' && (
         <div className="compact-section-content">
           <div className="compact-section-header">
-            <button 
+            <Button 
+              variant="ghost"
+              size="sm"
               className="compact-back-button"
               onClick={() => setActiveSection('overview')}
             >
               ← Назад к обзору
-            </button>
+            </Button>
             <h2>Транспорт</h2>
           </div>
           <VehiclesList />
@@ -133,12 +140,14 @@ const CompactDashboard = ({
       {activeSection === 'transactions' && (
         <div className="compact-section-content">
           <div className="compact-section-header">
-            <button 
+            <Button 
+              variant="ghost"
+              size="sm"
               className="compact-back-button"
               onClick={() => setActiveSection('overview')}
             >
               ← Назад к обзору
-            </button>
+            </Button>
             <h2>Транзакции</h2>
           </div>
           {onNavigateToTransactions && (

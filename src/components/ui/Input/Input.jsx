@@ -64,12 +64,17 @@ const Input = ({
           type={inputType}
           className="input-field"
           placeholder={placeholder}
-          value={value}
+          value={value || ''}
           onChange={onChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
           disabled={disabled}
           required={required}
+          aria-invalid={error ? 'true' : 'false'}
+          aria-describedby={
+            error ? `${name}-error` : helperText ? `${name}-help` : undefined
+          }
+          aria-label={label || name}
           {...props}
         />
 
@@ -90,9 +95,14 @@ const Input = ({
         )}
       </div>
 
-      {(error || helperText) && (
-        <div className={`input-helper ${error ? 'input-helper-error' : ''}`}>
-          {error || helperText}
+      {error && (
+        <div id={`${name}-error`} className="input-helper input-helper-error" role="alert">
+          {error}
+        </div>
+      )}
+      {helperText && !error && (
+        <div id={`${name}-help`} className="input-helper">
+          {helperText}
         </div>
       )}
     </div>

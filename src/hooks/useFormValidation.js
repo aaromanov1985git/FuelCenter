@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 
 /**
  * Хук для валидации форм в реальном времени
@@ -37,12 +37,19 @@ export const useFormValidation = (initialValues = {}, validationRules = {}) => {
     if (!rule) return null
 
     // Проверка обязательного поля
-    if (rule.required && (!value || (typeof value === 'string' && value.trim() === ''))) {
-      return rule.message || `${name} является обязательным полем`
+    if (rule.required) {
+      if (value === undefined || value === null || value === '' || (typeof value === 'string' && value.trim() === '')) {
+        return rule.message || `${name} является обязательным полем`
+      }
     }
 
-    // Если поле пустое и не обязательное, не валидируем
+    // Если поле пустое и не обязательное, не валидируем (кроме случаев когда есть validate функция)
     if (!value || (typeof value === 'string' && value.trim() === '')) {
+      // Если есть validate функция, она может вернуть null для пустого необязательного поля
+      if (rule.validate && typeof rule.validate === 'function') {
+        const customError = rule.validate(value)
+        return customError || null
+      }
       return null
     }
 
@@ -93,6 +100,32 @@ export const useFormValidation = (initialValues = {}, validationRules = {}) => {
     })
 
     setErrors(newErrors)
+    
+    // Дополнительная проверка обязательных полей
+    const hasRequiredErrors = Object.keys(validationRules).some(name => {
+      const rule = validationRules[name]
+      if (rule && rule.required) {
+        const value = values[name]
+        const isEmpty = value === undefined || value === null || value === '' || (typeof value === 'string' && value.trim() === '')
+        return isEmpty && !newErrors[name] // Если поле пустое и нет ошибки валидации, добавляем ошибку
+      }
+      return false
+    })
+    
+    if (hasRequiredErrors) {
+      Object.keys(validationRules).forEach(name => {
+        const rule = validationRules[name]
+        if (rule && rule.required && !newErrors[name]) {
+          const value = values[name]
+          const isEmpty = value === undefined || value === null || value === '' || (typeof value === 'string' && value.trim() === '')
+          if (isEmpty) {
+            newErrors[name] = rule.message || `${name} является обязательным полем`
+          }
+        }
+      })
+      setErrors(newErrors)
+    }
+    
     return Object.keys(newErrors).length === 0
   }, [values, validationRules, validateField])
 
@@ -140,15 +173,77 @@ export const useFormValidation = (initialValues = {}, validationRules = {}) => {
     setTouched({})
   }, [initialValues])
 
+  // Автоматическая валидация обязательных полей при изменении значений
+  useEffect(() => {
+    // Валидируем только обязательные поля, которые были touched или имеют значения
+    const newErrors = {}
+    let hasChanges = false
+    
+    Object.keys(validationRules).forEach(name => {
+      const rule = validationRules[name]
+      if (rule && rule.required) {
+        const value = values[name]
+        const isEmpty = value === undefined || value === null || value === '' || (typeof value === 'string' && value.trim() === '')
+        
+        if (isEmpty) {
+          const errorMsg = rule.message || `${name} является обязательным полем`
+          newErrors[name] = errorMsg
+          // Проверяем, изменилась ли ошибка
+          if (errors[name] !== errorMsg) {
+            hasChanges = true
+          }
+        } else {
+          // Если поле заполнено, проверяем валидацию
+          const error = validateField(name, value)
+          const errorValue = error || undefined
+          newErrors[name] = errorValue
+          // Проверяем, изменилась ли ошибка
+          if (errors[name] !== errorValue) {
+            hasChanges = true
+          }
+        }
+      } else if (touched[name] && values[name]) {
+        // Валидируем необязательные поля только если они touched и заполнены
+        const error = validateField(name, values[name])
+        const errorValue = error || undefined
+        newErrors[name] = errorValue
+        // Проверяем, изменилась ли ошибка
+        if (errors[name] !== errorValue) {
+          hasChanges = true
+        }
+      } else if (errors[name]) {
+        // Сохраняем существующие ошибки для необязательных полей, если они есть
+        newErrors[name] = errors[name]
+      }
+    })
+    
+    if (hasChanges) {
+      setErrors(newErrors)
+    }
+  }, [values, touched, validationRules, validateField]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Проверка валидности формы
-  const isValid = Object.keys(errors).length === 0 && 
-                  Object.keys(values).every(key => {
-                    const rule = validationRules[key]
-                    if (!rule) return true
-                    if (!rule.required) return true
-                    const value = values[key]
-                    return value !== undefined && value !== null && value !== ''
-                  })
+  const isValid = useMemo(() => {
+    // Проверяем наличие ошибок (только реальные ошибки, не undefined)
+    const hasErrors = Object.keys(errors).some(key => errors[key] !== undefined && errors[key] !== null && errors[key] !== '')
+    if (hasErrors) {
+      return false
+    }
+    
+    // Проверяем обязательные поля
+    for (const key in validationRules) {
+      const rule = validationRules[key]
+      if (rule && rule.required) {
+        const value = values[key]
+        const isEmpty = value === undefined || value === null || value === '' || (typeof value === 'string' && value.trim() === '')
+        if (isEmpty) {
+          return false
+        }
+      }
+    }
+    
+    return true
+  }, [errors, values, validationRules])
 
   return {
     values,

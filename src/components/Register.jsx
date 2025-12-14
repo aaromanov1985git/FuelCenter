@@ -1,14 +1,21 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from './ToastContainer'
 import FormField from './FormField'
 import { useFormValidation } from '../hooks/useFormValidation'
-import './Register.css'
+import { Card, Button, Select } from './ui'
+import logo from '../assets/logo.svg'
+import './Login.css'
 
 const Register = ({ onSuccess, onCancel }) => {
   const { register, user: currentUser } = useAuth()
   const { success, error: showError } = useToast()
   const [loading, setLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Проверяем, является ли текущий пользователь администратором
   const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.is_superuser)
@@ -89,122 +96,182 @@ const Register = ({ onSuccess, onCancel }) => {
     }
   }
 
+  const roleOptions = [
+    { value: 'user', label: 'Пользователь' },
+    { value: 'admin', label: 'Администратор' },
+    { value: 'viewer', label: 'Наблюдатель' }
+  ]
+
+  const handleRoleChange = (selectedValue) => {
+    handleChange({ target: { name: 'role', value: selectedValue } })
+  }
+
   if (!isAdmin) {
     return (
-      <div className="register-container">
-        <div className="register-card">
-          <p className="register-error">
-            Только администраторы могут регистрировать новых пользователей
-          </p>
-          {onCancel && (
-            <button onClick={onCancel} className="register-cancel-button">
-              Закрыть
-            </button>
-          )}
+      <div className="login-container">
+        <div className="login-background">
+          <div className="login-background-circle login-background-circle-1"></div>
+          <div className="login-background-circle login-background-circle-2"></div>
+          <div className="login-background-circle login-background-circle-3"></div>
+        </div>
+
+        <div className={`login-content ${mounted ? 'login-content-visible' : ''}`}>
+          <div className={`login-logo-wrapper ${mounted ? 'login-logo-visible' : ''}`}>
+            <img src={logo} alt="GSM Logo" className="login-logo" />
+            <div className="login-logo-glow"></div>
+          </div>
+
+          <Card className={`login-card ${mounted ? 'login-card-visible' : ''}`}>
+            <Card.Header>
+              <Card.Title className="login-title-animated">Доступ запрещен</Card.Title>
+              <p className="login-subtitle login-subtitle-animated">
+                Только администраторы могут регистрировать новых пользователей
+              </p>
+            </Card.Header>
+
+            <Card.Body>
+              {onCancel && (
+                <div className={`login-button-wrapper ${mounted ? 'login-button-visible' : ''}`} style={{ animationDelay: '0.2s' }}>
+                  <Button onClick={onCancel} variant="secondary" fullWidth className="login-submit-button">
+                    Закрыть
+                  </Button>
+                </div>
+              )}
+            </Card.Body>
+          </Card>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="register-container">
-      <div className="register-card">
-        <h2 className="register-title">Регистрация нового пользователя</h2>
-        <p className="register-subtitle">Заполните форму для создания нового пользователя</p>
+    <div className="login-container">
+      <div className="login-background">
+        <div className="login-background-circle login-background-circle-1"></div>
+        <div className="login-background-circle login-background-circle-2"></div>
+        <div className="login-background-circle login-background-circle-3"></div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="register-form">
-          <FormField
-            label="Имя пользователя"
-            name="username"
-            type="text"
-            value={values.username}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            error={touched.username && errors.username ? errors.username : ''}
-            required
-            autoComplete="username"
-          />
+      <div className={`login-content ${mounted ? 'login-content-visible' : ''}`}>
+        <div className={`login-logo-wrapper ${mounted ? 'login-logo-visible' : ''}`}>
+          <img src={logo} alt="GSM Logo" className="login-logo" />
+          <div className="login-logo-glow"></div>
+        </div>
 
-          <FormField
-            label="Email"
-            name="email"
-            type="email"
-            value={values.email}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            error={touched.email && errors.email ? errors.email : ''}
-            required
-            autoComplete="email"
-          />
+        <Card className={`login-card ${mounted ? 'login-card-visible' : ''}`}>
+          <Card.Header>
+            <Card.Title className="login-title-animated">Регистрация нового пользователя</Card.Title>
+          </Card.Header>
 
-          <FormField
-            label="Пароль"
-            name="password"
-            type="password"
-            value={values.password}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            error={touched.password && errors.password ? errors.password : ''}
-            required
-            autoComplete="new-password"
-          />
+          <Card.Body>
+            <form onSubmit={handleSubmit} className="login-form">
+              <FormField
+                label="Имя пользователя"
+                name="username"
+                type="text"
+                value={values.username}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.username && errors.username ? errors.username : ''}
+                touched={touched.username}
+                required
+                autoComplete="username"
+                className={`login-form-field ${mounted ? 'login-form-field-visible' : ''}`}
+                style={{ animationDelay: '0.2s' }}
+              />
 
-          <FormField
-            label="Подтверждение пароля"
-            name="confirmPassword"
-            type="password"
-            value={values.confirmPassword}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            error={touched.confirmPassword && errors.confirmPassword ? errors.confirmPassword : ''}
-            required
-            autoComplete="new-password"
-          />
+              <FormField
+                label="Email"
+                name="email"
+                type="email"
+                value={values.email}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.email && errors.email ? errors.email : ''}
+                touched={touched.email}
+                required
+                autoComplete="email"
+                className={`login-form-field ${mounted ? 'login-form-field-visible' : ''}`}
+                style={{ animationDelay: '0.25s' }}
+              />
 
-          <div className="register-field">
-            <label htmlFor="role" className="register-label">
-              Роль <span className="required">*</span>
-            </label>
-            <select
-              id="role"
-              name="role"
-              value={values.role}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              className={`register-select ${touched.role && errors.role ? 'error' : ''}`}
-            >
-              <option value="user">Пользователь</option>
-              <option value="admin">Администратор</option>
-              <option value="viewer">Наблюдатель</option>
-            </select>
-            {touched.role && errors.role && (
-              <span className="register-error-text">{errors.role}</span>
-            )}
-          </div>
+              <FormField
+                label="Пароль"
+                name="password"
+                type="password"
+                value={values.password}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.password && errors.password ? errors.password : ''}
+                touched={touched.password}
+                required
+                autoComplete="new-password"
+                className={`login-form-field ${mounted ? 'login-form-field-visible' : ''}`}
+                style={{ animationDelay: '0.3s' }}
+              />
 
-          <div className="register-buttons">
-            <button
-              type="submit"
-              className="register-button"
-              disabled={loading}
-            >
-              {loading ? 'Регистрация...' : 'Зарегистрировать'}
-            </button>
-            {onCancel && (
-              <button
-                type="button"
-                onClick={onCancel}
-                className="register-cancel-button"
-              >
-                Отмена
-              </button>
-            )}
-          </div>
-        </form>
+              <FormField
+                label="Подтверждение пароля"
+                name="confirmPassword"
+                type="password"
+                value={values.confirmPassword}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.confirmPassword && errors.confirmPassword ? errors.confirmPassword : ''}
+                touched={touched.confirmPassword}
+                required
+                autoComplete="new-password"
+                className={`login-form-field ${mounted ? 'login-form-field-visible' : ''}`}
+                style={{ animationDelay: '0.35s' }}
+              />
+
+              <div className={`login-form-field ${mounted ? 'login-form-field-visible' : ''}`} style={{ animationDelay: '0.4s' }}>
+                <Select
+                  label="Роль"
+                  name="role"
+                  options={roleOptions}
+                  value={values.role}
+                  onChange={handleRoleChange}
+                  onBlur={handleBlur}
+                  error={touched.role && errors.role ? errors.role : undefined}
+                  helperText={touched.role && errors.role ? errors.role : undefined}
+                  required
+                  fullWidth
+                />
+              </div>
+
+              <div className={`login-button-wrapper ${mounted ? 'login-button-visible' : ''}`} style={{ animationDelay: '0.5s' }}>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={loading}
+                  disabled={loading}
+                  fullWidth
+                  className="login-submit-button"
+                >
+                  {loading ? 'Регистрация...' : 'Зарегистрировать'}
+                </Button>
+              </div>
+
+              {onCancel && (
+                <div className={`login-button-wrapper ${mounted ? 'login-button-visible' : ''}`} style={{ animationDelay: '0.55s' }}>
+                  <Button
+                    type="button"
+                    onClick={onCancel}
+                    variant="secondary"
+                    fullWidth
+                    className="login-submit-button"
+                  >
+                    Отмена
+                  </Button>
+                </div>
+              )}
+            </form>
+          </Card.Body>
+        </Card>
       </div>
     </div>
   )
 }
 
 export default Register
-

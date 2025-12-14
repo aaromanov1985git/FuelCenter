@@ -22,6 +22,8 @@ const UsersList = () => {
   const [showModal, setShowModal] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, userId: null })
+  const [organizations, setOrganizations] = useState([])
+  const [assignOrgsModal, setAssignOrgsModal] = useState({ isOpen: false, userId: null, userName: '', selectedOrgs: [] })
 
   // Пагинация
   const [currentPage, setCurrentPage] = useState(1)
@@ -66,6 +68,18 @@ const UsersList = () => {
     validationRules
   )
 
+  const loadOrganizations = async () => {
+    try {
+      const response = await authFetch(`${API_URL}/api/v1/organizations?limit=1000`)
+      if (response.ok) {
+        const data = await response.json()
+        setOrganizations(data.items || [])
+      }
+    } catch (err) {
+      // Игнорируем ошибки загрузки организаций
+    }
+  }
+
   const loadUsers = async () => {
     if (!isAdmin) return
     setLoading(true)
@@ -87,6 +101,10 @@ const UsersList = () => {
       setUsers(data.items || [])
       setTotal(data.total || 0)
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       showError(err.message)
     } finally {
       setLoading(false)
@@ -100,9 +118,12 @@ const UsersList = () => {
 
   // Загружаем пользователей при изменении страницы или поиска
   useEffect(() => {
-    loadUsers()
+    if (isAdmin) {
+      loadUsers()
+      loadOrganizations()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, search])
+  }, [currentPage, search, isAdmin])
 
   const openAddModal = () => {
     reset()
@@ -181,6 +202,10 @@ const UsersList = () => {
       await loadUsers()
       closeModal()
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       showError(err.message)
     } finally {
       setLoading(false)
@@ -206,6 +231,10 @@ const UsersList = () => {
       await loadUsers()
       info(`Пользователь ${user.username} ${user.is_active ? 'отключен' : 'включен'}`)
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       showError(err.message)
     } finally {
       setLoading(false)
@@ -227,6 +256,10 @@ const UsersList = () => {
       await loadUsers()
       success('Роль обновлена')
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       showError(err.message)
     } finally {
       setLoading(false)
@@ -248,6 +281,10 @@ const UsersList = () => {
       setDeleteConfirm({ isOpen: false, userId: null })
       await loadUsers()
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       showError(err.message)
     } finally {
       setLoading(false)
@@ -259,6 +296,7 @@ const UsersList = () => {
     { key: 'username', header: 'Имя', sortable: true },
     { key: 'email', header: 'Email', sortable: true },
     { key: 'role', header: 'Роль', sortable: true },
+    { key: 'organizations', header: 'Организации', sortable: false },
     { key: 'status', header: 'Статус', sortable: true },
     { key: 'last_login', header: 'Последний вход', sortable: true },
     { key: 'actions', header: 'Действия', sortable: false }
@@ -268,8 +306,8 @@ const UsersList = () => {
     id: u.id,
     username: (
       <div>
-        <div style={{ fontWeight: 'var(--font-weight-semibold)' }}>{u.username}</div>
-        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+        <div className="user-username-primary">{u.username}</div>
+        <div className="user-username-meta">
           Создан: {new Date(u.created_at).toLocaleDateString()}
         </div>
       </div>
@@ -287,6 +325,21 @@ const UsersList = () => {
         disabled={loading || currentUser?.id === u.id}
       />
     ),
+    organizations: (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+        {u.organization_ids && u.organization_ids.length > 0 ? (
+          organizations
+            .filter(org => u.organization_ids.includes(org.id))
+            .map(org => (
+              <Badge key={org.id} variant="secondary" title={org.description || org.name}>
+                {org.name}
+              </Badge>
+            ))
+        ) : (
+          <span style={{ color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>—</span>
+        )}
+      </div>
+    ),
     status: (
       <StatusBadge
         status={u.is_active ? 'success' : 'error'}
@@ -295,7 +348,7 @@ const UsersList = () => {
     ),
     last_login: u.last_login ? new Date(u.last_login).toLocaleString() : '—',
     actions: (
-      <div style={{ display: 'flex', gap: 'var(--spacing-small)', justifyContent: 'flex-end' }}>
+      <div className="cell actions">
         <IconButton
           icon="edit"
           variant="secondary"
@@ -303,6 +356,22 @@ const UsersList = () => {
           title="Редактировать"
           disabled={loading}
           onClick={() => openEditModal(u)}
+        />
+        <IconButton
+          icon="users"
+          variant="secondary"
+          size="small"
+          title="Назначить организации"
+          disabled={loading}
+          onClick={() => {
+            const userOrgs = organizations.filter(org => u.organization_ids?.includes(org.id))
+            setAssignOrgsModal({
+              isOpen: true,
+              userId: u.id,
+              userName: u.username,
+              selectedOrgs: userOrgs.map(org => org.id)
+            })
+          }}
         />
         <Button
           variant={u.is_active ? 'error' : 'success'}
@@ -473,6 +542,104 @@ const UsersList = () => {
           onCancel={() => setDeleteConfirm({ isOpen: false, userId: null })}
         />
       )}
+
+      {/* Модальное окно назначения организаций */}
+      <Modal
+        isOpen={assignOrgsModal.isOpen}
+        onClose={() => setAssignOrgsModal({ isOpen: false, userId: null, userName: '', selectedOrgs: [] })}
+        title={`Назначить организации: ${assignOrgsModal.userName}`}
+      >
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+            Выберите организации:
+          </label>
+          <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '4px', padding: '0.5rem' }}>
+            {organizations.map(org => (
+              <label
+                key={org.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <input
+                  type="checkbox"
+                  checked={assignOrgsModal.selectedOrgs.includes(org.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setAssignOrgsModal(prev => ({
+                        ...prev,
+                        selectedOrgs: [...prev.selectedOrgs, org.id]
+                      }))
+                    } else {
+                      setAssignOrgsModal(prev => ({
+                        ...prev,
+                        selectedOrgs: prev.selectedOrgs.filter(id => id !== org.id)
+                      }))
+                    }
+                  }}
+                />
+                <div>
+                  <div style={{ fontWeight: 500 }}>{org.name}</div>
+                  {org.description && (
+                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                      {org.description}
+                    </div>
+                  )}
+                  <Badge variant="secondary" style={{ marginTop: '0.25rem' }}>{org.code}</Badge>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+          <Button
+            variant="secondary"
+            onClick={() => setAssignOrgsModal({ isOpen: false, userId: null, userName: '', selectedOrgs: [] })}
+          >
+            Отмена
+          </Button>
+          <Button
+            variant="primary"
+            onClick={async () => {
+              if (!assignOrgsModal.userId) return
+              setLoading(true)
+              try {
+                const response = await authFetch(`${API_URL}/api/v1/organizations/assign`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    user_id: assignOrgsModal.userId,
+                    organization_ids: assignOrgsModal.selectedOrgs
+                  })
+                })
+                if (!response.ok) {
+                  const errorData = await response.json().catch(() => ({}))
+                  throw new Error(errorData.detail || 'Не удалось назначить организации')
+                }
+                success('Организации успешно назначены')
+                setAssignOrgsModal({ isOpen: false, userId: null, userName: '', selectedOrgs: [] })
+                await loadUsers()
+              } catch (err) {
+                if (err.isUnauthorized) return
+                showError(err.message)
+              } finally {
+                setLoading(false)
+              }
+            }}
+            disabled={loading}
+          >
+            Назначить
+          </Button>
+        </div>
+      </Modal>
     </Card>
   )
 }

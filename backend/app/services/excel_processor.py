@@ -327,6 +327,7 @@ class ExcelProcessor:
                 "card_number": card,
                 "vehicle": user,
                 "azs_number": app_services.extract_azs_number(kazs),
+                "azs_original_name": kazs,  # Сохраняем оригинальное название АЗС для создания записи в справочнике
                 "product": normalized_fuel,
                 "operation_type": "Покупка",
                 "quantity": qty_value,

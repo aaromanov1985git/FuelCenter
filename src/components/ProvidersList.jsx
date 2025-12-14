@@ -3,11 +3,12 @@ import TemplateEditor from './TemplateEditor'
 import ConfirmModal from './ConfirmModal'
 import IconButton from './IconButton'
 import FormField from './FormField'
-import { SkeletonTable } from './Skeleton'
 import { useToast } from './ToastContainer'
 import { useFormValidation } from '../hooks/useFormValidation'
 import { useAutoSave } from '../hooks/useAutoSave'
 import StatusBadge from './StatusBadge'
+import { Card, Button, Input, Skeleton, Alert, Modal, Checkbox, Select, Badge } from './ui'
+import { authFetch } from '../utils/api'
 import './ProvidersList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
@@ -18,9 +19,10 @@ const ProvidersList = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [editingId, setEditingId] = useState(null)
-  const [editForm, setEditForm] = useState({ name: '', code: '', is_active: true })
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [newForm, setNewForm] = useState({ name: '', code: '', is_active: true })
+  const [editForm, setEditForm] = useState({ name: '', code: '', is_active: true, organization_id: null })
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [newForm, setNewForm] = useState({ name: '', code: '', is_active: true, organization_id: null })
+  const [organizations, setOrganizations] = useState([])
 
   // Валидация формы добавления провайдера
   const validationRules = {
@@ -47,19 +49,19 @@ const ProvidersList = () => {
     isValid: isFormValid,
     reset: resetForm,
     setValues: setFormValues
-  } = useFormValidation({ name: '', code: '', is_active: true }, validationRules)
+  } = useFormValidation({ name: '', code: '', is_active: true, organization_id: null }, validationRules)
 
   // Автосохранение формы добавления провайдера
   const { clearAutoSave, hasAutoSavedData, loadAutoSaved } = useAutoSave(
     formValues,
     'provider-add-form',
     1000, // Сохраняем через 1 секунду после последнего изменения
-    showAddForm // Включаем только когда форма открыта
+    showAddModal // Включаем только когда форма открыта
   )
 
   // Загрузка сохраненных данных при открытии формы
   useEffect(() => {
-    if (showAddForm && hasAutoSavedData) {
+    if (showAddModal && hasAutoSavedData) {
       const saved = loadAutoSaved()
       if (saved && (saved.name || saved.code)) {
         setFormValues(saved)
@@ -67,7 +69,7 @@ const ProvidersList = () => {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAddForm])
+  }, [showAddModal])
 
   const [selectedProviderId, setSelectedProviderId] = useState(null)
   const [showTemplateEditor, setShowTemplateEditor] = useState(false)
@@ -90,21 +92,38 @@ const ProvidersList = () => {
       params.append('skip', ((currentPage - 1) * limit).toString())
       params.append('limit', limit.toString())
       
-      const response = await fetch(`${API_URL}/api/v1/providers?${params}`)
+      const response = await authFetch(`${API_URL}/api/v1/providers?${params}`)
       if (!response.ok) throw new Error('Ошибка загрузки данных')
       
       const result = await response.json()
       setProviders(result.items)
       setTotal(result.total)
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       setError('Ошибка загрузки: ' + err.message)
     } finally {
       setLoading(false)
     }
   }
 
+  const loadOrganizations = async () => {
+    try {
+      const response = await authFetch(`${API_URL}/api/v1/organizations?limit=1000`)
+      if (response.ok) {
+        const data = await response.json()
+        setOrganizations(data.items || [])
+      }
+    } catch (err) {
+      // Игнорируем ошибки загрузки организаций
+    }
+  }
+
   useEffect(() => {
     loadProviders()
+    loadOrganizations()
   }, [currentPage])
 
   const handleEdit = (provider) => {
@@ -112,14 +131,15 @@ const ProvidersList = () => {
     setEditForm({
       name: provider.name,
       code: provider.code,
-      is_active: provider.is_active
+      is_active: provider.is_active,
+      organization_id: provider.organization_id || null
     })
   }
 
   const handleSave = async (providerId) => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_URL}/api/v1/providers/${providerId}`, {
+      const response = await authFetch(`${API_URL}/api/v1/providers/${providerId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -137,6 +157,10 @@ const ProvidersList = () => {
       setError('')
       success('Провайдер успешно обновлен')
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       const errorMessage = 'Ошибка сохранения: ' + err.message
       setError(errorMessage)
       showError(errorMessage)
@@ -154,7 +178,7 @@ const ProvidersList = () => {
 
   const handleCancel = () => {
     setEditingId(null)
-    setEditForm({ name: '', code: '', is_active: true })
+    setEditForm({ name: '', code: '', is_active: true, organization_id: null })
   }
 
   const handleAdd = async () => {
@@ -166,7 +190,7 @@ const ProvidersList = () => {
 
     try {
       setLoading(true)
-      const response = await fetch(`${API_URL}/api/v1/providers`, {
+      const response = await authFetch(`${API_URL}/api/v1/providers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -179,14 +203,18 @@ const ProvidersList = () => {
         throw new Error(errorData.detail || 'Ошибка создания')
       }
 
-      setShowAddForm(false)
-      setNewForm({ name: '', code: '', is_active: true })
+      setShowAddModal(false)
+      setNewForm({ name: '', code: '', is_active: true, organization_id: null })
       resetForm()
       clearAutoSave() // Очищаем автосохранение после успешного создания
       await loadProviders()
       setError('')
       success('Провайдер успешно создан')
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       const errorMessage = 'Ошибка создания: ' + err.message
       setError(errorMessage)
       showError(errorMessage)
@@ -221,7 +249,7 @@ const ProvidersList = () => {
     }
     
     try {
-      const response = await fetch(`${API_URL}/api/v1/providers/${providerId}/templates?limit=1000`)
+      const response = await authFetch(`${API_URL}/api/v1/providers/${providerId}/templates?limit=1000`)
       if (response.ok) {
         const result = await response.json()
         setTemplates(prev => ({
@@ -233,6 +261,10 @@ const ProvidersList = () => {
         setError('Ошибка загрузки шаблонов: ' + (errorData.detail || 'Неизвестная ошибка'))
       }
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       setError('Ошибка загрузки шаблонов: ' + err.message)
       setTemplates(prev => ({
         ...prev,
@@ -260,7 +292,7 @@ const ProvidersList = () => {
 
     try {
       setLoading(true)
-      const response = await fetch(`${API_URL}/api/v1/templates/${deleteTemplateConfirm.templateId}`, {
+      const response = await authFetch(`${API_URL}/api/v1/templates/${deleteTemplateConfirm.templateId}`, {
         method: 'DELETE'
       })
 
@@ -276,6 +308,10 @@ const ProvidersList = () => {
       setError('')
       setDeleteTemplateConfirm({ isOpen: false, templateId: null })
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       setError('Ошибка удаления шаблона: ' + err.message)
       setDeleteTemplateConfirm({ isOpen: false, templateId: null })
     } finally {
@@ -290,7 +326,7 @@ const ProvidersList = () => {
       
       if (editingTemplate) {
         // Обновление существующего шаблона
-        response = await fetch(`${API_URL}/api/v1/templates/${editingTemplate.id}`, {
+        response = await authFetch(`${API_URL}/api/v1/templates/${editingTemplate.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -299,7 +335,7 @@ const ProvidersList = () => {
         })
       } else {
         // Создание нового шаблона
-        response = await fetch(`${API_URL}/api/v1/providers/${selectedProviderId}/templates`, {
+        response = await authFetch(`${API_URL}/api/v1/providers/${selectedProviderId}/templates`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -322,6 +358,10 @@ const ProvidersList = () => {
       }
       setError('')
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       setError('Ошибка сохранения шаблона: ' + err.message)
     } finally {
       setLoading(false)
@@ -333,7 +373,7 @@ const ProvidersList = () => {
 
     try {
       setLoading(true)
-      const response = await fetch(`${API_URL}/api/v1/providers/${deleteConfirm.providerId}`, {
+      const response = await authFetch(`${API_URL}/api/v1/providers/${deleteConfirm.providerId}`, {
         method: 'DELETE'
       })
 
@@ -347,6 +387,10 @@ const ProvidersList = () => {
       setDeleteConfirm({ isOpen: false, providerId: null })
       success('Провайдер успешно удален')
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       const errorMessage = 'Ошибка удаления: ' + err.message
       setError(errorMessage)
       showError(errorMessage)
@@ -357,97 +401,46 @@ const ProvidersList = () => {
   }
 
   return (
-    <div className="providers-list">
-      <div className="providers-header">
-        <h2>Справочник провайдеров</h2>
-        <IconButton 
-          icon={showAddForm ? "cancel" : "add"}
-          variant={showAddForm ? "secondary" : "success"}
-          onClick={() => setShowAddForm(!showAddForm)}
-          title={showAddForm ? "Отмена" : "Добавить провайдера"}
-          size="medium"
-        />
-      </div>
-
-      {error && <div className="error-message">{error}</div>}
-
-      {showAddForm && (
-        <div className="add-form">
-          <h3>Новый провайдер</h3>
-          <div className="form-row">
-            <FormField
-              label="Название"
-              name="name"
-              type="text"
-              value={formValues.name}
-              onChange={handleFormChange}
-              onBlur={handleFormBlur}
-              error={formErrors.name}
-              touched={formTouched.name}
-              required
-              placeholder="Например: РП-газпром"
-              helpText="Уникальное название провайдера"
-            />
-            <FormField
-              label="Код"
-              name="code"
-              type="text"
-              value={formValues.code}
-              onChange={handleFormChange}
-              onBlur={handleFormBlur}
-              error={formErrors.code}
-              touched={formTouched.code}
-              required
-              placeholder="Например: RP-GAZPROM"
-              helpText="Уникальный код (только латиница, цифры, дефисы)"
-            />
-            <div className="form-field">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="is_active"
-                  checked={formValues.is_active}
-                  onChange={handleFormChange}
-                />
-                Активен
-              </label>
-            </div>
-            <div className="form-actions">
-              <IconButton 
-                icon="save" 
-                variant="success" 
-                onClick={handleAdd}
-                title="Создать"
-                size="medium"
-                disabled={!isFormValid || loading}
-              />
-              <IconButton 
-                icon="cancel" 
-                variant="secondary" 
-                onClick={() => {
-                  setShowAddForm(false)
-                  setNewForm({ name: '', code: '', is_active: true })
+    <>
+      <Card>
+        <Card.Header>
+          <Card.Title>Справочник провайдеров</Card.Title>
+          <Card.Actions>
+            <Button
+              variant={showAddModal ? "secondary" : "success"}
+              icon={showAddModal ? "×" : "+"}
+              onClick={() => {
+                if (showAddModal) {
+                  setShowAddModal(false)
                   resetForm()
-                  // Не очищаем автосохранение при отмене, чтобы пользователь мог восстановить данные
-                }}
-                title="Отмена"
-                size="medium"
-              />
-            </div>
-          </div>
-        </div>
-      )}
+                } else {
+                  setShowAddModal(true)
+                }
+              }}
+            >
+              {showAddModal ? "Отмена" : "Добавить провайдера"}
+            </Button>
+          </Card.Actions>
+        </Card.Header>
 
-      {loading && providers.length === 0 ? (
-        <SkeletonTable rows={10} columns={5} />
-      ) : (
-        <div className="providers-table-wrapper">
-          <table className="providers-table">
+        <Card.Body>
+          {error && (
+            <Alert variant="error" style={{ marginBottom: 'var(--spacing-element)' }}>
+              {error}
+            </Alert>
+          )}
+
+          {loading && providers.length === 0 ? (
+            <Skeleton rows={10} columns={5} />
+          ) : (
+            <div className="providers-table-wrapper">
+              <table className="providers-table">
             <thead>
               <tr>
                 <th>ID</th>
                 <th>Название</th>
                 <th>Код</th>
+                <th>Организация</th>
                 <th>Статус</th>
                 <th>Действия</th>
               </tr>
@@ -459,46 +452,60 @@ const ProvidersList = () => {
                     <td data-label="ID">{provider.id}</td>
                     <td data-label="Название">
                       {editingId === provider.id ? (
-                        <div>
-                          <input
-                            type="text"
-                            value={editForm.name}
-                            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                            className="edit-input"
-                            placeholder="Название *"
-                            required
-                          />
-                        </div>
+                        <Input
+                          type="text"
+                          value={editForm.name}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                          placeholder="Название *"
+                          required
+                          fullWidth
+                        />
                       ) : (
                         provider.name
                       )}
                     </td>
                     <td data-label="Код">
                       {editingId === provider.id ? (
-                        <div>
-                          <input
-                            type="text"
-                            value={editForm.code}
-                            onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
-                            className="edit-input"
-                            placeholder="Код *"
-                            required
-                          />
-                        </div>
+                        <Input
+                          type="text"
+                          value={editForm.code}
+                          onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
+                          placeholder="Код *"
+                          required
+                          fullWidth
+                        />
                       ) : (
                         provider.code
                       )}
                     </td>
+                    <td data-label="Организация">
+                      {editingId === provider.id ? (
+                        <Select
+                          value={editForm.organization_id ? editForm.organization_id.toString() : ''}
+                          onChange={(value) => setEditForm({ ...editForm, organization_id: value ? parseInt(value) : null })}
+                          options={[
+                            { value: '', label: 'Не указана' },
+                            ...organizations.filter(o => o.is_active).map(org => ({
+                              value: org.id.toString(),
+                              label: org.name
+                            }))
+                          ]}
+                          fullWidth
+                        />
+                      ) : (
+                        (() => {
+                          const org = organizations.find(o => o.id === provider.organization_id)
+                          return org ? <Badge variant="secondary">{org.name}</Badge> : '-'
+                        })()
+                      )}
+                    </td>
                     <td data-label="Статус">
                       {editingId === provider.id ? (
-                        <label className="checkbox-label">
-                          <input
-                            type="checkbox"
-                            checked={editForm.is_active}
-                            onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
-                          />
-                          Активен
-                        </label>
+                        <Checkbox
+                          checked={editForm.is_active}
+                          onChange={(checked) => setEditForm({ ...editForm, is_active: checked })}
+                          label="Активен"
+                        />
                       ) : (
                         <StatusBadge 
                           status={provider.is_active ? 'active' : 'inactive'} 
@@ -553,7 +560,7 @@ const ProvidersList = () => {
                   </tr>
                   {selectedProviderId === provider.id && !showTemplateEditor && (
                     <tr>
-                      <td colSpan="5" className="templates-cell">
+                      <td colSpan="6" className="templates-cell">
                         <div className="templates-section">
                           <div className="templates-header">
                             <h4>Шаблоны провайдера</h4>
@@ -608,7 +615,7 @@ const ProvidersList = () => {
                   )}
                   {selectedProviderId === provider.id && showTemplateEditor && (
                     <tr>
-                      <td colSpan="5" className="template-editor-cell">
+                      <td colSpan="6" className="template-editor-cell">
                         <TemplateEditor
                           providerId={provider.id}
                           template={editingTemplate}
@@ -627,29 +634,33 @@ const ProvidersList = () => {
           </table>
         </div>
       )}
-      
-      {/* Пагинация */}
-      {total > limit && (
-        <div className="pagination">
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1 || loading}
-            className="pagination-btn"
-          >
-            Предыдущая
-          </button>
-          <span className="pagination-info">
-            Страница {currentPage} из {Math.ceil(total / limit)} (всего: {total})
-          </span>
-          <button
-            onClick={() => setCurrentPage(prev => Math.min(Math.ceil(total / limit), prev + 1))}
-            disabled={currentPage >= Math.ceil(total / limit) || loading}
-            className="pagination-btn"
-          >
-            Следующая
-          </button>
-        </div>
-      )}
+          
+          {/* Пагинация */}
+          {total > limit && (
+            <div className="pagination-container">
+              <Button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1 || loading}
+                variant="secondary"
+                size="sm"
+              >
+                Предыдущая
+              </Button>
+              <span className="pagination-info">
+                Страница {currentPage} из {Math.ceil(total / limit)} (всего: {total})
+              </span>
+              <Button
+                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(total / limit), prev + 1))}
+                disabled={currentPage >= Math.ceil(total / limit) || loading}
+                variant="secondary"
+                size="sm"
+              >
+                Следующая
+              </Button>
+            </div>
+          )}
+        </Card.Body>
+      </Card>
 
       <ConfirmModal
         isOpen={deleteConfirm.isOpen}
@@ -672,7 +683,91 @@ const ProvidersList = () => {
         cancelText="Отмена"
         variant="danger"
       />
-    </div>
+
+      {/* Модальное окно добавления провайдера */}
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => {
+          setShowAddModal(false)
+          resetForm()
+        }}
+        title="Добавить провайдера"
+        size="md"
+      >
+        <Modal.Body>
+          <div className="form-group">
+            <label>
+              Название <span className="required">*</span>
+            </label>
+            <Input
+              type="text"
+              name="name"
+              value={formValues.name}
+              onChange={handleFormChange}
+              onBlur={handleFormBlur}
+              placeholder="Название провайдера"
+              error={formTouched.name && formErrors.name ? `⚠️ ${formErrors.name}` : undefined}
+              fullWidth
+            />
+          </div>
+          <div className="form-group">
+            <label>
+              Код <span className="required">*</span>
+            </label>
+            <Input
+              type="text"
+              name="code"
+              value={formValues.code}
+              onChange={handleFormChange}
+              onBlur={handleFormBlur}
+              placeholder="Код провайдера"
+              error={formTouched.code && formErrors.code ? `⚠️ ${formErrors.code}` : undefined}
+              fullWidth
+            />
+          </div>
+          <div className="form-group">
+            <label>Организация</label>
+            <Select
+              value={formValues.organization_id ? formValues.organization_id.toString() : ''}
+              onChange={(value) => setFormValues({ ...formValues, organization_id: value ? parseInt(value) : null })}
+              options={[
+                { value: '', label: 'Не указана' },
+                ...organizations.filter(o => o.is_active).map(org => ({
+                  value: org.id.toString(),
+                  label: org.name
+                }))
+              ]}
+              fullWidth
+            />
+          </div>
+          <div className="form-group">
+            <Checkbox
+              checked={formValues.is_active}
+              onChange={(checked) => setFormValues({ ...formValues, is_active: checked })}
+              label="Активен"
+            />
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setShowAddModal(false)
+              resetForm()
+            }}
+          >
+            Отмена
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleAdd}
+            disabled={!isFormValid || loading}
+          >
+            Создать
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
   )
 }
 

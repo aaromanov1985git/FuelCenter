@@ -163,7 +163,7 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--padding-tiny);
   min-width: 0; /* Позволяет полям сжиматься в grid */
   width: 100%; /* Занимает всю доступную ширину */
   box-sizing: border-box; /* Учитывает padding и border в ширине */
@@ -258,7 +258,7 @@
   min-width: 150px;
   max-width: 250px;
   text-align: left;
-  padding: 10px 14px;
+  padding: var(--padding-small) var(--padding-small);
 }
 
 /* На мобильных устройствах числовые поля занимают всю ширину */
@@ -320,12 +320,12 @@
   width: 100%;
   border-collapse: collapse;
   background: var(--color-bg-card);
-  border-radius: 4px;
+  border-radius: var(--radius-tiny);
 }
 
 .mapping-table th {
   background: var(--color-bg-hover);
-  padding: 12px;
+  padding: var(--padding-small);
   text-align: left;
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
@@ -334,7 +334,7 @@
 }
 
 .mapping-table td {
-  padding: 12px;
+  padding: var(--padding-small);
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text-primary);
   min-height: 40px;
@@ -367,10 +367,10 @@
 .status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+  gap: var(--spacing-tiny);
+  padding: var(--spacing-tiny) var(--padding-tiny);
+  border-radius: var(--radius-tiny);
+  font-size: var(--font-size-xs);
   font-weight: 500;
 }
 
@@ -461,7 +461,7 @@
 .checkbox-label {
   flex-direction: row !important;
   align-items: center;
-  gap: 8px;
+  gap: var(--padding-tiny);
   font-weight: normal;
 }
 
@@ -473,7 +473,7 @@
 
 .form-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--padding-small);
   margin-top: 10px;
   align-items: center;
   justify-content: flex-end;
@@ -634,7 +634,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--padding-tiny);
 }
 
 .btn-load-columns:hover:not(:disabled) {
@@ -667,7 +667,7 @@
 
 .column-badge {
   display: inline-block;
-  padding: 4px 8px;
+  padding: var(--spacing-tiny) var(--padding-tiny);
   background: var(--color-primary-light);
   color: var(--color-primary);
   border-radius: var(--radius-small);
@@ -710,7 +710,7 @@
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: var(--spacing-element);
   margin-top: 12px;
   align-items: start;
   min-width: 0; /* Позволяет grid сжиматься */
@@ -786,32 +786,185 @@
 
 /* Улучшаем отображение на мобильных устройствах */
 @media (max-width: 768px) {
-  .form-row {
-    grid-template-columns: 1fr;
-    gap: 16px;
+  .template-editor {
+    padding: var(--spacing-responsive-element);
+    margin-bottom: var(--spacing-responsive-element);
+  }
+
+  .template-editor-header h3 {
+    font-size: var(--font-responsive-h2);
+  }
+
+  .form-section {
+    padding: var(--spacing-responsive-element);
+    margin-bottom: var(--spacing-responsive-element);
+  }
+
+  .section-title {
+    font-size: var(--font-size-base);
+    margin-bottom: var(--spacing-small);
+  }
+
+  .section-description {
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-small);
+  }
+
+  /* Все form-row на одной колонке */
+  .form-row,
+  .form-row-numbers,
+  .form-row-basic-info {
+    grid-template-columns: 1fr !important;
+    gap: var(--spacing-responsive-element);
   }
   
+  /* Поля ввода на всю ширину */
   .form-group input[type="text"],
-  .form-group input[type="number"] {
+  .form-group input[type="number"],
+  .form-group input[type="password"],
+  .form-group select,
+  .form-group textarea {
     min-width: 0;
     max-width: 100%;
     width: 100%;
+    font-size: 16px; /* Предотвращает zoom на iOS */
+  }
+
+  .input-number {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .form-group input[type="number"] {
+    max-width: 100%;
+    min-width: 0;
   }
   
-  .form-section:has(.form-group:first-child input[type="text"]) .form-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .btn-test-connection {
+  /* Кнопки на всю ширину */
+  .btn-test-connection,
+  .btn-save,
+  .btn-cancel {
     width: 100%;
     max-width: 100%;
+    min-height: 44px; /* Touch-friendly */
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: var(--spacing-small);
+    align-items: stretch;
+  }
+
+  /* Таблица маппинга - карточный вид */
+  .mapping-table {
+    overflow-x: visible;
+  }
+
+  .mapping-table table {
+    display: block;
+    border: 0;
+  }
+
+  .mapping-table thead {
+    display: none;
+  }
+
+  .mapping-table tbody {
+    display: block;
+  }
+
+  .mapping-table tr {
+    display: block;
+    margin-bottom: var(--spacing-element);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-medium);
+    padding: var(--spacing-element);
+    background: var(--color-bg-card);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .mapping-table td {
+    display: block;
+    padding: var(--spacing-small);
+    border-bottom: 1px solid var(--color-border-light);
+    text-align: left;
+    position: relative;
+    padding-left: 45%;
+    padding-top: var(--spacing-small);
+    padding-bottom: var(--spacing-small);
+  }
+
+  .mapping-table td:before {
+    content: attr(data-label);
+    position: absolute;
+    left: var(--spacing-small);
+    width: 40%;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    top: var(--spacing-small);
+  }
+
+  .mapping-table td:last-child {
+    border-bottom: none;
+  }
+
+  .mapping-status-cell {
+    width: auto;
+    text-align: left;
+  }
+
+  .mapping-table .mapping-select {
+    width: 100%;
+    min-height: 44px; /* Touch-friendly */
+  }
+
+  /* Компактные отступы */
+  .template-form {
+    gap: var(--spacing-responsive-block);
+  }
+
+  .file-upload-button {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
   }
 }
 
-/* Улучшаем отображение на средних экранах */
-@media (max-width: 1024px) and (min-width: 769px) {
-  .form-section:has(.form-group:first-child input[type="text"]) .form-row {
+/* Планшеты (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .template-editor {
+    padding: var(--spacing-responsive-block);
+  }
+
+  .form-section {
+    padding: var(--spacing-responsive-block);
+  }
+
+  .form-row,
+  .form-row-basic-info {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .form-row-numbers {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Таблица маппинга - табличный вид с прокруткой */
+  .mapping-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mapping-table table {
+    min-width: 600px;
+  }
+
+  .form-actions {
+    flex-direction: row;
+    justify-content: flex-end;
   }
 }
 

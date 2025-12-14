@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay-background);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -62,7 +62,7 @@
 }
 
 .ui-modal-xl {
-  width: 1000px;
+  width: 1150px; /* Увеличено на 15% с 1000px */
   max-width: 95vw;
 }
 
@@ -117,6 +117,7 @@
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  position: relative; /* Для правильного позиционирования выпадающих списков */
 }
 
 .ui-modal-body {
@@ -135,11 +136,28 @@
 /* Mobile responsive */
 @media (max-width: 768px) {
   .ui-modal-overlay {
-    padding: var(--spacing-element);
+    padding: 0;
+    align-items: flex-end; /* Модалка появляется снизу на мобильных */
   }
 
   .ui-modal {
     max-height: 95vh;
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-large) var(--radius-large) 0 0;
+    margin: 0;
+    animation: modalSlideUpMobile 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes modalSlideUpMobile {
+    from {
+      transform: translateY(100%);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 
   .ui-modal-sm,
@@ -151,19 +169,61 @@
   }
 
   .ui-modal-header {
-    padding: var(--padding-element);
+    padding: var(--spacing-responsive-element);
+    min-height: 56px; /* Touch-friendly высота */
+  }
+
+  .ui-modal-title {
+    font-size: var(--font-size-lg);
+  }
+
+  .ui-modal-close {
+    width: 44px; /* Touch-friendly */
+    height: 44px;
+    font-size: 28px;
   }
 
   .ui-modal-body {
-    padding: var(--padding-element);
+    padding: var(--spacing-responsive-element);
+    max-height: calc(95vh - 112px); /* Учитываем header + footer */
   }
 
   .ui-modal-footer {
-    padding: var(--padding-element);
+    padding: var(--spacing-responsive-element);
     flex-direction: column;
+    gap: var(--spacing-small);
   }
 
   .ui-modal-footer > * {
     width: 100%;
+    min-height: 44px; /* Touch-friendly кнопки */
+  }
+}
+
+/* Очень маленькие экраны - полноэкранный режим */
+@media (max-width: 480px) {
+  .ui-modal-overlay {
+    padding: 0;
+  }
+
+  .ui-modal {
+    max-height: 100vh;
+    height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  .ui-modal-header {
+    padding: var(--spacing-small) var(--spacing-responsive-element);
+  }
+
+  .ui-modal-body {
+    padding: var(--spacing-responsive-element);
+    max-height: calc(100vh - 112px);
+  }
+
+  .ui-modal-footer {
+    padding: var(--spacing-responsive-element);
+    border-top: 2px solid var(--color-border);
   }
 }

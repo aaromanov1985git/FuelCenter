@@ -128,7 +128,7 @@
   left: 0;
   height: 3px;
   width: 100%;
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--color-bg-hover);
   overflow: hidden;
 }
 

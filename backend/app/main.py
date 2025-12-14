@@ -28,7 +28,9 @@ from app.routers import (
     upload_period_lock,
     upload_events,
     auth,
-    users
+    users,
+    organizations,
+    logs
 )
 
 from app.models import Provider, User
@@ -169,6 +171,8 @@ app.include_router(dashboard.router)
 app.include_router(upload_period_lock.router)
 app.include_router(upload_events.router)
 app.include_router(users.router)
+app.include_router(organizations.router)
+app.include_router(logs.router)
 
 
 @app.on_event("startup")
@@ -176,10 +180,115 @@ async def startup_event():
     """
     Инициализация при старте приложения
     Создание начальных данных (провайдер "РП-газпром")
+    Запуск планировщика автоматической загрузки
     """
     from sqlalchemy.orm import Session
     from sqlalchemy import text
-    logger.info("Запуск приложения: инициализация начальных данных")
+    from app.services.logging_service import logging_service
+    
+    logger.info("Запуск приложения: инициализация начальных данных", extra={
+        "event_type": "system",
+        "event_category": "startup"
+    })
+    
+    # Тестовое логирование для проверки работы системы логирования
+    db = next(get_db())
+    try:
+        # Проверяем, существуют ли таблицы логов
+        from sqlalchemy import inspect
+        inspector = inspect(engine)
+        tables = inspector.get_table_names()
+        
+        if 'system_logs' not in tables or 'user_action_logs' not in tables:
+            logger.warning("Таблицы логов не найдены. Необходимо применить миграцию: alembic upgrade head")
+        else:
+            # Создаем тестовый лог
+            logging_service.log_system_event(
+                db=db,
+                level="INFO",
+                message="Приложение запущено",
+                module="main",
+                function="startup_event",
+                event_type="system",
+                event_category="startup",
+                extra_data={"version": settings.api_version}
+            )
+            logger.info("Тестовый системный лог успешно создан")
+    except Exception as e:
+        logger.error(f"Ошибка при создании тестового системного лога: {e}", exc_info=True)
+        # Проверяем, может быть таблицы не существуют
+        try:
+            from sqlalchemy import inspect, text
+            inspector = inspect(engine)
+            tables = inspector.get_table_names()
+            if 'system_logs' not in tables:
+                logger.error("Таблица system_logs не существует. Примените миграцию: alembic upgrade head")
+        except Exception as check_error:
+            logger.error(f"Не удалось проверить наличие таблиц: {check_error}")
+    finally:
+        db.close()
+    
+    # Запускаем планировщик автоматической загрузки
+    logger.info("Начало инициализации планировщика", extra={
+        "event_type": "scheduler",
+        "event_category": "startup"
+    })
+    try:
+        from app.services.scheduler_service import SchedulerService
+        scheduler = SchedulerService.get_instance()
+        scheduler.start()
+        
+        # Получаем информацию о запланированных задачах
+        jobs_info = scheduler.get_scheduled_jobs()
+        logger.info("Планировщик автоматической загрузки инициализирован", extra={
+            "event_type": "scheduler",
+            "event_category": "startup",
+            "scheduled_jobs_count": jobs_info.get("total", 0),
+            "scheduler_running": scheduler._scheduler.running if scheduler._scheduler else False
+        })
+        
+        # Логируем детали запланированных задач
+        if jobs_info.get("total", 0) > 0:
+            for job in jobs_info.get("jobs", []):
+                logger.info("Запланированная задача", extra={
+                    "event_type": "scheduler",
+                    "event_category": "startup",
+                    "job_id": job.get("id"),
+                    "next_run_time": job.get("next_run_time"),
+                    "trigger": job.get("trigger")
+                })
+        else:
+            logger.warning("Не найдено запланированных задач автоматической загрузки", extra={
+                "event_type": "scheduler",
+                "event_category": "startup"
+            })
+    except Exception as e:
+        logger.error(f"Ошибка при инициализации планировщика: {e}", extra={
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "event_type": "scheduler",
+            "event_category": "startup"
+        }, exc_info=True)
+        
+        # Логируем ошибку через logging_service если возможно
+        try:
+            db = next(get_db())
+            try:
+                logging_service.log_system_event(
+                    db=db,
+                    level="ERROR",
+                    message=f"Критическая ошибка при инициализации планировщика: {str(e)}",
+                    module="main",
+                    function="startup_event",
+                    event_type="scheduler",
+                    event_category="startup",
+                    extra_data={"error": str(e), "error_type": type(e).__name__},
+                    exception=e
+                )
+            finally:
+                db.close()
+        except Exception as log_error:
+            logger.error(f"Не удалось записать системный лог ошибки планировщика: {log_error}", exc_info=True)
     
     # Создаем базу данных gsm_user, если она не существует
     # Это нужно для устранения ошибок в логах PostgreSQL
@@ -317,12 +426,57 @@ async def startup_event():
             )
         else:
             logger.debug("Администратор по умолчанию уже существует", extra={"username": admin_username})
+        
+        # Логируем завершение инициализации
+        try:
+            logging_service.log_system_event(
+                db=db,
+                level="INFO",
+                message="Инициализация приложения завершена",
+                module="main",
+                function="startup_event",
+                event_type="system",
+                event_category="startup",
+                extra_data={"status": "success"}
+            )
+        except Exception as e:
+            logger.warning(f"Не удалось записать системный лог завершения инициализации: {e}", exc_info=True)
     except Exception as e:
         logger.error(f"Ошибка при инициализации: {e}", extra={"error": str(e)}, exc_info=True)
         db.rollback()
+        
+        # Логируем ошибку инициализации
+        try:
+            logging_service.log_system_event(
+                db=db,
+                level="ERROR",
+                message=f"Ошибка при инициализации приложения: {str(e)}",
+                module="main",
+                function="startup_event",
+                event_type="system",
+                event_category="startup",
+                extra_data={"error": str(e)},
+                exception=e
+            )
+        except Exception as log_error:
+            logger.error(f"Не удалось записать системный лог ошибки: {log_error}", exc_info=True)
     finally:
         db.close()
         logger.info("Инициализация завершена")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """
+    Остановка планировщика при завершении приложения
+    """
+    try:
+        from app.services.scheduler_service import SchedulerService
+        scheduler = SchedulerService.get_instance()
+        scheduler.shutdown()
+        logger.info("Планировщик автоматической загрузки остановлен")
+    except Exception as e:
+        logger.error(f"Ошибка при остановке планировщика: {e}", extra={"error": str(e)}, exc_info=True)
 
 
 @app.get("/")

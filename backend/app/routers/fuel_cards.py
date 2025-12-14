@@ -6,12 +6,14 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
 from app.logger import logger
-from app.models import Vehicle, FuelCard
+from app.models import Vehicle, FuelCard, User
 from app.schemas import (
     FuelCardResponse, FuelCardUpdate, FuelCardListResponse,
     CardAssignmentRequest, CardAssignmentResponse, MergeRequest, MergeResponse
 )
 from app.services import assign_card_to_vehicle
+from app.auth import require_auth_if_enabled, require_admin
+from app.services.logging_service import logging_service
 
 router = APIRouter(prefix="/api/v1/fuel-cards", tags=["fuel-cards"])
 
@@ -58,7 +60,8 @@ async def get_fuel_card(card_id: int, db: Session = Depends(get_db)):
 async def update_fuel_card(
     card_id: int,
     card_data: FuelCardUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
 ):
     """
     Обновление топливной карты
@@ -89,13 +92,31 @@ async def update_fuel_card(
     
     logger.info(f"Топливная карта обновлена", extra={"card_id": card_id})
     
+    # Логируем действие пользователя
+    if current_user:
+        try:
+            logging_service.log_user_action(
+                db=db,
+                user_id=current_user.id,
+                username=current_user.username,
+                action_type="update",
+                action_description=f"Обновлена топливная карта: {card.card_number}",
+                action_category="fuel_card",
+                entity_type="FuelCard",
+                entity_id=card_id,
+                status="success"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
     return card
 
 
 @router.post("/assign", response_model=CardAssignmentResponse)
 async def assign_card(
     assignment: CardAssignmentRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
 ):
     """
     Закрепление карты за ТС с проверкой пересечений
@@ -125,6 +146,34 @@ async def assign_card(
             overlaps=overlaps
         )
     
+    # Логируем действие пользователя
+    if current_user:
+        try:
+            card = db.query(FuelCard).filter(FuelCard.id == assignment.card_id).first()
+            vehicle = db.query(Vehicle).filter(Vehicle.id == assignment.vehicle_id).first()
+            card_number = card.card_number if card else f"ID {assignment.card_id}"
+            vehicle_name = vehicle.original_name if vehicle else f"ID {assignment.vehicle_id}"
+            
+            logging_service.log_user_action(
+                db=db,
+                user_id=current_user.id,
+                username=current_user.username,
+                action_type="assign",
+                action_description=f"Назначена карта '{card_number}' на ТС '{vehicle_name}'",
+                action_category="fuel_card",
+                entity_type="FuelCard",
+                entity_id=assignment.card_id,
+                status="success",
+                extra_data={
+                    "card_id": assignment.card_id,
+                    "vehicle_id": assignment.vehicle_id,
+                    "start_date": assignment.start_date.isoformat() if assignment.start_date else None,
+                    "end_date": assignment.end_date.isoformat() if assignment.end_date else None
+                }
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
     return CardAssignmentResponse(
         success=True,
         message=message,
@@ -136,7 +185,8 @@ async def assign_card(
 async def merge_fuel_cards(
     card_id: int,
     merge_request: MergeRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
 ):
     """
     Слияние двух топливных карт
@@ -187,6 +237,28 @@ async def merge_fuel_cards(
             }
         )
         
+        # Логируем действие пользователя
+        if current_user:
+            try:
+                logging_service.log_user_action(
+                    db=db,
+                    user_id=current_user.id,
+                    username=current_user.username,
+                    action_type="merge",
+                    action_description=f"Объединены карты: '{source_card.card_number}' с '{target_card.card_number}'",
+                    action_category="fuel_card",
+                    entity_type="FuelCard",
+                    entity_id=merge_request.target_id,
+                    status="success",
+                    extra_data={
+                        "source_card_id": card_id,
+                        "target_card_id": merge_request.target_id,
+                        "transactions_updated": transactions_updated
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+        
         return MergeResponse(
             success=True,
             message=f"Карта '{source_card.card_number}' успешно объединена с '{target_card.card_number}'",
@@ -204,3 +276,55 @@ async def merge_fuel_cards(
             exc_info=True
         )
         raise HTTPException(status_code=500, detail=f"Ошибка при слиянии карт: {str(e)}")
+
+
+@router.delete("/clear")
+async def clear_all_fuel_cards(
+    confirm: Optional[str] = Query(None, description="Подтверждение удаления всех топливных карт"),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_admin)
+):
+    """
+    Очистка всех топливных карт из базы данных
+    """
+    confirm_bool = confirm and confirm.lower() in ("true", "1", "yes")
+    
+    if not confirm_bool:
+        raise HTTPException(
+            status_code=400, 
+            detail="Для очистки всех топливных карт необходимо установить параметр confirm=true"
+        )
+    
+    try:
+        total_count = db.query(FuelCard).count()
+        db.query(FuelCard).delete()
+        db.commit()
+        
+        # Логируем действие пользователя
+        if current_user:
+            try:
+                logging_service.log_user_action(
+                    db=db,
+                    user_id=current_user.id,
+                    username=current_user.username,
+                    action_type="clear",
+                    action_description=f"Очищены все топливные карты ({total_count} записей)",
+                    action_category="fuel_card",
+                    entity_type="FuelCard",
+                    entity_id=None,
+                    status="success",
+                    extra_data={"deleted_count": total_count}
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+        
+        logger.info(f"Очищены все топливные карты", extra={"deleted_count": total_count})
+        
+        return {
+            "message": f"Все топливные карты успешно удалены",
+            "deleted_count": total_count
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Ошибка при очистке топливных карт", extra={"error": str(e)}, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Ошибка при очистке топливных карт: {str(e)}")

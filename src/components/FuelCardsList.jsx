@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { logger } from '../utils/logger'
 import FuelCardEditModal from './FuelCardEditModal'
 import IconButton from './IconButton'
-import { SkeletonTable, SkeletonCard } from './Skeleton'
 import { useToast } from './ToastContainer'
 import AdvancedSearch from './AdvancedSearch'
 import { useDebounce } from '../hooks/useDebounce'
 import { authFetch } from '../utils/api'
+import { Card, Button, Table, Badge, Skeleton, Alert } from './ui'
 import './FuelCardsList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
@@ -45,6 +45,10 @@ const FuelCardsList = () => {
         setAllCards(result.items)
       }
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       logger.error('Ошибка загрузки всех карт для статистики', { error: err.message })
     }
   }
@@ -91,6 +95,10 @@ const FuelCardsList = () => {
       
       setCards(filteredItems)
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       setError('Ошибка загрузки: ' + err.message)
     } finally {
       setLoading(false)
@@ -106,6 +114,10 @@ const FuelCardsList = () => {
         logger.debug('ТС загружены в FuelCardsList', { count: result.items.length })
       }
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       logger.error('Ошибка загрузки ТС', { error: err.message })
     }
   }
@@ -119,6 +131,10 @@ const FuelCardsList = () => {
         logger.debug('Провайдеры загружены в FuelCardsList', { count: result.items.length })
       }
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       logger.error('Ошибка загрузки провайдеров', { error: err.message })
     }
   }
@@ -182,6 +198,10 @@ const FuelCardsList = () => {
       setError('')
       success('Топливная карта успешно обновлена')
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       const errorMessage = 'Ошибка сохранения: ' + err.message
       setError(errorMessage)
       showError(errorMessage)
@@ -213,93 +233,114 @@ const FuelCardsList = () => {
     return provider ? provider.name : `ID: ${providerId}`
   }
 
+  // Подготовка данных для таблицы
+  const tableColumns = [
+    { key: 'card_number', header: 'Номер карты' },
+    { key: 'provider', header: 'Провайдер' },
+    { key: 'vehicle', header: 'Закреплена за ТС' },
+    { key: 'status', header: 'Статус' },
+    { key: 'actions', header: 'Действия' }
+  ]
+
+  const tableData = cards.map(card => ({
+    id: card.id,
+    card_number: card.card_number,
+    provider: getProviderName(card.provider_id),
+    vehicle: getVehicleName(card.vehicle_id),
+    status: card.is_blocked ? (
+      <Badge variant="error" size="sm">Заблокирована</Badge>
+    ) : (
+      <Badge variant="success" size="sm">Активна</Badge>
+    ),
+    actions: (
+      <IconButton 
+        icon="edit" 
+        variant="primary" 
+        onClick={() => handleEdit(card)}
+        title="Редактировать"
+        size="small"
+      />
+    ),
+    className: card.is_blocked ? 'blocked-card' : ''
+  }))
+
   return (
-    <div className="fuel-cards-list">
+    <>
       {/* Компактный дашборд */}
       {stats && (
-        <div className="dashboard-section fuel-cards-dashboard-section">
-          <h3>Статистика по топливным картам</h3>
-          
-          <div className="fuel-cards-dashboard-grid">
-            <div className="fuel-cards-dashboard-card">
-              <div className="fuel-cards-dashboard-card-header">
-                <span className="fuel-cards-dashboard-icon">💳</span>
-                <h4>Всего карт</h4>
-              </div>
-              <div className="fuel-cards-dashboard-stat-value">
-                {stats.total}
-              </div>
+        <div className="stats-grid">
+          <Card variant="outlined" padding="sm">
+            <div className="stat-card-header">
+              <span>💳</span>
+              <h4 className="stat-card-title">Всего карт</h4>
             </div>
+            <div className="stat-card-value">
+              {stats.total}
+            </div>
+          </Card>
 
-            <div className="fuel-cards-dashboard-card">
-              <div className="fuel-cards-dashboard-card-header">
-                <span className="fuel-cards-dashboard-icon">✅</span>
-                <h4>Активных</h4>
-              </div>
-              <div className="fuel-cards-dashboard-stat-value stat-success">
-                {stats.active}
-              </div>
-              <div className="fuel-cards-dashboard-stat-percent">
-                {stats.total > 0 
-                  ? ((stats.active / stats.total) * 100).toFixed(1)
-                  : 0}%
-              </div>
+          <Card variant="outlined" padding="sm">
+            <div className="stat-card-header">
+              <span>✅</span>
+              <h4 className="stat-card-title">Активных</h4>
             </div>
+            <div className="stat-card-value success">
+              {stats.active}
+            </div>
+            <div className="stat-card-percent">
+              {stats.total > 0 ? ((stats.active / stats.total) * 100).toFixed(1) : 0}%
+            </div>
+          </Card>
 
-            <div className="fuel-cards-dashboard-card">
-              <div className="fuel-cards-dashboard-card-header">
-                <span className="fuel-cards-dashboard-icon">🚫</span>
-                <h4>Заблокированных</h4>
-              </div>
-              <div className="fuel-cards-dashboard-stat-value stat-error">
-                {stats.blocked}
-              </div>
-              <div className="fuel-cards-dashboard-stat-percent">
-                {stats.total > 0 
-                  ? ((stats.blocked / stats.total) * 100).toFixed(1)
-                  : 0}%
-              </div>
+          <Card variant="outlined" padding="sm">
+            <div className="stat-card-header">
+              <span>🚫</span>
+              <h4 className="stat-card-title">Заблокированных</h4>
             </div>
+            <div className="stat-card-value error">
+              {stats.blocked}
+            </div>
+            <div className="stat-card-percent">
+              {stats.total > 0 ? ((stats.blocked / stats.total) * 100).toFixed(1) : 0}%
+            </div>
+          </Card>
 
-            <div className="fuel-cards-dashboard-card">
-              <div className="fuel-cards-dashboard-card-header">
-                <span className="fuel-cards-dashboard-icon">🚗</span>
-                <h4>Закрепленных</h4>
-              </div>
-              <div className="fuel-cards-dashboard-stat-value stat-success">
-                {stats.assigned}
-              </div>
-              <div className="fuel-cards-dashboard-stat-percent">
-                {stats.total > 0 
-                  ? ((stats.assigned / stats.total) * 100).toFixed(1)
-                  : 0}%
-              </div>
+          <Card variant="outlined" padding="sm">
+            <div className="stat-card-header">
+              <span>🚗</span>
+              <h4 className="stat-card-title">Закрепленных</h4>
             </div>
+            <div className="stat-card-value success">
+              {stats.assigned}
+            </div>
+            <div className="stat-card-percent">
+              {stats.total > 0 ? ((stats.assigned / stats.total) * 100).toFixed(1) : 0}%
+            </div>
+          </Card>
 
-            <div className="fuel-cards-dashboard-card">
-              <div className="fuel-cards-dashboard-card-header">
-                <span className="fuel-cards-dashboard-icon">📭</span>
-                <h4>Не закрепленных</h4>
-              </div>
-              <div className="fuel-cards-dashboard-stat-value stat-warning">
-                {stats.unassigned}
-              </div>
-              <div className="fuel-cards-dashboard-stat-percent">
-                {stats.total > 0 
-                  ? ((stats.unassigned / stats.total) * 100).toFixed(1)
-                  : 0}%
-              </div>
+          <Card variant="outlined" padding="sm">
+            <div className="stat-card-header">
+              <span>📭</span>
+              <h4 className="stat-card-title">Не закрепленных</h4>
             </div>
-          </div>
+            <div className="stat-card-value warning">
+              {stats.unassigned}
+            </div>
+            <div className="stat-card-percent">
+              {stats.total > 0 ? ((stats.unassigned / stats.total) * 100).toFixed(1) : 0}%
+            </div>
+          </Card>
         </div>
       )}
 
-      <div className="fuel-cards-header">
-        <h2>Справочник топливных карт</h2>
-      </div>
+      <Card>
+        <Card.Header>
+          <Card.Title>Справочник топливных карт</Card.Title>
+        </Card.Header>
 
-      {/* Фильтры и поиск */}
-      {cards.length > 0 && (
+        <Card.Body>
+          {/* Фильтры и поиск */}
+          {cards.length > 0 && (
         <AdvancedSearch
           filters={filters}
           onFiltersChange={setFilters}
@@ -333,76 +374,34 @@ const FuelCardsList = () => {
         />
       )}
 
-      {error && <div className="error-message">{error}</div>}
-
-      {loading && cards.length === 0 ? (
-        <SkeletonTable rows={10} columns={5} />
-      ) : (
-        <div className="cards-table-wrapper">
-          <table className="cards-table">
-            <thead>
-              <tr>
-                <th>Номер карты</th>
-                <th>Провайдер</th>
-                <th>Закреплена за ТС</th>
-                <th>Статус</th>
-                <th>Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cards.map(card => (
-                <tr key={card.id} className={card.is_blocked ? 'blocked-card' : ''}>
-                  <td data-label="Номер карты">{card.card_number}</td>
-                  <td data-label="Провайдер">{getProviderName(card.provider_id)}</td>
-                  <td data-label="Закреплена за ТС">{getVehicleName(card.vehicle_id)}</td>
-                  <td data-label="Статус">
-                    {card.is_blocked ? (
-                      <span className="blocked-badge">Заблокирована</span>
-                    ) : (
-                      <span className="active-badge">Активна</span>
-                    )}
-                  </td>
-                  <td data-label="Действия">
-                    <IconButton 
-                      icon="edit" 
-                      variant="primary" 
-                      onClick={() => handleEdit(card)}
-                      title="Редактировать"
-                      size="small"
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {cards.length === 0 && (
-            <div className="empty-state">Нет данных для отображения</div>
+          {error && (
+            <Alert variant="error" style={{ marginBottom: 'var(--spacing-element)' }}>
+              {error}
+            </Alert>
           )}
-        </div>
-      )}
-      
-      {/* Пагинация */}
-      {total > limit && (
-        <div className="pagination">
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1 || loading}
-            className="pagination-btn"
-          >
-            Предыдущая
-          </button>
-          <span className="pagination-info">
-            Страница {currentPage} из {Math.ceil(total / limit)} (всего: {total})
-          </span>
-          <button
-            onClick={() => setCurrentPage(prev => Math.min(Math.ceil(total / limit), prev + 1))}
-            disabled={currentPage >= Math.ceil(total / limit) || loading}
-            className="pagination-btn"
-          >
-            Следующая
-          </button>
-        </div>
-      )}
+
+          {loading && cards.length === 0 ? (
+            <Skeleton rows={10} columns={5} />
+          ) : (
+            <Table
+              columns={tableColumns}
+              data={tableData}
+              emptyMessage="Нет данных для отображения"
+            >
+              {total > limit && (
+                <Table.Pagination
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(total / limit)}
+                  totalItems={total}
+                  itemsPerPage={limit}
+                  onPageChange={setCurrentPage}
+                  disabled={loading}
+                />
+              )}
+            </Table>
+          )}
+        </Card.Body>
+      </Card>
 
       <FuelCardEditModal
         isOpen={editingCard !== null}
@@ -413,7 +412,7 @@ const FuelCardsList = () => {
         onCancel={handleCancel}
         loading={loading}
       />
-    </div>
+    </>
   )
 }
 

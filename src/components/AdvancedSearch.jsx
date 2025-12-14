@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react'
+import { Button, Input, Select, Badge } from './ui'
 import './AdvancedSearch.css'
 
 /**
@@ -55,30 +56,30 @@ const AdvancedSearch = ({
   return (
     <div className="advanced-search">
       <div className="advanced-search-header">
-        <button
-          className="advanced-search-toggle"
+        <Button
+          variant="secondary"
           onClick={handleToggle}
-          type="button"
           aria-expanded={isExpanded}
+          className="advanced-search-toggle-button"
         >
-          <span className="advanced-search-icon">
-            {isExpanded ? '▼' : '▶'}
+          <span className="advanced-search-toggle-content">
+            <span>{isExpanded ? '▼' : '▶'}</span>
+            <span>Расширенный поиск</span>
+            {activeFiltersCount > 0 && (
+              <Badge variant="primary" size="sm">{activeFiltersCount}</Badge>
+            )}
           </span>
-          <span className="advanced-search-title">Расширенный поиск</span>
-          {activeFiltersCount > 0 && (
-            <span className="advanced-search-badge">{activeFiltersCount}</span>
-          )}
-        </button>
+        </Button>
         {activeFiltersCount > 0 && (
-          <button
-            className="advanced-search-clear"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleClear}
-            type="button"
             disabled={loading}
             title="Очистить все фильтры"
           >
             Очистить
-          </button>
+          </Button>
         )}
       </div>
 
@@ -91,33 +92,28 @@ const AdvancedSearch = ({
                   {config.label}
                 </label>
                 {config.type === 'select' ? (
-                  <select
+                  <Select
                     id={`filter-${config.key}`}
                     value={filters[config.key] || ''}
-                    onChange={(e) => handleFilterChange(config.key, e.target.value)}
+                    onChange={(value) => handleFilterChange(config.key, value)}
                     disabled={loading}
-                    className="advanced-search-select"
-                  >
-                    <option value="">Все</option>
-                    {config.options?.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: '', label: 'Все' },
+                      ...(config.options || [])
+                    ]}
+                    fullWidth
+                  />
                 ) : (
-                  <div className="advanced-search-input-wrapper">
-                    <input
-                      ref={(el) => { inputRefs.current[config.key] = el }}
-                      id={`filter-${config.key}`}
-                      type={config.type || 'text'}
-                      value={filters[config.key] || ''}
-                      onChange={(e) => handleFilterChange(config.key, e.target.value)}
-                      placeholder={config.placeholder || `Введите ${config.label.toLowerCase()}`}
-                      disabled={loading}
-                      className="advanced-search-input"
-                    />
-                  </div>
+                  <Input
+                    ref={(el) => { inputRefs.current[config.key] = el }}
+                    id={`filter-${config.key}`}
+                    type={config.type || 'text'}
+                    value={filters[config.key] || ''}
+                    onChange={(e) => handleFilterChange(config.key, e.target.value)}
+                    placeholder={config.placeholder || `Введите ${config.label.toLowerCase()}`}
+                    disabled={loading}
+                    fullWidth
+                  />
                 )}
               </div>
             ))}

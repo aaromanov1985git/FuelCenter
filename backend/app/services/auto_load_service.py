@@ -139,7 +139,7 @@ class AutoLoadService:
         try:
             if template.connection_type == "firebird":
                 result = self._load_from_firebird(template, date_from, date_to)
-            elif template.connection_type == "api":
+            elif template.connection_type in ["api", "web"]:
                 result = self._load_from_api(template, date_from, date_to)
             else:
                 result = {
@@ -151,6 +151,16 @@ class AutoLoadService:
                     "transactions_skipped": 0,
                     "transactions_total": 0
                 }
+            
+            # Логируем результат перед возвратом
+            logger.info("Результат автоматической загрузки", extra={
+                "template_id": template.id,
+                "template_name": template.name,
+                "success": result.get("success", False),
+                "transactions_created": result.get("transactions_created", 0),
+                "transactions_total": result.get("transactions_total", 0)
+            })
+            
             return result
         except Exception as e:
             logger.error("Ошибка при загрузке данных для шаблона", extra={
@@ -172,14 +182,31 @@ class AutoLoadService:
             return result
         finally:
             try:
-                if result:
-                    transactions_created = int(result.get("transactions_created") or 0)
-                    transactions_skipped = int(result.get("transactions_skipped") or 0)
-                    transactions_total = int(result.get("transactions_total") or (transactions_created + transactions_skipped))
-                    status = "success" if result.get("success") else "failed"
-                    message = message or result.get("message") or result.get("error")
+                # Убеждаемся, что result определен
+                if not result:
+                    result = {}
+                
+                transactions_created = int(result.get("transactions_created") or 0)
+                transactions_skipped = int(result.get("transactions_skipped") or 0)
+                transactions_total = int(result.get("transactions_total") or (transactions_created + transactions_skipped))
+                status = "success" if result.get("success") else "failed"
+                message = message or result.get("message") or result.get("error") or "Неизвестная ошибка"
+                
                 duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
-                event_service.log_event(
+                
+                # Логируем перед записью события
+                logger.info("Запись события автозагрузки в журнал", extra={
+                    "template_id": template.id,
+                    "template_name": template.name,
+                    "status": status,
+                    "transactions_total": transactions_total,
+                    "transactions_created": transactions_created,
+                    "is_scheduled": True,
+                    "source_type": "auto"
+                })
+                
+                # Всегда логируем событие, даже если загрузка не удалась
+                event = event_service.log_event(
                     source_type="auto",
                     status=status,
                     is_scheduled=True,
@@ -195,9 +222,29 @@ class AutoLoadService:
                     duration_ms=duration_ms,
                     message=message
                 )
-            except Exception:
+                
+                # Проверяем, что событие действительно создано
+                if event and hasattr(event, 'id'):
+                    logger.info("Событие автозагрузки успешно зафиксировано в журнале", extra={
+                        "event_id": event.id,
+                        "template_id": template.id,
+                        "status": status,
+                        "transactions_created": transactions_created,
+                        "is_scheduled": True
+                    })
+                else:
+                    logger.warning("Событие автозагрузки создано, но ID не получен", extra={
+                        "template_id": template.id,
+                        "status": status
+                    })
+            except Exception as log_exc:
                 # Не прерываем основной процесс из-за ошибок логирования событий
-                logger.warning("Не удалось зафиксировать событие автозагрузки", exc_info=True)
+                logger.error("Не удалось зафиксировать событие автозагрузки в журнале", extra={
+                    "template_id": template.id,
+                    "template_name": template.name,
+                    "error": str(log_exc),
+                    "error_type": type(log_exc).__name__
+                }, exc_info=True)
 
     def _load_from_firebird(
         self, 
@@ -328,7 +375,9 @@ class AutoLoadService:
                 # Остальные поля
                 transaction_data["card_number"] = str(row.get("card") or row.get("card_number") or "").strip()
                 transaction_data["vehicle"] = str(row.get("user") or row.get("vehicle") or "").strip()
-                transaction_data["azs_number"] = app_services.extract_azs_number(str(row.get("kazs") or row.get("azs_number") or ""))
+                kazs_value = str(row.get("kazs") or row.get("azs_number") or "").strip()
+                transaction_data["azs_number"] = app_services.extract_azs_number(kazs_value)
+                transaction_data["azs_original_name"] = kazs_value  # Сохраняем оригинальное название АЗС
                 transaction_data["product"] = app_services.normalize_fuel(str(row.get("fuel") or row.get("product") or ""))
                 transaction_data["operation_type"] = "Покупка"
                 transaction_data["currency"] = "RUB"
@@ -369,10 +418,21 @@ class AutoLoadService:
 
         # Сохраняем транзакции
         batch_processor = TransactionBatchProcessor(self.db)
-        created_count, skipped_count = batch_processor.process_transactions_batch(
-            transactions_data,
-            provider_id=template.provider_id
-        )
+        # Используем create_transactions для получения warnings
+        created_count, skipped_count, batch_warnings = batch_processor.create_transactions(transactions_data)
+        
+        # Объединяем предупреждения
+        all_warnings = warnings + (batch_warnings if batch_warnings else [])
+
+        # Формируем сообщение
+        message = f"Успешно загружено транзакций: {created_count}"
+        if skipped_count > 0:
+            message += f", пропущено дубликатов: {skipped_count}"
+        if all_warnings:
+            warnings_text = "; ".join(all_warnings[:3])  # Показываем первые 3 предупреждения
+            if len(all_warnings) > 3:
+                warnings_text += f" и еще {len(all_warnings) - 3}"
+            message += f". Предупреждения: {warnings_text}"
 
         return {
             "template_id": template.id,
@@ -381,7 +441,8 @@ class AutoLoadService:
             "transactions_created": created_count,
             "transactions_skipped": skipped_count,
             "transactions_total": len(transactions_data),
-            "warnings": warnings if warnings else None
+            "warnings": all_warnings if all_warnings else None,
+            "message": message
         }
 
     def _load_from_api(
@@ -417,10 +478,10 @@ class AutoLoadService:
             asyncio.set_event_loop(loop)
 
         api_data = loop.run_until_complete(
-            api_service.load_transactions(
+            api_service.fetch_transactions(
                 template=template,
-                date_from=date_from,
-                date_to=date_to,
+                date_from=date_from.date() if isinstance(date_from, datetime) else date_from,
+                date_to=date_to.date() if isinstance(date_to, datetime) else date_to,
                 card_numbers=None
             )
         )
@@ -437,66 +498,27 @@ class AutoLoadService:
                 "success": True,
                 "transactions_created": 0,
                 "transactions_skipped": 0,
-                "transactions_total": len(api_data),
+                "transactions_total": 0,
                 "message": "Данные не найдены за указанный период"
             }
 
-        # Преобразуем данные в транзакции (используем логику из transactions.py)
-        # Для API данные уже должны быть в правильном формате
-        transactions_data = []
-        
-        for item in api_data:
-            transaction_data = {
-                "transaction_date": item.get("transaction_date"),
-                "card_number": str(item.get("card_number", "")).strip(),
-                "vehicle": str(item.get("vehicle", "")).strip(),
-                "azs_number": str(item.get("azs_number", "")).strip(),
-                "product": str(item.get("product", "")).strip(),
-                "quantity": item.get("quantity"),
-                "operation_type": item.get("operation_type", "Покупка"),
-                "currency": item.get("currency", "RUB"),
-                "exchange_rate": item.get("exchange_rate", 1),
-                "provider_id": template.provider_id,
-                "source_file": f"API: {template.name}"
-            }
-            
-            if item.get("supplier"):
-                transaction_data["supplier"] = str(item["supplier"]).strip()
-            if item.get("region"):
-                transaction_data["region"] = str(item["region"]).strip()
-            if item.get("settlement"):
-                transaction_data["settlement"] = str(item["settlement"]).strip()
-            if item.get("location"):
-                transaction_data["location"] = str(item["location"]).strip()
-            if item.get("organization"):
-                transaction_data["organization"] = str(item["organization"]).strip()
-            
-            transactions_data.append(transaction_data)
-
-        if not transactions_data:
-            return {
-                "template_id": template.id,
-                "template_name": template.name,
-                "success": True,
-                "transactions_created": 0,
-                "transactions_skipped": 0,
-                "transactions_total": len(transactions_data),
-                "message": "Не удалось преобразовать данные в транзакции"
-            }
-
+        # Данные из fetch_transactions уже в правильном формате системы
         # Сохраняем транзакции
         batch_processor = TransactionBatchProcessor(self.db)
-        created_count, skipped_count = batch_processor.process_transactions_batch(
-            transactions_data,
-            provider_id=template.provider_id
-        )
+        created_count, skipped_count, warnings = batch_processor.create_transactions(api_data)
 
+        message = f"Успешно загружено транзакций: {created_count}"
+        if skipped_count > 0:
+            message += f", пропущено дубликатов: {skipped_count}"
+        
         return {
             "template_id": template.id,
             "template_name": template.name,
             "success": True,
             "transactions_created": created_count,
             "transactions_skipped": skipped_count,
-            "transactions_total": len(transactions_data)
+            "transactions_total": len(api_data),
+            "message": message,
+            "warnings": warnings if warnings else None
         }
 

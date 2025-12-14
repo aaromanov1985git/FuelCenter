@@ -1,0 +1,277 @@
+/* === RESPONSIVE SYSTEM === */
+/* Единая система breakpoints и адаптивных стилей */
+
+/* Breakpoints как CSS переменные */
+:root {
+  /* Breakpoints */
+  --breakpoint-mobile: 320px;
+  --breakpoint-mobile-large: 480px;
+  --breakpoint-tablet: 768px;
+  --breakpoint-tablet-large: 1024px;
+  --breakpoint-desktop: 1440px;
+  
+  /* Адаптивные отступы (Mobile First) */
+  --spacing-responsive-section: var(--spacing-section); /* 32px по умолчанию */
+  --spacing-responsive-block: var(--spacing-block); /* 24px по умолчанию */
+  --spacing-responsive-element: var(--spacing-element); /* 16px по умолчанию */
+  
+  /* Адаптивные размеры шрифтов (Mobile First) */
+  --font-responsive-h1: var(--font-size-xl); /* 24px по умолчанию */
+  --font-responsive-h2: var(--font-size-lg); /* 18px по умолчанию */
+  --font-responsive-h3: var(--font-size-base); /* 16px по умолчанию */
+}
+
+/* Мобильные устройства (≤ 768px) */
+@media (max-width: 768px) {
+  :root {
+    /* Уменьшенные отступы для мобильных */
+    --spacing-responsive-section: 16px; /* было 32px */
+    --spacing-responsive-block: 12px; /* было 24px */
+    --spacing-responsive-element: 8px; /* было 16px */
+    
+    /* Уменьшенные заголовки для мобильных */
+    --font-responsive-h1: 1.25rem; /* 20px */
+    --font-responsive-h2: 1.125rem; /* 18px */
+    --font-responsive-h3: 1rem; /* 16px */
+  }
+}
+
+/* Маленькие мобильные устройства (≤ 480px) */
+@media (max-width: 480px) {
+  :root {
+    /* Еще более компактные отступы */
+    --spacing-responsive-section: 12px;
+    --spacing-responsive-block: 8px;
+    --spacing-responsive-element: 6px;
+  }
+}
+
+/* Планшеты (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  :root {
+    --spacing-responsive-section: 24px;
+    --spacing-responsive-block: 20px;
+    --spacing-responsive-element: 14px;
+  }
+}
+
+/* === RESPONSIVE UTILITIES === */
+
+/* Скрытие на разных устройствах */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .hide-desktop {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .hide-tablet {
+    display: none !important;
+  }
+}
+
+/* Показ только на определенных устройствах */
+.show-mobile-only {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .show-mobile-only {
+    display: block !important;
+  }
+  
+  .show-mobile-only.inline-block {
+    display: inline-block !important;
+  }
+  
+  .show-mobile-only.flex {
+    display: flex !important;
+  }
+}
+
+.show-tablet-only {
+  display: none !important;
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .show-tablet-only {
+    display: block !important;
+  }
+  
+  .show-tablet-only.inline-block {
+    display: inline-block !important;
+  }
+  
+  .show-tablet-only.flex {
+    display: flex !important;
+  }
+}
+
+.show-desktop-only {
+  display: none !important;
+}
+
+@media (min-width: 1025px) {
+  .show-desktop-only {
+    display: block !important;
+  }
+  
+  .show-desktop-only.inline-block {
+    display: inline-block !important;
+  }
+  
+  .show-desktop-only.flex {
+    display: flex !important;
+  }
+}
+
+/* === ADAPTIVE GRID === */
+
+/* Адаптивные grid колонки */
+.grid-responsive {
+  display: grid;
+  grid-template-columns: 1fr; /* Mobile First: 1 колонка */
+  gap: var(--spacing-responsive-element);
+}
+
+@media (min-width: 769px) {
+  .grid-responsive {
+    grid-template-columns: repeat(2, 1fr); /* Планшеты: 2 колонки */
+  }
+}
+
+@media (min-width: 1025px) {
+  .grid-responsive {
+    grid-template-columns: repeat(3, 1fr); /* Десктоп: 3 колонки */
+  }
+}
+
+@media (min-width: 1441px) {
+  .grid-responsive {
+    grid-template-columns: repeat(4, 1fr); /* Большие экраны: 4 колонки */
+  }
+}
+
+/* Grid с адаптацией 2 колонки */
+.grid-responsive-2 {
+  display: grid;
+  grid-template-columns: 1fr; /* Mobile First */
+  gap: var(--spacing-responsive-element);
+}
+
+@media (min-width: 769px) {
+  .grid-responsive-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Grid с адаптацией 3 колонки */
+.grid-responsive-3 {
+  display: grid;
+  grid-template-columns: 1fr; /* Mobile First */
+  gap: var(--spacing-responsive-element);
+}
+
+@media (min-width: 769px) {
+  .grid-responsive-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1025px) {
+  .grid-responsive-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* === ADAPTIVE CONTAINER === */
+
+.container-responsive {
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--spacing-responsive-element);
+}
+
+@media (min-width: 769px) {
+  .container-responsive {
+    padding: 0 var(--spacing-responsive-block);
+    max-width: 720px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .container-responsive {
+    max-width: 1200px;
+  }
+}
+
+@media (min-width: 1441px) {
+  .container-responsive {
+    max-width: 1400px;
+  }
+}
+
+/* === TOUCH-FRIENDLY ELEMENTS === */
+
+/* Минимальные размеры для touch-элементов */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@media (max-width: 768px) {
+  /* Увеличение touch-целей на мобильных */
+  button:not(.icon-button-small),
+  .btn:not(.btn-small),
+  .nav-item,
+  .pagination button,
+  input[type="button"],
+  input[type="submit"],
+  a.button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Увеличение padding для лучшего touch */
+  button:not(.icon-button-small),
+  .btn:not(.btn-small) {
+    padding: 10px 16px;
+  }
+}
+
+/* === RESPONSIVE TYPOGRAPHY === */
+
+h1.responsive,
+.responsive-h1 {
+  font-size: var(--font-responsive-h1);
+}
+
+h2.responsive,
+.responsive-h2 {
+  font-size: var(--font-responsive-h2);
+}
+
+h3.responsive,
+.responsive-h3 {
+  font-size: var(--font-responsive-h3);
+}
+
+/* === RESPONSIVE SPACING === */
+
+.section-responsive {
+  padding: var(--spacing-responsive-section);
+}
+
+.block-responsive {
+  padding: var(--spacing-responsive-block);
+}
+
+.element-responsive {
+  padding: var(--spacing-responsive-element);
+}

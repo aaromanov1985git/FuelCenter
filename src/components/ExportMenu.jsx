@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import IconButton from './IconButton'
+import { Button } from './ui'
 import { exportToCSV, exportToJSON, exportToTXT, exportToPDF } from '../utils/exportUtils'
 import './ExportMenu.css'
 
@@ -116,14 +117,21 @@ const ExportMenu = ({ data, headers, onExportExcel, filename = 'transactions' })
       {isOpen && (
         <div className="export-menu-dropdown">
           {availableOptions.map(option => (
-            <button
+            <Button
               key={option.id}
-              className="export-menu-item"
+              variant="ghost"
+              size="sm"
               onClick={() => handleExport(option.id)}
+              className="export-menu-item"
+              style={{ 
+                width: '100%', 
+                justifyContent: 'flex-start',
+                padding: 'var(--padding-small) var(--padding-element)'
+              }}
             >
               <span className="export-menu-icon">{option.icon}</span>
               <span className="export-menu-label">{option.label}</span>
-            </button>
+            </Button>
           ))}
         </div>
       )}

@@ -1,0 +1,127 @@
+.settings-container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.settings-container h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+  color: var(--text-primary, #333);
+}
+
+.settings-section {
+  margin-bottom: 3rem;
+}
+
+.settings-section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary, #333);
+}
+
+.settings-section-description {
+  font-size: 0.95rem;
+  color: var(--text-secondary, #666);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.clear-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.clear-option-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.clear-option-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.clear-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.clear-option-icon {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.clear-option-info {
+  flex: 1;
+}
+
+.clear-option-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary, #333);
+}
+
+.clear-option-description {
+  font-size: 0.9rem;
+  color: var(--text-secondary, #666);
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.clear-option-button {
+  width: 100%;
+  margin-top: auto;
+}
+
+.clear-transactions-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: auto;
+}
+
+.clear-transactions-buttons .clear-option-button {
+  width: 100%;
+  margin-top: 0;
+}
+
+/* Темная тема */
+[data-theme="midnight"] .settings-container h1,
+[data-theme="midnight"] .settings-section-title,
+[data-theme="midnight"] .clear-option-label {
+  color: var(--text-primary, #fff);
+}
+
+[data-theme="midnight"] .settings-section-description,
+[data-theme="midnight"] .clear-option-description {
+  color: var(--text-secondary, #aaa);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .settings-container {
+    padding: 1rem;
+  }
+
+  .settings-container h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .clear-options-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .settings-section-title {
+    font-size: 1.25rem;
+  }
+}

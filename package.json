@@ -19,6 +19,7 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
     "cross-env": "^7.0.3",
+    "shadcn": "^3.6.1",
     "vite": "^5.0.8"
   }
 }

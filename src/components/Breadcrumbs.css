@@ -32,8 +32,8 @@
 .breadcrumbs-link {
   background: none;
   border: none;
-  padding: 4px 8px;
-  margin: -4px -8px;
+  padding: var(--spacing-tiny) var(--padding-tiny);
+  margin: calc(-1 * var(--spacing-tiny)) calc(-1 * var(--padding-tiny));
   color: var(--color-primary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
@@ -63,7 +63,7 @@
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  padding: 4px 8px;
+  padding: var(--spacing-tiny) var(--padding-tiny);
 }
 
 /* Иконка дома для первого элемента */

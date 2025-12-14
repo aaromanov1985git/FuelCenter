@@ -270,50 +270,7 @@ def require_role(required_role: str):
     return role_checker
 
 
-def require_admin(current_user: User = Depends(get_current_active_user)) -> User:
-    """
-    Проверка, что пользователь является администратором
-    
-    Args:
-        current_user: Текущий пользователь
-        
-    Returns:
-        Пользователь-администратор
-        
-    Raises:
-        HTTPException: Если пользователь не администратор
-    """
-    if current_user.role != "admin" and not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Требуются права администратора"
-        )
-    return current_user
-
-
-async def _get_optional_token() -> Optional[str]:
-    """
-    Внутренняя функция для получения токена из заголовка Authorization, если аутентификация включена
-    """
-    if not settings.enable_auth:
-        return None
-    
-    # Используем oauth2_scheme только если аутентификация включена
-    # Но мы не можем использовать условный Depends, поэтому используем другой подход
-    # Создаем функцию, которая всегда пытается получить токен, но возвращает None при ошибке
-    try:
-        # Используем Request для получения токена напрямую
-        from fastapi import Request
-        from starlette.requests import Request as StarletteRequest
-        
-        # Но мы не можем получить Request здесь без Depends
-        # Поэтому возвращаем None и обрабатываем это в optional_auth_with_token
-        return None
-    except:
-        return None
-
-
-# Создаем две версии функции в зависимости от настроек
+# Создаем две версии функции в зависимости от настроек (должно быть перед использованием)
 if settings.enable_auth:
     async def _get_token_from_header(token: str = Depends(oauth2_scheme)) -> Optional[str]:
         return token
@@ -359,6 +316,60 @@ async def optional_auth_with_token(
         return None
 
 
+def require_admin(current_user: Optional[User] = Depends(optional_auth_with_token)) -> Optional[User]:
+    """
+    Проверка, что пользователь является администратором
+    Если аутентификация выключена, разрешает доступ
+    
+    Args:
+        current_user: Текущий пользователь (опционально)
+    
+    Returns:
+        Пользователь-администратор или None (если аутентификация выключена)
+    
+    Raises:
+        HTTPException: Если аутентификация включена, но пользователь не администратор
+    """
+    if not settings.enable_auth:
+        return None
+    
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Требуется аутентификация",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    if current_user.role != "admin" and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Требуются права администратора"
+        )
+    return current_user
+
+
+async def _get_optional_token() -> Optional[str]:
+    """
+    Внутренняя функция для получения токена из заголовка Authorization, если аутентификация включена
+    """
+    if not settings.enable_auth:
+        return None
+    
+    # Используем oauth2_scheme только если аутентификация включена
+    # Но мы не можем использовать условный Depends, поэтому используем другой подход
+    # Создаем функцию, которая всегда пытается получить токен, но возвращает None при ошибке
+    try:
+        # Используем Request для получения токена напрямую
+        from fastapi import Request
+        from starlette.requests import Request as StarletteRequest
+        
+        # Но мы не можем получить Request здесь без Depends
+        # Поэтому возвращаем None и обрабатываем это в optional_auth_with_token
+        return None
+    except:
+        return None
+
+
 def require_auth_if_enabled(
     current_user: Optional[User] = Depends(optional_auth_with_token)
 ) -> Optional[User]:
@@ -383,3 +394,54 @@ def require_auth_if_enabled(
             )
         return current_user
     return None
+
+
+def get_user_organization_ids(db: Session, user: User) -> list[int]:
+    """
+    Получение списка ID организаций, к которым у пользователя есть доступ
+    
+    Args:
+        db: Сессия базы данных
+        user: Пользователь
+        
+    Returns:
+        Список ID организаций
+    """
+    if user.is_superuser:
+        # Суперпользователь имеет доступ ко всем организациям
+        from app.models import Organization
+        all_orgs = db.query(Organization.id).filter(Organization.is_active == True).all()
+        return [org.id for org in all_orgs]
+    
+    # Обычный пользователь - только к назначенным организациям
+    return [org.id for org in user.organizations if org.is_active]
+
+
+def filter_by_user_organizations(query, db: Session, user: User, organization_id_column):
+    """
+    Фильтрация запроса по организациям пользователя
+    
+    Args:
+        query: SQLAlchemy запрос
+        db: Сессия базы данных
+        user: Пользователь
+        organization_id_column: Колонка с organization_id в модели
+        
+    Returns:
+        Отфильтрованный запрос
+    """
+    if user.is_superuser:
+        # Суперпользователь видит все данные
+        return query
+    
+    # Получаем ID доступных организаций
+    org_ids = get_user_organization_ids(db, user)
+    
+    if not org_ids:
+        # Если у пользователя нет доступа ни к одной организации, возвращаем пустой результат
+        return query.filter(False)
+    
+    # Фильтруем по доступным организациям (включая NULL для обратной совместимости)
+    return query.filter(
+        (organization_id_column.in_(org_ids)) | (organization_id_column.is_(None))
+    )

@@ -2,9 +2,12 @@
 Middleware для логирования запросов
 """
 import time
+import traceback
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.logger import logger
+from app.services.logging_service import logging_service
+from app.database import SessionLocal
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -17,17 +20,23 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # Получаем IP адрес клиента
         client_ip = request.client.host if request.client else "unknown"
         
-        # Логируем начало запроса
-        logger.info(
-            f"Входящий запрос: {request.method} {request.url.path}",
-            extra={
-                "method": request.method,
-                "path": request.url.path,
-                "client_ip": client_ip,
-                "query_params": str(request.query_params) if request.query_params else None
-            }
-        )
+        # Пропускаем логирование для health check и других служебных endpoints
+        skip_paths = ["/health", "/api/v1/config", "/docs", "/openapi.json", "/redoc"]
+        should_log = not any(request.url.path.startswith(path) for path in skip_paths)
         
+        # Логируем начало запроса
+        if should_log:
+            logger.info(
+                f"Входящий запрос: {request.method} {request.url.path}",
+                extra={
+                    "method": request.method,
+                    "path": request.url.path,
+                    "client_ip": client_ip,
+                    "query_params": str(request.query_params) if request.query_params else None
+                }
+            )
+        
+        db = SessionLocal()
         try:
             # Выполняем запрос
             response = await call_next(request)
@@ -36,16 +45,41 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             process_time = time.time() - start_time
             
             # Логируем успешный ответ
-            logger.info(
-                f"Запрос выполнен: {request.method} {request.url.path}",
-                extra={
-                    "method": request.method,
-                    "path": request.url.path,
-                    "status_code": response.status_code,
-                    "process_time_ms": round(process_time * 1000, 2),
-                    "client_ip": client_ip
-                }
-            )
+            if should_log:
+                logger.info(
+                    f"Запрос выполнен: {request.method} {request.url.path}",
+                    extra={
+                        "method": request.method,
+                        "path": request.url.path,
+                        "status_code": response.status_code,
+                        "process_time_ms": round(process_time * 1000, 2),
+                        "client_ip": client_ip
+                    }
+                )
+                
+                # Логируем системное событие в БД
+                try:
+                    # Логируем все запросы для отладки (можно ограничить только важными)
+                    log_level = "ERROR" if response.status_code >= 500 else "INFO"
+                    logging_service.log_system_event(
+                        db=db,
+                        level=log_level,
+                        message=f"HTTP {request.method} {request.url.path} - {response.status_code}",
+                        module="middleware",
+                        function="dispatch",
+                        event_type="request",
+                        event_category="http",
+                        extra_data={
+                            "method": request.method,
+                            "path": request.url.path,
+                            "status_code": response.status_code,
+                            "client_ip": client_ip,
+                            "process_time_ms": round(process_time * 1000, 2)
+                        }
+                    )
+                except Exception as log_error:
+                    # Не прерываем выполнение, если логирование не удалось
+                    logger.error(f"Ошибка при записи системного лога: {log_error}", exc_info=True)
             
             # Добавляем заголовок с временем выполнения
             response.headers["X-Process-Time"] = str(round(process_time * 1000, 2))
@@ -66,5 +100,30 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 },
                 exc_info=True
             )
+            
+            # Логируем системное событие в БД
+            if should_log:
+                try:
+                    logging_service.log_system_event(
+                        db=db,
+                        level="ERROR",
+                        message=f"Ошибка при обработке запроса: {request.method} {request.url.path}",
+                        module="middleware",
+                        function="dispatch",
+                        event_type="request",
+                        event_category="http",
+                        extra_data={
+                            "method": request.method,
+                            "path": request.url.path,
+                            "client_ip": client_ip,
+                            "process_time_ms": round(process_time * 1000, 2)
+                        },
+                        exception=e
+                    )
+                except Exception as log_error:
+                    logger.error(f"Ошибка при записи системного лога: {log_error}", exc_info=True)
+            
             raise
+        finally:
+            db.close()
 

@@ -4,10 +4,10 @@
 """
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, date
 from app.repositories.transaction_repository import TransactionRepository
 from app.repositories.vehicle_repository import VehicleRepository
-from app.models import Transaction, Vehicle, Provider
+from app.models import Transaction, Vehicle, Provider, UploadPeriodLock
 from app.logger import logger
 
 
@@ -170,3 +170,107 @@ class TransactionService:
         Получение статистики по транзакциям
         """
         return self.transaction_repo.get_stats_summary(provider_id=provider_id)
+    
+    def clear_transactions_by_provider(
+        self,
+        provider_id: int,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None
+    ) -> Dict[str, Any]:
+        """
+        Очистка транзакций по провайдеру с проверкой блокировки периода
+        
+        Args:
+            provider_id: ID провайдера
+            date_from: Начальная дата периода (включительно). Если None - за все время
+            date_to: Конечная дата периода (включительно). Если None - за все время
+        
+        Returns:
+            Dict с ключами: deleted_count, message
+        
+        Raises:
+            ValueError: если период пересекается с заблокированным периодом
+        """
+        # Проверяем наличие провайдера
+        provider = self.db.query(Provider).filter(Provider.id == provider_id).first()
+        if not provider:
+            raise ValueError(f"Провайдер с ID {provider_id} не найден")
+        
+        # Проверяем блокировку периода
+        period_lock = self.db.query(UploadPeriodLock).first()
+        
+        if period_lock:
+            lock_date = period_lock.lock_date
+            
+            # Если указан период
+            if date_from is not None or date_to is not None:
+                # Проверяем, не попадает ли начало периода в заблокированную зону
+                if date_from is not None:
+                    date_from_date = date_from.date() if isinstance(date_from, datetime) else date_from
+                    if date_from_date < lock_date:
+                        raise ValueError(
+                            f"Нельзя удалять транзакции с датами раньше {lock_date.strftime('%d.%m.%Y')}. "
+                            f"Указана начальная дата: {date_from_date.strftime('%d.%m.%Y')}"
+                        )
+                
+                # Проверяем, не попадает ли конец периода в заблокированную зону
+                if date_to is not None:
+                    date_to_date = date_to.date() if isinstance(date_to, datetime) else date_to
+                    if date_to_date < lock_date:
+                        raise ValueError(
+                            f"Нельзя удалять транзакции с датами раньше {lock_date.strftime('%d.%m.%Y')}. "
+                            f"Указана конечная дата: {date_to_date.strftime('%d.%m.%Y')}"
+                        )
+            else:
+                # Если период не указан (удаление за все время), проверяем наличие транзакций раньше lock_date
+                # Преобразуем date в datetime (начало дня)
+                lock_datetime = datetime.combine(lock_date, datetime.min.time())
+                has_blocked = self.transaction_repo.has_transactions_before_date(
+                    provider_id=provider_id,
+                    before_date=lock_datetime
+                )
+                if has_blocked:
+                    raise ValueError(
+                        f"Нельзя удалять все транзакции провайдера, так как есть транзакции "
+                        f"с датами раньше заблокированного периода ({lock_date.strftime('%d.%m.%Y')}). "
+                        f"Укажите период удаления после {lock_date.strftime('%d.%m.%Y')}"
+                    )
+        
+        # Выполняем удаление
+        deleted_count = self.transaction_repo.delete_by_provider_and_period(
+            provider_id=provider_id,
+            date_from=date_from,
+            date_to=date_to
+        )
+        
+        # Формируем сообщение
+        if date_from is not None or date_to is not None:
+            period_str = ""
+            if date_from is not None:
+                date_from_str = date_from.strftime('%d.%m.%Y') if isinstance(date_from, datetime) else date_from.strftime('%d.%m.%Y')
+                period_str += f"с {date_from_str}"
+            if date_to is not None:
+                date_to_str = date_to.strftime('%d.%m.%Y') if isinstance(date_to, datetime) else date_to.strftime('%d.%m.%Y')
+                if period_str:
+                    period_str += f" по {date_to_str}"
+                else:
+                    period_str += f"по {date_to_str}"
+            message = f"Удалено {deleted_count} транзакций провайдера '{provider.name}' за период {period_str}"
+        else:
+            message = f"Удалено {deleted_count} транзакций провайдера '{provider.name}' за все время"
+        
+        logger.info(
+            "Транзакции провайдера удалены",
+            extra={
+                "provider_id": provider_id,
+                "provider_name": provider.name,
+                "deleted_count": deleted_count,
+                "date_from": date_from.isoformat() if date_from else None,
+                "date_to": date_to.isoformat() if date_to else None
+            }
+        )
+        
+        return {
+            "deleted_count": deleted_count,
+            "message": message
+        }

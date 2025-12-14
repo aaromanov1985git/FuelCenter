@@ -26,6 +26,7 @@ from app.auth import (
 from app.logger import logger
 from app.middleware.rate_limit import limiter
 from app.config import get_settings
+from app.services.logging_service import logging_service
 
 settings = get_settings()
 
@@ -85,7 +86,35 @@ async def register(
         extra={"user_id": new_user.id, "role": new_user.role, "created_by": current_user.id}
     )
     
-    return new_user
+    # Логируем создание пользователя
+    try:
+        logging_service.log_user_action(
+            db=db,
+            user_id=current_user.id,
+            username=current_user.username,
+            action_type="create",
+            action_description=f"Создан новый пользователь: {new_user.username}",
+            action_category="auth",
+            entity_type="User",
+            entity_id=new_user.id,
+            status="success"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    # Возвращаем UserResponse с organization_ids
+    user_dict = {
+        "id": new_user.id,
+        "username": new_user.username,
+        "email": new_user.email,
+        "role": new_user.role,
+        "is_active": new_user.is_active,
+        "is_superuser": new_user.is_superuser,
+        "created_at": new_user.created_at,
+        "last_login": new_user.last_login,
+        "organization_ids": [org.id for org in new_user.organizations]
+    }
+    return UserResponse(**user_dict)
 
 
 @router.post("/login", response_model=Token)
@@ -115,6 +144,27 @@ async def login(
             f"Неудачная попытка входа: {form_data.username}",
             extra={"username": form_data.username}
         )
+        # Логируем неудачную попытку входа
+        try:
+            client_ip = request.client.host if request.client else None
+            user_agent = request.headers.get("user-agent")
+            logging_service.log_user_action(
+                db=db,
+                user_id=None,
+                username=form_data.username,
+                action_type="login",
+                action_description=f"Неудачная попытка входа: {form_data.username}",
+                action_category="auth",
+                ip_address=client_ip,
+                user_agent=user_agent,
+                request_method=request.method,
+                request_path=request.url.path,
+                status="failed",
+                error_message="Неверное имя пользователя или пароль"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Неверное имя пользователя или пароль",
@@ -131,6 +181,26 @@ async def login(
         f"Успешный вход пользователя: {user.username}",
         extra={"user_id": user.id, "role": user.role}
     )
+    
+    # Логируем успешный вход
+    try:
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        logging_service.log_user_action(
+            db=db,
+            user_id=user.id,
+            username=user.username,
+            action_type="login",
+            action_description=f"Успешный вход пользователя: {user.username}",
+            action_category="auth",
+            ip_address=client_ip,
+            user_agent=user_agent,
+            request_method=request.method,
+            request_path=request.url.path,
+            status="success"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
     
     return {
         "access_token": access_token,
@@ -178,6 +248,27 @@ async def login_json(
             f"Неудачная попытка входа: {login_data.username}",
             extra={"username": login_data.username}
         )
+        # Логируем неудачную попытку входа
+        try:
+            client_ip = request.client.host if request.client else None
+            user_agent = request.headers.get("user-agent")
+            logging_service.log_user_action(
+                db=db,
+                user_id=None,
+                username=login_data.username,
+                action_type="login",
+                action_description=f"Неудачная попытка входа: {login_data.username}",
+                action_category="auth",
+                ip_address=client_ip,
+                user_agent=user_agent,
+                request_method=request.method,
+                request_path=request.url.path,
+                status="failed",
+                error_message="Неверное имя пользователя или пароль"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Неверное имя пользователя или пароль",
@@ -195,6 +286,26 @@ async def login_json(
         extra={"user_id": user.id, "role": user.role}
     )
     
+    # Логируем успешный вход
+    try:
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        logging_service.log_user_action(
+            db=db,
+            user_id=user.id,
+            username=user.username,
+            action_type="login",
+            action_description=f"Успешный вход пользователя: {user.username}",
+            action_category="auth",
+            ip_address=client_ip,
+            user_agent=user_agent,
+            request_method=request.method,
+            request_path=request.url.path,
+            status="success"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -202,18 +313,68 @@ async def login_json(
     }
 
 
+@router.post("/logout")
+async def logout(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Выход пользователя из системы
+    """
+    try:
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        
+        # Логируем выход пользователя
+        logging_service.log_user_action(
+            db=db,
+            user_id=current_user.id,
+            username=current_user.username,
+            action_type="logout",
+            action_description=f"Выход пользователя: {current_user.username}",
+            action_category="auth",
+            ip_address=client_ip,
+            user_agent=user_agent,
+            request_method=request.method,
+            request_path=request.url.path,
+            status="success"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    return {"message": "Выход выполнен успешно"}
+
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
 ):
     """
     Получение информации о текущем пользователе
     
     Args:
         current_user: Текущий пользователь
+        db: Сессия базы данных (для загрузки организаций)
         
     Returns:
-        Информация о пользователе
+        Информация о пользователе с organization_ids
     """
-    return current_user
+    # Обновляем связи организаций
+    db.refresh(current_user, ['organizations'])
+    
+    # Возвращаем UserResponse с organization_ids
+    user_dict = {
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email,
+        "role": current_user.role,
+        "is_active": current_user.is_active,
+        "is_superuser": current_user.is_superuser,
+        "created_at": current_user.created_at,
+        "last_login": current_user.last_login,
+        "organization_ids": [org.id for org in current_user.organizations]
+    }
+    return UserResponse(**user_dict)
 

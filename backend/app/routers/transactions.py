@@ -2,7 +2,7 @@
 Роутер для работы с транзакциями
 """
 from fastapi import APIRouter, UploadFile, File, Depends, Query, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
@@ -32,7 +32,8 @@ from app.utils import (
     get_firebird_service
 )
 from app.middleware.rate_limit import limiter
-from app.auth import require_auth_if_enabled
+from app.auth import require_auth_if_enabled, require_admin
+from app.services.logging_service import logging_service
 
 settings = get_settings()
 
@@ -44,12 +45,15 @@ router = APIRouter(prefix="/api/v1/transactions", tags=["transactions"])
 async def upload_file(
     request: Request,
     file: UploadFile = File(...),
+    provider_id: Optional[int] = Query(None, description="ID провайдера (если не указан, будет попытка автоопределения)"),
+    template_id: Optional[int] = Query(None, description="ID шаблона (если не указан, будет попытка автоопределения)"),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(require_auth_if_enabled)
 ):
     """
     Загрузка Excel файла и создание транзакций
-    Автоматически определяет провайдера и шаблон на основе структуры файла
+    Автоматически определяет провайдера и шаблон на основе структуры файла.
+    Если автоопределение не удалось, возвращает require_template_selection=true с списком доступных шаблонов.
     """
     logger.info(
         f"Начало загрузки файла: {file.filename}",
@@ -124,16 +128,78 @@ async def upload_file(
     try:
         tmp_file_path = create_temp_file(content, suffix=".xlsx")
         
-        # Автоматически определяем провайдера и шаблон
-        logger.info("Определение провайдера и шаблона для файла", extra={"file_name": file.filename})
-        provider_id, template_id, match_info = detect_provider_and_template(tmp_file_path, db)
+        match_info = {}
+        auto_detected = False
+        
+        # Если провайдер и шаблон не указаны, пытаемся автоопределить
+        if not provider_id or not template_id:
+            logger.info("Определение провайдера и шаблона для файла", extra={"file_name": file.filename})
+            detected_provider_id, detected_template_id, match_info = detect_provider_and_template(tmp_file_path, db)
             
-        # Если провайдер не определен, используем провайдера по умолчанию
-        if not provider_id:
-            default_provider = db.query(Provider).filter(Provider.code == "RP-GAZPROM").first()
-            if default_provider:
-                provider_id = default_provider.id
-                logger.info("Использован провайдер по умолчанию", extra={"provider_id": provider_id})
+            # Используем автоопределенные значения, если они не были переданы
+            if not provider_id:
+                provider_id = detected_provider_id
+            if not template_id:
+                template_id = detected_template_id
+            
+            auto_detected = True
+            
+            # Если провайдер не определен, используем провайдера по умолчанию
+            if not provider_id:
+                default_provider = db.query(Provider).filter(Provider.code == "RP-GAZPROM").first()
+                if default_provider:
+                    provider_id = default_provider.id
+                    logger.info("Использован провайдер по умолчанию", extra={"provider_id": provider_id})
+        
+        # Проверяем, удалось ли автоопределение (score >= 30 и template_id определен)
+        match_score = match_info.get("score", 0) if match_info else 0
+        requires_selection = auto_detected and (match_score < 30 or not template_id)
+        
+        if requires_selection:
+            # Собираем список всех доступных провайдеров и их шаблонов
+            providers = db.query(Provider).filter(Provider.is_active == True).all()
+            available_templates = []
+            
+            for provider in providers:
+                templates = db.query(ProviderTemplate).filter(
+                    ProviderTemplate.provider_id == provider.id,
+                    ProviderTemplate.is_active == True
+                ).all()
+                
+                for template in templates:
+                    available_templates.append({
+                        "template_id": template.id,
+                        "template_name": template.name,
+                        "provider_id": provider.id,
+                        "provider_name": provider.name,
+                        "provider_code": provider.code
+                    })
+            
+            logger.info(
+                "Автоопределение не удалось, требуется выбор шаблона",
+                extra={
+                    "file_name": file.filename,
+                    "match_score": match_score,
+                    "available_templates_count": len(available_templates)
+                }
+            )
+            
+            # Возвращаем ответ с требованием выбора шаблона
+            return JSONResponse(
+                status_code=200,
+                content=FileUploadResponse(
+                    message="Не удалось автоматически определить шаблон. Пожалуйста, выберите шаблон вручную.",
+                    transactions_created=0,
+                    transactions_skipped=0,
+                    file_name=file.filename,
+                    validation_warnings=[],
+                    require_template_selection=True,
+                    available_templates=available_templates,
+                    detected_provider_id=provider_id,
+                    detected_template_id=template_id,
+                    match_info=match_info
+                ).model_dump()
+            )
         
         if provider_id:
             logger.info(
@@ -141,7 +207,7 @@ async def upload_file(
                 extra={
                     "provider_id": provider_id,
                     "template_id": template_id,
-                    "match_score": match_info.get("score", 0)
+                    "match_score": match_info.get("score", 0) if match_info else 0
                 }
             )
         
@@ -262,12 +328,47 @@ async def upload_file(
             message="; ".join(warnings) if warnings else message
         )
         
-        return FileUploadResponse(
+        # Логируем действие пользователя
+        if current_user:
+            try:
+                logging_service.log_user_action(
+                    db=db,
+                    user_id=current_user.id,
+                    username=current_user.username,
+                    action_type="upload",
+                    action_description=f"Загружен файл транзакций: {file.filename}",
+                    action_category="transaction",
+                    entity_type="Transaction",
+                    entity_id=None,
+                    status="success",
+                    extra_data={
+                        "file_name": file.filename,
+                        "provider_id": provider_id,
+                        "template_id": template_id,
+                        "transactions_total": transactions_total,
+                        "transactions_created": created_count,
+                        "transactions_skipped": skipped_count
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+        
+        response_data = FileUploadResponse(
             message=message,
             transactions_created=created_count,
             transactions_skipped=skipped_count,
             file_name=file.filename,
-            validation_warnings=warnings
+            validation_warnings=warnings,
+            require_template_selection=False,
+            available_templates=None,
+            detected_provider_id=provider_id,
+            detected_template_id=template_id,
+            match_info=match_info if match_info else None
+        )
+        
+        return JSONResponse(
+            status_code=200,
+            content=response_data.model_dump()
         )
     except HTTPException as http_exc:
         # Логируем событие неуспешной загрузки
@@ -330,14 +431,15 @@ async def upload_file(
 
 @router.post("/load-from-api", response_model=FileUploadResponse)
 async def load_from_api(
-    template_id: int = Query(..., description="ID шаблона с типом подключения 'api'"),
+    template_id: int = Query(..., description="ID шаблона с типом подключения 'api' или 'web'"),
     date_from: Optional[str] = Query(None, description="Начальная дата периода в формате YYYY-MM-DD"),
     date_to: Optional[str] = Query(None, description="Конечная дата периода в формате YYYY-MM-DD"),
     card_numbers: Optional[str] = Query(None, description="Список номеров карт через запятую (опционально)"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
 ):
     """
-    Загрузка транзакций через API провайдера
+    Загрузка транзакций через API или веб-сервис провайдера
     """
     from datetime import date as date_type
     
@@ -345,10 +447,10 @@ async def load_from_api(
     if not template:
         raise HTTPException(status_code=404, detail="Шаблон не найден")
     
-    if template.connection_type != "api":
+    if template.connection_type not in ["api", "web"]:
         raise HTTPException(
             status_code=400,
-            detail=f"Шаблон имеет тип подключения '{template.connection_type}', ожидается 'api'"
+            detail=f"Шаблон имеет тип подключения '{template.connection_type}', ожидается 'api' или 'web'"
         )
     
     # Парсим даты
@@ -382,6 +484,9 @@ async def load_from_api(
                        f"Указана дата начала: {parsed_date_from.strftime('%d.%m.%Y')}"
             )
     
+    event_service = UploadEventService(db)
+    start_time = datetime.now()
+    
     try:
         # Загружаем транзакции через API
         api_service = ApiProviderService(db)
@@ -394,6 +499,23 @@ async def load_from_api(
         )
         
         if not transactions_data:
+            duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+            event_service.log_event(
+                source_type="manual",
+                status="success",
+                is_scheduled=False,
+                file_name=f"API: {template.name}",
+                provider_id=template.provider_id,
+                template_id=template.id,
+                user_id=current_user.id if current_user else None,
+                username=current_user.username if current_user else None,
+                transactions_total=0,
+                transactions_created=0,
+                transactions_skipped=0,
+                transactions_failed=0,
+                duration_ms=duration_ms,
+                message="Транзакции не найдены за указанный период"
+            )
             return FileUploadResponse(
                 message="Транзакции не найдены за указанный период",
                 transactions_created=0,
@@ -424,6 +546,24 @@ async def load_from_api(
         if skipped_count > 0:
             message += f", пропущено дубликатов: {skipped_count}"
         
+        duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+        event_service.log_event(
+            source_type="manual",
+            status="success",
+            is_scheduled=False,
+            file_name=f"API: {template.name}",
+            provider_id=template.provider_id,
+            template_id=template.id,
+            user_id=current_user.id if current_user else None,
+            username=current_user.username if current_user else None,
+            transactions_total=len(transactions_data),
+            transactions_created=created_count,
+            transactions_skipped=skipped_count,
+            transactions_failed=0,
+            duration_ms=duration_ms,
+            message=message
+        )
+        
         return FileUploadResponse(
             message=message,
             transactions_created=created_count,
@@ -432,19 +572,43 @@ async def load_from_api(
             validation_warnings=warnings
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
+        duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+        error_message = str(e)
+        try:
+            event_service.log_event(
+                source_type="manual",
+                status="failed",
+                is_scheduled=False,
+                file_name=f"API: {template.name}",
+                provider_id=template.provider_id,
+                template_id=template.id,
+                user_id=current_user.id if current_user else None,
+                username=current_user.username if current_user else None,
+                transactions_total=0,
+                transactions_created=0,
+                transactions_skipped=0,
+                transactions_failed=0,
+                duration_ms=duration_ms,
+                message=error_message
+            )
+        except Exception:
+            logger.warning("Не удалось зафиксировать событие загрузки из API", exc_info=True)
+        
         logger.error(
             "Ошибка при загрузке транзакций из API",
             extra={
                 "template_id": template_id,
-                "error": str(e)
+                "error": error_message
             },
             exc_info=True
         )
         raise HTTPException(
             status_code=500,
-            detail=f"Ошибка при загрузке транзакций из API: {str(e)}"
+            detail=f"Ошибка при загрузке транзакций из API: {error_message}"
         )
 
 
@@ -453,7 +617,8 @@ async def load_from_firebird(
     template_id: int = Query(..., description="ID шаблона провайдера с типом подключения firebird"),
     date_from: Optional[str] = Query(None, description="Начальная дата периода в формате YYYY-MM-DD или YYYY-MM-DD HH:MM:SS"),
     date_to: Optional[str] = Query(None, description="Конечная дата периода в формате YYYY-MM-DD или YYYY-MM-DD HH:MM:SS"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
 ):
     """
     Загрузка транзакций из базы данных Firebird за указанный период
@@ -488,6 +653,9 @@ async def load_from_firebird(
             status_code=400,
             detail="В шаблоне не указаны настройки подключения к Firebird"
         )
+    
+    event_service = UploadEventService(db)
+    start_time = datetime.now()
     
     try:
         # Парсим настройки подключения
@@ -646,7 +814,9 @@ async def load_from_firebird(
                 # Остальные поля
                 transaction_data["card_number"] = str(row.get("card") or row.get("card_number") or "").strip()
                 transaction_data["vehicle"] = str(row.get("user") or row.get("vehicle") or "").strip()
-                transaction_data["azs_number"] = app_services.extract_azs_number(str(row.get("kazs") or row.get("azs_number") or ""))
+                kazs_value = str(row.get("kazs") or row.get("azs_number") or "").strip()
+                transaction_data["azs_number"] = app_services.extract_azs_number(kazs_value)
+                transaction_data["azs_original_name"] = kazs_value  # Сохраняем оригинальное название АЗС
                 transaction_data["product"] = app_services.normalize_fuel(str(row.get("fuel") or row.get("product") or ""))
                 transaction_data["operation_type"] = "Покупка"
                 transaction_data["currency"] = "RUB"
@@ -686,6 +856,27 @@ async def load_from_firebird(
                 error_detail += f"Текущий маппинг полей: {field_mapping}\n"
             error_detail += "Проверьте маппинг полей в шаблоне и убедитесь, что поле количества правильно сопоставлено."
             
+            duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+            try:
+                event_service.log_event(
+                    source_type="manual",
+                    status="failed",
+                    is_scheduled=False,
+                    file_name=f"Firebird: {template.name}",
+                    provider_id=template.provider_id,
+                    template_id=template.id,
+                    user_id=current_user.id if current_user else None,
+                    username=current_user.username if current_user else None,
+                    transactions_total=len(firebird_data) if firebird_data else 0,
+                    transactions_created=0,
+                    transactions_skipped=0,
+                    transactions_failed=len(firebird_data) if firebird_data else 0,
+                    duration_ms=duration_ms,
+                    message=error_detail
+                )
+            except Exception:
+                logger.warning("Не удалось зафиксировать событие загрузки из Firebird", exc_info=True)
+            
             raise HTTPException(
                 status_code=400,
                 detail=error_detail
@@ -701,6 +892,27 @@ async def load_from_firebird(
         message = f"Загружено {created_count} транзакций из Firebird"
         if skipped_count > 0:
             message += f" (пропущено: {skipped_count})"
+        
+        duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+        try:
+            event_service.log_event(
+                source_type="manual",
+                status="success",
+                is_scheduled=False,
+                file_name=f"Firebird: {template.name}",
+                provider_id=template.provider_id,
+                template_id=template.id,
+                user_id=current_user.id if current_user else None,
+                username=current_user.username if current_user else None,
+                transactions_total=len(transactions_data),
+                transactions_created=created_count,
+                transactions_skipped=skipped_count,
+                transactions_failed=0,
+                duration_ms=duration_ms,
+                message=message
+            )
+        except Exception:
+            logger.warning("Не удалось зафиксировать событие загрузки из Firebird", exc_info=True)
         
         logger.info("Загрузка данных из Firebird завершена", extra={
             "created": created_count,
@@ -721,6 +933,31 @@ async def load_from_firebird(
     except Exception as e:
         import traceback
         error_traceback = traceback.format_exc()
+        duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+        error_detail = f"Ошибка при загрузке данных из Firebird: {str(e)}"
+        if hasattr(e, '__cause__') and e.__cause__:
+            error_detail += f" (причина: {str(e.__cause__)})"
+        
+        try:
+            event_service.log_event(
+                source_type="manual",
+                status="failed",
+                is_scheduled=False,
+                file_name=f"Firebird: {template.name}",
+                provider_id=template.provider_id if template else None,
+                template_id=template_id,
+                user_id=current_user.id if current_user else None,
+                username=current_user.username if current_user else None,
+                transactions_total=0,
+                transactions_created=0,
+                transactions_skipped=0,
+                transactions_failed=0,
+                duration_ms=duration_ms,
+                message=error_detail
+            )
+        except Exception:
+            logger.warning("Не удалось зафиксировать событие загрузки из Firebird", exc_info=True)
+        
         logger.error(
             "Ошибка при загрузке данных из Firebird",
             extra={
@@ -731,9 +968,6 @@ async def load_from_firebird(
             },
             exc_info=True
         )
-        error_detail = f"Ошибка при загрузке данных из Firebird: {str(e)}"
-        if hasattr(e, '__cause__') and e.__cause__:
-            error_detail += f" (причина: {str(e.__cause__)})"
         raise HTTPException(status_code=500, detail=error_detail)
 
 
@@ -844,7 +1078,8 @@ async def get_transactions(
 @router.delete("/clear")
 async def clear_all_transactions(
     confirm: Optional[str] = Query(None, description="Подтверждение удаления всех транзакций"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_admin)
 ):
     """
     Очистка всех транзакций из базы данных
@@ -862,6 +1097,24 @@ async def clear_all_transactions(
         transaction_service = TransactionService(db)
         total_count = transaction_service.clear_all_transactions()
         
+        # Логируем действие пользователя
+        if current_user:
+            try:
+                logging_service.log_user_action(
+                    db=db,
+                    user_id=current_user.id,
+                    username=current_user.username,
+                    action_type="clear",
+                    action_description=f"Очищены все транзакции ({total_count} записей)",
+                    action_category="transaction",
+                    entity_type="Transaction",
+                    entity_id=None,
+                    status="success",
+                    extra_data={"deleted_count": total_count}
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+        
         return {
             "message": f"База данных успешно очищена",
             "deleted_count": total_count
@@ -870,6 +1123,229 @@ async def clear_all_transactions(
         db.rollback()
         logger.error(f"Ошибка при очистке базы данных", extra={"error": str(e)}, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Ошибка при очистке базы данных: {str(e)}")
+
+
+@router.delete("/clear-by-provider")
+async def clear_transactions_by_provider(
+    provider_id: int = Query(..., description="ID провайдера"),
+    date_from: Optional[str] = Query(None, description="Начальная дата периода в формате YYYY-MM-DD"),
+    date_to: Optional[str] = Query(None, description="Конечная дата периода в формате YYYY-MM-DD"),
+    confirm: Optional[str] = Query(None, description="Подтверждение удаления транзакций"),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_admin)
+):
+    """
+    Очистка транзакций по конкретному провайдеру за все время или за определенный период
+    Проверяет заблокированный период перед удалением
+    """
+    from datetime import date as date_type
+    
+    # Проверяем параметр confirm
+    confirm_bool = confirm and confirm.lower() in ("true", "1", "yes")
+    
+    if not confirm_bool:
+        raise HTTPException(
+            status_code=400,
+            detail="Для очистки транзакций необходимо установить параметр confirm=true"
+        )
+    
+    # Парсим даты периода, если указаны
+    parsed_date_from = None
+    parsed_date_to = None
+    
+    if date_from:
+        try:
+            parsed_date_from = datetime.strptime(date_from, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Неверный формат начальной даты. Используйте формат YYYY-MM-DD"
+            )
+    
+    if date_to:
+        try:
+            parsed_date_to = datetime.strptime(date_to, "%Y-%m-%d")
+            # Устанавливаем время на конец дня для включения всех транзакций за этот день
+            parsed_date_to = parsed_date_to.replace(hour=23, minute=59, second=59)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Неверный формат конечной даты. Используйте формат YYYY-MM-DD"
+            )
+    
+    # Проверяем, что date_from <= date_to, если оба указаны
+    if parsed_date_from and parsed_date_to and parsed_date_from > parsed_date_to:
+        raise HTTPException(
+            status_code=400,
+            detail="Начальная дата не может быть больше конечной даты"
+        )
+    
+    start_time = datetime.now()
+    event_service = UploadEventService(db)
+    
+    try:
+        transaction_service = TransactionService(db)
+        result = transaction_service.clear_transactions_by_provider(
+            provider_id=provider_id,
+            date_from=parsed_date_from,
+            date_to=parsed_date_to
+        )
+        
+        # Получаем информацию о провайдере для логирования
+        provider = db.query(Provider).filter(Provider.id == provider_id).first()
+        provider_name = provider.name if provider else f"ID {provider_id}"
+        
+        # Формируем сообщение для логирования
+        period_info = ""
+        if parsed_date_from or parsed_date_to:
+            if parsed_date_from:
+                period_info += f"с {parsed_date_from.strftime('%d.%m.%Y')}"
+            if parsed_date_to:
+                if period_info:
+                    period_info += f" по {parsed_date_to.strftime('%d.%m.%Y')}"
+                else:
+                    period_info += f"по {parsed_date_to.strftime('%d.%m.%Y')}"
+        else:
+            period_info = "за все время"
+        
+        cleanup_message = (
+            f"Очистка транзакций провайдера '{provider_name}' {period_info}. "
+            f"Удалено транзакций: {result['deleted_count']}"
+        )
+        
+        # Логируем операцию очистки
+        event_service.log_event(
+            source_type="cleanup",
+            status="success",
+            is_scheduled=False,
+            file_name=f"Очистка провайдера {provider_name}",
+            provider_id=provider_id,
+            template_id=None,
+            user_id=current_user.id if current_user else None,
+            username=current_user.username if current_user else None,
+            transactions_total=result['deleted_count'],
+            transactions_created=0,
+            transactions_skipped=0,
+            transactions_failed=0,
+            duration_ms=int((datetime.now() - start_time).total_seconds() * 1000),
+            message=cleanup_message
+        )
+        
+        logger.info(
+            "Транзакции провайдера успешно очищены",
+            extra={
+                "provider_id": provider_id,
+                "provider_name": provider_name,
+                "deleted_count": result['deleted_count'],
+                "date_from": parsed_date_from.isoformat() if parsed_date_from else None,
+                "date_to": parsed_date_to.isoformat() if parsed_date_to else None,
+                "user_id": current_user.id if current_user else None,
+                "username": current_user.username if current_user else None
+            }
+        )
+        
+        # Логируем действие пользователя
+        if current_user:
+            try:
+                logging_service.log_user_action(
+                    db=db,
+                    user_id=current_user.id,
+                    username=current_user.username,
+                    action_type="clear",
+                    action_description=f"Очищены транзакции провайдера '{provider_name}' {period_info} ({result['deleted_count']} записей)",
+                    action_category="transaction",
+                    entity_type="Provider",
+                    entity_id=provider_id,
+                    status="success",
+                    extra_data={
+                        "provider_id": provider_id,
+                        "provider_name": provider_name,
+                        "deleted_count": result['deleted_count'],
+                        "date_from": parsed_date_from.isoformat() if parsed_date_from else None,
+                        "date_to": parsed_date_to.isoformat() if parsed_date_to else None
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+        
+        return {
+            "message": result['message'],
+            "deleted_count": result['deleted_count']
+        }
+        
+    except ValueError as e:
+        db.rollback()
+        error_message = str(e)
+        
+        # Логируем неуспешную операцию
+        provider = db.query(Provider).filter(Provider.id == provider_id).first()
+        provider_name = provider.name if provider else f"ID {provider_id}"
+        
+        event_service.log_event(
+            source_type="cleanup",
+            status="failed",
+            is_scheduled=False,
+            file_name=f"Очистка провайдера {provider_name}",
+            provider_id=provider_id,
+            template_id=None,
+            user_id=current_user.id if current_user else None,
+            username=current_user.username if current_user else None,
+            transactions_total=0,
+            transactions_created=0,
+            transactions_skipped=0,
+            transactions_failed=0,
+            duration_ms=int((datetime.now() - start_time).total_seconds() * 1000),
+            message=f"Ошибка: {error_message}"
+        )
+        
+        logger.error(
+            "Ошибка при очистке транзакций провайдера",
+            extra={
+                "provider_id": provider_id,
+                "error": error_message,
+                "user_id": current_user.id if current_user else None
+            },
+            exc_info=True
+        )
+        
+        raise HTTPException(status_code=400, detail=error_message)
+        
+    except Exception as e:
+        db.rollback()
+        error_message = f"Ошибка при очистке транзакций провайдера: {str(e)}"
+        
+        # Логируем неуспешную операцию
+        provider = db.query(Provider).filter(Provider.id == provider_id).first()
+        provider_name = provider.name if provider else f"ID {provider_id}"
+        
+        event_service.log_event(
+            source_type="cleanup",
+            status="failed",
+            is_scheduled=False,
+            file_name=f"Очистка провайдера {provider_name}",
+            provider_id=provider_id,
+            template_id=None,
+            user_id=current_user.id if current_user else None,
+            username=current_user.username if current_user else None,
+            transactions_total=0,
+            transactions_created=0,
+            transactions_skipped=0,
+            transactions_failed=0,
+            duration_ms=int((datetime.now() - start_time).total_seconds() * 1000),
+            message=error_message
+        )
+        
+        logger.error(
+            "Ошибка при очистке транзакций провайдера",
+            extra={
+                "provider_id": provider_id,
+                "error": str(e),
+                "user_id": current_user.id if current_user else None
+            },
+            exc_info=True
+        )
+        
+        raise HTTPException(status_code=500, detail=error_message)
 
 
 @router.get("/{transaction_id}", response_model=TransactionResponse)
@@ -890,7 +1366,8 @@ async def get_transaction(
 @router.delete("/{transaction_id}")
 async def delete_transaction(
     transaction_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
 ):
     """
     Удаление транзакции по ID
@@ -899,6 +1376,24 @@ async def delete_transaction(
     success = transaction_service.delete_transaction(transaction_id)
     if not success:
         raise HTTPException(status_code=404, detail="Транзакция не найдена")
+    
+    # Логируем действие пользователя
+    if current_user:
+        try:
+            logging_service.log_user_action(
+                db=db,
+                user_id=current_user.id,
+                username=current_user.username,
+                action_type="delete",
+                action_description=f"Удалена транзакция ID: {transaction_id}",
+                action_category="transaction",
+                entity_type="Transaction",
+                entity_id=transaction_id,
+                status="success"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
     return {"message": "Транзакция успешно удалена"}
 
 
@@ -925,6 +1420,7 @@ async def check_file_match(
 ):
     """
     Проверка соответствия файла шаблону провайдера перед загрузкой
+    Возвращает информацию о совпадении и список доступных шаблонов, если требуется выбор
     """
     validate_excel_file(file)
     
@@ -936,13 +1432,43 @@ async def check_file_match(
         # Определяем провайдера и шаблон
         provider_id, template_id, match_info = detect_provider_and_template(tmp_file_path, db)
         
-        logger.debug("Проверка соответствия файла завершена", extra={"match_info": match_info})
+        # Проверяем, требуется ли выбор шаблона
+        match_score = match_info.get("score", 0) if match_info else 0
+        requires_selection = match_score < 30 or not template_id
+        
+        available_templates = []
+        if requires_selection:
+            # Собираем список всех доступных провайдеров и их шаблонов
+            providers = db.query(Provider).filter(Provider.is_active == True).all()
+            
+            for provider in providers:
+                templates = db.query(ProviderTemplate).filter(
+                    ProviderTemplate.provider_id == provider.id,
+                    ProviderTemplate.is_active == True
+                ).all()
+                
+                for template in templates:
+                    available_templates.append({
+                        "template_id": template.id,
+                        "template_name": template.name,
+                        "provider_id": provider.id,
+                        "provider_name": provider.name,
+                        "provider_code": provider.code
+                    })
+        
+        logger.debug("Проверка соответствия файла завершена", extra={
+            "match_info": match_info,
+            "requires_selection": requires_selection,
+            "available_templates_count": len(available_templates)
+        })
         
         return {
             "provider_id": provider_id,
             "template_id": template_id,
             "match_info": match_info,
-            "is_match": match_info.get("score", 0) >= 30
+            "is_match": match_score >= 30 and template_id is not None,
+            "require_template_selection": requires_selection,
+            "available_templates": available_templates if requires_selection else None
         }
     finally:
         if tmp_file_path:

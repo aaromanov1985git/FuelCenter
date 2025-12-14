@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import './Select.css';
 
 const Select = ({
@@ -20,8 +21,10 @@ const Select = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const selectRef = useRef(null);
   const searchInputRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   const selectedOption = options.find(opt => opt.value === value);
 
@@ -31,17 +34,56 @@ const Select = ({
       )
     : options;
 
+  // Вычисление позиции выпадающего списка
+  const updateDropdownPosition = () => {
+    if (!selectRef.current) return;
+    
+    const rect = selectRef.current.getBoundingClientRect();
+    
+    setDropdownPosition({
+      top: rect.bottom + 4, // Для fixed позиционирования используем координаты viewport
+      left: rect.left,
+      width: rect.width
+    });
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      updateDropdownPosition();
+      
+      const handleResize = () => updateDropdownPosition();
+      const handleScroll = () => updateDropdownPosition();
+      
+      window.addEventListener('resize', handleResize);
+      window.addEventListener('scroll', handleScroll, true);
+      
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        window.removeEventListener('scroll', handleScroll, true);
+      };
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (selectRef.current && !selectRef.current.contains(e.target)) {
+      if (selectRef.current && !selectRef.current.contains(e.target) &&
+          dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsOpen(false);
         setSearchTerm('');
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (isOpen) {
+      // Небольшая задержка, чтобы не закрыть сразу после открытия
+      setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 0);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && searchable && searchInputRef.current) {
@@ -51,7 +93,12 @@ const Select = ({
 
   const handleToggle = () => {
     if (!disabled) {
-      setIsOpen(!isOpen);
+      const newIsOpen = !isOpen;
+      setIsOpen(newIsOpen);
+      if (newIsOpen) {
+        // Обновляем позицию при открытии
+        setTimeout(() => updateDropdownPosition(), 0);
+      }
     }
   };
 
@@ -121,8 +168,19 @@ const Select = ({
         </div>
       </div>
 
-      {isOpen && (
-        <div className="select-dropdown" role="listbox">
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <div 
+          ref={dropdownRef}
+          className="select-dropdown select-dropdown-portal" 
+          role="listbox"
+          style={{
+            position: 'fixed',
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${dropdownPosition.width}px`,
+            zIndex: 1100
+          }}
+        >
           {searchable && (
             <div className="select-search">
               <input
@@ -159,7 +217,8 @@ const Select = ({
               ))
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {(error || helperText) && (

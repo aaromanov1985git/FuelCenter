@@ -19,7 +19,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://gsm_user:gsm_password@localhost:5432/gsm_db"
     
     # CORS настройки (строка с разделителем запятая)
-    allowed_origins: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"
+    # Включает localhost для разработки и внешний домен для production
+    allowed_origins: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173,http://defectively-nimble-rattail.cloudpub.ru,https://defectively-nimble-rattail.cloudpub.ru"
     
     # Настройки приложения
     debug: bool = False

@@ -8,6 +8,21 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     wget \
     unzip \
+    # Зависимости для Playwright
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libdbus-1-3 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Установка Firebird Client Library для Linux
@@ -57,6 +72,10 @@ ENV FIREBIRD_LIB=/lib/x86_64-linux-gnu/libfbclient.so.2
 # Копирование requirements и установка зависимостей
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Установка браузера Chromium для Playwright
+RUN python -m playwright install chromium
+RUN python -m playwright install-deps chromium
 
 # Копирование кода приложения
 COPY ./app /app/app

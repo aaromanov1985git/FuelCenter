@@ -1,9 +1,46 @@
-.fuel-cards-list {
-  background: var(--color-bg-card);
-  border-radius: var(--radius-large);
-  box-shadow: var(--shadow-lg);
-  padding: var(--padding-card);
+/* Стили для статистических карточек */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-element);
   margin-bottom: var(--spacing-section);
+}
+
+.stat-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+  margin-bottom: var(--spacing-small);
+}
+
+.stat-card-title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.stat-card-value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.stat-card-value.success {
+  color: var(--color-success);
+}
+
+.stat-card-value.error {
+  color: var(--color-error);
+}
+
+.stat-card-value.warning {
+  color: var(--color-warning);
+}
+
+.stat-card-percent {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-tiny);
 }
 
 .fuel-cards-header {
@@ -50,63 +87,13 @@
   background-color: var(--color-error-light);
 }
 
-.blocked-badge {
-  display: inline-block;
-  padding: var(--spacing-tiny) var(--padding-small);
-  background-color: var(--color-error);
-  color: white;
-  border-radius: var(--radius-small);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-}
+/* Бейджи теперь используют стандартный Badge из ui библиотеки */
+/* Таблица теперь использует стандартный Table из ui библиотеки */
 
-.active-badge {
-  display: inline-block;
-  padding: var(--spacing-tiny) var(--padding-small);
-  background-color: var(--color-success);
-  color: white;
-  border-radius: var(--radius-small);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  text-transform: uppercase;
-}
-
-.cards-table-wrapper {
-  overflow-x: auto;
-}
-
-.cards-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 600px;
-}
-
-.cards-table thead {
-  background: var(--color-bg-hover);
-}
-
-.cards-table th {
-  padding: var(--padding-small) var(--padding-element);
-  text-align: left;
-  font-size: 0.625rem;
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 2px solid var(--color-border-light);
-}
-
-.cards-table td {
-  padding: var(--padding-small) var(--padding-element);
-  font-size: 0.625rem;
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-normal);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.cards-table tbody tr:hover {
-  background: var(--color-bg-secondary);
+/* Стили для заблокированных карт в таблице */
+.blocked-card {
+  opacity: 0.7;
+  background-color: var(--color-error-light);
 }
 
 /* Стили для edit-btn удалены - используется IconButton */
@@ -123,55 +110,19 @@
 
 .loading {
   text-align: center;
-  padding: 48px;
+  padding: calc(var(--spacing-section) * 1.5);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
 }
 
 .empty-state {
   text-align: center;
-  padding: 48px;
+  padding: calc(var(--spacing-section) * 1.5);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
 }
 
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--spacing-element);
-  margin-top: var(--spacing-block);
-  padding-top: var(--spacing-block);
-  border-top: 1px solid var(--color-border);
-}
-
-.pagination-btn {
-  padding: var(--padding-tiny) var(--padding-element);
-  border: 1px solid var(--color-border-light);
-  background: var(--color-bg-card);
-  border-radius: var(--radius-small);
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  transition: all 0.2s;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  background: var(--color-bg-secondary);
-  border-color: var(--color-border);
-}
-
-.pagination-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.pagination-info {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-normal);
-}
+/* Пагинация теперь использует Table.Pagination из ui библиотеки */
 
 /* Стили для дашборда топливных карт */
 .dashboard-section {

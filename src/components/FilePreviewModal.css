@@ -1,20 +1,5 @@
-.file-preview-modal {
-  max-width: 900px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-large);
-  box-shadow: var(--shadow-xl);
-  border: 1px solid var(--color-border);
-  overflow: hidden;
-}
-
-.file-preview-body {
-  overflow-y: auto;
-  max-height: calc(90vh - 140px);
-  padding: var(--padding-section);
-}
+/* Модальное окно теперь использует стандартный Modal компонент из ui библиотеки */
+/* Стили для body теперь не нужны, так как Modal.Body управляет этим */
 
 .file-preview-info {
   display: grid;
@@ -86,7 +71,7 @@
 }
 
 .file-preview-table td {
-  padding: 6px 8px;
+  padding: var(--padding-tiny) var(--padding-tiny);
   border-bottom: 1px solid var(--color-border-light);
   border-right: 1px solid var(--color-border-light);
   color: var(--color-text-primary);
@@ -152,27 +137,89 @@
   color: var(--color-text-secondary);
 }
 
+.alert-with-margin {
+  margin-bottom: var(--spacing-block);
+}
+
+.file-preview-template-check {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-element);
+  padding: var(--padding-section);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-block);
+}
+
+.file-preview-template-info {
+  margin-top: var(--spacing-block);
+}
+
+.file-preview-template-selection {
+  margin-top: var(--spacing-block);
+  padding: var(--padding-element);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-medium);
+  border: 1px solid var(--color-border);
+}
+
 /* Мобильная адаптация */
 @media (max-width: 768px) {
-  .file-preview-modal {
-    max-width: 95vw;
-    max-height: 95vh;
-  }
-
   .file-preview-info {
     grid-template-columns: 1fr;
     gap: var(--spacing-small);
+    padding: var(--spacing-responsive-element);
+  }
+
+  .file-preview-info-item {
+    gap: var(--spacing-tiny);
+  }
+
+  .file-preview-label {
+    font-size: var(--font-size-xs);
+  }
+
+  .file-preview-value {
+    font-size: var(--font-size-sm);
+  }
+
+  .file-preview-content {
+    margin-top: var(--spacing-responsive-block);
+  }
+
+  .file-preview-table {
+    font-size: var(--font-size-xs);
   }
 
   .file-preview-table td {
-    max-width: 100px;
-    font-size: 0.65rem;
-    padding: 4px 6px;
+    max-width: none;
+    font-size: var(--font-size-xs);
+    padding: var(--spacing-small);
+    white-space: normal;
+    word-break: break-word;
   }
 
   .file-preview-text {
-    font-size: 0.7rem;
+    font-size: var(--font-size-xs);
     max-height: 300px;
+    padding: var(--spacing-responsive-element);
+  }
+
+  .file-preview-csv {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Очень маленькие экраны */
+@media (max-width: 480px) {
+  .file-preview-info {
+    padding: var(--spacing-small);
+  }
+
+  .file-preview-text {
+    max-height: 250px;
   }
 }
 

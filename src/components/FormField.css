@@ -2,6 +2,11 @@
   margin-bottom: var(--spacing-block);
 }
 
+/* Стили для FormField, когда используется стандартный Input из ui библиотеки */
+.form-field .input-wrapper {
+  margin-bottom: 0; /* Input уже имеет свои отступы */
+}
+
 .form-field-label {
   display: block;
   margin-bottom: var(--spacing-small);
@@ -23,7 +28,7 @@
 
 .form-field-input {
   width: 100%;
-  padding: 14px 16px;
+  padding: var(--padding-small) var(--padding-element);
   padding-right: 40px; /* Место для иконки */
   border: 1px solid var(--color-border);
   border-radius: var(--radius-small);
@@ -95,7 +100,7 @@
   color: var(--color-error);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--padding-tiny);
   animation: slideDown 0.2s ease;
 }
 
@@ -128,7 +133,7 @@
 /* Для select и textarea */
 .form-field-input-wrapper select,
 .form-field-input-wrapper textarea {
-  padding: 14px 16px;
+  padding: var(--padding-small) var(--padding-element);
   min-height: 48px;
   line-height: 1.5;
 }

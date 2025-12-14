@@ -2,7 +2,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-small);
-  padding: 4px 12px;
+  padding: var(--spacing-tiny) var(--padding-small);
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
@@ -82,7 +82,7 @@
 /* Мобильная адаптация */
 @media (max-width: 768px) {
   .status-indicator {
-    padding: 3px 8px;
+    padding: 3px var(--padding-tiny);
     font-size: var(--font-size-xs);
   }
 

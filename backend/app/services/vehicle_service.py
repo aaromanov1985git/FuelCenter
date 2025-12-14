@@ -32,10 +32,14 @@ class VehicleService:
         self,
         skip: int = 0,
         limit: int = 100,
-        is_validated: Optional[str] = None
+        is_validated: Optional[str] = None,
+        organization_ids: Optional[List[int]] = None
     ) -> Tuple[List[Vehicle], int]:
         """
         Получение списка ТС с фильтрацией
+        
+        Args:
+            organization_ids: Список ID организаций для фильтрации
         
         Returns:
             tuple: (список ТС, общее количество)
@@ -43,7 +47,8 @@ class VehicleService:
         return self.vehicle_repo.get_all(
             skip=skip,
             limit=limit,
-            is_validated=is_validated
+            is_validated=is_validated,
+            organization_ids=organization_ids
         )
     
     def update_vehicle(
@@ -51,7 +56,8 @@ class VehicleService:
         vehicle_id: int,
         garage_number: Optional[str] = None,
         license_plate: Optional[str] = None,
-        is_validated: Optional[str] = None
+        is_validated: Optional[str] = None,
+        organization_id: Optional[int] = None
     ) -> Optional[Vehicle]:
         """
         Обновление данных ТС с валидацией
@@ -63,6 +69,18 @@ class VehicleService:
         if not vehicle:
             return None
         
+        logger.info(
+            "Начало обновления ТС",
+            extra={
+                "vehicle_id": vehicle_id,
+                "garage_number": garage_number,
+                "license_plate": license_plate,
+                "is_validated": is_validated,
+                "organization_id": organization_id,
+                "current_organization_id": vehicle.organization_id
+            }
+        )
+        
         # Обновляем поля
         if garage_number is not None:
             vehicle.garage_number = garage_number
@@ -70,6 +88,20 @@ class VehicleService:
             vehicle.license_plate = license_plate
         if is_validated is not None:
             vehicle.is_validated = is_validated
+        
+        # organization_id всегда обновляем (может быть None для сброса организации)
+        # Используем специальный подход: если organization_id передан (даже None), обновляем
+        # Для этого проверяем, был ли параметр передан через inspect или просто всегда обновляем
+        vehicle.organization_id = organization_id
+        logger.info(
+            "Обновлен organization_id для ТС",
+            extra={
+                "vehicle_id": vehicle_id,
+                "old_organization_id": getattr(vehicle, '_old_organization_id', None),
+                "new_organization_id": organization_id,
+                "vehicle_organization_id_after": vehicle.organization_id
+            }
+        )
         
         # Валидация при обновлении
         validation_result = validate_vehicle_data(vehicle.garage_number, vehicle.license_plate)
@@ -87,7 +119,15 @@ class VehicleService:
         self.db.commit()
         self.db.refresh(vehicle)
         
-        logger.info("ТС обновлено", extra={"vehicle_id": vehicle_id})
+        logger.info(
+            "ТС обновлено",
+            extra={
+                "vehicle_id": vehicle_id,
+                "final_organization_id": vehicle.organization_id,
+                "garage_number": vehicle.garage_number,
+                "license_plate": vehicle.license_plate
+            }
+        )
         
         return vehicle
     

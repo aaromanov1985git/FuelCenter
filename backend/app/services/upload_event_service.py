@@ -58,12 +58,30 @@ class UploadEventService:
             self.db.add(event)
             self.db.commit()
             self.db.refresh(event)
+            
+            logger.debug("Событие загрузки успешно записано в журнал", extra={
+                "event_id": event.id,
+                "source_type": source_type,
+                "status": status,
+                "template_id": template_id
+            })
+            
             return event
         except Exception as exc:
+            # Делаем rollback при ошибке
+            try:
+                self.db.rollback()
+            except Exception as rollback_error:
+                logger.error("Ошибка при откате транзакции при логировании события", extra={
+                    "rollback_error": str(rollback_error),
+                    "original_error": str(exc)
+                }, exc_info=True)
+            
             logger.error(
-                "Не удалось записать событие загрузки",
+                "Не удалось записать событие загрузки в журнал",
                 extra={
                     "error": str(exc),
+                    "error_type": type(exc).__name__,
                     "source_type": source_type,
                     "status": status,
                     "file_name": file_name,

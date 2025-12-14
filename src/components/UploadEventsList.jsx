@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Card, Input, Select, Table, Button, Badge, Skeleton } from './ui'
+import { Card, Input, Select, Table, Button, Badge, Skeleton, Modal } from './ui'
 import { authFetch } from '../utils/api'
 import { useToast } from './ToastContainer'
 import { useDebounce } from '../hooks/useDebounce'
 import StatusBadge from './StatusBadge'
+import EmptyState from './EmptyState'
 import './UploadEventsList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
@@ -24,8 +25,14 @@ const sourceLabels = {
 
 const statusTone = {
   success: 'success',
-  failed: 'danger',
-  partial: 'warning'
+  failed: 'failed',
+  partial: 'partial'
+}
+
+const statusLabels = {
+  success: 'Успешно',
+  failed: 'Ошибка',
+  partial: 'Частично'
 }
 
 const UploadEventsList = () => {
@@ -56,6 +63,7 @@ const UploadEventsList = () => {
     date_from: '',
     date_to: ''
   })
+  const [messageModal, setMessageModal] = useState({ isOpen: false, message: '', title: '' })
 
   const debouncedSearch = useDebounce(filters.search, 400)
 
@@ -115,6 +123,10 @@ const UploadEventsList = () => {
       })
       setTotal(data.total || 0)
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       console.error('Ошибка загрузки событий:', err)
       showError(err.message || 'Ошибка загрузки событий загрузки')
       // При ошибке устанавливаем пустые значения
@@ -167,9 +179,9 @@ const UploadEventsList = () => {
     id: event.id,
     created_at: (
       <div>
-        <div style={{ fontWeight: 'var(--font-weight-semibold)' }}>{formatDateTime(event.created_at)}</div>
+        <div className="event-datetime-primary">{formatDateTime(event.created_at)}</div>
         {event.duration_ms && (
-          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 'var(--spacing-tiny)' }}>
+          <div className="event-datetime-secondary">
             {event.duration_ms} мс
           </div>
         )}
@@ -177,9 +189,9 @@ const UploadEventsList = () => {
     ),
     username: (
       <div>
-        <div style={{ fontWeight: 'var(--font-weight-semibold)' }}>{event.username || '—'}</div>
+        <div className="event-username-primary">{event.username || '—'}</div>
         {event.user_id && (
-          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 'var(--spacing-tiny)' }}>
+          <div className="event-username-secondary">
             ID {event.user_id}
           </div>
         )}
@@ -187,37 +199,56 @@ const UploadEventsList = () => {
     ),
     source_type: (
       <div>
-        <div style={{ fontWeight: 'var(--font-weight-semibold)' }}>{sourceLabels[event.source_type] || event.source_type}</div>
-        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 'var(--spacing-tiny)' }}>
+        <div className="event-source-primary">{sourceLabels[event.source_type] || event.source_type}</div>
+        <div className="event-source-secondary">
           {event.is_scheduled ? 'Регламентная' : 'Ручная'}
         </div>
       </div>
     ),
     provider_name: (
       <div>
-        <div style={{ fontWeight: 'var(--font-weight-semibold)' }}>{event.provider_name || '—'}</div>
-        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 'var(--spacing-tiny)' }}>
+        <div className="event-provider-primary">{event.provider_name || '—'}</div>
+        <div className="event-provider-secondary">
           {event.template_name || '—'}
         </div>
       </div>
     ),
     file_name: event.file_name || '—',
-    status: <StatusBadge status={statusTone[event.status] || 'info'} text={event.status || '—'} />,
+    status: <StatusBadge status={statusTone[event.status] || 'pending'} text={statusLabels[event.status] || event.status || '—'} />,
     transactions: (
       <div>
-        <div style={{ fontWeight: 'var(--font-weight-semibold)' }}>
+        <div className="event-transactions-primary">
           {event.transactions_created}/{event.transactions_total}
         </div>
         {event.transactions_skipped && (
-          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 'var(--spacing-tiny)' }}>
+          <div className="event-transactions-secondary">
             Пропущено: {event.transactions_skipped}
           </div>
         )}
       </div>
     ),
     message: (
-      <div style={{ maxWidth: '320px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={event.message || '—'}>
-        {event.message ? event.message.slice(0, 80) + (event.message.length > 80 ? '…' : '') : '—'}
+      <div className="event-message-cell">
+        <div className="event-message-truncated" title={event.message || '—'}>
+          {event.message ? event.message.slice(0, 80) + (event.message.length > 80 ? '…' : '') : '—'}
+        </div>
+        {event.message && event.message.length > 80 && (
+          <button
+            className="event-message-expand-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              setMessageModal({
+                isOpen: true,
+                message: event.message,
+                title: `Сообщение события #${event.id}`
+              })
+            }}
+            title="Просмотреть полный текст"
+            aria-label="Просмотреть полный текст сообщения"
+          >
+            📄
+          </button>
+        )}
       </div>
     )
   }))
@@ -227,13 +258,13 @@ const UploadEventsList = () => {
       <Card.Header>
         <div>
           <Card.Title>События загрузок</Card.Title>
-          <p style={{ margin: 'var(--spacing-small) 0 0', color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+          <p className="event-subtitle">
             Кто, когда и сколько загрузил. Регламентные загрузки включены.
           </p>
         </div>
       </Card.Header>
       <Card.Body>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--spacing-section)', marginBottom: 'var(--spacing-block)' }}>
+        <div className="events-filters-grid">
           <Input
             label="Поиск"
             type="text"
@@ -304,44 +335,44 @@ const UploadEventsList = () => {
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 'var(--spacing-element)', marginBottom: 'var(--spacing-section)' }}>
+        <div className="events-stats-grid">
           <Card variant="outlined" padding="sm">
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginBottom: 'var(--spacing-small)' }}>
+            <div className="events-stat-label">
               Всего событий
             </div>
-            <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)' }}>
+            <div className="events-stat-value">
               {stats?.total_events || 0}
             </div>
           </Card>
           <Card variant="outlined" padding="sm">
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginBottom: 'var(--spacing-small)' }}>
+            <div className="events-stat-label">
               Создано транзакций
             </div>
-            <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)' }}>
+            <div className="events-stat-value">
               {stats?.total_created || 0}
             </div>
           </Card>
           <Card variant="outlined" padding="sm">
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginBottom: 'var(--spacing-small)' }}>
+            <div className="events-stat-label">
               Пропущено
             </div>
-            <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)' }}>
+            <div className="events-stat-value">
               {stats?.total_skipped || 0}
             </div>
           </Card>
           <Card variant="outlined" padding="sm">
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginBottom: 'var(--spacing-small)' }}>
+            <div className="events-stat-label">
               Ошибок
             </div>
-            <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)' }}>
+            <div className="events-stat-value">
               {stats?.failed_events || 0}
             </div>
           </Card>
           <Card variant="outlined" padding="sm">
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginBottom: 'var(--spacing-small)' }}>
+            <div className="events-stat-label">
               Регламентных
             </div>
-            <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)' }}>
+            <div className="events-stat-value">
               {stats?.scheduled_events || 0}
             </div>
           </Card>
@@ -350,27 +381,36 @@ const UploadEventsList = () => {
         {loading ? (
           <Skeleton rows={6} columns={8} />
         ) : tableData.length === 0 ? (
-          <div style={{ padding: 'var(--spacing-block)', textAlign: 'center', color: 'var(--color-text-secondary)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--spacing-section)' }}>
-            <p style={{ margin: 0 }}>Нет событий по выбранным фильтрам.</p>
-            {(filters.provider_id || filters.source_type || filters.status || filters.is_scheduled !== 'all' || filters.date_from || filters.date_to || debouncedSearch.trim()) && (
-              <Button
-                variant="primary"
-                onClick={() => {
-                  setFilters({
-                    search: '',
-                    provider_id: '',
-                    source_type: '',
-                    status: '',
-                    is_scheduled: 'all',
-                    date_from: '',
-                    date_to: ''
-                  })
-                }}
-              >
-                Сбросить фильтры
-              </Button>
-            )}
-          </div>
+          <EmptyState
+            title="Нет событий по выбранным фильтрам"
+            message={
+              (filters.provider_id || filters.source_type || filters.status || filters.is_scheduled !== 'all' || filters.date_from || filters.date_to || debouncedSearch.trim())
+                ? "Попробуйте изменить параметры фильтрации или сбросить фильтры, чтобы увидеть все события."
+                : "События загрузок пока отсутствуют. Загрузите файл для создания первого события."
+            }
+            icon="📋"
+            variant="default"
+            action={
+              (filters.provider_id || filters.source_type || filters.status || filters.is_scheduled !== 'all' || filters.date_from || filters.date_to || debouncedSearch.trim()) ? (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setFilters({
+                      search: '',
+                      provider_id: '',
+                      source_type: '',
+                      status: '',
+                      is_scheduled: 'all',
+                      date_from: '',
+                      date_to: ''
+                    })
+                  }}
+                >
+                  Сбросить фильтры
+                </Button>
+              ) : null
+            }
+          />
         ) : (
           <>
             <Table
@@ -393,6 +433,27 @@ const UploadEventsList = () => {
           </>
         )}
       </Card.Body>
+      
+      <Modal
+        isOpen={messageModal.isOpen}
+        onClose={() => setMessageModal({ isOpen: false, message: '', title: '' })}
+        title={messageModal.title}
+        size="md"
+      >
+        <Modal.Body>
+          <div className="event-message-full">
+            {messageModal.message || '—'}
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="primary"
+            onClick={() => setMessageModal({ isOpen: false, message: '', title: '' })}
+          >
+            Закрыть
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Card>
   )
 }

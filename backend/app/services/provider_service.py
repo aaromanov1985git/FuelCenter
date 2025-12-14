@@ -49,6 +49,7 @@ class ProviderService:
         self,
         name: str,
         code: str,
+        organization_id: Optional[int] = None,
         is_active: bool = True
     ) -> Provider:
         """
@@ -62,12 +63,17 @@ class ProviderService:
         if existing:
             raise ValueError("Провайдер с таким кодом уже существует")
         
-        provider = Provider(name=name, code=code, is_active=is_active)
+        provider = Provider(
+            name=name,
+            code=code,
+            organization_id=organization_id,
+            is_active=is_active
+        )
         self.db.add(provider)
         self.db.commit()
         self.db.refresh(provider)
         
-        logger.info("Провайдер создан", extra={"provider_id": provider.id, "code": code})
+        logger.info("Провайдер создан", extra={"provider_id": provider.id, "code": code, "organization_id": organization_id})
         
         return provider
     
@@ -76,6 +82,7 @@ class ProviderService:
         provider_id: int,
         name: Optional[str] = None,
         code: Optional[str] = None,
+        organization_id: Optional[int] = None,
         is_active: Optional[bool] = None
     ) -> Optional[Provider]:
         """
@@ -96,13 +103,15 @@ class ProviderService:
         
         if name is not None:
             provider.name = name
+        if organization_id is not None:
+            provider.organization_id = organization_id
         if is_active is not None:
             provider.is_active = is_active
         
         self.db.commit()
         self.db.refresh(provider)
         
-        logger.info("Провайдер обновлен", extra={"provider_id": provider_id})
+        logger.info("Провайдер обновлен", extra={"provider_id": provider_id, "organization_id": organization_id})
         
         return provider
     

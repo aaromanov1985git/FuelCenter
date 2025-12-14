@@ -4,7 +4,7 @@ import './StatusBadge.css'
 /**
  * Компонент бейджа статуса с иконкой
  * 
- * @param {string} status - Статус: 'valid', 'invalid', 'pending', 'active', 'inactive', 'locked'
+ * @param {string} status - Статус: 'valid', 'invalid', 'pending', 'active', 'inactive', 'locked', 'success', 'failed', 'partial'
  * @param {string} text - Текст статуса (опционально, будет использован дефолтный)
  * @param {string} size - Размер: 'small', 'medium', 'large' (по умолчанию 'medium')
  * @param {string} className - Дополнительные CSS классы
@@ -40,6 +40,21 @@ const StatusBadge = ({ status, text, size = 'medium', className = '' }) => {
       icon: '🔒',
       defaultText: 'Заблокировано',
       class: 'status-locked'
+    },
+    success: {
+      icon: '✅',
+      defaultText: 'Успешно',
+      class: 'status-success'
+    },
+    failed: {
+      icon: '❌',
+      defaultText: 'Ошибка',
+      class: 'status-failed'
+    },
+    partial: {
+      icon: '⚠️',
+      defaultText: 'Частично',
+      class: 'status-partial'
     }
   }
 

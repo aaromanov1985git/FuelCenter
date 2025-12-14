@@ -1391,14 +1391,17 @@ h1 {
     -webkit-overflow-scrolling: touch;
   }
 
+  /* На планшетах оставляем табличный вид с горизонтальной прокруткой */
   .data-table {
-    min-width: 1200px; /* Увеличена минимальная ширина для планшетов */
-    font-size: 0.625rem;
+    display: table;
+    width: 100%;
+    font-size: var(--font-size-sm);
+    min-width: 600px; /* Минимальная ширина для корректного отображения */
   }
 
   .data-table th,
   .data-table td {
-    padding: var(--spacing-tiny) var(--padding-tiny);
+    padding: var(--spacing-small) var(--padding-small);
     white-space: nowrap;
   }
 
@@ -1564,64 +1567,68 @@ h1 {
     font-size: var(--font-size-xl);
   }
 
-  .data-table {
-    min-width: 1000px; /* Увеличена минимальная ширина для мобильных */
-    font-size: 0.625rem;
-  }
-
-  /* Адаптация таблицы транзакций для мобильных */
+  /* Адаптация таблицы для мобильных - карточный вид */
   .table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
 
+  /* На мобильных таблицы переключаются в карточный вид */
   .data-table {
     display: block;
-    overflow-x: auto;
-  }
-
-  .data-table thead,
-  .data-table tbody,
-  .data-table tr {
-    display: block;
+    width: 100%;
+    min-width: unset; /* Убираем фиксированную минимальную ширину */
+    font-size: var(--font-size-sm); /* Используем нормальный размер шрифта */
   }
 
   .data-table thead {
     display: none; /* Скрываем заголовки на мобильных */
   }
 
+  .data-table tbody {
+    display: block;
+  }
+
   .data-table tr {
+    display: block;
     margin-bottom: var(--spacing-element);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-medium);
     padding: var(--padding-small);
     background: var(--color-bg-card);
-    display: block;
+    box-shadow: var(--shadow-sm);
   }
 
   .data-table td {
     display: block;
     text-align: right;
-    padding: var(--spacing-tiny) var(--padding-small);
+    padding: var(--spacing-small) var(--padding-small);
     border-bottom: 1px solid var(--color-border-light);
     position: relative;
     padding-left: 50%;
   }
 
+  /* Поддержка data-label атрибутов для карточного вида */
   .data-table td:before {
     content: attr(data-label);
     position: absolute;
     left: var(--padding-small);
     width: 45%;
     text-align: left;
-    font-weight: var(--font-weight-bold);
+    font-weight: var(--font-weight-semibold);
     color: var(--color-text-secondary);
     text-transform: uppercase;
     font-size: var(--font-size-xs);
+    letter-spacing: 0.5px;
   }
 
   .data-table td:last-child {
     border-bottom: none;
+  }
+
+  /* Если нет data-label, пытаемся использовать заголовок из thead */
+  .data-table td:not([data-label]):before {
+    content: attr(data-column);
   }
 
   .pagination {

@@ -3,7 +3,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-tiny) !important;
-  padding: 2px 8px !important;
+  padding: 2px var(--padding-tiny) !important;
   border-radius: var(--radius-badge);
   font-weight: var(--font-weight-bold) !important;
   font-size: var(--font-size-sm) !important;
@@ -17,7 +17,7 @@
 
 .status-badge-small {
   font-size: var(--font-size-xs) !important;
-  padding: 2px 8px !important;
+  padding: 2px var(--padding-tiny) !important;
   font-weight: var(--font-weight-bold) !important;
   height: 26px !important;
   min-height: 26px !important;
@@ -25,7 +25,7 @@
 
 .status-badge-medium {
   font-size: var(--font-size-sm) !important;
-  padding: 3px 10px !important;
+  padding: 3px var(--padding-small) !important;
   height: 28px !important;
   min-height: 28px !important;
 }
@@ -75,9 +75,9 @@
 /* Улучшенная читаемость для темной темы */
 [data-theme="midnight"] .status-badge.status-pending,
 [data-theme="amber-glow"] .status-badge.status-pending {
-  background: rgba(245, 158, 11, 0.25);
-  color: #fcd34d; /* Более яркий желтый для темной темы */
-  border-color: #f59e0b;
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+  border-color: var(--color-warning);
   text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.5);
 }
 
@@ -102,6 +102,30 @@
   border: 1px solid var(--color-error);
 }
 
+/* Статус: Успешно */
+.status-badge.status-success {
+  background: var(--color-success-light) !important;
+  color: var(--color-success-dark) !important;
+  border: 1px solid var(--color-success) !important;
+  font-weight: var(--font-weight-bold) !important;
+}
+
+/* Статус: Ошибка */
+.status-badge.status-failed {
+  background: var(--color-error-light) !important;
+  color: var(--color-error-dark) !important;
+  border: 1px solid var(--color-error) !important;
+  font-weight: var(--font-weight-bold) !important;
+}
+
+/* Статус: Частично */
+.status-badge.status-partial {
+  background: var(--color-warning-light) !important;
+  color: var(--color-warning-dark) !important;
+  border-color: var(--color-warning) !important;
+  font-weight: var(--font-weight-bold) !important;
+}
+
 @keyframes pulse-badge {
   0%, 100% {
     opacity: 1;
@@ -114,7 +138,7 @@
 /* Мобильная адаптация */
 @media (max-width: 768px) {
   .status-badge {
-    padding: 2px 8px;
+    padding: 2px var(--padding-tiny);
     font-size: var(--font-size-xs);
   }
 

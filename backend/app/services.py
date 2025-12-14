@@ -531,6 +531,7 @@ def process_excel_file(
             "card_number": card,
             "vehicle": user,
             "azs_number": extract_azs_number(kazs),
+            "azs_original_name": kazs,  # Сохраняем оригинальное название АЗС для создания записи в справочнике
             "product": normalize_fuel(fuel),
             "operation_type": "Покупка",
             "quantity": qty_value,

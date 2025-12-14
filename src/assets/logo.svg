@@ -1,0 +1,55 @@
+<svg width="140" height="140" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#7c3aed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a855f7;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="logoGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="logoGlow" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:0" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Внешнее свечение -->
+  <circle cx="70" cy="70" r="65" fill="url(#logoGlow)" opacity="0.3"/>
+  
+  <!-- Основной круг с градиентом -->
+  <circle cx="70" cy="70" r="55" fill="url(#logoGradient)" opacity="0.15"/>
+  <circle cx="70" cy="70" r="50" fill="url(#logoGradient)" opacity="0.2"/>
+  
+  <!-- Внутренние декоративные круги -->
+  <circle cx="70" cy="70" r="42" fill="none" stroke="url(#logoGradient)" stroke-width="2" opacity="0.3"/>
+  <circle cx="70" cy="70" r="38" fill="none" stroke="url(#logoGradient2)" stroke-width="1.5" opacity="0.4"/>
+  
+  <!-- Буквы GSM стилизованные с современным дизайном -->
+  <g transform="translate(30, 30)">
+    <!-- Буква G -->
+    <path d="M 20 15 L 20 45 L 40 45 L 40 35 L 30 35 L 30 40 L 25 40 L 25 20 L 35 20 L 35 15 Z" 
+          fill="url(#logoGradient)" 
+          stroke="url(#logoGradient2)" 
+          stroke-width="0.5"/>
+    
+    <!-- Буква S -->
+    <path d="M 50 15 L 55 15 L 55 25 L 50 25 L 50 30 L 55 30 L 55 40 L 50 40 L 50 45 L 45 45 L 45 40 L 50 40 L 50 35 L 45 35 L 45 25 L 50 25 L 50 20 L 45 20 L 45 15 Z" 
+          fill="url(#logoGradient)" 
+          stroke="url(#logoGradient2)" 
+          stroke-width="0.5"/>
+    
+    <!-- Буква M -->
+    <path d="M 65 15 L 65 45 L 70 45 L 70 25 L 75 35 L 80 25 L 80 45 L 85 45 L 85 15 L 80 15 L 80 20 L 75 30 L 70 20 L 70 15 Z" 
+          fill="url(#logoGradient2)" 
+          stroke="url(#logoGradient)" 
+          stroke-width="0.5"/>
+  </g>
+  
+  <!-- Декоративные элементы - точки -->
+  <circle cx="70" cy="25" r="3" fill="url(#logoGradient2)" opacity="0.6"/>
+  <circle cx="70" cy="115" r="3" fill="url(#logoGradient2)" opacity="0.6"/>
+  <circle cx="25" cy="70" r="3" fill="url(#logoGradient)" opacity="0.6"/>
+  <circle cx="115" cy="70" r="3" fill="url(#logoGradient)" opacity="0.6"/>
+</svg>

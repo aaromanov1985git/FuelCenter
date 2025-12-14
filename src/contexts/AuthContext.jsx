@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { logger } from '../utils/logger'
-import { authFetch } from '../utils/api'
+import { authFetch, setLogoutHandler } from '../utils/api'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
 
@@ -127,12 +127,46 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Вызываем API endpoint для логирования выхода
+    if (token) {
+      try {
+        const logoutUrl = API_URL ? `${API_URL}/api/v1/auth/logout` : '/api/v1/auth/logout'
+        await fetch(logoutUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }).catch(err => {
+          // Игнорируем ошибки при вызове logout API, чтобы не блокировать выход
+          logger.warn('Ошибка при вызове logout API', { error: err.message })
+        })
+      } catch (error) {
+        // Игнорируем ошибки, чтобы не блокировать выход
+        logger.warn('Ошибка при вызове logout API', { error: error.message })
+      }
+    }
+    
+    // Очищаем локальное состояние независимо от результата API запроса
     localStorage.removeItem('auth_token')
     setToken(null)
     setUser(null)
     logger.info('Выход из системы')
-  }, [])
+  }, [token])
+
+  // Устанавливаем глобальный обработчик для автоматического выхода при 401 ошибке
+  useEffect(() => {
+    setLogoutHandler(() => {
+      logout()
+      logger.warn('Автоматический выход из-за истечения токена авторизации')
+    })
+    
+    // Очищаем обработчик при размонтировании
+    return () => {
+      setLogoutHandler(null)
+    }
+  }, [logout])
 
   const value = {
     token,

@@ -25,10 +25,16 @@ class VehicleRepository:
         self,
         skip: int = 0,
         limit: int = 100,
-        is_validated: Optional[str] = None
+        is_validated: Optional[str] = None,
+        organization_id: Optional[int] = None,
+        organization_ids: Optional[List[int]] = None
     ) -> tuple[List[Vehicle], int]:
         """
         Получение списка ТС с фильтрацией
+        
+        Args:
+            organization_id: Фильтр по одной организации
+            organization_ids: Фильтр по списку организаций (приоритет над organization_id)
         
         Returns:
             tuple: (список ТС, общее количество)
@@ -37,6 +43,16 @@ class VehicleRepository:
         
         if is_validated:
             query = query.filter(Vehicle.is_validated == is_validated)
+        
+        # Фильтрация по организациям
+        if organization_ids is not None:
+            query = query.filter(
+                (Vehicle.organization_id.in_(organization_ids)) | (Vehicle.organization_id.is_(None))
+            )
+        elif organization_id is not None:
+            query = query.filter(
+                (Vehicle.organization_id == organization_id) | (Vehicle.organization_id.is_(None))
+            )
         
         total = query.count()
         vehicles = query.order_by(Vehicle.created_at.desc()).offset(skip).limit(limit).all()

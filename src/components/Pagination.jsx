@@ -1,4 +1,5 @@
 import React from 'react'
+import { Button, Input, Select } from './ui'
 import './Pagination.css'
 
 /**
@@ -64,8 +65,8 @@ const Pagination = ({
     }
   }
 
-  const handlePageSizeChange = (e) => {
-    const newPageSize = parseInt(e.target.value)
+  const handlePageSizeChange = (value) => {
+    const newPageSize = parseInt(value)
     if (onPageSizeChange && !loading) {
       onPageSizeChange(newPageSize)
     }
@@ -129,46 +130,44 @@ const Pagination = ({
         {onPageSizeChange && (
           <div className="pagination-page-size">
             <label htmlFor="page-size-select">Записей на странице:</label>
-            <select
+            <Select
               id="page-size-select"
-              value={pageSize}
+              value={pageSize.toString()}
               onChange={handlePageSizeChange}
               disabled={loading}
-              className="pagination-page-size-select"
-            >
-              {pageSizeOptions.map(size => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-              {total > 0 && !pageSizeOptions.includes(total) && (
-                <option value={total}>Все ({total})</option>
-              )}
-            </select>
+              options={[
+                ...pageSizeOptions.map(size => ({ value: size.toString(), label: size.toString() })),
+                ...(total > 0 && !pageSizeOptions.includes(total) ? [{ value: total.toString(), label: `Все (${total})` }] : [])
+              ]}
+            />
           </div>
         )}
       </div>
 
       <div className="pagination-controls">
-        <button
-          className="pagination-button pagination-button-first"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={handleFirstPage}
           disabled={currentPage === 1 || loading}
           title="Первая страница"
           aria-label="Первая страница"
+          className="pagination-button-first"
         >
           ««
-        </button>
+        </Button>
         
-        <button
-          className="pagination-button pagination-button-prev"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={handlePrevPage}
           disabled={currentPage === 1 || loading}
           title="Предыдущая страница"
           aria-label="Предыдущая страница"
+          className="pagination-button-prev"
         >
           ‹
-        </button>
+        </Button>
 
         <div className="pagination-pages">
           {pageNumbers.map((page, index) => (
@@ -177,54 +176,61 @@ const Pagination = ({
                 ...
               </span>
             ) : (
-              <button
+              <Button
                 key={page}
-                className={`pagination-button pagination-button-page ${currentPage === page ? 'pagination-button-active' : ''}`}
+                variant={currentPage === page ? 'primary' : 'secondary'}
+                size="sm"
                 onClick={() => !loading && onPageChange(page)}
                 disabled={loading}
                 aria-label={`Страница ${page}`}
                 aria-current={currentPage === page ? 'page' : undefined}
+                className="pagination-button-page"
               >
                 {page}
-              </button>
+              </Button>
             )
           ))}
         </div>
 
         <div className="pagination-jump">
           <span>Перейти:</span>
-          <input
+          <Input
             type="number"
             min="1"
             max={totalPages}
-            defaultValue={currentPage}
+            defaultValue={currentPage.toString()}
             onBlur={handlePageInput}
             onKeyPress={handlePageInputKeyPress}
             disabled={loading}
             className="pagination-jump-input"
             aria-label="Номер страницы"
+            style={{ width: '60px' }}
           />
         </div>
 
-        <button
-          className="pagination-button pagination-button-next"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={handleNextPage}
           disabled={currentPage >= totalPages || loading}
           title="Следующая страница"
           aria-label="Следующая страница"
+          className="pagination-button-next"
         >
           ›
-        </button>
+        </Button>
 
-        <button
-          className="pagination-button pagination-button-last"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={handleLastPage}
           disabled={currentPage >= totalPages || loading}
           title="Последняя страница"
           aria-label="Последняя страница"
+          className="pagination-button-last"
         >
           »»
-        </button>
+        </Button>
       </div>
     </div>
   )

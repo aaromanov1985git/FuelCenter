@@ -1,9 +1,49 @@
-.gas-stations-list {
-  background: var(--color-bg-card);
-  border-radius: var(--radius-large);
-  box-shadow: var(--shadow-lg);
-  padding: var(--padding-card);
-  margin-bottom: var(--spacing-section);
+/* Стили для статистических карточек */
+.stats-grid-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--spacing-element);
+}
+
+.stat-card-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-small);
+}
+
+.stat-card-value-compact {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.stat-card-value-compact.error {
+  color: var(--color-error);
+}
+
+.stat-card-value-compact.warning {
+  color: var(--color-warning);
+}
+
+.stat-card-value-compact.success {
+  color: var(--color-success);
+}
+
+/* Стили для ошибок в таблице */
+.error-text {
+  max-width: 300px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-error);
+  font-size: var(--font-size-xs);
+}
+
+/* Стили для кнопок действий */
+.action-buttons {
+  display: flex;
+  gap: var(--spacing-small);
 }
 
 .gas-stations-header {
@@ -68,7 +108,7 @@
 .gas-stations-table th {
   padding: var(--padding-small) var(--padding-element);
   text-align: left;
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   text-transform: uppercase;
@@ -79,7 +119,7 @@
 
 .gas-stations-table td {
   padding: var(--padding-small) var(--padding-element);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
   border-bottom: 1px solid var(--color-border);
@@ -117,7 +157,7 @@
 
 .error-text {
   color: var(--color-error);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   font-weight: var(--font-weight-normal);
   display: block;
   overflow: hidden;
@@ -138,7 +178,7 @@
 
 .empty-state {
   text-align: center;
-  padding: 48px;
+  padding: calc(var(--spacing-section) * 1.5);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
 }
@@ -297,6 +337,199 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   text-align: center;
+}
+
+/* Компактное представление таблицы */
+.gas-stations-list .ui-table {
+  font-size: var(--font-size-sm);
+}
+
+.gas-stations-list .ui-table-compact .ui-table-cell {
+  padding: 6px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.gas-stations-list .ui-table-compact .ui-table-header-cell {
+  padding: 6px 8px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Специальные стили для длинных полей - исходное наименование, местоположение и ошибки */
+.gas-stations-list .ui-table-compact tbody .ui-table-cell:nth-child(1) {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gas-stations-list .ui-table-compact tbody .ui-table-cell:nth-child(4),
+.gas-stations-list .ui-table-compact tbody .ui-table-cell:nth-child(9) {
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Утилита для обрезки текста */
+.text-truncate {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Форма редактирования АЗС в модальном окне */
+.gas-station-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-element);
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-tiny);
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-element);
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--spacing-element);
+  justify-content: flex-end;
+  margin-top: var(--spacing-block);
+  padding-top: var(--spacing-block);
+  border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 768px) {
+  .form-row-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Модальное окно настроек полей */
+.column-settings-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.column-settings-content {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-large);
+  padding: var(--padding-section);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+
+.column-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-block);
+  padding-bottom: var(--spacing-element);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.column-settings-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.column-settings-close {
+  background: none;
+  border: none;
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-tiny);
+  line-height: 1;
+  transition: color var(--duration-fast);
+}
+
+.column-settings-close:hover {
+  color: var(--color-text-primary);
+}
+
+.column-settings-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.column-settings-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-element);
+  padding: var(--spacing-element);
+  margin-bottom: var(--spacing-small);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-small);
+  cursor: move;
+  transition: background var(--duration-fast);
+}
+
+.column-settings-item:hover {
+  background: var(--color-bg-hover);
+}
+
+.column-settings-item.dragging {
+  opacity: 0.5;
+}
+
+.column-settings-item-handle {
+  cursor: grab;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-lg);
+  user-select: none;
+}
+
+.column-settings-item-handle:active {
+  cursor: grabbing;
+}
+
+.column-settings-item-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.column-settings-item-label {
+  flex: 1;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  user-select: none;
+}
+
+.column-settings-actions {
+  display: flex;
+  gap: var(--spacing-element);
+  justify-content: flex-end;
+  margin-top: var(--spacing-block);
+  padding-top: var(--spacing-block);
+  border-top: 2px solid var(--color-border);
 }
 
 /* Адаптивность для мобильных устройств */

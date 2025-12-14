@@ -50,10 +50,13 @@ class GasStationService:
         self,
         gas_station_id: int,
         original_name: Optional[str] = None,
+        provider_id: Optional[int] = None,
         azs_number: Optional[str] = None,
         location: Optional[str] = None,
         region: Optional[str] = None,
         settlement: Optional[str] = None,
+        latitude: Optional[float] = None,
+        longitude: Optional[float] = None,
         is_validated: Optional[str] = None
     ) -> Optional[GasStation]:
         """
@@ -66,9 +69,13 @@ class GasStationService:
         if not gas_station:
             return None
         
-        # Обновляем поля
-        if original_name is not None:
-            gas_station.original_name = original_name
+        # original_name нельзя изменять - это поле только для чтения
+        # Оно устанавливается только при создании записи из загружаемых файлов
+        # Игнорируем попытки изменения original_name при обновлении
+        # if original_name is not None:
+        #     gas_station.original_name = original_name
+        if provider_id is not None:
+            gas_station.provider_id = provider_id
         if azs_number is not None:
             gas_station.azs_number = azs_number
         if location is not None:
@@ -77,6 +84,10 @@ class GasStationService:
             gas_station.region = region
         if settlement is not None:
             gas_station.settlement = settlement
+        if latitude is not None:
+            gas_station.latitude = latitude
+        if longitude is not None:
+            gas_station.longitude = longitude
         if is_validated is not None:
             gas_station.is_validated = is_validated
         
@@ -130,7 +141,9 @@ class GasStationService:
         azs_number: Optional[str] = None,
         location: Optional[str] = None,
         region: Optional[str] = None,
-        settlement: Optional[str] = None
+        settlement: Optional[str] = None,
+        latitude: Optional[float] = None,
+        longitude: Optional[float] = None
     ) -> Tuple[GasStation, List[str]]:
         """
         Получить или создать автозаправочную станцию в справочнике
@@ -169,6 +182,19 @@ class GasStationService:
                     gas_station = gs
                     break
 
+        # Если не найдено по названию и есть номер АЗС, ищем по номеру АЗС
+        # Это помогает найти ту же АЗС, даже если original_name был изменен вручную
+        if not gas_station and azs_number and azs_number.strip():
+            gas_station = self.db.query(GasStation).filter(GasStation.azs_number == azs_number.strip()).first()
+            if gas_station:
+                # Если нашли по номеру, но название не совпадает - предупреждаем
+                if gas_station.original_name != original_name:
+                    warnings.append(
+                        f"АЗС найдена по номеру '{azs_number}', но название в файле '{original_name}' "
+                        f"отличается от сохраненного '{gas_station.original_name}'. "
+                        f"Будет использована существующая запись."
+                    )
+
         # Если все еще не найдено, проверяем на похожие записи
         if not gas_station:
             similar_gas_stations = []
@@ -204,6 +230,8 @@ class GasStationService:
                 location=location,
                 region=region,
                 settlement=settlement,
+                latitude=latitude,
+                longitude=longitude,
                 is_validated="pending"
             )
             self.db.add(gas_station)
@@ -222,6 +250,12 @@ class GasStationService:
                 updated = True
             if not gas_station.settlement and settlement:
                 gas_station.settlement = settlement
+                updated = True
+            if gas_station.latitude is None and latitude is not None:
+                gas_station.latitude = latitude
+                updated = True
+            if gas_station.longitude is None and longitude is not None:
+                gas_station.longitude = longitude
                 updated = True
 
             if updated:

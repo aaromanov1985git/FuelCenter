@@ -12,7 +12,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
   z-index: 999;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   opacity: 0.9;
@@ -22,13 +22,13 @@
 .scroll-to-top:hover {
   opacity: 1;
   background: var(--color-primary-hover);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-xl);
   transform: translateY(-2px);
 }
 
 .scroll-to-top:active {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .scroll-to-top-icon {

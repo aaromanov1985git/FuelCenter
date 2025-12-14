@@ -40,7 +40,7 @@
   box-shadow: var(--shadow-lg);
   z-index: 1000;
   min-width: 180px;
-  padding: 4px;
+  padding: var(--spacing-tiny);
   animation: exportMenuFadeIn 0.15s ease-out;
 }
 
@@ -60,7 +60,7 @@
   align-items: center;
   gap: var(--spacing-element);
   width: 100%;
-  padding: 8px 12px;
+  padding: var(--padding-tiny) var(--padding-small);
   border: none;
   background: none;
   text-align: left;

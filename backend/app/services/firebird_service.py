@@ -84,12 +84,16 @@ class FirebirdService:
             user = connection_settings.get("user")
             if not user or (isinstance(user, str) and not user.strip()):
                 user = "SYSDBA"
+                logger.debug("Используется пользователь по умолчанию: SYSDBA")
             
             # Обрабатываем password: если не указан (None), используем значение по умолчанию
             # Если указана пустая строка "", используем её (это валидное значение для некоторых конфигураций)
             password = connection_settings.get("password")
             if password is None:
                 password = "masterkey"
+                logger.debug("Используется пароль по умолчанию: masterkey")
+            elif password == "":
+                logger.debug("Используется пустой пароль")
             # Если password - пустая строка, оставляем её как есть
             
             port = connection_settings.get("port", 3050)
@@ -139,15 +143,32 @@ class FirebirdService:
                 "port": port,
                 "database": database,
                 "dsn": dsn,
-                "is_remote": is_remote_host
+                "is_remote": is_remote_host,
+                "user": user,
+                "has_password": password is not None,
+                "password_is_empty": password == "",
+                "charset": charset
             })
             
-            conn = fdb.connect(
-                dsn=dsn,
-                user=user,
-                password=password,
-                charset=charset
-            )
+            try:
+                conn = fdb.connect(
+                    dsn=dsn,
+                    user=user,
+                    password=password,
+                    charset=charset
+                )
+            except Exception as connect_error:
+                # Логируем детали ошибки подключения
+                logger.error("Ошибка при вызове fdb.connect", extra={
+                    "dsn": dsn,
+                    "user": user,
+                    "has_password": password is not None,
+                    "password_is_empty": password == "",
+                    "charset": charset,
+                    "error": str(connect_error),
+                    "error_type": type(connect_error).__name__
+                }, exc_info=True)
+                raise
             
             logger.info("Подключение к Firebird установлено", extra={
                 "host": host,
@@ -177,39 +198,66 @@ class FirebirdService:
                     "После установки убедитесь, что fbclient.dll находится в PATH или укажите путь через переменную окружения FIREBIRD_LIB.\n"
                     f"Оригинальная ошибка: {error_message}"
                 )
-            # Проверяем ошибку -902: имя пользователя и пароль не определены
-            elif error_code == -902 or "Your user name and password are not defined" in error_message:
+            # Проверяем ошибки аутентификации
+            elif (error_code == -902 or 
+                  "Your user name and password are not defined" in error_message or
+                  "Not authenticated" in error_message or
+                  "authentication" in error_message.lower() or
+                  "login" in error_message.lower() and "failed" in error_message.lower()):
                 # Проверяем, были ли указаны учетные данные в настройках
                 user_provided = connection_settings.get("user") and connection_settings.get("user").strip()
                 password_provided = connection_settings.get("password") is not None
                 
+                # Получаем фактические значения для диагностики
+                actual_user = connection_settings.get("user", "")
+                actual_password_set = connection_settings.get("password") is not None
+                actual_password_empty = connection_settings.get("password") == ""
+                
                 if not user_provided or not password_provided:
                     # Учетные данные не указаны
+                    if not user_provided:
+                        user_status = "не указан"
+                    else:
+                        user_status = f'"{actual_user}" (пусто)'
+                    password_status = "не указан" if not password_provided else ("указан (пустая строка)" if actual_password_empty else "указан")
+                    original_error = error_message
                     error_message = (
-                        "Ошибка аутентификации в Firebird (SQLCODE: -902).\n\n"
+                        "Ошибка аутентификации в Firebird.\n\n"
                         "Имя пользователя и/или пароль не указаны в настройках подключения.\n\n"
+                        f"Текущие настройки:\n"
+                        f"- Пользователь: {user_status}\n"
+                        f"- Пароль: {password_status}\n\n"
                         "Решение:\n"
                         "1. В разделе 'Настройки подключения' укажите:\n"
                         "   - Пользователь: имя пользователя (например, SYSDBA)\n"
-                        "   - Пароль: пароль пользователя\n"
+                        "   - Пароль: пароль пользователя (если пароль пустой, оставьте поле пустым)\n"
                         "2. Нажмите 'Тестировать подключение' для проверки\n"
                         "3. Сохраните шаблон после успешного тестирования\n\n"
-                        f"Оригинальная ошибка: {error_message}"
+                        f"Оригинальная ошибка: {original_error}"
                     )
                 else:
                     # Учетные данные указаны, но неверны
+                    user_display = actual_user if user_provided else "не указан"
+                    password_display = "указан" if actual_password_set and not actual_password_empty else "пустая строка" if actual_password_empty else "не указан"
+                    
                     error_message = (
-                        "Ошибка аутентификации в Firebird (SQLCODE: -902).\n\n"
+                        "Ошибка аутентификации в Firebird.\n\n"
                         "Указанные имя пользователя и/или пароль неверны или пользователь не существует в базе данных.\n\n"
+                        f"Используемые учетные данные:\n"
+                        f"- Пользователь: \"{user_display}\"\n"
+                        f"- Пароль: {password_display}\n\n"
                         "Возможные причины:\n"
                         "1. Неверный пароль для указанного пользователя\n"
                         "2. Пользователь не существует в базе данных Firebird\n"
-                        "3. Пользователь не имеет прав доступа к указанной базе данных\n\n"
+                        "3. Пользователь не имеет прав доступа к указанной базе данных\n"
+                        "4. Для Firebird 3.0+ может потребоваться указать роль (ROLE)\n"
+                        "5. База данных может требовать другого пользователя (не SYSDBA)\n\n"
                         "Решение:\n"
                         "1. Проверьте правильность имени пользователя и пароля\n"
                         "2. Убедитесь, что пользователь существует в базе данных Firebird\n"
                         "3. Проверьте права доступа пользователя к базе данных\n"
-                        "4. Обратитесь к администратору базы данных для настройки учетных данных\n\n"
+                        "4. Для Firebird 3.0+ попробуйте использовать пользователя с ролью RDB$ADMIN\n"
+                        "5. Обратитесь к администратору базы данных для настройки учетных данных\n\n"
                         f"Оригинальная ошибка: {error_message}"
                     )
             

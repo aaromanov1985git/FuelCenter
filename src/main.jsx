@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import './index.css'
 import './styles/animations.css'
 import './styles/utilities.css'
+import './styles/responsive.css'
 
 // Применяем сохраненную тему сразу при загрузке страницы (до рендеринга React)
 // чтобы избежать мигания при переключении темы

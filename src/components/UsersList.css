@@ -103,14 +103,14 @@
   padding: var(--padding-element) var(--padding-small);
   align-items: center;
   border-bottom: 1px solid var(--color-border);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   font-weight: var(--font-weight-normal);
 }
 
 .users-head {
   background: var(--color-bg-hover);
   font-weight: var(--font-weight-semibold);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
 }
 
 .cell {
@@ -121,6 +121,15 @@
   display: flex;
   gap: var(--spacing-small);
   justify-content: flex-end;
+}
+
+.user-username-primary {
+  font-weight: var(--font-weight-semibold);
+}
+
+.user-username-meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }
 
 .cell.cell-full {
@@ -175,7 +184,7 @@
 .users-modal-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--overlay-background-light);
 }
 
 .users-modal-content {
@@ -266,7 +275,7 @@
 
   .users-pagination {
     flex-direction: column;
-    gap: 12px;
+    gap: var(--padding-small);
   }
 
   .users-pagination-btn {

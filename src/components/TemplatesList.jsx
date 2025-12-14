@@ -5,6 +5,7 @@ import LoadFirebirdModal from './LoadFirebirdModal'
 import LoadApiModal from './LoadApiModal'
 import { Button, Card, Badge, Table, Alert, Skeleton, useToast } from './ui'
 import { logger } from '../utils/logger'
+import { authFetch } from '../utils/api'
 import './TemplatesList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
@@ -37,12 +38,16 @@ const TemplatesList = () => {
 
   const loadProviders = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/providers?limit=1000`)
+      const response = await authFetch(`${API_URL}/api/v1/providers?limit=1000`)
       if (response.ok) {
         const result = await response.json()
         setProviders(result.items.filter(p => p.is_active))
       }
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       logger.error('Ошибка загрузки провайдеров', { error: err.message })
     }
   }
@@ -60,13 +65,17 @@ const TemplatesList = () => {
       params.append('skip', ((currentPage - 1) * limit).toString())
       params.append('limit', limit.toString())
       
-      const response = await fetch(`${API_URL}/api/v1/providers/${providerId}/templates?${params}`)
+      const response = await authFetch(`${API_URL}/api/v1/providers/${providerId}/templates?${params}`)
       if (response.ok) {
         const result = await response.json()
         setTemplates(result.items)
         setTotal(result.total)
       }
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       setError('Ошибка загрузки шаблонов: ' + err.message)
     } finally {
       setLoading(false)
@@ -122,7 +131,7 @@ const TemplatesList = () => {
 
     try {
       setLoading(true)
-      const response = await fetch(`${API_URL}/api/v1/templates/${deleteConfirm.templateId}`, {
+      const response = await authFetch(`${API_URL}/api/v1/templates/${deleteConfirm.templateId}`, {
         method: 'DELETE'
       })
 
@@ -135,6 +144,10 @@ const TemplatesList = () => {
       setError('')
       setDeleteConfirm({ isOpen: false, templateId: null })
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       setError('Ошибка удаления: ' + err.message)
       setDeleteConfirm({ isOpen: false, templateId: null })
     } finally {
@@ -150,7 +163,7 @@ const TemplatesList = () => {
       let response
       if (editingTemplate) {
         // Обновление существующего шаблона
-        response = await fetch(`${API_URL}/api/v1/templates/${editingTemplate.id}`, {
+        response = await authFetch(`${API_URL}/api/v1/templates/${editingTemplate.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -159,21 +172,68 @@ const TemplatesList = () => {
         })
       } else {
         // Создание нового шаблона
-        response = await fetch(`${API_URL}/api/v1/providers/${selectedProviderId}/templates`, {
+        // Убеждаемся, что все обязательные поля присутствуют
+        const requestData = {
+          ...templateData,
+          provider_id: selectedProviderId,
+          // Убеждаемся, что field_mapping не пустой объект (минимум должен быть пустым объектом, но не null)
+          field_mapping: templateData.field_mapping || {}
+        }
+        
+        logger.debug('Создание шаблона', { 
+          providerId: selectedProviderId, 
+          name: requestData.name,
+          hasFieldMapping: !!requestData.field_mapping,
+          fieldMappingKeys: Object.keys(requestData.field_mapping || {}).length
+        })
+        
+        response = await authFetch(`${API_URL}/api/v1/providers/${selectedProviderId}/templates`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            ...templateData,
-            provider_id: selectedProviderId
-          })
+          body: JSON.stringify(requestData)
         })
       }
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Ошибка сохранения')
+        let errorMessage = 'Ошибка сохранения'
+        try {
+          const errorData = await response.json()
+          // Обрабатываем ошибки валидации Pydantic
+          if (errorData.detail) {
+            if (Array.isArray(errorData.detail)) {
+              // Если это массив ошибок валидации
+              const validationErrors = errorData.detail
+                .map(err => {
+                  const field = err.loc && err.loc.length > 0 ? err.loc[err.loc.length - 1] : 'поле'
+                  return `${field}: ${err.msg}`
+                })
+                .join('; ')
+              errorMessage = `Ошибка валидации: ${validationErrors}`
+            } else if (typeof errorData.detail === 'string') {
+              errorMessage = errorData.detail
+            } else {
+              errorMessage = JSON.stringify(errorData.detail)
+            }
+          } else if (errorData.message) {
+            errorMessage = errorData.message
+          }
+        } catch (parseError) {
+          // Если не удалось распарсить JSON, используем текст ответа
+          const text = await response.text().catch(() => 'Ошибка сохранения')
+          errorMessage = text || 'Ошибка сохранения'
+        }
+        throw new Error(errorMessage)
+      }
+
+      // Читаем ответ от сервера (даже если не используем, это важно для валидации)
+      try {
+        const result = await response.json()
+        logger.debug('Шаблон сохранен', { templateId: result.id, name: result.name })
+      } catch (parseError) {
+        // Если ответ пустой или не JSON, это нормально для некоторых эндпоинтов
+        logger.debug('Ответ сервера не содержит JSON', { error: parseError.message })
       }
 
       setShowTemplateEditor(false)
@@ -181,7 +241,12 @@ const TemplatesList = () => {
       await loadTemplates(selectedProviderId)
       setError('')
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       setError('Ошибка сохранения: ' + err.message)
+      showError('Ошибка сохранения: ' + err.message)
     } finally {
       setLoading(false)
     }
@@ -191,6 +256,78 @@ const TemplatesList = () => {
     setShowTemplateEditor(false)
     setEditingTemplate(null)
     setError('')
+  }
+
+  // Функция для преобразования расписания в читаемый формат
+  const formatSchedule = (schedule) => {
+    if (!schedule || !schedule.trim()) return null
+    
+    const scheduleStr = schedule.trim().toLowerCase()
+    
+    // Простые форматы
+    if (scheduleStr === 'daily' || scheduleStr === 'day') {
+      return 'один раз в сутки'
+    }
+    if (scheduleStr === 'hourly' || scheduleStr === 'hour') {
+      return 'один раз в час'
+    }
+    if (scheduleStr === 'weekly' || scheduleStr === 'week') {
+      return 'один раз в неделю'
+    }
+    
+    // Формат "every N hours/minutes"
+    if (scheduleStr.startsWith('every ')) {
+      const parts = scheduleStr.split(/\s+/)
+      if (parts.length >= 3) {
+        const interval = parts[1]
+        const unit = parts[2]
+        if (unit.includes('hour') || unit.includes('час')) {
+          if (interval === '1') {
+            return 'один раз в час'
+          }
+          return `каждые ${interval} часа`
+        }
+        if (unit.includes('minute') || unit.includes('мин')) {
+          if (interval === '1') {
+            return 'каждую минуту'
+          }
+          return `каждые ${interval} минуты`
+        }
+      }
+    }
+    
+    // Cron-формат (минута час день месяц день_недели)
+    const cronParts = scheduleStr.split(/\s+/)
+    if (cronParts.length === 5) {
+      const [minute, hour, day, month, dayOfWeek] = cronParts
+      
+      // Каждый час: "0 * * * *" или "0 */1 * * *"
+      if (minute === '0' && (hour === '*' || hour === '*/1') && day === '*' && month === '*' && dayOfWeek === '*') {
+        return 'один раз в час'
+      }
+      
+      // Каждый день в определенное время: "0 2 * * *"
+      if (minute !== '*' && hour !== '*' && day === '*' && month === '*' && dayOfWeek === '*') {
+        const h = parseInt(hour)
+        const m = parseInt(minute)
+        const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+        return `один раз в сутки (${timeStr})`
+      }
+      
+      // Каждые N часов: "0 */6 * * *"
+      if (minute === '0' && hour.startsWith('*/') && day === '*' && month === '*' && dayOfWeek === '*') {
+        const interval = hour.substring(2)
+        if (interval === '1') {
+          return 'один раз в час'
+        }
+        return `каждые ${interval} часа`
+      }
+      
+      // Возвращаем исходное расписание, если не удалось распознать
+      return schedule
+    }
+    
+    return schedule
   }
 
   const columns = [
@@ -208,6 +345,27 @@ const TemplatesList = () => {
           {val ? 'Активен' : 'Неактивен'}
         </Badge>
       )
+    },
+    {
+      key: 'auto_load',
+      header: 'Автозагрузка',
+      width: '200px',
+      render: (_, row) => {
+        if (row.auto_load_enabled && row.auto_load_schedule) {
+          const scheduleText = formatSchedule(row.auto_load_schedule)
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <Badge size="sm" variant="info" style={{ alignSelf: 'flex-start' }}>
+                Включена
+              </Badge>
+              <span style={{ fontSize: '12px', color: '#666' }}>
+                {scheduleText}
+              </span>
+            </div>
+          )
+        }
+        return <span style={{ color: '#999' }}>—</span>
+      }
     },
     {
       key: 'actions',
@@ -389,7 +547,7 @@ const TemplatesList = () => {
               params.append('date_to', firebirdDateTo + ' 23:59:59')
             }
             
-            const response = await fetch(`${API_URL}/api/v1/transactions/load-from-firebird?${params}`, {
+            const response = await authFetch(`${API_URL}/api/v1/transactions/load-from-firebird?${params}`, {
               method: 'POST'
             })
             
@@ -416,18 +574,37 @@ const TemplatesList = () => {
               message += `\n\n⚠️ Предупреждения валидации:\n${warningsText}`
               setError(message)
             } else {
-              alert(message)
+              // Показываем красивое модальное окно вместо alert()
+              setSuccessModal({ isOpen: true, message })
               setError('')
             }
             
             // Не перезагружаем транзакции автоматически, чтобы не переключать вкладку
             // Пользователь может сам перейти на вкладку "Транзакции" для просмотра загруженных данных
-          } catch (err) {
-            setError('Ошибка загрузки из Firebird: ' + err.message)
-            logger.error('Ошибка загрузки из Firebird', { error: err.message })
-          } finally {
-            setLoadingFirebird(false)
-          }
+            } catch (err) {
+              let errorMessage = err.message || 'Неизвестная ошибка'
+              
+              // Улучшаем сообщение об ошибке аутентификации
+              if (errorMessage.includes('Not authenticated') || 
+                  errorMessage.includes('аутентификации') || 
+                  errorMessage.includes('SQLCODE: -902') ||
+                  errorMessage.includes('authentication')) {
+                errorMessage = (
+                  'Ошибка аутентификации при подключении к Firebird.\n\n' +
+                  'Проверьте настройки подключения:\n' +
+                  '1. Убедитесь, что указаны правильные имя пользователя и пароль\n' +
+                  '2. Проверьте, что пользователь существует в базе данных Firebird\n' +
+                  '3. Убедитесь, что пользователь имеет права доступа к базе данных\n' +
+                  '4. Для Firebird 3.0+ может потребоваться указать роль (ROLE)\n\n' +
+                  'Откройте шаблон и проверьте настройки подключения в разделе "Настройки подключения к Firebird".'
+                )
+              }
+              
+              setError(errorMessage)
+              logger.error('Ошибка загрузки из Firebird', { error: err.message, fullError: err })
+            } finally {
+              setLoadingFirebird(false)
+            }
         }}
         onCancel={() => {
           setLoadFirebirdModal({ isOpen: false, templateId: null, templateName: '' })
@@ -466,7 +643,7 @@ const TemplatesList = () => {
               }
             }
             
-            const response = await fetch(`${API_URL}/api/v1/transactions/load-from-api?${params}`, {
+            const response = await authFetch(`${API_URL}/api/v1/transactions/load-from-api?${params}`, {
               method: 'POST'
             })
             

@@ -1,4 +1,5 @@
 import React from 'react'
+import { Button } from './ui'
 import './Breadcrumbs.css'
 
 /**
@@ -53,13 +54,14 @@ const Breadcrumbs = ({ items = [], separator = '>', className = '' }) => {
                   {item.label}
                 </span>
               ) : isClickable ? (
-                <button
-                  className="breadcrumbs-link"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => handleClick(item, index)}
-                  type="button"
+                  className="breadcrumbs-link"
                 >
                   {item.label}
-                </button>
+                </Button>
               ) : (
                 <span className="breadcrumbs-text">{item.label}</span>
               )}

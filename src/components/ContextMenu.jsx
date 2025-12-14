@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react'
+import { Button } from './ui'
 import './ContextMenu.css'
 
 /**
@@ -92,11 +93,18 @@ const ContextMenu = ({ isOpen, x, y, items = [], onClose }) => {
         }
 
         return (
-          <button
+          <Button
             key={index}
-            className={`context-menu-item ${item.disabled ? 'disabled' : ''}`}
+            variant="ghost"
+            size="sm"
             onClick={() => handleItemClick(item)}
             disabled={item.disabled}
+            className={`context-menu-item ${item.disabled ? 'disabled' : ''}`}
+            style={{
+              width: '100%',
+              justifyContent: 'flex-start',
+              padding: 'var(--padding-small) var(--padding-element)'
+            }}
             role="menuitem"
           >
             {item.icon && (
@@ -106,7 +114,7 @@ const ContextMenu = ({ isOpen, x, y, items = [], onClose }) => {
             {item.shortcut && (
               <span className="context-menu-shortcut">{item.shortcut}</span>
             )}
-          </button>
+          </Button>
         )
       })}
     </div>

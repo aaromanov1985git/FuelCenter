@@ -58,6 +58,11 @@
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.15);
 
+  /* Overlay для модальных окон */
+  --overlay-background: rgba(0, 0, 0, 0.6);
+  --overlay-background-light: rgba(0, 0, 0, 0.3);
+  --overlay-backdrop-blur: blur(4px);
+
   /* Типографика */
   --font-size-xs: 0.75rem;       /* 12px - мелкий текст */
   --font-size-sm: 0.875rem;      /* 14px - маленький текст */
@@ -67,6 +72,7 @@
   --font-size-2xl: 2rem;         /* 32px - главные заголовки */
   --font-size-3xl: 2.5rem;       /* 40px - крупные заголовки */
   --font-size-4xl: 3rem;         /* 48px - экстра крупные заголовки */
+  --font-size-compact: 0.625rem; /* 10px - компактный текст для таблиц */
 
   --font-weight-normal: 500;     /* Обычный текст */
   --font-weight-medium: 550;     /* Средний текст */

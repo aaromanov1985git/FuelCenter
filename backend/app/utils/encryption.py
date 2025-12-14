@@ -5,13 +5,36 @@
 import base64
 import os
 from typing import Optional, Dict, Any
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+# Опциональный импорт cryptography
+try:
+    from cryptography.fernet import Fernet
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    CRYPTOGRAPHY_AVAILABLE = True
+except ImportError as e:
+    CRYPTOGRAPHY_AVAILABLE = False
+    Fernet = None
+    hashes = None
+    PBKDF2HMAC = None
+    _import_error = e
+
 from app.config import get_settings
 from app.logger import logger
 
 settings = get_settings()
+
+# Проверяем доступность cryptography при импорте модуля
+if not CRYPTOGRAPHY_AVAILABLE:
+    logger.error(
+        "Модуль cryptography не установлен. Установите его командой: pip install cryptography==41.0.7",
+        extra={"import_error": str(_import_error) if '_import_error' in globals() else "Unknown"}
+    )
+    raise ImportError(
+        "Модуль cryptography не установлен. "
+        "Это критическая зависимость для работы приложения (шифрование паролей, JWT). "
+        "Установите его командой: pip install cryptography==41.0.7"
+    ) from (_import_error if '_import_error' in globals() else None)
 
 
 def get_encryption_key() -> bytes:

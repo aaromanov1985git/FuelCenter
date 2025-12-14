@@ -2,8 +2,147 @@
 .upload-events {
   background: var(--color-bg-primary);
   padding: var(--spacing-block);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-small);
+  border-radius: var(--radius-medium);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Стили для статистических карточек */
+.events-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--spacing-element);
+  margin-bottom: var(--spacing-section);
+}
+
+.events-stat-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-small);
+}
+
+.events-stat-value {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+/* Стили для фильтров */
+.events-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--spacing-section);
+  margin-bottom: var(--spacing-block);
+}
+
+/* Стили для данных в таблице */
+.event-datetime-primary {
+  font-weight: var(--font-weight-semibold);
+}
+
+.event-datetime-secondary {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-tiny);
+}
+
+.event-username-primary {
+  font-weight: var(--font-weight-semibold);
+}
+
+.event-username-secondary {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-tiny);
+}
+
+.event-source-primary {
+  font-weight: var(--font-weight-semibold);
+}
+
+.event-source-secondary {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-tiny);
+}
+
+.event-provider-primary {
+  font-weight: var(--font-weight-semibold);
+}
+
+.event-provider-secondary {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-tiny);
+}
+
+.event-transactions-primary {
+  font-weight: var(--font-weight-semibold);
+}
+
+.event-transactions-secondary {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-tiny);
+}
+
+.event-message-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+  max-width: 400px;
+}
+
+.event-message-truncated {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.event-message-expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--padding-tiny);
+  font-size: var(--font-size-base);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-small);
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.event-message-expand-btn:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.event-message-expand-btn:active {
+  background-color: var(--color-bg-active);
+}
+
+.event-message-full {
+  padding: var(--padding-element);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--color-text-primary);
+}
+
+.event-subtitle {
+  margin: var(--spacing-small) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .upload-events__header {
@@ -43,7 +182,7 @@
   width: 100%;
   padding: var(--padding-small) var(--padding-element);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-small);
   background: var(--color-bg-secondary);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
@@ -58,7 +197,7 @@
 
 .summary-card {
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-small);
   padding: var(--padding-element);
   background: var(--color-bg-secondary);
 }
@@ -85,7 +224,7 @@
 .upload-events__table table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
 }
 
 .upload-events__table th,
@@ -99,11 +238,11 @@
   color: var(--color-text-secondary);
   font-weight: var(--font-weight-semibold);
   background: var(--color-bg-hover);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
 }
 
 .upload-events__table td {
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   font-weight: var(--font-weight-normal);
 }
 
@@ -112,7 +251,7 @@
 }
 
 .cell-sub {
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   color: var(--color-text-secondary);
   margin-top: var(--spacing-tiny);
 }
@@ -144,7 +283,7 @@
   background: var(--color-primary);
   color: var(--color-text-on-primary);
   border: none;
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-small);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;

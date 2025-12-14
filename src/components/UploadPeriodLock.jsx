@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import ConfirmModal from './ConfirmModal'
-import IconButton from './IconButton'
+import { Card, Button, Input, Alert } from './ui'
+import FormField from './FormField'
 import './UploadPeriodLock.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
@@ -160,83 +161,97 @@ const UploadPeriodLock = () => {
 
   return (
     <div className="upload-period-lock">
-      <h2>Закрытие периода загрузки</h2>
-      <p className="description">
-        Установите дату закрытия периода загрузки. Транзакции с датами раньше установленной даты не могут быть загружены в систему.
-      </p>
+      <Card>
+        <Card.Header>
+          <Card.Title>Закрытие периода загрузки</Card.Title>
+        </Card.Header>
+        <Card.Body>
+          <p className="description">
+            Установите дату закрытия периода загрузки. Транзакции с датами раньше установленной даты не могут быть загружены в систему.
+          </p>
 
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
+          {error && (
+            <Alert variant="error" style={{ marginBottom: 'var(--spacing-block)' }}>
+              {error}
+            </Alert>
+          )}
 
-      {success && (
-        <div className="success-message">
-          {success}
-        </div>
-      )}
+          {success && (
+            <Alert variant="success" style={{ marginBottom: 'var(--spacing-block)' }}>
+              {success}
+            </Alert>
+          )}
 
-      <div className="lock-form">
-        <div className="form-group">
-          <label htmlFor="lockDate" className="form-label">
-            Дата закрытия периода:
-          </label>
-          <input
-            type="date"
-            id="lockDate"
-            value={lockDate}
-            onChange={(e) => setLockDate(e.target.value)}
-            className="form-input"
-            disabled={loading}
-          />
-        </div>
+          <div className="lock-form">
+            <FormField
+              label="Дата закрытия периода"
+              required
+            >
+              <Input
+                type="date"
+                id="lockDate"
+                value={lockDate}
+                onChange={(e) => setLockDate(e.target.value)}
+                disabled={loading}
+                fullWidth
+                style={{ maxWidth: '300px' }}
+              />
+            </FormField>
 
-        <div className="form-actions">
-          <IconButton
-            icon="save"
-            variant="primary"
-            onClick={handleSetLock}
-            disabled={loading || !lockDate}
-            title={currentLock ? 'Обновить дату' : 'Установить дату закрытия'}
-            size="medium"
-          />
+            <div className="form-actions">
+              <Button
+                variant="primary"
+                onClick={handleSetLock}
+                disabled={loading || !lockDate}
+                loading={loading}
+              >
+                {currentLock ? 'Обновить дату' : 'Установить дату закрытия'}
+              </Button>
+
+              {currentLock && (
+                <Button
+                  variant="error"
+                  onClick={handleRemoveLock}
+                  disabled={loading}
+                >
+                  Открыть период
+                </Button>
+              )}
+            </div>
+          </div>
 
           {currentLock && (
-            <IconButton
-              icon="clear"
-              variant="error"
-              onClick={handleRemoveLock}
-              disabled={loading}
-              title="Открыть период"
-              size="medium"
-            />
+            <Card variant="outlined" style={{ marginTop: 'var(--spacing-block)', borderLeft: '4px solid var(--color-info)' }}>
+              <Card.Body>
+                <h3 style={{ marginTop: 0, marginBottom: 'var(--padding-element)', fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)' }}>
+                  Текущие настройки
+                </h3>
+                <div className="info-item">
+                  <strong>Дата закрытия периода:</strong> {formatDate(currentLock.lock_date)}
+                </div>
+                <div className="info-item">
+                  <strong>Установлено:</strong> {new Date(currentLock.created_at).toLocaleString('ru-RU')}
+                </div>
+                {currentLock.updated_at && currentLock.updated_at !== currentLock.created_at && (
+                  <div className="info-item">
+                    <strong>Обновлено:</strong> {new Date(currentLock.updated_at).toLocaleString('ru-RU')}
+                  </div>
+                )}
+              </Card.Body>
+            </Card>
           )}
-        </div>
-      </div>
 
-      {currentLock && (
-        <div className="current-lock-info">
-          <h3>Текущие настройки</h3>
-          <div className="info-item">
-            <strong>Дата закрытия периода:</strong> {formatDate(currentLock.lock_date)}
-          </div>
-          <div className="info-item">
-            <strong>Установлено:</strong> {new Date(currentLock.created_at).toLocaleString('ru-RU')}
-          </div>
-          {currentLock.updated_at && currentLock.updated_at !== currentLock.created_at && (
-            <div className="info-item">
-              <strong>Обновлено:</strong> {new Date(currentLock.updated_at).toLocaleString('ru-RU')}
-            </div>
+          {!currentLock && (
+            <Card variant="outlined" style={{ marginTop: 'var(--spacing-block)', borderLeft: '4px solid var(--color-warning)' }}>
+              <Card.Body>
+                <p style={{ margin: 0, color: 'var(--color-warning)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)' }}>
+                  Период загрузки не закрыт. Можно загружать транзакции с любыми датами.
+                </p>
+              </Card.Body>
+            </Card>
           )}
-        </div>
-      )}
-
-      {!currentLock && (
-        <div className="no-lock-info">
-          <p>Период загрузки не закрыт. Можно загружать транзакции с любыми датами.</p>
-        </div>
-      )}
+        </Card.Body>
+      </Card>
 
       <ConfirmModal
         isOpen={showRemoveConfirm}

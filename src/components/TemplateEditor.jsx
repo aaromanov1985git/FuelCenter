@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import IconButton from './IconButton'
+import { authFetch } from '../utils/api'
 import './TemplateEditor.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
@@ -30,7 +31,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
     try {
       // Всегда используем настройки из формы, чтобы тестировать актуальные значения
       // (включая изменения, которые пользователь еще не сохранил)
-      const response = await fetch(`${API_URL}/api/v1/templates/test-firebird-connection`, {
+      const response = await authFetch(`${API_URL}/api/v1/templates/test-firebird-connection`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -41,6 +42,10 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       const result = await response.json()
       setConnectionTestResult(result)
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       setConnectionTestResult({ success: false, message: 'Ошибка тестирования: ' + err.message })
     } finally {
       setTestingConnection(false)
@@ -58,6 +63,78 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       }
     }
     return mapping
+  }
+
+  // Функция для преобразования расписания в читаемый формат
+  const formatSchedule = (schedule) => {
+    if (!schedule || !schedule.trim()) return null
+    
+    const scheduleStr = schedule.trim().toLowerCase()
+    
+    // Простые форматы
+    if (scheduleStr === 'daily' || scheduleStr === 'day') {
+      return 'один раз в сутки (в 2:00)'
+    }
+    if (scheduleStr === 'hourly' || scheduleStr === 'hour') {
+      return 'один раз в час'
+    }
+    if (scheduleStr === 'weekly' || scheduleStr === 'week') {
+      return 'один раз в неделю (понедельник в 2:00)'
+    }
+    
+    // Формат "every N hours/minutes"
+    if (scheduleStr.startsWith('every ')) {
+      const parts = scheduleStr.split(/\s+/)
+      if (parts.length >= 3) {
+        const interval = parts[1]
+        const unit = parts[2]
+        if (unit.includes('hour') || unit.includes('час')) {
+          if (interval === '1') {
+            return 'один раз в час'
+          }
+          return `каждые ${interval} ${interval === '1' ? 'час' : 'часа'}`
+        }
+        if (unit.includes('minute') || unit.includes('мин')) {
+          if (interval === '1') {
+            return 'каждую минуту'
+          }
+          return `каждые ${interval} ${interval === '1' ? 'минуту' : 'минуты'}`
+        }
+      }
+    }
+    
+    // Cron-формат (минута час день месяц день_недели)
+    const cronParts = scheduleStr.split(/\s+/)
+    if (cronParts.length === 5) {
+      const [minute, hour, day, month, dayOfWeek] = cronParts
+      
+      // Каждый час: "0 * * * *" или "0 */1 * * *"
+      if (minute === '0' && (hour === '*' || hour === '*/1') && day === '*' && month === '*' && dayOfWeek === '*') {
+        return 'один раз в час'
+      }
+      
+      // Каждый день в определенное время: "0 2 * * *"
+      if (minute !== '*' && hour !== '*' && day === '*' && month === '*' && dayOfWeek === '*') {
+        const h = parseInt(hour)
+        const m = parseInt(minute)
+        const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
+        return `один раз в сутки (в ${timeStr})`
+      }
+      
+      // Каждые N часов: "0 */6 * * *"
+      if (minute === '0' && hour.startsWith('*/') && day === '*' && month === '*' && dayOfWeek === '*') {
+        const interval = hour.substring(2)
+        if (interval === '1') {
+          return 'один раз в час'
+        }
+        return `каждые ${interval} часа`
+      }
+      
+      // Возвращаем исходное расписание, если не удалось распознать
+      return schedule
+    }
+    
+    return schedule
   }
 
   const [formData, setFormData] = useState({
@@ -166,7 +243,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await fetch(`${API_URL}/api/v1/templates/analyze`, {
+      const response = await authFetch(`${API_URL}/api/v1/templates/analyze`, {
         method: 'POST',
         body: formData
       })
@@ -228,7 +305,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
     try {
       // Если шаблон уже сохранен, используем endpoint для тестирования
       if (template?.id) {
-        const response = await fetch(`${API_URL}/api/v1/templates/${template.id}/test-firebird-connection`, {
+        const response = await authFetch(`${API_URL}/api/v1/templates/${template.id}/test-firebird-connection`, {
           method: 'POST'
         })
         
@@ -282,6 +359,10 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
           }
         }
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       setError('Ошибка загрузки таблиц: ' + err.message)
       setConnectionTestResult({ success: false, message: err.message })
     } finally {
@@ -306,7 +387,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         const url = `${API_URL}/api/v1/templates/${template.id}/firebird-table-columns?${params}`
         console.log('Запрос колонок (с шаблоном):', url)
         
-        const response = await fetch(url)
+        const response = await authFetch(url)
         
         if (!response.ok) {
           const errorData = await response.json()
@@ -345,6 +426,10 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         setSelectedTableColumns(result.columns || [])
       }
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       console.error('Ошибка загрузки колонок:', err)
       setError('Ошибка загрузки колонок таблицы: ' + err.message)
       setSelectedTableColumns([])
@@ -389,6 +474,10 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       console.log('Колонки из SQL запроса загружены:', result)
       setSelectedTableColumns(result.columns || [])
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       console.error('Ошибка загрузки колонок из SQL запроса:', err)
       setError('Ошибка загрузки колонок из SQL запроса: ' + err.message)
       setSelectedTableColumns([])
@@ -430,6 +519,14 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       }
     }
     
+    if (formData.connection_type === 'web') {
+      // Для веб-сервиса проверяем настройки подключения
+      if (!connectionSettings.base_url || !connectionSettings.username || !connectionSettings.password) {
+        setError('Укажите базовый URL, имя пользователя и пароль для веб-сервиса')
+        return
+      }
+    }
+    
     const missingFields = systemFields
       .filter(f => f.required && !formData.field_mapping[f.key])
       .map(f => f.label)
@@ -465,8 +562,8 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       auto_load_date_to_offset: formData.auto_load_date_to_offset ?? -1
     }
     
-    // Добавляем настройки подключения для Firebird или API
-    if (formData.connection_type === 'firebird' || formData.connection_type === 'api') {
+    // Добавляем настройки подключения для Firebird, API или Web
+    if (formData.connection_type === 'firebird' || formData.connection_type === 'api' || formData.connection_type === 'web') {
       saveData.connection_settings = connectionSettings
     } else {
       saveData.connection_settings = null
@@ -560,7 +657,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
             Тип подключения
           </h4>
           <p className="section-description">
-            Выберите источник данных для шаблона: загрузка из файла Excel, подключение к базе данных Firebird или загрузка через API провайдера.
+            Выберите источник данных для шаблона: загрузка из файла Excel, подключение к базе данных Firebird, загрузка через API провайдера или подключение к веб-сервису с авторизацией.
           </p>
           <div className="form-group">
             <label>
@@ -576,6 +673,8 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                     setConnectionSettings({ provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB' })
                   } else if (newConnectionType === 'firebird') {
                     setConnectionSettings({ host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8' })
+                  } else if (newConnectionType === 'web') {
+                    setConnectionSettings({ base_url: '', username: '', password: '', currency: 'RUB' })
                   }
                 }}
                 className="input-full-width"
@@ -583,6 +682,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                 <option value="file">Загрузка из файла Excel</option>
                 <option value="firebird">Firebird Database (FDB)</option>
                 <option value="api">Загрузка API</option>
+                <option value="web">Веб-сервис (Web Service)</option>
               </select>
             </label>
           </div>
@@ -636,6 +736,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                   onChange={(e) => setConnectionSettings({ ...connectionSettings, api_token: e.target.value })}
                   placeholder="Ваш API токен"
                   className="input-full-width"
+                  autoComplete="off"
                 />
                 <span className="field-help">Токен для авторизации в API</span>
               </label>
@@ -672,11 +773,11 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                     try {
                       let response
                       if (template?.id) {
-                        response = await fetch(`${API_URL}/api/v1/templates/${template.id}/test-api-connection`, {
+                        response = await authFetch(`${API_URL}/api/v1/templates/${template.id}/test-api-connection`, {
                           method: 'POST'
                         })
                       } else {
-                        response = await fetch(`${API_URL}/api/v1/templates/test-api-connection`, {
+                        response = await authFetch(`${API_URL}/api/v1/templates/test-api-connection`, {
                           method: 'POST',
                           headers: {
                             'Content-Type': 'application/json'
@@ -688,6 +789,10 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                       const result = await response.json()
                       setConnectionTestResult(result)
                     } catch (err) {
+                      // Не показываем ошибку при 401 - это обрабатывается централизованно
+                      if (err.isUnauthorized) {
+                        return
+                      }
                       setConnectionTestResult({ success: false, message: 'Ошибка тестирования: ' + err.message })
                     } finally {
                       setTestingConnection(false)
@@ -716,7 +821,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                           method: 'POST'
                         })
                       } else {
-                        response = await fetch(`${API_URL}/api/v1/templates/api-fields`, {
+                        response = await authFetch(`${API_URL}/api/v1/templates/api-fields`, {
                           method: 'POST',
                           headers: {
                             'Content-Type': 'application/json'
@@ -744,6 +849,10 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                         setError(errorMsg)
                       }
                     } catch (err) {
+                      // Не показываем ошибку при 401 - это обрабатывается централизованно
+                      if (err.isUnauthorized) {
+                        return
+                      }
                       setError('Ошибка загрузки полей из API: ' + err.message)
                       setApiFields([])
                     } finally {
@@ -776,6 +885,228 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ШАГ 2: Настройки подключения к веб-сервису */}
+        {formData.connection_type === 'web' && (
+          <div className="form-section">
+            <h4 className="section-title">
+              <span className="step-number">2</span>
+              Настройки подключения к веб-сервису
+            </h4>
+            <p className="section-description">
+              Укажите параметры подключения к веб-сервису с авторизацией через JWT токен.
+            </p>
+            
+            <form onSubmit={(e) => e.preventDefault()} noValidate>
+            <div className="form-group">
+              <label>
+                Базовый URL: <span className="required-mark">*</span>
+                <input
+                  type="text"
+                  value={connectionSettings.base_url || ''}
+                  onChange={(e) => setConnectionSettings({ ...connectionSettings, base_url: e.target.value })}
+                  placeholder="http://example.com:8080"
+                  className="input-full-width"
+                />
+                <span className="field-help">Базовый URL веб-сервиса (например: http://176.222.217.51:8080)</span>
+              </label>
+            </div>
+            
+            <div className="form-row">
+              <div className="form-group">
+                <label>
+                  Имя пользователя: <span className="required-mark">*</span>
+                  <input
+                    type="text"
+                    value={connectionSettings.username || ''}
+                    onChange={(e) => setConnectionSettings({ ...connectionSettings, username: e.target.value })}
+                    placeholder="username"
+                    className="input-full-width"
+                    autoComplete="username"
+                  />
+                </label>
+              </div>
+              <div className="form-group">
+                <label>
+                  Пароль: <span className="required-mark">*</span>
+                  <input
+                    type="password"
+                    value={connectionSettings.password || ''}
+                    onChange={(e) => setConnectionSettings({ ...connectionSettings, password: e.target.value })}
+                    placeholder="password"
+                    className="input-full-width"
+                    autoComplete="current-password"
+                  />
+                </label>
+              </div>
+            </div>
+            
+            <div className="form-group">
+              <label>
+                Валюта:
+                <input
+                  type="text"
+                  value={connectionSettings.currency || 'RUB'}
+                  onChange={(e) => setConnectionSettings({ ...connectionSettings, currency: e.target.value })}
+                  placeholder="RUB"
+                  className="input-full-width"
+                />
+                <span className="field-help">Валюта по умолчанию (например: RUB, USD, EUR)</span>
+              </label>
+            </div>
+            
+            <div className="form-group">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={async () => {
+                  if (!connectionSettings.base_url || !connectionSettings.username || !connectionSettings.password) {
+                    setError('Заполните все обязательные поля: базовый URL, имя пользователя и пароль')
+                    return
+                  }
+                  
+                  // Нормализуем базовый URL (убираем лишние слэши и пробелы)
+                  const normalizedSettings = {
+                    ...connectionSettings,
+                    base_url: connectionSettings.base_url.trim().replace(/\/+$/, '')
+                  }
+                  
+                  setLoadingApiFields(true)
+                  setError('')
+                  
+                  try {
+                    let response
+                    if (template?.id) {
+                      response = await fetch(`${API_URL}/api/v1/templates/${template.id}/test-api-connection`, {
+                        method: 'POST'
+                      })
+                    } else {
+                      response = await authFetch(`${API_URL}/api/v1/templates/test-api-connection?connection_type=web`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(normalizedSettings)
+                      })
+                    }
+                    
+                    if (!response.ok) {
+                      const errorData = await response.json()
+                      throw new Error(errorData.detail || errorData.message || 'Ошибка тестирования подключения')
+                    }
+                    
+                    const result = await response.json()
+                    setConnectionTestResult(result)
+                    
+                    if (result.success) {
+                      setError('')
+                    } else {
+                      setError(result.message || 'Ошибка подключения')
+                    }
+                  } catch (err) {
+                    if (err.isUnauthorized) {
+                      return
+                    }
+                    setError('Ошибка тестирования подключения: ' + err.message)
+                    setConnectionTestResult({ success: false, message: err.message })
+                  } finally {
+                    setLoadingApiFields(false)
+                  }
+                }}
+                disabled={loadingApiFields || !connectionSettings.base_url || !connectionSettings.username || !connectionSettings.password}
+                title="Проверить подключение к веб-сервису"
+              >
+                {loadingApiFields ? '⏳ Проверка...' : '🔍 Проверить подключение'}
+              </button>
+            </div>
+            {connectionTestResult && (
+              <div className={`connection-test-result ${connectionTestResult.success ? 'success' : 'error'}`}>
+                {connectionTestResult.success ? (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="icon-small" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    {connectionTestResult.message}
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="icon-small" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    {connectionTestResult.message}
+                  </>
+                )}
+              </div>
+            )}
+            <div className="form-group" style={{ marginTop: '15px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={async () => {
+                  if (!connectionSettings.base_url || !connectionSettings.username || !connectionSettings.password) {
+                    setError('Заполните все обязательные поля: базовый URL, имя пользователя и пароль')
+                    return
+                  }
+                  
+                  // Нормализуем базовый URL (убираем лишние слэши и пробелы)
+                  const normalizedSettings = {
+                    ...connectionSettings,
+                    base_url: connectionSettings.base_url.trim().replace(/\/+$/, '')
+                  }
+                  
+                  setLoadingApiFields(true)
+                  setError('')
+                  
+                  try {
+                    let response
+                    if (template?.id) {
+                      response = await fetch(`${API_URL}/api/v1/templates/${template.id}/api-fields`, {
+                        method: 'POST'
+                      })
+                    } else {
+                      response = await authFetch(`${API_URL}/api/v1/templates/api-fields?connection_type=web`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(normalizedSettings)
+                      })
+                    }
+                    
+                    if (!response.ok) {
+                      const errorData = await response.json()
+                      throw new Error(errorData.detail || errorData.error || 'Ошибка загрузки полей из веб-сервиса')
+                    }
+                    
+                    const result = await response.json()
+                    setApiFields(result.fields || [])
+                    
+                    if (result.fields && result.fields.length > 0) {
+                      setError('')
+                      console.log(`Загружено полей из веб-сервиса: ${result.count || result.fields.length}`)
+                    } else {
+                      const errorMsg = result.error || 'Не удалось получить поля из веб-сервиса. Используйте стандартные названия полей.'
+                      setError(errorMsg)
+                    }
+                  } catch (err) {
+                    if (err.isUnauthorized) {
+                      return
+                    }
+                    setError('Ошибка загрузки полей из веб-сервиса: ' + err.message)
+                    setApiFields([])
+                  } finally {
+                    setLoadingApiFields(false)
+                  }
+                }}
+                disabled={loadingApiFields || !connectionSettings.base_url || !connectionSettings.username || !connectionSettings.password}
+                title="Загрузить список полей из веб-сервиса"
+              >
+                {loadingApiFields ? '⏳ Загрузка...' : '🔍 Загрузить поля из веб-сервиса'}
+              </button>
+            </div>
+            </form>
           </div>
         )}
 
@@ -853,6 +1184,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                     onChange={(e) => setConnectionSettings({ ...connectionSettings, password: e.target.value })}
                     placeholder="masterkey"
                     className="input-full-width"
+                    autoComplete="current-password"
                   />
                 </label>
               </div>
@@ -1188,7 +1520,7 @@ ORDER BY rg."Date" DESC`}
         )}
 
         {/* ШАГ 7: Сопоставление полей */}
-        {((formData.connection_type === 'file' && fileColumns.length > 0) || formData.connection_type === 'firebird' || formData.connection_type === 'api') && (
+        {((formData.connection_type === 'file' && fileColumns.length > 0) || formData.connection_type === 'firebird' || formData.connection_type === 'api' || formData.connection_type === 'web') && (
           <div className="form-section mapping-section">
             <h4 className="section-title">
               <span className="step-number">7</span>
@@ -1199,10 +1531,12 @@ ORDER BY rg."Date" DESC`}
                 ? 'Система автоматически сопоставила поля, где это было возможно. Проверьте и при необходимости исправьте сопоставление вручную.'
                 : formData.connection_type === 'firebird'
                 ? 'Укажите соответствие полей из базы данных Firebird полям системы.'
+                : formData.connection_type === 'web'
+                ? 'Для веб-сервиса укажите соответствие полей из API ответа полям системы. Используйте стандартные названия полей или введите вручную.'
                 : 'Для API подключения используйте кнопку "Загрузить поля из API" для получения списка доступных полей из API ответа. Затем выберите соответствующие поля из выпадающего списка или введите вручную.'}
               Поля, отмеченные <span className="required-mark">*</span>, обязательны для заполнения.
             </p>
-            {formData.connection_type === 'api' && apiFields.length > 0 && (
+            {(formData.connection_type === 'api' || formData.connection_type === 'web') && apiFields.length > 0 && (
               <div className="success-badge" style={{ marginBottom: '15px' }}>
                 <svg xmlns="http://www.w3.org/2000/svg" className="icon-small" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -1216,7 +1550,7 @@ ORDER BY rg."Date" DESC`}
                 <thead>
                   <tr>
                     <th>Поле системы</th>
-                    <th>{formData.connection_type === 'file' ? 'Колонка из файла' : formData.connection_type === 'api' ? 'Поле из API ответа' : 'Поле из БД Firebird'}</th>
+                    <th>{formData.connection_type === 'file' ? 'Колонка из файла' : formData.connection_type === 'api' || formData.connection_type === 'web' ? 'Поле из API ответа' : 'Поле из БД Firebird'}</th>
                     <th>Статус</th>
                   </tr>
                 </thead>
@@ -1231,13 +1565,13 @@ ORDER BY rg."Date" DESC`}
                         key={field.key} 
                         className={`${isRequired ? 'required' : ''} ${isAutoMapped ? 'auto-mapped' : ''} ${isRequired && !isMapped ? 'missing-required' : ''}`}
                       >
-                        <td>
+                        <td data-label="Поле системы">
                           <span className="field-label">
                             {field.label}
                             {isRequired && <span className="required-mark"> *</span>}
                           </span>
                         </td>
-                        <td>
+                        <td data-label={formData.connection_type === 'file' ? 'Колонка из файла' : formData.connection_type === 'api' || formData.connection_type === 'web' ? 'Поле из API ответа' : 'Поле из БД Firebird'}>
                           {formData.connection_type === 'file' ? (
                             <select
                               value={formData.field_mapping[field.key] || ''}
@@ -1261,7 +1595,7 @@ ORDER BY rg."Date" DESC`}
                                 </option>
                               ))}
                             </select>
-                          ) : formData.connection_type === 'api' ? (
+                          ) : (formData.connection_type === 'api' || formData.connection_type === 'web') ? (
                             // Для API показываем выпадающий список с полями из API или поле ввода
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                               <select
@@ -1312,7 +1646,7 @@ ORDER BY rg."Date" DESC`}
                             </div>
                           )}
                         </td>
-                        <td className="mapping-status-cell">
+                        <td className="mapping-status-cell" data-label="Статус">
                           {isMapped ? (
                             <span className={`status-badge ${isAutoMapped ? 'status-auto' : 'status-manual'}`}>
                               {isAutoMapped ? (
@@ -1383,8 +1717,8 @@ ORDER BY rg."Date" DESC`}
           </div>
         </div>
 
-        {/* ШАГ 7: Настройки автоматической загрузки (только для Firebird и API) */}
-        {(formData.connection_type === 'firebird' || formData.connection_type === 'api') && (
+        {/* ШАГ 7: Настройки автоматической загрузки (только для Firebird, API и Web) */}
+        {(formData.connection_type === 'firebird' || formData.connection_type === 'api' || formData.connection_type === 'web') && (
           <div className="form-section">
             <h3 className="section-title">Настройки автоматической загрузки</h3>
             <div className="form-group checkbox-group">
@@ -1403,6 +1737,23 @@ ORDER BY rg."Date" DESC`}
 
             {formData.auto_load_enabled && (
               <>
+                {/* Информационное сообщение о статусе автозагрузки */}
+                {formData.auto_load_schedule && (
+                  <div className="auto-load-info" style={{
+                    padding: '12px 16px',
+                    marginBottom: '15px',
+                    backgroundColor: '#e3f2fd',
+                    border: '1px solid #90caf9',
+                    borderRadius: '4px',
+                    color: '#1565c0'
+                  }}>
+                    <strong>Автоматическая загрузка включена</strong>
+                    <div style={{ marginTop: '8px', fontSize: '14px' }}>
+                      Расписание: <strong>{formatSchedule(formData.auto_load_schedule)}</strong>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="form-group">
                   <label className="form-label">
                     Расписание (cron-выражение):
@@ -1410,13 +1761,14 @@ ORDER BY rg."Date" DESC`}
                       type="text"
                       value={formData.auto_load_schedule}
                       onChange={(e) => setFormData({ ...formData, auto_load_schedule: e.target.value })}
-                      placeholder='Например: "0 2 * * *" (каждый день в 2:00)'
+                      placeholder='Например: "0 2 * * *" (каждый день в 2:00) или "hourly" (каждый час)'
                       className="input-full-width"
                     />
                   </label>
                   <span className="field-help">
                     Формат cron: минута час день месяц день_недели. Примеры: "0 2 * * *" - каждый день в 2:00,
-                    "0 */6 * * *" - каждые 6 часов, "0 0 * * 1" - каждый понедельник в полночь
+                    "0 */6 * * *" - каждые 6 часов, "0 0 * * 1" - каждый понедельник в полночь.
+                    Также поддерживаются простые форматы: "hourly" (каждый час), "daily" (каждый день в 2:00), "weekly" (каждую неделю)
                   </span>
                 </div>
 

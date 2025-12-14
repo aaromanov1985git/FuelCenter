@@ -3,8 +3,21 @@
  */
 
 // В режиме разработки используем относительные пути для прокси Vite
-// В production используем полный URL или переменную окружения
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+// В production используем относительные пути (через nginx proxy) или переменную окружения
+// Если VITE_API_URL не задан, используем пустую строку для относительных путей
+// Это работает как в dev (через vite proxy), так и в production (через nginx proxy)
+const API_URL = import.meta.env.VITE_API_URL || ''
+
+// Глобальный обработчик для 401 ошибок (будет установлен из AuthContext)
+let globalLogoutHandler = null
+
+/**
+ * Установить глобальный обработчик для выхода при 401 ошибке
+ * @param {Function} handler - Функция для вызова при 401 ошибке
+ */
+export const setLogoutHandler = (handler) => {
+  globalLogoutHandler = handler
+}
 
 /**
  * Получить токен из localStorage
@@ -81,10 +94,40 @@ export const authFetch = async (url, options = {}) => {
     }
   }
   
-  return fetch(normalizedUrl, {
-    ...options,
-    headers
-  })
+  try {
+    const response = await fetch(normalizedUrl, {
+      ...options,
+      headers
+    })
+    
+    // Централизованная обработка ошибок 401 (Unauthorized)
+    if (response.status === 401) {
+      // Удаляем токен из localStorage
+      localStorage.removeItem('auth_token')
+      
+      // Вызываем глобальный обработчик logout, если он установлен
+      if (globalLogoutHandler) {
+        globalLogoutHandler()
+      }
+      
+      // Бросаем специальную ошибку, чтобы компоненты могли её обработать
+      const error = new Error('Требуется авторизация')
+      error.status = 401
+      error.isUnauthorized = true
+      throw error
+    }
+    
+    return response
+  } catch (fetchError) {
+    // Обрабатываем ошибки сети (Failed to fetch, CORS и т.д.)
+    if (fetchError.name === 'TypeError' && (fetchError.message.includes('Failed to fetch') || fetchError.message.includes('NetworkError'))) {
+      const networkError = new Error('Ошибка подключения к серверу. Проверьте, что бэкенд запущен и доступен.')
+      networkError.isNetworkError = true
+      throw networkError
+    }
+    // Пробрасываем другие ошибки (включая нашу 401 ошибку)
+    throw fetchError
+  }
 }
 
 /**

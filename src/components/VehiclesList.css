@@ -76,7 +76,7 @@
 .vehicles-table th {
   padding: var(--padding-small) var(--padding-element);
   text-align: left;
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   text-transform: uppercase;
@@ -86,7 +86,7 @@
 
 .vehicles-table td {
   padding: var(--padding-small) var(--padding-element);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
   border-bottom: 1px solid var(--color-border);
@@ -100,9 +100,19 @@
   max-width: 300px;
 }
 
+.vehicle-actions-container {
+  display: flex;
+  gap: var(--spacing-small);
+}
+
+.vehicle-error-text {
+  color: var(--color-error-dark);
+  font-weight: var(--font-weight-semibold);
+}
+
 .error-text {
   color: var(--color-error);
-  font-size: 0.625rem;
+  font-size: var(--font-size-compact);
   font-weight: var(--font-weight-normal);
   display: block;
   overflow: hidden;
@@ -189,20 +199,20 @@
   border-radius: var(--radius-medium);
   margin-bottom: var(--spacing-element);
   border: 2px solid var(--color-error);
-  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 
 .loading {
   text-align: center;
-  padding: 48px;
+  padding: calc(var(--spacing-section) * 1.5);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
 }
 
 .empty-state {
   text-align: center;
-  padding: 48px;
+  padding: calc(var(--spacing-section) * 1.5);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
 }
@@ -547,5 +557,56 @@
   .errors-warnings-stats {
     grid-template-columns: 1fr;
   }
+}
+
+/* Стандартные стили форм */
+.vehicles-list .form-section,
+.vehicles-list :global(.form-section) {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border, var(--border));
+}
+
+.vehicles-list .form-section:first-of-type,
+.vehicles-list :global(.form-section:first-of-type) {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.vehicles-list .form-section h3,
+.vehicles-list :global(.form-section h3) {
+  margin-bottom: 0.5rem;
+  margin-top: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-primary, var(--text-primary));
+}
+
+.vehicles-list .form-group,
+.vehicles-list :global(.form-group) {
+  margin-bottom: 0.5rem;
+}
+
+.vehicles-list .form-group label,
+.vehicles-list :global(.form-group label) {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--color-text-primary, var(--text-primary));
+}
+
+.vehicles-list .form-row,
+.vehicles-list :global(.form-row) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.vehicles-list .form-row .form-group,
+.vehicles-list :global(.form-row .form-group) {
+  margin-bottom: 0;
 }
 

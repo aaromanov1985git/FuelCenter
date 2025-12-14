@@ -8,6 +8,7 @@ from sqlalchemy import and_, or_
 from typing import List, Dict, Tuple, Set, Optional, Optional
 from datetime import datetime
 from app.models import Transaction, Vehicle, FuelCard
+from app.services.gas_station_service import GasStationService
 # Импортируем функции из основного модуля services (не из папки services/)
 from app import services as app_services
 from app.logger import logger
@@ -113,6 +114,7 @@ class TransactionBatchProcessor:
         # Батчевая обработка справочников (собираем предупреждения)
         vehicles_map = self._process_vehicles_batch(new_transactions, warnings)
         cards_map = self._process_cards_batch(new_transactions, vehicles_map, warnings)
+        gas_stations_map = self._process_gas_stations_batch(new_transactions, warnings)
         
         # Создаем транзакции
         for trans_data in new_transactions:
@@ -139,10 +141,22 @@ class TransactionBatchProcessor:
             
             trans_data["vehicle_id"] = vehicle_id
             
+            # Получаем gas_station_id из карты
+            gas_station_id = None
+            azs_original_name = trans_data.get("azs_original_name")
+            if azs_original_name:
+                # Используем оригинальное название как ключ
+                gas_station_id = gas_stations_map.get(azs_original_name)
+            elif trans_data.get("azs_number"):
+                # Fallback: используем номер АЗС как ключ, если оригинальное название отсутствует
+                gas_station_id = gas_stations_map.get(trans_data.get("azs_number"))
+            
+            trans_data["gas_station_id"] = gas_station_id
+            
             # Удаляем поля, которых нет в модели Transaction
             # Оставляем только те поля, которые есть в модели
             transaction_fields = {
-                "transaction_date", "card_number", "vehicle", "vehicle_id", "azs_number",
+                "transaction_date", "card_number", "vehicle", "vehicle_id", "azs_number", "gas_station_id",
                 "provider_id", "supplier", "region", "settlement", "location", "location_code",
                 "product", "operation_type", "quantity", "currency", "exchange_rate",
                 "price", "price_with_discount", "amount", "amount_with_discount",
@@ -433,6 +447,89 @@ class TransactionBatchProcessor:
                         continue
         
         return cards_map
+    
+    def _process_gas_stations_batch(
+        self,
+        transactions: List[Dict],
+        warnings: List[str]
+    ) -> Dict[str, int]:
+        """
+        Батчевая обработка автозаправочных станций
+        Возвращает словарь {original_name: gas_station_id}
+        Собирает предупреждения о возможных дублях
+        """
+        gas_stations_map = {}
+        gas_station_service = GasStationService(self.db)
+        
+        # Собираем все уникальные названия АЗС
+        gas_station_names = set()
+        for trans_data in transactions:
+            azs_original_name = trans_data.get("azs_original_name")
+            if azs_original_name and azs_original_name.strip():
+                gas_station_names.add(azs_original_name.strip())
+            # Также добавляем номер АЗС как fallback, если оригинальное название отсутствует
+            elif trans_data.get("azs_number"):
+                gas_station_names.add(trans_data.get("azs_number").strip())
+        
+        if not gas_station_names:
+            return gas_stations_map
+        
+        # Обрабатываем каждую АЗС
+        for gas_station_name in gas_station_names:
+            # Находим первую транзакцию с этой АЗС для получения данных
+            azs_number = None
+            location = None
+            region = None
+            settlement = None
+            
+            for trans_data in transactions:
+                azs_original = trans_data.get("azs_original_name", "").strip()
+                azs_num = trans_data.get("azs_number")
+                
+                # Проверяем совпадение по оригинальному названию или номеру
+                if (azs_original == gas_station_name or 
+                    (not azs_original and azs_num and str(azs_num).strip() == gas_station_name)):
+                    azs_number = azs_num
+                    location = trans_data.get("location")
+                    region = trans_data.get("region")
+                    settlement = trans_data.get("settlement")
+                    break
+            
+            # Если не нашли данные, извлекаем номер из названия
+            if not azs_number and gas_station_name:
+                azs_number = app_services.extract_azs_number(gas_station_name)
+            
+            try:
+                gas_station, gas_station_warnings = gas_station_service.get_or_create_gas_station(
+                    original_name=gas_station_name,
+                    azs_number=azs_number,
+                    location=location,
+                    region=region,
+                    settlement=settlement
+                )
+                gas_stations_map[gas_station_name] = gas_station.id
+                # Также добавляем номер АЗС как ключ для обратной совместимости
+                if azs_number:
+                    gas_stations_map[str(azs_number).strip()] = gas_station.id
+                # Собираем предупреждения
+                warnings.extend(gas_station_warnings)
+            except Exception as e:
+                error_msg = str(e)
+                warnings.append(f"Ошибка при обработке АЗС '{gas_station_name}': {error_msg}")
+                logger.error(
+                    "Ошибка при создании/получении АЗС",
+                    extra={
+                        "gas_station_name": gas_station_name,
+                        "azs_number": azs_number,
+                        "error": error_msg,
+                        "error_type": type(e).__name__
+                    },
+                    exc_info=True
+                )
+                # Продолжаем обработку других АЗС
+                continue
+        
+        return gas_stations_map
     
     def process_transactions_batch(
         self,

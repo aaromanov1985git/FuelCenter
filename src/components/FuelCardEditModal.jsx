@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import IconButton from './IconButton'
+import { Modal, Input, Select, Button, Checkbox } from './ui'
+import FormField from './FormField'
+import { authFetch } from '../utils/api'
 import './FuelCardEditModal.css'
+
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
 
 /**
  * Модальное окно для редактирования топливной карты
@@ -35,29 +39,6 @@ const FuelCardEditModal = ({
     }
   }, [isOpen, card])
 
-  const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onCancel()
-    }
-  }
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      onCancel()
-    }
-  }
-
-  useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = 'hidden'
-    }
-    
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = ''
-    }
-  }, [isOpen])
 
   const handleSave = () => {
     if (card) {
@@ -71,119 +52,105 @@ const FuelCardEditModal = ({
 
   if (!isOpen || !card) return null
 
+  const providerOptions = [
+    { value: '', label: 'Не указан' },
+    ...providers.filter(p => p.is_active).map(provider => ({
+      value: provider.id.toString(),
+      label: provider.name
+    }))
+  ]
+
+  const vehicleOptions = [
+    { value: '', label: 'Не закреплена' },
+    ...vehicles.map(vehicle => ({
+      value: vehicle.id.toString(),
+      label: `${vehicle.original_name}${vehicle.license_plate ? ` (${vehicle.license_plate})` : ''}`
+    }))
+  ]
+
   return (
-    <div 
-      className="fuel-card-edit-modal-overlay" 
-      onClick={handleOverlayClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="fuel-card-edit-modal-title"
+    <Modal
+      isOpen={isOpen}
+      onClose={onCancel}
+      title={`Редактирование карты: ${card.card_number}`}
+      size="md"
     >
-      <div className="fuel-card-edit-modal-content">
-        <div className="fuel-card-edit-modal-header">
-          <h3 id="fuel-card-edit-modal-title" className="fuel-card-edit-modal-title">
-            Редактирование карты: {card.card_number}
-          </h3>
-          <button
-            type="button"
-            className="fuel-card-edit-modal-close"
-            onClick={onCancel}
-            aria-label="Закрыть"
-          >
-            ×
-          </button>
-        </div>
-        
-        <div className="fuel-card-edit-modal-body">
+      <Modal.Body>
+        <div className="form-section">
+          <h3>Основная информация</h3>
           <div className="form-group">
-            <label htmlFor="cardNumber" className="form-label">
-              Номер карты
-            </label>
-            <input
+            <label>Номер карты</label>
+            <Input
               type="text"
-              id="cardNumber"
               value={card.card_number}
               disabled
-              className="form-input form-input-disabled"
+              fullWidth
             />
-            <span className="form-hint">Номер карты нельзя изменить</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
+              Номер карты нельзя изменить
+            </span>
           </div>
-
-          <div className="form-group">
-            <label htmlFor="providerSelect" className="form-label">
-              Провайдер
-            </label>
-            <select
-              id="providerSelect"
-              value={selectedProviderId || ''}
-              onChange={(e) => setSelectedProviderId(e.target.value ? parseInt(e.target.value) : null)}
-              className="form-select"
-              disabled={loading}
-            >
-              <option value="">Не указан</option>
-              {providers.filter(p => p.is_active).map(provider => (
-                <option key={provider.id} value={provider.id}>
-                  {provider.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="vehicleSelect" className="form-label">
-              Закреплена за ТС
-            </label>
-            <select
-              id="vehicleSelect"
-              value={selectedVehicleId || ''}
-              onChange={(e) => setSelectedVehicleId(e.target.value ? parseInt(e.target.value) : null)}
-              className="form-select"
-              disabled={loading}
-            >
-              <option value="">Не закреплена</option>
-              {vehicles.map(vehicle => (
-                <option key={vehicle.id} value={vehicle.id}>
-                  {vehicle.original_name} {vehicle.license_plate ? `(${vehicle.license_plate})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group form-group-checkbox">
-            <label className="form-label form-label-checkbox">
-              <input
-                type="checkbox"
-                checked={isBlocked}
-                onChange={(e) => setIsBlocked(e.target.checked)}
+        </div>
+        <div className="form-section">
+          <h3>Связи</h3>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Провайдер</label>
+              <Select
+                value={selectedProviderId ? selectedProviderId.toString() : ''}
+                onChange={(value) => setSelectedProviderId(value ? parseInt(value) : null)}
+                options={providerOptions}
                 disabled={loading}
-                className="form-checkbox"
+                fullWidth
               />
-              <span>Карта заблокирована</span>
-            </label>
-            <span className="form-hint">Заблокированные карты не будут использоваться при обработке транзакций</span>
+            </div>
+            <div className="form-group">
+              <label>Закреплена за ТС</label>
+              <Select
+                value={selectedVehicleId ? selectedVehicleId.toString() : ''}
+                onChange={(value) => setSelectedVehicleId(value ? parseInt(value) : null)}
+                options={vehicleOptions}
+                disabled={loading}
+                fullWidth
+              />
+            </div>
           </div>
         </div>
-        
-        <div className="fuel-card-edit-modal-footer">
-          <IconButton 
-            icon="cancel" 
-            variant="secondary" 
-            onClick={onCancel}
-            disabled={loading}
-            title="Отмена"
-            size="medium"
-          />
-          <IconButton 
-            icon="save" 
-            variant="success" 
-            onClick={handleSave}
-            disabled={loading}
-            title={loading ? 'Сохранение...' : 'Сохранить'}
-            size="medium"
-          />
+        <div className="form-section">
+          <div className="form-group">
+            <label>
+              <Checkbox
+                checked={isBlocked}
+                onChange={setIsBlocked}
+                disabled={loading}
+                label="Карта заблокирована"
+              />
+            </label>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
+              Заблокированные карты не будут использоваться при обработке транзакций
+            </span>
+          </div>
         </div>
-      </div>
-    </div>
+      </Modal.Body>
+
+      <Modal.Footer>
+        <Button
+          variant="secondary"
+          onClick={onCancel}
+          disabled={loading}
+        >
+          Отмена
+        </Button>
+        <Button
+          variant="success"
+          onClick={handleSave}
+          disabled={loading}
+          loading={loading}
+        >
+          Сохранить
+        </Button>
+      </Modal.Footer>
+    </Modal>
   )
 }
 

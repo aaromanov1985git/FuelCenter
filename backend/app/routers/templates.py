@@ -6,7 +6,9 @@ from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any
 from app.database import get_db
 from app.logger import logger
-from app.models import Provider, ProviderTemplate
+from app.models import Provider, ProviderTemplate, User
+from app.auth import require_auth_if_enabled
+from app.services.logging_service import logging_service
 from app.schemas import (
     ProviderTemplateResponse, ProviderTemplateCreate, ProviderTemplateUpdate,
     ProviderTemplateListResponse
@@ -41,7 +43,8 @@ async def get_template(template_id: int, db: Session = Depends(get_db)):
 async def update_template(
     template_id: int,
     template: ProviderTemplateUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
 ):
     """
     Обновление шаблона
@@ -86,11 +89,56 @@ async def update_template(
     
     logger.info("Шаблон обновлен", extra={"template_id": template_id})
     
-    return db_template
+    # Логируем действие пользователя
+    if current_user:
+        try:
+            logging_service.log_user_action(
+                db=db,
+                user_id=current_user.id,
+                username=current_user.username,
+                action_type="update",
+                action_description=f"Обновлен шаблон: {db_template.name}",
+                action_category="template",
+                entity_type="ProviderTemplate",
+                entity_id=template_id,
+                status="success"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    # Перезагружаем расписания, если изменились настройки автозагрузки
+    if (template.auto_load_enabled is not None or 
+        template.auto_load_schedule is not None or 
+        template.is_active is not None):
+        try:
+            from app.services.scheduler_service import SchedulerService
+            scheduler = SchedulerService.get_instance()
+            scheduler.reload_schedules()
+            logger.info("Расписания автоматической загрузки перезагружены после обновления шаблона", extra={
+                "template_id": template_id
+            })
+        except Exception as e:
+            logger.warning("Не удалось перезагрузить расписания после обновления шаблона", extra={
+                "template_id": template_id,
+                "error": str(e)
+            })
+    
+    # Явно преобразуем объект SQLAlchemy в Pydantic модель для корректной сериализации
+    try:
+        template_response = ProviderTemplateResponse.model_validate(db_template)
+        return template_response
+    except Exception as e:
+        logger.error(f"Ошибка при преобразовании шаблона в ответ: {e}", exc_info=True)
+        # Если преобразование не удалось, возвращаем объект напрямую (FastAPI попытается сериализовать)
+        return db_template
 
 
 @router.delete("/{template_id}")
-async def delete_template(template_id: int, db: Session = Depends(get_db)):
+async def delete_template(
+    template_id: int,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
+):
     """
     Удаление шаблона
     """
@@ -98,10 +146,43 @@ async def delete_template(template_id: int, db: Session = Depends(get_db)):
     if not template:
         raise HTTPException(status_code=404, detail="Шаблон не найден")
     
+    template_name = template.name
+    
     db.delete(template)
     db.commit()
     
+    # Логируем действие пользователя
+    if current_user:
+        try:
+            logging_service.log_user_action(
+                db=db,
+                user_id=current_user.id,
+                username=current_user.username,
+                action_type="delete",
+                action_description=f"Удален шаблон: {template_name}",
+                action_category="template",
+                entity_type="ProviderTemplate",
+                entity_id=template_id,
+                status="success"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
     logger.info("Шаблон удален", extra={"template_id": template_id})
+    
+    # Перезагружаем расписания, так как шаблон мог иметь активное расписание
+    try:
+        from app.services.scheduler_service import SchedulerService
+        scheduler = SchedulerService.get_instance()
+        scheduler.reload_schedules()
+        logger.info("Расписания автоматической загрузки перезагружены после удаления шаблона", extra={
+            "template_id": template_id
+        })
+    except Exception as e:
+        logger.warning("Не удалось перезагрузить расписания после удаления шаблона", extra={
+            "template_id": template_id,
+            "error": str(e)
+        })
     
     return {"message": "Шаблон успешно удален"}
 
@@ -439,42 +520,74 @@ async def get_firebird_table_columns(
 @router.post("/test-api-connection")
 async def test_api_connection_direct(
     connection_settings: dict,
+    connection_type: str = "api",
     db: Session = Depends(get_db)
 ):
     """
-    Тестирование подключения к API без сохранения шаблона
+    Тестирование подключения к API или веб-сервису без сохранения шаблона
     Используется при создании нового шаблона
+    
+    Args:
+        connection_settings: Настройки подключения
+        connection_type: Тип подключения ("api" или "web")
     """
+    # Явное логирование в консоль для отладки
+    print(f"\n{'='*80}")
+    print(f"=== ТЕСТ ПОДКЛЮЧЕНИЯ К {connection_type.upper()} ===")
+    print(f"Тип подключения: {connection_type}")
+    print(f"Настройки: {connection_settings}")
+    print(f"{'='*80}\n")
+    
+    logger.info(f"=== НАЧАЛО ТЕСТА ПОДКЛЮЧЕНИЯ К {connection_type.upper()} ===", extra={
+        "connection_type": connection_type,
+        "connection_settings": {k: v if k != 'password' else '***' for k, v in connection_settings.items()}
+    })
+    
     api_service = ApiProviderService(db)
     
     if not connection_settings:
+        print("ОШИБКА: Не указаны настройки подключения")
         raise HTTPException(
             status_code=400,
             detail="Не указаны настройки подключения"
+        )
+    
+    if connection_type not in ["api", "web"]:
+        print(f"ОШИБКА: Неподдерживаемый тип подключения: {connection_type}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Неподдерживаемый тип подключения: {connection_type}. Поддерживаются: api, web"
         )
     
     try:
         # Создаем временный шаблон для тестирования
         from app.models import ProviderTemplate
         temp_template = ProviderTemplate(
-            connection_type="api",
+            connection_type=connection_type,
             connection_settings=serialize_template_json(connection_settings),
             field_mapping={},
             provider_id=1  # Временное значение, не используется
         )
         
+        print(f"Создан временный шаблон, запускаем test_connection...")
+        logger.info("Запуск test_connection", extra={"connection_type": connection_type})
+        
         import asyncio
         result = await api_service.test_connection(temp_template)
         
-        logger.info("Тест подключения к API выполнен (без шаблона)", extra={
-            "success": result["success"]
+        print(f"Результат теста: success={result.get('success')}, message={result.get('message')}")
+        logger.info(f"Тест подключения к {connection_type.upper()} выполнен (без шаблона)", extra={
+            "success": result["success"],
+            "connection_type": connection_type,
+            "message": result.get("message")
         })
         
         return result
         
     except ValueError as e:
-        logger.error("Ошибка валидации при тестировании подключения к API", extra={
-            "error": str(e)
+        logger.error(f"Ошибка валидации при тестировании подключения к {connection_type.upper()}", extra={
+            "error": str(e),
+            "connection_type": connection_type
         }, exc_info=True)
         return {
             "success": False,
@@ -482,8 +595,9 @@ async def test_api_connection_direct(
             "details": {"error": str(e)}
         }
     except Exception as e:
-        logger.error("Ошибка при тестировании подключения к API", extra={
-            "error": str(e)
+        logger.error(f"Ошибка при тестировании подключения к {connection_type.upper()}", extra={
+            "error": str(e),
+            "connection_type": connection_type
         }, exc_info=True)
         return {
             "success": False,
@@ -506,16 +620,16 @@ async def test_api_connection(
     if not template:
         raise HTTPException(status_code=404, detail="Шаблон не найден")
     
-    if template.connection_type != "api":
+    if template.connection_type not in ["api", "web"]:
         raise HTTPException(
             status_code=400,
-            detail=f"Шаблон имеет тип подключения '{template.connection_type}', ожидается 'api'"
+            detail=f"Шаблон имеет тип подключения '{template.connection_type}', ожидается 'api' или 'web'"
         )
     
     if not template.connection_settings:
         raise HTTPException(
             status_code=400,
-            detail="В шаблоне не указаны настройки подключения к API"
+            detail="В шаблоне не указаны настройки подключения к API или веб-сервису"
         )
     
     try:
@@ -603,16 +717,16 @@ async def get_api_fields(
     if not template:
         raise HTTPException(status_code=404, detail="Шаблон не найден")
     
-    if template.connection_type != "api":
+    if template.connection_type not in ["api", "web"]:
         raise HTTPException(
             status_code=400,
-            detail=f"Шаблон имеет тип подключения '{template.connection_type}', ожидается 'api'"
+            detail=f"Шаблон имеет тип подключения '{template.connection_type}', ожидается 'api' или 'web'"
         )
     
     if not template.connection_settings:
         raise HTTPException(
             status_code=400,
-            detail="В шаблоне не указаны настройки подключения к API"
+            detail="В шаблоне не указаны настройки подключения к API или веб-сервису"
         )
     
     try:
@@ -681,4 +795,89 @@ async def run_auto_load(
         raise HTTPException(
             status_code=500,
             detail=f"Ошибка при автоматической загрузке: {str(e)}"
+        )
+
+
+@router.get("/scheduler/status")
+async def get_scheduler_status(
+    db: Session = Depends(get_db)
+):
+    """
+    Получить статус планировщика автоматической загрузки и список запланированных задач
+    """
+    try:
+        from app.services.scheduler_service import SchedulerService
+        from app.models import ProviderTemplate, UploadEvent
+        from datetime import datetime, timedelta
+        
+        scheduler = SchedulerService.get_instance()
+        
+        # Проверяем статус планировщика
+        is_running = scheduler._scheduler.running if scheduler._scheduler else False
+        
+        # Получаем список запланированных задач
+        jobs_info = scheduler.get_scheduled_jobs() if is_running else {"total": 0, "jobs": []}
+        
+        # Получаем информацию о шаблонах с расписанием
+        templates_with_schedule = db.query(ProviderTemplate).filter(
+            ProviderTemplate.is_active == True,
+            ProviderTemplate.auto_load_enabled == True,
+            ProviderTemplate.auto_load_schedule.isnot(None),
+            ProviderTemplate.auto_load_schedule != ''
+        ).all()
+        
+        templates_info = []
+        for template in templates_with_schedule:
+            job_id = f"auto_load_template_{template.id}"
+            job = scheduler._scheduler.get_job(job_id) if scheduler._scheduler and is_running else None
+            
+            templates_info.append({
+                "template_id": template.id,
+                "template_name": template.name,
+                "schedule": template.auto_load_schedule,
+                "is_active": template.is_active,
+                "auto_load_enabled": template.auto_load_enabled,
+                "has_scheduled_job": job is not None,
+                "next_run_time": job.next_run_time.isoformat() if job and job.next_run_time else None
+            })
+        
+        # Получаем последние события автозагрузки за последние 7 дней
+        date_from = datetime.utcnow() - timedelta(days=7)
+        recent_auto_events = db.query(UploadEvent).filter(
+            UploadEvent.source_type == "auto",
+            UploadEvent.is_scheduled == True,
+            UploadEvent.created_at >= date_from
+        ).order_by(UploadEvent.created_at.desc()).limit(10).all()
+        
+        events_info = []
+        for event in recent_auto_events:
+            events_info.append({
+                "id": event.id,
+                "created_at": event.created_at.isoformat() if event.created_at else None,
+                "template_id": event.template_id,
+                "status": event.status,
+                "transactions_created": event.transactions_created,
+                "transactions_total": event.transactions_total,
+                "message": event.message
+            })
+        
+        return {
+            "scheduler_running": is_running,
+            "scheduled_jobs": jobs_info,
+            "templates_with_schedule": {
+                "total": len(templates_with_schedule),
+                "templates": templates_info
+            },
+            "recent_auto_events": {
+                "total": len(events_info),
+                "events": events_info
+            }
+        }
+    except Exception as e:
+        logger.error("Ошибка при получении статуса планировщика", extra={
+            "error": str(e)
+        }, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при получении статуса планировщика: {str(e)}"
         )

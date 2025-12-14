@@ -34,7 +34,9 @@ class TransactionRepository:
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
         sort_by: str = "transaction_date",
-        sort_order: str = "desc"
+        sort_order: str = "desc",
+        organization_id: Optional[int] = None,
+        organization_ids: Optional[List[int]] = None
     ) -> tuple[List[Transaction], int]:
         """
         Получение списка транзакций с фильтрацией и сортировкой
@@ -70,6 +72,16 @@ class TransactionRepository:
             query = query.filter(Transaction.transaction_date >= date_from)
         if date_to is not None:
             query = query.filter(Transaction.transaction_date <= date_to)
+        
+        # Фильтрация по организациям
+        if organization_ids is not None:
+            query = query.filter(
+                (Transaction.organization_id.in_(organization_ids)) | (Transaction.organization_id.is_(None))
+            )
+        elif organization_id is not None:
+            query = query.filter(
+                (Transaction.organization_id == organization_id) | (Transaction.organization_id.is_(None))
+            )
         
         # Получаем общее количество
         total = query.count()
@@ -126,6 +138,82 @@ class TransactionRepository:
         """
         count = self.db.query(Transaction).count()
         self.db.query(Transaction).delete()
+        self.db.commit()
+        return count
+    
+    def count_by_provider_and_period(
+        self,
+        provider_id: int,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None
+    ) -> int:
+        """
+        Подсчет количества транзакций по провайдеру и периоду
+        
+        Args:
+            provider_id: ID провайдера
+            date_from: Начальная дата периода (включительно)
+            date_to: Конечная дата периода (включительно)
+        
+        Returns:
+            int: количество транзакций
+        """
+        query = self.db.query(Transaction).filter(Transaction.provider_id == provider_id)
+        
+        if date_from is not None:
+            query = query.filter(Transaction.transaction_date >= date_from)
+        if date_to is not None:
+            query = query.filter(Transaction.transaction_date <= date_to)
+        
+        return query.count()
+    
+    def has_transactions_before_date(
+        self,
+        provider_id: int,
+        before_date: datetime
+    ) -> bool:
+        """
+        Проверка наличия транзакций провайдера до указанной даты
+        
+        Args:
+            provider_id: ID провайдера
+            before_date: Дата, раньше которой проверяем
+        
+        Returns:
+            bool: True если есть транзакции раньше указанной даты
+        """
+        count = self.db.query(Transaction).filter(
+            Transaction.provider_id == provider_id,
+            Transaction.transaction_date < before_date
+        ).count()
+        return count > 0
+    
+    def delete_by_provider_and_period(
+        self,
+        provider_id: int,
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None
+    ) -> int:
+        """
+        Удаление транзакций по провайдеру и периоду
+        
+        Args:
+            provider_id: ID провайдера
+            date_from: Начальная дата периода (включительно)
+            date_to: Конечная дата периода (включительно)
+        
+        Returns:
+            int: количество удаленных транзакций
+        """
+        query = self.db.query(Transaction).filter(Transaction.provider_id == provider_id)
+        
+        if date_from is not None:
+            query = query.filter(Transaction.transaction_date >= date_from)
+        if date_to is not None:
+            query = query.filter(Transaction.transaction_date <= date_to)
+        
+        count = query.count()
+        query.delete()
         self.db.commit()
         return count
     

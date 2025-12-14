@@ -2,11 +2,28 @@ import React, { useState, useEffect } from 'react'
 import Skeleton, { SkeletonCard } from './Skeleton'
 import { useToast } from './ToastContainer'
 import Tooltip from './Tooltip'
+import { Button } from './ui'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
 import './Dashboard.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+
+// Функция для получения цветов графиков из CSS переменных
+const getChartColors = () => {
+  const root = document.documentElement
+  return [
+    getComputedStyle(root).getPropertyValue('--color-chart-1').trim() || '#4f46e5',
+    getComputedStyle(root).getPropertyValue('--color-chart-2').trim() || '#06b6d4',
+    getComputedStyle(root).getPropertyValue('--color-chart-3').trim() || '#10b981',
+    getComputedStyle(root).getPropertyValue('--color-chart-4').trim() || '#f59e0b',
+    getComputedStyle(root).getPropertyValue('--color-chart-5').trim() || '#ef4444',
+    getComputedStyle(root).getPropertyValue('--color-chart-6').trim() || '#8b5cf6',
+    // Дополнительные цвета для большего количества провайдеров
+    getComputedStyle(root).getPropertyValue('--color-primary').trim() || '#4f46e5',
+    getComputedStyle(root).getPropertyValue('--color-info').trim() || '#3b82f6'
+  ]
+}
 
 const Dashboard = () => {
   const { error: showError, success } = useToast()
@@ -31,6 +48,10 @@ const Dashboard = () => {
       const result = await response.json()
       setStats(result)
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       const errorMessage = 'Ошибка загрузки: ' + err.message
       setError(errorMessage)
       showError(errorMessage)
@@ -47,6 +68,10 @@ const Dashboard = () => {
       const result = await response.json()
       setAutoLoadStats(result)
     } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
       logger.error('Ошибка загрузки статистики автоматических загрузок', { error: err.message })
     } finally {
       setAutoLoadLoading(false)
@@ -195,7 +220,7 @@ const Dashboard = () => {
         <div className="dashboard-header">
           <h2>Дашборд</h2>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+        <div className="dashboard-skeleton-grid">
           {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonCard key={i} />
           ))}
@@ -217,24 +242,27 @@ const Dashboard = () => {
       <div className="dashboard-header">
         <h2>Дашборд</h2>
         <div className="period-selector">
-          <button 
-            className={period === 'day' ? 'active' : ''}
+          <Button 
+            variant={period === 'day' ? 'primary' : 'secondary'}
+            size="sm"
             onClick={() => setPeriod('day')}
           >
             По дням
-          </button>
-          <button 
-            className={period === 'month' ? 'active' : ''}
+          </Button>
+          <Button 
+            variant={period === 'month' ? 'primary' : 'secondary'}
+            size="sm"
             onClick={() => setPeriod('month')}
           >
             По месяцам
-          </button>
-          <button 
-            className={period === 'year' ? 'active' : ''}
+          </Button>
+          <Button 
+            variant={period === 'year' ? 'primary' : 'secondary'}
+            size="sm"
             onClick={() => setPeriod('year')}
           >
             По годам
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -242,7 +270,7 @@ const Dashboard = () => {
       <div className="dashboard-section auto-load-section">
         <h3>Загрузка по расписанию</h3>
         {autoLoadLoading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <div className="auto-load-skeleton-grid">
             {Array.from({ length: 4 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
@@ -368,17 +396,8 @@ const Dashboard = () => {
                 
                 const providersList = Array.from(providersSet).sort()
                 
-                // Цвета для провайдеров (те же, что и в графике по провайдерам)
-                const providerColors = [
-                  '#2196F3',  // Синий
-                  '#4CAF50',  // Зеленый
-                  '#FF9800',  // Оранжевый
-                  '#9C27B0',  // Фиолетовый
-                  '#F44336',  // Красный
-                  '#00BCD4',  // Голубой
-                  '#FFC107',  // Желтый
-                  '#795548'   // Коричневый
-                ]
+                // Цвета для провайдеров из CSS переменных
+                const providerColors = getChartColors()
                 
                 const providerColorMap = {}
                 providersList.forEach((providerName, idx) => {
@@ -499,18 +518,9 @@ const Dashboard = () => {
         
         {/* Легенда провайдеров для основного графика */}
         {stats.period_providers && Object.keys(stats.period_providers).length > 0 && stats.providers && stats.providers.length > 0 && (
-          <div className="chart-legend" style={{ marginTop: 'var(--spacing-block)' }}>
+          <div className="chart-legend">
             {(() => {
-              const providerColors = [
-                '#2196F3',  // Синий
-                '#4CAF50',  // Зеленый
-                '#FF9800',  // Оранжевый
-                '#9C27B0',  // Фиолетовый
-                '#F44336',  // Красный
-                '#00BCD4',  // Голубой
-                '#FFC107',  // Желтый
-                '#795548'   // Коричневый
-              ]
+              const providerColors = getChartColors()
               
               const sortedProviders = [...stats.providers].sort((a, b) => 
                 a.provider_name.localeCompare(b.provider_name)
@@ -563,7 +573,9 @@ const Dashboard = () => {
         <div className="dashboard-section">
           <div className="leaders-table-header">
             <h3>Топ-10 по количеству (литры)</h3>
-            <button 
+            <Button 
+              variant="secondary"
+              size="sm"
               className="export-leaders-btn"
               onClick={() => {
                 const sortedData = [...stats.leaders_by_quantity].sort((a, b) => {
@@ -594,7 +606,7 @@ const Dashboard = () => {
               title="Экспортировать таблицу в CSV"
             >
               📥 Экспорт
-            </button>
+            </Button>
           </div>
           <div className="leaders-table">
             <table>
@@ -729,7 +741,9 @@ const Dashboard = () => {
         <div className="dashboard-section">
           <div className="leaders-table-header">
             <h3>Топ-10 по количеству транзакций</h3>
-            <button 
+            <Button 
+              variant="secondary"
+              size="sm"
               className="export-leaders-btn"
               onClick={() => {
                 const sortedData = [...stats.leaders_by_count].sort((a, b) => {
@@ -760,7 +774,7 @@ const Dashboard = () => {
               title="Экспортировать таблицу в CSV"
             >
               📥 Экспорт
-            </button>
+            </Button>
           </div>
           <div className="leaders-table">
             <table>
