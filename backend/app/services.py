@@ -567,13 +567,14 @@ def get_or_create_gas_station(
     azs_number: Optional[str] = None,
     location: Optional[str] = None,
     region: Optional[str] = None,
-    settlement: Optional[str] = None
+    settlement: Optional[str] = None,
+    provider_id: Optional[int] = None
 ) -> Tuple[GasStation, List[str]]:
     """DEPRECATED: Используйте GasStationService.get_or_create_gas_station"""
     from app.services.gas_station_service import GasStationService
     gas_station_service = GasStationService(db)
     return gas_station_service.get_or_create_gas_station(
-        original_name, azs_number, location, region, settlement
+        original_name, azs_number, location, region, settlement, provider_id=provider_id
     )
 
 
@@ -704,7 +705,8 @@ def create_transactions(db: Session, transactions: List[Dict]) -> Tuple[int, int
                 azs_number=azs_number,
                 location=trans_data.get("location"),
                 region=trans_data.get("region"),
-                settlement=trans_data.get("settlement")
+                settlement=trans_data.get("settlement"),
+                provider_id=trans_data.get("provider_id")
             )
             gas_station_id = gas_station.id
             warnings.extend(azs_warnings)

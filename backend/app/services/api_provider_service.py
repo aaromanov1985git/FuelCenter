@@ -334,10 +334,18 @@ class WebAdapter:
             async with async_playwright() as p:
                 print("Запуск браузера Chromium...")
                 logger.info("Запуск браузера Chromium...")
-                # Запускаем браузер в headless режиме
+                # Запускаем браузер в headless режиме с максимальным скрытием признаков автоматизации
                 browser = await p.chromium.launch(
                     headless=True,
-                    args=['--disable-blink-features=AutomationControlled']  # Скрываем признаки автоматизации
+                    args=[
+                        '--disable-blink-features=AutomationControlled',
+                        '--disable-dev-shm-usage',
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox',
+                        '--disable-web-security',
+                        '--disable-features=IsolateOrigins,site-per-process',
+                        '--disable-site-isolation-trials',
+                    ]
                 )
                 print("Браузер запущен, создаем контекст...")
                 logger.info("Браузер запущен, создаем контекст...")
@@ -345,31 +353,124 @@ class WebAdapter:
                     viewport={'width': 1920, 'height': 1080},
                     user_agent="Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36",
                     locale="ru-RU",
-                    timezone_id="Europe/Moscow"
+                    timezone_id="Europe/Moscow",
+                    # Устанавливаем заголовки, которые есть в реальном браузере
+                    extra_http_headers={
+                        "Accept": "application/json, text/plain, */*",
+                        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+                        "Accept-Encoding": "gzip, deflate",
+                        "Cache-Control": "no-cache",
+                        "Pragma": "no-cache",
+                        "Connection": "keep-alive",
+                    },
+                    # Скрываем признаки автоматизации
+                    java_script_enabled=True,
+                    bypass_csp=True,
                 )
+                
+                # Добавляем скрипт для скрытия WebDriver флагов
+                await context.add_init_script("""
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => undefined
+                    });
+                    
+                    // Переопределяем plugins
+                    Object.defineProperty(navigator, 'plugins', {
+                        get: () => [1, 2, 3, 4, 5]
+                    });
+                    
+                    // Переопределяем languages
+                    Object.defineProperty(navigator, 'languages', {
+                        get: () => ['ru-RU', 'ru', 'en-US', 'en']
+                    });
+                    
+                    // Переопределяем permissions
+                    const originalQuery = window.navigator.permissions.query;
+                    window.navigator.permissions.query = (parameters) => (
+                        parameters.name === 'notifications' ?
+                            Promise.resolve({ state: Notification.permission }) :
+                            originalQuery(parameters)
+                    );
+                """)
+                print("Скрипты для скрытия автоматизации добавлены")
                 page = await context.new_page()
                 print("Страница создана")
                 logger.info("Страница создана")
+                
+                # Перехватываем и модифицируем запросы, чтобы они выглядели как из реального браузера
+                async def handle_route(route):
+                    request = route.request
+                    # Модифицируем только запросы к /api/auth/login
+                    if '/api/auth/login' in request.url:
+                        print(f"Перехвачен запрос к /api/auth/login, модифицируем заголовки...")
+                        headers = request.headers.copy()
+                        # Убеждаемся, что все заголовки точно как в реальном браузере
+                        headers['accept'] = 'application/json, text/plain, */*'
+                        headers['accept-encoding'] = 'gzip, deflate'
+                        headers['accept-language'] = 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7'
+                        headers['cache-control'] = 'no-cache'
+                        headers['connection'] = 'keep-alive'
+                        headers['content-type'] = 'application/json;charset=UTF-8'
+                        headers['origin'] = base_url
+                        headers['pragma'] = 'no-cache'
+                        headers['referer'] = f'{base_url}/login'
+                        headers['user-agent'] = 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36'
+                        
+                        await route.continue_(headers=headers)
+                    else:
+                        await route.continue_()
+                
+                await page.route('**/*', handle_route)
+                print("Route interception настроен")
                 
                 try:
                     # Перехватываем ответ от API при авторизации
                     token_from_response = None
                     response_received = asyncio.Event()
+                    all_responses = []
                     
                     async def handle_response(response):
                         nonlocal token_from_response
-                        if '/api/auth/login' in response.url:
-                            logger.info(f"Получен ответ от /api/auth/login: статус {response.status}")
-                            if response.status == 200:
+                        url = response.url
+                        status = response.status
+                        all_responses.append({"url": url, "status": status})
+                        
+                        # Логируем только важные ответы (не все статические ресурсы)
+                        if '/api/' in url or 'captcha' in url.lower():
+                            print(f"Получен ответ: {status} от {url}")
+                            logger.info(f"Получен ответ: {status} от {url}")
+                        
+                        if '/api/auth/login' in url:
+                            print(f"!!! Это ответ от /api/auth/login: статус {status} !!!")
+                            logger.info(f"Получен ответ от /api/auth/login: статус {status}")
+                            if status == 200:
                                 try:
                                     data = await response.json()
                                     token_from_response = data.get('accessToken') or data.get('token')
+                                    print(f"!!! ТОКЕН ПОЛУЧЕН ИЗ ОТВЕТА: {token_from_response[:50] if token_from_response else 'None'}... !!!")
                                     logger.info("Токен получен из ответа API через Playwright")
                                     response_received.set()
                                 except Exception as e:
+                                    print(f"Ошибка при парсинге ответа: {str(e)}")
                                     logger.warning(f"Ошибка при парсинге ответа: {str(e)}")
+                            elif status == 403:
+                                try:
+                                    error_text = await response.text()
+                                    print(f"!!! API вернул 403 Forbidden: {error_text[:500]} !!!")
+                                    logger.error(f"API вернул 403 Forbidden: {error_text[:500]}")
+                                    # Проверяем, не связана ли ошибка с капчей
+                                    if 'captcha' in error_text.lower() or 'капча' in error_text.lower():
+                                        print(f"!!! ОШИБКА СВЯЗАНА С КАПЧЕЙ !!!")
+                                        logger.error("Ошибка 403 связана с капчей")
+                                except:
+                                    logger.warning(f"API вернул статус {status}")
                             else:
-                                logger.warning(f"API вернул статус {response.status}")
+                                try:
+                                    error_text = await response.text()
+                                    print(f"API вернул статус {status}: {error_text[:200]}")
+                                    logger.warning(f"API вернул статус {status}: {error_text[:200]}")
+                                except:
+                                    logger.warning(f"API вернул статус {status}")
                     
                     page.on("response", handle_response)
                     
@@ -377,6 +478,24 @@ class WebAdapter:
                     print(f"Открываем страницу логина: {base_url}/login")
                     logger.info("Открываем страницу логина через Playwright")
                     await page.goto(f"{base_url}/login", wait_until="domcontentloaded", timeout=30000)
+                    
+                    # Устанавливаем cookie rememberMe после загрузки страницы
+                    try:
+                        await context.add_cookies([{
+                            "name": "rememberMe",
+                            "value": "false",
+                            "domain": "176.222.217.51",
+                            "path": "/",
+                        }])
+                        print("Cookie rememberMe=false установлен")
+                    except Exception as cookie_error:
+                        print(f"Не удалось установить cookie rememberMe: {str(cookie_error)}")
+                        # Пробуем установить через JavaScript
+                        try:
+                            await page.evaluate('() => { document.cookie = "rememberMe=false; path=/"; }')
+                            print("Cookie rememberMe=false установлен через JavaScript")
+                        except:
+                            pass
                     
                     print(f"Страница загружена, ждем выполнения JavaScript...")
                     # Ждем, пока страница загрузится и выполнится JavaScript
@@ -397,7 +516,55 @@ class WebAdapter:
                         pass
                     
                     await asyncio.sleep(3)  # Дополнительная задержка для выполнения JS
-                    print(f"Страница готова, пробуем прямой вызов API...")
+                    print(f"Страница готова, проверяем наличие капчи...")
+                    
+                    # Проверяем наличие капчи на странице
+                    captcha_found = False
+                    try:
+                        # Проверяем наличие элементов капчи Yandex
+                        captcha_selectors = [
+                            '[data-captcha]',
+                            '.yandex-captcha',
+                            '#captcha',
+                            'iframe[src*="captcha"]',
+                            'iframe[src*="yandex"]',
+                        ]
+                        for selector in captcha_selectors:
+                            count = await page.locator(selector).count()
+                            if count > 0:
+                                captcha_found = True
+                                print(f"!!! ОБНАРУЖЕНА КАПЧА: {selector} !!!")
+                                logger.warning(f"Обнаружена капча на странице: {selector}")
+                                break
+                        
+                        # Также проверяем через JavaScript
+                        if not captcha_found:
+                            has_captcha = await page.evaluate('''() => {
+                                return !!(
+                                    document.querySelector('[data-captcha]') ||
+                                    document.querySelector('.yandex-captcha') ||
+                                    document.querySelector('#captcha') ||
+                                    document.querySelector('iframe[src*="captcha"]') ||
+                                    document.querySelector('iframe[src*="yandex"]') ||
+                                    window.yandexCaptcha ||
+                                    document.body.innerText.includes('капча') ||
+                                    document.body.innerText.includes('captcha')
+                                );
+                            }''')
+                            if has_captcha:
+                                captcha_found = True
+                                print(f"!!! ОБНАРУЖЕНА КАПЧА (через JS проверку) !!!")
+                                logger.warning("Обнаружена капча на странице (через JS проверку)")
+                    except Exception as captcha_check_error:
+                        print(f"Ошибка при проверке капчи: {str(captcha_check_error)}")
+                    
+                    if captcha_found:
+                        print(f"!!! ВНИМАНИЕ: На странице обнаружена капча! Автоматическая авторизация невозможна. !!!")
+                        logger.error("На странице обнаружена капча. Автоматическая авторизация невозможна.")
+                        await browser.close()
+                        return None
+                    
+                    print(f"Капча не обнаружена, пробуем прямой вызов API...")
                     
                     # Пробуем прямой вызов API через JavaScript в браузере
                     print(f"Пробуем прямой вызов API через JavaScript в браузере")
@@ -415,15 +582,28 @@ class WebAdapter:
                                 const password = {repr(self.password)};
                                 const loginUrl = {repr(full_login_url)};
                                 
+                                // Устанавливаем cookie rememberMe, если его нет
+                                if (!document.cookie.includes('rememberMe')) {{
+                                    document.cookie = 'rememberMe=false; path=/';
+                                }}
+                                
                                 console.log('Начинаем fetch к:', loginUrl);
+                                console.log('Cookies:', document.cookie);
+                                
                                 const response = await fetch(loginUrl, {{
                                     method: 'POST',
                                     headers: {{
-                                        'Content-Type': 'application/json',
+                                        'Content-Type': 'application/json;charset=UTF-8',
                                         'Accept': 'application/json, text/plain, */*',
+                                        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+                                        'Accept-Encoding': 'gzip, deflate',
+                                        'Cache-Control': 'no-cache',
+                                        'Pragma': 'no-cache',
+                                        'Connection': 'keep-alive',
                                         'Origin': window.location.origin,
                                         'Referer': window.location.href
                                     }},
+                                    credentials: 'include',
                                     body: JSON.stringify({{
                                         username: username,
                                         password: password,
@@ -596,6 +776,15 @@ class WebAdapter:
                     
                     print(f"Кнопка нажата: {button_clicked}, ждем ответа от API...")
                     
+                    # Если кнопка не нажата, пробуем отправить форму через JavaScript
+                    if not button_clicked:
+                        try:
+                            print(f"Пробуем отправить форму через JavaScript submit...")
+                            await page.evaluate('() => { const form = document.querySelector("form"); if (form) form.submit(); }')
+                            print(f"Форма отправлена через JS submit")
+                        except Exception as submit_error:
+                            print(f"Не удалось отправить форму через JS: {str(submit_error)}")
+                    
                     # Ждем ответа от API (максимум 15 секунд)
                     try:
                         print(f"Ожидание ответа от API (таймаут 15 сек)...")
@@ -603,6 +792,9 @@ class WebAdapter:
                         print(f"Получен ответ от API!")
                     except asyncio.TimeoutError:
                         print(f"Таймаут ожидания ответа от API")
+                        print(f"Всего получено ответов: {len(all_responses)}")
+                        for resp in all_responses:
+                            print(f"  - {resp['status']} от {resp['url']}")
                         logger.warning("Таймаут ожидания ответа от API")
                     
                     # Даем еще немного времени на обработку
@@ -1202,6 +1394,58 @@ class ApiProviderService:
                     ),
                     "details": result
                 }
+        except ValueError as e:
+            # Специальная обработка для ошибок валидации (например, капча)
+            error_msg = str(e)
+            print(f"\n[ApiProviderService.test_connection] ОШИБКА ВАЛИДАЦИИ: {error_msg}")
+            logger.error("Ошибка валидации при тестировании подключения", extra={
+                "template_id": getattr(template, 'id', None),
+                "error": error_msg,
+                "error_type": "ValueError"
+            })
+            return {
+                "success": False,
+                "message": error_msg,
+                "details": {"error": error_msg, "error_type": "validation"}
+            }
+        except httpx.HTTPStatusError as e:
+            # Специальная обработка для HTTP ошибок
+            status_code = e.response.status_code
+            try:
+                error_text = e.response.text[:500] if hasattr(e.response, 'text') else str(e)
+            except:
+                error_text = str(e)
+            
+            if status_code == 403:
+                # Проверяем, может быть это из-за капчи
+                if 'captcha' in error_text.lower() or 'капча' in error_text.lower():
+                    error_msg = (
+                        "Сервер требует решение капчи для авторизации. "
+                        "Автоматическая авторизация невозможна. "
+                        "Пожалуйста, проверьте учетные данные или обратитесь к администратору сервера."
+                    )
+                else:
+                    error_msg = (
+                        f"Сервер вернул 403 Forbidden. "
+                        f"Возможные причины: неправильные учетные данные, требуется капча, "
+                        f"или сервер блокирует автоматизированные запросы. "
+                        f"Ответ сервера: {error_text}"
+                    )
+            else:
+                error_msg = f"Ошибка HTTP {status_code}: {error_text}"
+            
+            print(f"\n[ApiProviderService.test_connection] HTTP ОШИБКА {status_code}: {error_msg}")
+            logger.error(f"Ошибка HTTP при тестировании подключения: {status_code}", extra={
+                "template_id": getattr(template, 'id', None),
+                "status_code": status_code,
+                "error": error_text,
+                "error_type": "HTTPStatusError"
+            }, exc_info=True)
+            return {
+                "success": False,
+                "message": error_msg,
+                "details": {"error": error_text, "status_code": status_code, "error_type": "http"}
+            }
         except Exception as e:
             print(f"\n[ApiProviderService.test_connection] ИСКЛЮЧЕНИЕ: {type(e).__name__}: {str(e)}")
             import traceback

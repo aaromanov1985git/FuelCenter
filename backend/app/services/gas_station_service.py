@@ -143,7 +143,8 @@ class GasStationService:
         region: Optional[str] = None,
         settlement: Optional[str] = None,
         latitude: Optional[float] = None,
-        longitude: Optional[float] = None
+        longitude: Optional[float] = None,
+        provider_id: Optional[int] = None
     ) -> Tuple[GasStation, List[str]]:
         """
         Получить или создать автозаправочную станцию в справочнике
@@ -157,6 +158,7 @@ class GasStationService:
             location: Местоположение (опционально)
             region: Регион (опционально)
             settlement: Населенный пункт (опционально)
+            provider_id: ID провайдера (опционально)
 
         Returns:
             Tuple[GasStation, List[str]]: АЗС и список предупреждений
@@ -232,6 +234,7 @@ class GasStationService:
                 settlement=settlement,
                 latitude=latitude,
                 longitude=longitude,
+                provider_id=provider_id,
                 is_validated="pending"
             )
             self.db.add(gas_station)
@@ -256,6 +259,10 @@ class GasStationService:
                 updated = True
             if gas_station.longitude is None and longitude is not None:
                 gas_station.longitude = longitude
+                updated = True
+            # Устанавливаем provider_id, если он не установлен
+            if not gas_station.provider_id and provider_id:
+                gas_station.provider_id = provider_id
                 updated = True
 
             if updated:

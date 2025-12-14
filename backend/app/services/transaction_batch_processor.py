@@ -481,6 +481,7 @@ class TransactionBatchProcessor:
             location = None
             region = None
             settlement = None
+            provider_id = None
             
             for trans_data in transactions:
                 azs_original = trans_data.get("azs_original_name", "").strip()
@@ -493,11 +494,23 @@ class TransactionBatchProcessor:
                     location = trans_data.get("location")
                     region = trans_data.get("region")
                     settlement = trans_data.get("settlement")
+                    provider_id = trans_data.get("provider_id")
                     break
             
             # Если не нашли данные, извлекаем номер из названия
             if not azs_number and gas_station_name:
                 azs_number = app_services.extract_azs_number(gas_station_name)
+            
+            # Если provider_id не найден в первой транзакции, ищем в других транзакциях с этой АЗС
+            if not provider_id:
+                for trans_data in transactions:
+                    azs_original = trans_data.get("azs_original_name", "").strip()
+                    azs_num = trans_data.get("azs_number")
+                    if ((azs_original == gas_station_name or 
+                         (not azs_original and azs_num and str(azs_num).strip() == gas_station_name)) and
+                        trans_data.get("provider_id")):
+                        provider_id = trans_data.get("provider_id")
+                        break
             
             try:
                 gas_station, gas_station_warnings = gas_station_service.get_or_create_gas_station(
@@ -505,7 +518,8 @@ class TransactionBatchProcessor:
                     azs_number=azs_number,
                     location=location,
                     region=region,
-                    settlement=settlement
+                    settlement=settlement,
+                    provider_id=provider_id
                 )
                 gas_stations_map[gas_station_name] = gas_station.id
                 # Также добавляем номер АЗС как ключ для обратной совместимости
