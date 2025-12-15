@@ -10,9 +10,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 9999; /* Увеличено для отображения поверх всех элементов, включая таблицы */
   padding: var(--spacing-block);
   animation: fadeInOverlay 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Убеждаемся, что overlay поверх всех элементов */
+  isolation: isolate;
+  /* Скрываем все элементы под overlay */
+  pointer-events: auto;
 }
 
 @keyframes fadeInOverlay {
@@ -41,6 +45,7 @@
   border: 1px solid var(--color-border-light);
   position: relative;
   overflow: hidden;
+  z-index: 10000; /* Убеждаемся, что контент модального окна поверх overlay */
 }
 
 @keyframes slideUpScale {

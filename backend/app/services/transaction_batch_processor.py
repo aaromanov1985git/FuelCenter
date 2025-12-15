@@ -167,6 +167,18 @@ class TransactionBatchProcessor:
             # Фильтруем только допустимые поля
             filtered_trans_data = {k: v for k, v in trans_data.items() if k in transaction_fields}
             
+            # Логируем значение product перед сохранением (только первые несколько для отладки)
+            if created_count < 5 and filtered_trans_data.get("product"):
+                import sys
+                product_value = filtered_trans_data.get("product")
+                print(f"  [DEBUG TransactionBatchProcessor] Сохраняем product в БД: '{product_value}'", file=sys.stderr, flush=True)
+                logger.info("Сохраняем product в БД", extra={
+                    "product": product_value,
+                    "transaction_date": str(filtered_trans_data.get("transaction_date")),
+                    "event_type": "transaction_creation",
+                    "event_category": "fuel_mapping"
+                })
+            
             # Проверяем обязательные поля
             if not filtered_trans_data.get("transaction_date"):
                 warnings.append("Пропущена транзакция: отсутствует дата")

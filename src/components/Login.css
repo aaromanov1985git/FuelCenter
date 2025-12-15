@@ -1,17 +1,14 @@
+/* Контейнер страницы входа */
 .login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
-  min-height: -webkit-fill-available; /* Для iOS */
+  min-height: -webkit-fill-available;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--padding-section);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 35%, #6366f1 65%, #4f46e5 100%);
-  background-attachment: fixed;
   position: relative;
-  overflow-x: hidden;
-  overflow-y: auto;
-  box-sizing: border-box;
-  -webkit-overflow-scrolling: touch; /* Плавная прокрутка на iOS */
+  overflow: hidden;
+  background: #f8fafc;
 }
 
 .login-container *,
@@ -20,69 +17,36 @@
   box-sizing: border-box;
 }
 
-/* Анимированный фон - улучшенная версия */
+/* Фон */
 .login-background {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #6366f1 100%);
   z-index: 0;
 }
 
-.login-background-circle {
+.login-background::before {
+  content: '';
   position: absolute;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
-  filter: blur(80px);
-  animation: floatWave 25s ease-in-out infinite;
-  will-change: transform, opacity;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  animation: backgroundPulse 20s ease-in-out infinite;
 }
 
-.login-background-circle-1 {
-  width: 500px;
-  height: 500px;
-  top: -250px;
-  left: -250px;
-  animation-delay: 0s;
-}
-
-.login-background-circle-2 {
-  width: 600px;
-  height: 600px;
-  bottom: -300px;
-  right: -300px;
-  animation-delay: 8s;
-}
-
-.login-background-circle-3 {
-  width: 450px;
-  height: 450px;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation-delay: 16s;
-}
-
-@keyframes floatWave {
+@keyframes backgroundPulse {
   0%, 100% {
-    transform: translate(0, 0) scale(1) rotate(0deg);
-    opacity: 0.4;
-  }
-  25% {
-    transform: translate(80px, -60px) scale(1.15) rotate(90deg);
-    opacity: 0.6;
-  }
-  50% {
-    transform: translate(-40px, 40px) scale(0.95) rotate(180deg);
+    transform: translate(0, 0) scale(1);
     opacity: 0.5;
   }
-  75% {
-    transform: translate(60px, 50px) scale(1.1) rotate(270deg);
-    opacity: 0.65;
+  50% {
+    transform: translate(-10%, -10%) scale(1.1);
+    opacity: 0.8;
   }
 }
 
@@ -91,645 +55,91 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 450px;
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-width: 420px;
 }
 
-.login-content-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Логотип - улучшенная анимация */
-.login-logo-wrapper {
+.login-wrapper {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: var(--spacing-section);
-  position: relative;
-  opacity: 0;
-  transform: scale(0.7) translateY(-30px) rotate(-10deg);
-  transition: opacity 1s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-direction: column;
+  gap: var(--spacing-section);
 }
 
-.login-logo-visible {
-  opacity: 1;
-  transform: scale(1) translateY(0) rotate(0deg);
+/* Брендинг */
+.login-brand {
+  text-align: center;
+  margin-bottom: var(--spacing-block);
 }
 
-.login-logo {
-  width: 140px;
-  height: 140px;
-  filter: drop-shadow(0 0 20px rgba(79, 70, 229, 0.6)) 
-          drop-shadow(0 0 40px rgba(124, 58, 237, 0.4))
-          drop-shadow(0 0 60px rgba(168, 85, 247, 0.3));
-  animation: logoFloat 4s ease-in-out infinite, logoGlow 3s ease-in-out infinite;
-  position: relative;
-  z-index: 2;
-  will-change: transform, filter;
-  transform-origin: center center;
+.login-brand-title {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  color: #ffffff;
+  margin: 0 0 var(--spacing-small) 0;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
 }
 
-@keyframes logoFloat {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-10px) rotate(5deg);
-  }
-}
-
-@keyframes logoGlow {
-  0%, 100% {
-    filter: drop-shadow(0 0 20px rgba(79, 70, 229, 0.5)) 
-            drop-shadow(0 0 40px rgba(124, 58, 237, 0.3))
-            drop-shadow(0 0 60px rgba(168, 85, 247, 0.2));
-  }
-  50% {
-    filter: drop-shadow(0 0 30px rgba(79, 70, 229, 0.7)) 
-            drop-shadow(0 0 60px rgba(124, 58, 237, 0.5))
-            drop-shadow(0 0 90px rgba(168, 85, 247, 0.3));
-  }
-}
-
-.login-logo-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, 
-    rgba(79, 70, 229, 0.5) 0%, 
-    rgba(124, 58, 237, 0.35) 25%,
-    rgba(168, 85, 247, 0.25) 40%,
-    rgba(139, 92, 246, 0.15) 60%,
-    transparent 80%);
-  border-radius: 50%;
-  z-index: 1;
-  animation: glowPulse 3s ease-in-out infinite, glowRotate 12s linear infinite;
-  will-change: transform, opacity;
-  filter: blur(1px);
-}
-
-.login-logo-wrapper::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 220px;
-  height: 220px;
-  background: radial-gradient(circle, 
-    rgba(6, 182, 212, 0.2) 0%,
-    rgba(59, 130, 246, 0.15) 30%,
-    transparent 60%);
-  border-radius: 50%;
-  z-index: 0;
-  animation: outerGlow 4s ease-in-out infinite;
-  animation-delay: 1s;
-}
-
-@keyframes outerGlow {
-  0%, 100% {
-    opacity: 0.3;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: translate(-50%, -50%) scale(1.2);
-  }
-}
-
-@keyframes glowPulse {
-  0%, 100% {
-    opacity: 0.6;
-    transform: translate(-50%, -50%) scale(1);
-    filter: blur(1px);
-  }
-  50% {
-    opacity: 0.95;
-    transform: translate(-50%, -50%) scale(1.4);
-    filter: blur(2px);
-  }
-}
-
-@keyframes glowRotate {
-  0% {
-    transform: translate(-50%, -50%) rotate(0deg);
-  }
-  100% {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
+.login-brand-subtitle {
+  font-size: var(--font-size-lg);
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+  font-weight: var(--font-weight-normal);
 }
 
 /* Карточка */
 .login-card {
   width: 100%;
-  padding: var(--spacing-section);
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  background: #ffffff;
   border-radius: var(--radius-large);
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25),
-              0 8px 16px rgba(0, 0, 0, 0.15),
-              0 0 0 1px rgba(255, 255, 255, 0.5) inset,
-              0 1px 2px rgba(255, 255, 255, 0.8) inset;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  opacity: 0;
-  transform: translateY(40px) scale(0.9);
-  transition: opacity 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s, 
-              transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s;
-  will-change: opacity, transform;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15),
+              0 0 0 1px rgba(0, 0, 0, 0.05);
+  border: none;
+  overflow: hidden;
 }
 
-[data-theme="midnight"] .login-card,
-[data-theme="amber-glow"] .login-card {
-  background: rgba(31, 41, 55, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
-              0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+.login-card-body {
+  padding: var(--padding-section);
 }
 
-.login-card-visible {
-  opacity: 1;
-  transform: translateY(0) scale(1);
+.login-card-header-inline {
+  margin-bottom: var(--spacing-block);
 }
 
-.login-card:hover {
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4),
-              0 0 0 1px rgba(255, 255, 255, 0.4) inset;
-  transform: translateY(-3px);
-  transition: box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-              transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@media (hover: none) {
-  .login-card:hover {
-    transform: none;
-  }
-}
-
-/* Заголовок карточки - стандартизированный */
-.login-card .card-header {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  text-align: center;
-  margin: 0 0 var(--spacing-section) 0 !important;
-  padding: 0 0 var(--spacing-section) 0 !important;
-  border-bottom: 1px solid var(--color-border);
-  width: 100%;
-}
-
-.login-card .card-title {
-  margin: 0;
+.login-form-title {
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
-  text-align: center;
-  line-height: var(--line-height-tight);
-  width: 100%;
+  margin: 0 0 var(--spacing-tiny) 0;
 }
 
-.login-title-animated {
-  opacity: 0;
-  transform: translateY(-15px);
-  animation: fadeInDown 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 0.4s;
-}
-
-/* Логотип - улучшенная анимация */
-.login-logo-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: var(--spacing-section);
-  position: relative;
-  opacity: 0;
-  transform: scale(0.7) translateY(-30px) rotate(-10deg);
-  transition: opacity 1s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              transform 1s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.login-logo-visible {
-  opacity: 1;
-  transform: scale(1) translateY(0) rotate(0deg);
-}
-
-.login-logo {
-  width: 140px;
-  height: 140px;
-  filter: drop-shadow(0 0 20px rgba(79, 70, 229, 0.6)) 
-          drop-shadow(0 0 40px rgba(124, 58, 237, 0.4))
-          drop-shadow(0 0 60px rgba(168, 85, 247, 0.3));
-  animation: logoFloat 4s ease-in-out infinite, logoGlow 3s ease-in-out infinite;
-  position: relative;
-  z-index: 2;
-  will-change: transform, filter;
-  transform-origin: center center;
-}
-
-@keyframes logoFloat {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-10px) rotate(5deg);
-  }
-}
-
-@keyframes logoGlow {
-  0%, 100% {
-    filter: drop-shadow(0 0 20px rgba(79, 70, 229, 0.5)) 
-            drop-shadow(0 0 40px rgba(124, 58, 237, 0.3))
-            drop-shadow(0 0 60px rgba(168, 85, 247, 0.2));
-  }
-  50% {
-    filter: drop-shadow(0 0 30px rgba(79, 70, 229, 0.7)) 
-            drop-shadow(0 0 60px rgba(124, 58, 237, 0.5))
-            drop-shadow(0 0 90px rgba(168, 85, 247, 0.3));
-  }
-}
-
-.login-logo-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, 
-    rgba(79, 70, 229, 0.5) 0%, 
-    rgba(124, 58, 237, 0.35) 25%,
-    rgba(168, 85, 247, 0.25) 40%,
-    rgba(139, 92, 246, 0.15) 60%,
-    transparent 80%);
-  border-radius: 50%;
-  z-index: 1;
-  animation: glowPulse 3s ease-in-out infinite, glowRotate 12s linear infinite;
-  will-change: transform, opacity;
-  filter: blur(1px);
-}
-
-.login-logo-wrapper::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 220px;
-  height: 220px;
-  background: radial-gradient(circle, 
-    rgba(6, 182, 212, 0.2) 0%,
-    rgba(59, 130, 246, 0.15) 30%,
-    transparent 60%);
-  border-radius: 50%;
-  z-index: 0;
-  animation: outerGlow 4s ease-in-out infinite;
-  animation-delay: 1s;
-}
-
-@keyframes outerGlow {
-  0%, 100% {
-    opacity: 0.3;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: translate(-50%, -50%) scale(1.2);
-  }
-}
-
-@keyframes glowPulse {
-  0%, 100% {
-    opacity: 0.6;
-    transform: translate(-50%, -50%) scale(1);
-    filter: blur(1px);
-  }
-  50% {
-    opacity: 0.95;
-    transform: translate(-50%, -50%) scale(1.4);
-    filter: blur(2px);
-  }
-}
-
-@keyframes glowRotate {
-  0% {
-    transform: translate(-50%, -50%) rotate(0deg);
-  }
-  100% {
-    transform: translate(-50%, -50%) rotate(360deg);
-  }
-}
-
-.login-subtitle {
-  margin: var(--spacing-small) 0 0 0;
-  padding: 0;
+.login-form-subtitle {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  text-align: center;
-  width: 100%;
-}
-
-.login-subtitle-animated {
-  opacity: 0;
-  transform: translateY(-10px);
-  animation: fadeInDown 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 0.5s;
-}
-
-@keyframes fadeInDown {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Заголовок системы */
-.login-header {
-  text-align: center;
-  margin: 0 0 var(--spacing-section) 0;
-  padding: 0;
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s,
-              transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s;
-  position: relative;
-  z-index: 1;
-}
-
-.login-header-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.login-title {
-  margin: 0 0 var(--spacing-small) 0;
-  padding: 0;
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  color: rgba(255, 255, 255, 0.98);
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3),
-               0 0 20px rgba(79, 70, 229, 0.4),
-               0 0 40px rgba(124, 58, 237, 0.2);
-  line-height: var(--line-height-tight);
-  letter-spacing: -0.02em;
-}
-
-.login-subtitle {
   margin: 0;
-  padding: 0;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-normal);
-  color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
-  line-height: var(--line-height-normal);
 }
 
-/* Адаптация заголовка для темной темы */
-[data-theme="midnight"] .login-title,
-[data-theme="amber-glow"] .login-title {
-  color: rgba(255, 255, 255, 0.98);
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5),
-               0 0 25px rgba(168, 85, 247, 0.5),
-               0 0 45px rgba(139, 92, 246, 0.3);
-}
-
-[data-theme="midnight"] .login-subtitle,
-[data-theme="amber-glow"] .login-subtitle {
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
-}
-
-/* Body карточки - стандартизация */
-.login-card .card-body {
-  padding: 0;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-/* Форма - стандартизированные поля */
+/* Форма */
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-block);
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  align-items: stretch;
+  gap: var(--spacing-element);
 }
 
-/* Стандартизация полей формы */
-.login-form-field {
-  width: 100%;
-  opacity: 0;
-  transform: translateY(20px);
-  animation: slideInUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-.login-form-field-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Обеспечиваем одинаковые стили для всех полей */
-.login-form-field {
-  width: 100%;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.login-form-field .input-wrapper,
-.login-form-field .form-field {
-  width: 100%;
-  margin: 0;
+.login-form-group {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-tiny);
-  align-items: stretch;
 }
 
-.login-form-field .input-wrapper .input-container {
+.login-form-field {
   width: 100%;
+}
+
+.login-form-actions {
   display: flex;
-  align-items: center;
-}
-
-.login-form-field .input-wrapper .input-field,
-.login-form-field .form-field .form-field-input {
-  width: 100%;
-  min-height: 48px;
-  padding: var(--padding-small) var(--padding-element);
-  font-size: var(--font-size-base);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-small);
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-sizing: border-box;
-  display: block;
-  margin: 0;
-  -webkit-appearance: none;
-  appearance: none;
-  touch-action: manipulation;
-}
-
-.login-form-field .input-wrapper .input-field:focus,
-.login-form-field .form-field .form-field-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
-  transform: translateY(-1px);
-}
-
-.login-form-field .input-wrapper .input-field:hover,
-.login-form-field .form-field .form-field-input:hover {
-  border-color: var(--color-primary-hover);
-}
-
-/* Метки полей - стандартизация */
-.login-form-field .input-label,
-.login-form-field .form-field-label {
-  display: block;
-  margin: 0 0 var(--spacing-small) 0;
-  padding: 0;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  text-align: left;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Сообщения об ошибках и подсказки - стандартизация */
-.login-form-field .input-helper,
-.login-form-field .form-field-error-message,
-.login-form-field .form-field-help {
-  margin: var(--spacing-tiny) 0 0 0;
-  padding: 0;
-  font-size: var(--font-size-xs);
-  text-align: left;
-  width: 100%;
-  display: block;
-}
-
-/* Стили для Select в форме регистрации */
-.login-form-field .select-wrapper {
-  width: 100%;
-}
-
-.login-form-field .select-wrapper .select-label {
-  display: block;
+  justify-content: flex-end;
+  margin-top: calc(var(--spacing-small) * -1);
   margin-bottom: var(--spacing-small);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  text-align: left;
-  width: 100%;
-}
-
-/* Кнопка - стандартизированная */
-.login-button-wrapper {
-  width: 100%;
-  margin: var(--spacing-small) 0 0 0;
-  padding: 0;
-  opacity: 0;
-  transform: translateY(20px) scale(0.95);
-  animation: buttonSlideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.login-button-visible {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-@keyframes buttonSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.login-submit-button {
-  width: 100%;
-  min-height: 52px;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  border-radius: var(--radius-small);
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  user-select: none;
-}
-
-.login-submit-button::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 70%);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), 
-              height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-}
-
-.login-submit-button:hover::before {
-  width: 400px;
-  height: 400px;
-}
-
-.login-submit-button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 30px rgba(79, 70, 229, 0.5);
-}
-
-.login-submit-button:active {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
-}
-
-.login-form .btn {
-  margin-top: 0;
-}
-
-/* Ссылки - стандартизированные */
-.login-links {
-  text-align: right;
-  margin: calc(var(--spacing-small) * -1) 0 var(--spacing-small) 0;
-  padding: 0;
-  width: 100%;
 }
 
 .login-link-button {
@@ -737,93 +147,62 @@
   border: none;
   color: var(--color-primary);
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   padding: var(--spacing-tiny) var(--spacing-small);
-  text-decoration: underline;
-  transition: color 0.2s ease, opacity 0.2s ease;
+  text-decoration: none;
+  transition: color 0.2s ease;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-  border-radius: var(--radius-tiny);
 }
 
-.login-link-button:hover,
-.login-link-button:focus {
+.login-link-button:hover {
   color: var(--color-primary-hover);
-  outline: none;
+  text-decoration: underline;
 }
 
 .login-link-button:active {
   opacity: 0.7;
 }
 
-.login-register-link {
+.login-submit-button {
+  margin-top: var(--spacing-small);
+  min-height: 48px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.login-register-section {
   text-align: center;
-  margin: var(--spacing-element) 0 0 0;
-  padding: 0;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  margin-top: var(--spacing-element);
+  padding-top: var(--spacing-element);
+  border-top: 1px solid var(--color-border);
 }
 
-/* Стили для подсказок (helperText) */
-.login-form-field .input-helper {
-  margin-top: var(--spacing-tiny);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  font-style: italic;
-}
-
-.login-form-field .input-helper-error {
-  color: var(--color-error);
-  font-style: normal;
-}
-
-
-/* CAPTCHA (для будущей реализации) */
-.login-captcha-wrapper {
-  margin: var(--spacing-element) 0;
-  display: flex;
-  justify-content: center;
-}
-
-
-.forgot-password-success {
-  text-align: center;
-  margin: 0 0 var(--spacing-section) 0;
-  padding: 0;
-  width: 100%;
-}
-
-.forgot-password-success p {
-  margin: 0 0 var(--spacing-element) 0;
-  padding: 0;
-}
-
-.forgot-password-success p {
-  color: var(--color-text-secondary);
+.login-register-text {
   font-size: var(--font-size-sm);
-  margin-bottom: var(--spacing-section);
+  color: var(--color-text-secondary);
+}
+
+.login-register-link {
+  font-weight: var(--font-weight-semibold);
 }
 
 /* Адаптивность - Планшеты */
 @media (max-width: 768px) {
+  .login-container {
+    padding: var(--padding-element);
+  }
+
   .login-content {
-    max-width: 420px;
+    max-width: 100%;
   }
 
-  .login-logo {
-    width: 130px;
-    height: 130px;
+  .login-brand-title {
+    font-size: var(--font-size-3xl);
   }
 
-  .login-logo-glow {
-    width: 180px;
-    height: 180px;
-  }
-
-  .login-slogan-text {
-    font-size: clamp(0.875rem, 2.5vw, 1rem);
+  .login-brand-subtitle {
+    font-size: var(--font-size-base);
   }
 }
 
@@ -831,286 +210,71 @@
 @media (max-width: 480px) {
   .login-container {
     padding: var(--padding-small);
-    min-height: 100vh;
-    min-height: -webkit-fill-available; /* Для iOS */
-  }
-
-  .login-content {
-    max-width: 100%;
-    width: 100%;
+    align-items: flex-start;
+    padding-top: var(--padding-section);
   }
 
   .login-card {
-    padding: var(--padding-card);
     border-radius: var(--radius-medium);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25),
-                0 0 0 1px rgba(255, 255, 255, 0.25) inset;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   }
 
-  .login-logo-wrapper {
+  .login-card-body {
+    padding: var(--padding-element);
+  }
+
+  .login-brand {
     margin-bottom: var(--spacing-element);
   }
 
-  .login-header {
-    margin-bottom: var(--spacing-element);
-  }
-
-  .login-logo {
-    width: 100px;
-    height: 100px;
-  }
-
-  .login-logo-glow {
-    width: 140px;
-    height: 140px;
-  }
-
-  .login-logo-wrapper::after {
-    width: 160px;
-    height: 160px;
-  }
-
-  .login-card .card-title {
-    font-size: var(--font-size-xl);
-    font-weight: var(--font-weight-bold);
-  }
-
-  .login-card .card-header {
-    margin-bottom: var(--spacing-element) !important;
-    padding-bottom: var(--spacing-element) !important;
-  }
-
-  .login-header {
-    margin: 0 0 var(--spacing-element) 0;
-  }
-
-  .login-title {
+  .login-brand-title {
     font-size: var(--font-size-2xl);
-    margin-bottom: var(--spacing-tiny);
   }
 
-  .login-subtitle {
+  .login-brand-subtitle {
     font-size: var(--font-size-sm);
   }
 
-  /* Touch-friendly поля ввода */
+  .login-form-title {
+    font-size: var(--font-size-xl);
+  }
+
   .login-form-field .input-wrapper .input-field,
   .login-form-field .form-field .form-field-input {
     min-height: 52px;
-    padding: var(--padding-small) var(--padding-element);
-    font-size: 16px; /* Предотвращает zoom на iOS */
-    -webkit-appearance: none;
-    border-radius: var(--radius-small);
+    font-size: 16px;
   }
 
-  .login-form-field .input-label,
-  .login-form-field .form-field-label {
-    font-size: var(--font-size-sm);
-    margin-bottom: var(--spacing-small);
-  }
-
-  /* Touch-friendly кнопки */
   .login-submit-button {
-    min-height: 56px;
-    font-size: var(--font-size-base);
-    padding: var(--padding-small) var(--padding-element);
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .login-link-button {
-    min-height: 44px; /* Минимальный размер для удобного нажатия */
-    padding: var(--spacing-tiny) var(--spacing-small);
-    font-size: var(--font-size-sm);
-    -webkit-tap-highlight-color: transparent;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .login-links {
-    margin: calc(var(--spacing-small) * -0.5) 0 var(--spacing-small) 0;
-    text-align: center;
-  }
-
-  .login-register-link {
-    margin-top: var(--spacing-element);
-  }
-
-  /* Оптимизация фона для мобильных */
-  .login-background-circle {
-    filter: blur(50px);
-  }
-
-  .login-background-circle-1 {
-    width: 280px;
-    height: 280px;
-    top: -140px;
-    left: -140px;
-  }
-
-  .login-background-circle-2 {
-    width: 320px;
-    height: 320px;
-    bottom: -160px;
-    right: -160px;
-  }
-
-  .login-background-circle-3 {
-    width: 250px;
-    height: 250px;
-  }
-
-  /* Оптимизация анимаций для мобильных */
-  .login-logo {
-    animation: logoFloat 6s ease-in-out infinite, logoGlow 4s ease-in-out infinite;
-  }
-
-  .login-form {
-    gap: var(--spacing-element);
+    min-height: 52px;
   }
 }
 
-/* Очень маленькие экраны */
-@media (max-width: 360px) {
-  .login-container {
-    padding: var(--padding-tiny);
-  }
-
-  .login-card {
-    padding: var(--padding-element);
-  }
-
-  .login-logo {
-    width: 90px;
-    height: 90px;
-  }
-
-  .login-logo-glow {
-    width: 120px;
-    height: 120px;
-  }
-
-  .login-logo-wrapper::after {
-    width: 140px;
-    height: 140px;
-  }
-
-  .login-title {
-    font-size: var(--font-size-xl);
-  }
-
-  .login-subtitle {
-    font-size: var(--font-size-xs);
-  }
-
-  .login-card .card-title {
-    font-size: var(--font-size-lg);
-  }
-}
-
-/* Портретная ориентация на мобильных */
-@media (max-width: 480px) and (orientation: portrait) {
-  .login-container {
-    padding-top: max(var(--padding-element), env(safe-area-inset-top));
-    padding-bottom: max(var(--padding-element), env(safe-area-inset-bottom));
-  }
-}
-
-/* Ландшафтная ориентация на мобильных */
-@media (max-width: 896px) and (orientation: landscape) and (max-height: 500px) {
-  .login-container {
-    padding: var(--padding-tiny);
-    align-items: flex-start;
-    padding-top: var(--padding-small);
-  }
-
-  .login-content {
-    max-width: 400px;
-  }
-
-  .login-logo-wrapper {
-    margin-bottom: var(--spacing-small);
-  }
-
-  .login-logo {
-    width: 80px;
-    height: 80px;
-  }
-
-  .login-logo-glow {
-    width: 110px;
-    height: 110px;
-  }
-
-  .login-header {
-    margin: var(--spacing-small) 0;
-  }
-
-  .login-title {
-    font-size: var(--font-size-xl);
-  }
-
-  .login-subtitle {
-    font-size: var(--font-size-xs);
-  }
-
-  .login-card {
-    padding: var(--padding-element);
-  }
-}
-
-/* Адаптация для темной темы */
+/* Темная тема */
 [data-theme="midnight"] .login-container,
 [data-theme="amber-glow"] .login-container {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #1e293b 100%);
+  background: #0f172a;
 }
 
-[data-theme="midnight"] .login-background-circle,
-[data-theme="amber-glow"] .login-background-circle {
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 50%, transparent 100%);
+[data-theme="midnight"] .login-card,
+[data-theme="amber-glow"] .login-card {
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Оптимизация производительности для мобильных */
-@media (max-width: 768px) {
-  .login-background-circle {
-    will-change: transform;
-  }
+[data-theme="midnight"] .login-brand-title,
+[data-theme="amber-glow"] .login-brand-title {
+  color: #ffffff;
+}
 
-  .login-logo,
-  .login-logo-glow {
-    will-change: transform, filter;
-  }
-
-  /* Упрощенные анимации для экономии батареи */
-  @media (prefers-reduced-motion: no-preference) {
-    .login-background-circle {
-      animation-duration: 30s;
-    }
-  }
+[data-theme="midnight"] .login-brand-subtitle,
+[data-theme="amber-glow"] .login-brand-subtitle {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Отключение анимаций для пользователей с prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
-  .login-container *,
-  .login-container *::before,
-  .login-container *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-
-  .login-content,
-  .login-logo-wrapper,
-  .login-header,
-  .login-card,
-  .login-form-field,
-  .login-button-wrapper {
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .login-logo,
-  .login-logo-glow {
-    animation: none !important;
+  .login-background::before {
+    animation: none;
   }
 }

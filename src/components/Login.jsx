@@ -4,7 +4,6 @@ import { useToast } from './ToastContainer'
 import FormField from './FormField'
 import { useFormValidation } from '../hooks/useFormValidation'
 import { Card, Button } from './ui'
-import logo from '../assets/logo.svg'
 import Register from './Register'
 import ForgotPassword from './ForgotPassword'
 import './Login.css'
@@ -106,81 +105,73 @@ const Login = ({ onSuccess }) => {
 
   return (
     <div className="login-container">
-      {/* Анимированный фон */}
-      <div className="login-background">
-        <div className="login-background-circle login-background-circle-1"></div>
-        <div className="login-background-circle login-background-circle-2"></div>
-        <div className="login-background-circle login-background-circle-3"></div>
-      </div>
+      <div className="login-background"></div>
+      
+      <div className="login-content">
+        <div className="login-wrapper">
+          {/* Заголовок */}
+          <div className="login-brand">
+            <h1 className="login-brand-title">Конвертер ГСМ</h1>
+            <p className="login-brand-subtitle">Система управления транзакциями</p>
+          </div>
 
-      <div className={`login-content ${mounted ? 'login-content-visible' : ''}`}>
-        {/* Логотип с анимацией */}
-        <div className={`login-logo-wrapper ${mounted ? 'login-logo-visible' : ''}`}>
-          <img src={logo} alt="GSM Logo" className="login-logo" />
-          <div className="login-logo-glow"></div>
-        </div>
-
-        {/* Заголовок системы */}
-        <div className={`login-header ${mounted ? 'login-header-visible' : ''}`}>
-          <h1 className="login-title">GSM Converter</h1>
-          <p className="login-subtitle">Система управления транзакциями ГСМ</p>
-        </div>
-
-        <Card className={`login-card ${mounted ? 'login-card-visible' : ''}`}>
-          <Card.Header>
-            <Card.Title className="login-title-animated">Вход в систему</Card.Title>
-          </Card.Header>
-
-          <Card.Body>
-            <form onSubmit={handleSubmit} className="login-form">
-              <FormField
-                label="Логин"
-                name="username"
-                type="text"
-                value={values.username}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.username && errors.username ? errors.username : ''}
-                touched={touched.username}
-                required
-                autoComplete="username"
-                placeholder="Введите ваш логин"
-                helperText={!touched.username || !errors.username ? 'Минимум 3 символа' : ''}
-                className={`login-form-field ${mounted ? 'login-form-field-visible' : ''}`}
-                style={{ animationDelay: '0.2s' }}
-              />
-
-              <FormField
-                label="Пароль"
-                name="password"
-                type="password"
-                value={values.password}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.password && errors.password ? errors.password : ''}
-                touched={touched.password}
-                required
-                autoComplete="current-password"
-                placeholder="Введите ваш пароль"
-                helperText={!touched.password || !errors.password ? 'Минимум 8 символов' : ''}
-                className={`login-form-field ${mounted ? 'login-form-field-visible' : ''}`}
-                style={{ animationDelay: '0.3s' }}
-              />
-
-              <div className="login-links">
-                <button
-                  type="button"
-                  className="login-link-button"
-                  onClick={() => setShowForgotPassword(true)}
-                >
-                  Забыли пароль?
-                </button>
+          {/* Форма входа */}
+          <Card variant="elevated" className="login-card">
+            <Card.Body className="login-card-body">
+              <div className="login-card-header-inline">
+                <h2 className="login-form-title">Вход</h2>
+                <p className="login-form-subtitle">Войдите в свой аккаунт</p>
               </div>
 
-              <div className={`login-button-wrapper ${mounted ? 'login-button-visible' : ''}`} style={{ animationDelay: '0.4s' }}>
+              <form onSubmit={handleSubmit} className="login-form" noValidate>
+                <div className="login-form-group">
+                  <FormField
+                    label="Логин"
+                    name="username"
+                    type="text"
+                    value={values.username}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.username && errors.username ? errors.username : ''}
+                    touched={touched.username}
+                    required
+                    autoComplete="username"
+                    placeholder="Введите логин"
+                    className="login-form-field"
+                  />
+                </div>
+
+                <div className="login-form-group">
+                  <FormField
+                    label="Пароль"
+                    name="password"
+                    type="password"
+                    value={values.password}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    error={touched.password && errors.password ? errors.password : ''}
+                    touched={touched.password}
+                    required
+                    autoComplete="current-password"
+                    placeholder="Введите пароль"
+                    className="login-form-field"
+                  />
+                </div>
+
+                <div className="login-form-actions">
+                  <button
+                    type="button"
+                    className="login-link-button"
+                    onClick={() => setShowForgotPassword(true)}
+                  >
+                    Забыли пароль?
+                  </button>
+                </div>
+
                 <Button
                   type="submit"
                   variant="primary"
+                  size="lg"
                   fullWidth
                   loading={loading}
                   disabled={loading}
@@ -188,28 +179,21 @@ const Login = ({ onSuccess }) => {
                 >
                   {loading ? 'Вход...' : 'Войти'}
                 </Button>
-              </div>
 
-              <div className="login-register-link">
-                <button
-                  type="button"
-                  className="login-link-button"
-                  onClick={() => setShowRegister(true)}
-                >
-                  Зарегистрироваться
-                </button>
-              </div>
-
-              {/* TODO: Добавить CAPTCHA для защиты от брутфорса */}
-              {/* <div className="login-captcha-wrapper">
-                <ReCAPTCHA
-                  sitekey="YOUR_RECAPTCHA_SITE_KEY"
-                  onChange={handleCaptchaChange}
-                />
-              </div> */}
-            </form>
-          </Card.Body>
-        </Card>
+                <div className="login-register-section">
+                  <span className="login-register-text">Нет аккаунта? </span>
+                  <button
+                    type="button"
+                    className="login-link-button login-register-link"
+                    onClick={() => setShowRegister(true)}
+                  >
+                    Зарегистрироваться
+                  </button>
+                </div>
+              </form>
+            </Card.Body>
+          </Card>
+        </div>
       </div>
     </div>
   )

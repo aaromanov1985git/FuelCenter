@@ -774,16 +774,59 @@ async def run_auto_load(
         - failed_templates: количество шаблонов с ошибками
         - results: список результатов по каждому шаблону
     """
-    logger.info("Запуск автоматической загрузки шаблонов")
+    import sys
+    # Выводим в оба потока для гарантии видимости
+    msg1 = "=" * 80 + "\nPOST /api/v1/templates/auto-load ВЫЗВАН\n" + "=" * 80
+    print(msg1, file=sys.stderr, flush=True)
+    print(msg1, file=sys.stdout, flush=True)
+    
+    logger.info("=" * 80)
+    logger.info("Запуск автоматической загрузки шаблонов (ручной запуск)", extra={
+        "event_type": "auto_load",
+        "event_category": "manual"
+    })
+    logger.info("=" * 80)
     
     try:
+        msg2 = "Создание AutoLoadService..."
+        print(msg2, file=sys.stderr, flush=True)
+        print(msg2, file=sys.stdout, flush=True)
+        logger.info(msg2, extra={"event_type": "auto_load", "event_category": "service_creation"})
+        
         auto_load_service = AutoLoadService(db)
-        result = auto_load_service.load_all_enabled_templates()
+        
+        msg3 = "AutoLoadService создан, запуск load_all_enabled_templates..."
+        print(msg3, file=sys.stderr, flush=True)
+        print(msg3, file=sys.stdout, flush=True)
+        logger.info(msg3, extra={"event_type": "auto_load", "event_category": "service_creation"})
+        
+        try:
+            result = auto_load_service.load_all_enabled_templates()
+            msg4 = f"load_all_enabled_templates завершен: {result}"
+            print(msg4, file=sys.stderr, flush=True)
+            print(msg4, file=sys.stdout, flush=True)
+            logger.info(msg4, extra={"event_type": "auto_load", "event_category": "completion"})
+        except Exception as load_err:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"ОШИБКА в load_all_enabled_templates: {load_err}", file=sys.stderr, flush=True)
+            print(f"Трассировка: {error_trace}", file=sys.stderr, flush=True)
+            print(f"ОШИБКА в load_all_enabled_templates: {load_err}", file=sys.stdout, flush=True)
+            print(f"Трассировка: {error_trace}", file=sys.stdout, flush=True)
+            logger.error(f"Ошибка в load_all_enabled_templates: {load_err}", extra={
+                "error": str(load_err),
+                "error_type": type(load_err).__name__,
+                "event_type": "auto_load",
+                "event_category": "error"
+            }, exc_info=True)
+            raise
         
         logger.info("Автоматическая загрузка завершена", extra={
             "total_templates": result["total_templates"],
             "loaded_templates": result["loaded_templates"],
-            "failed_templates": result["failed_templates"]
+            "failed_templates": result["failed_templates"],
+            "event_type": "auto_load",
+            "event_category": "manual"
         })
         
         return result

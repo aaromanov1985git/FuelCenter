@@ -5,6 +5,9 @@ from datetime import datetime, timezone, date
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
 import httpx
+import hashlib
+import json
+import xml.etree.ElementTree as ET
 from sqlalchemy.orm import Session
 from app.logger import logger
 from app.models import Provider, ProviderTemplate
@@ -254,13 +257,26 @@ class WebAdapter:
     """
     Адаптер для работы с веб-сервисом через API авторизацию
     
-    Примечание: Если возникает ошибка 403 Forbidden, это может означать, что сервер
-    использует защиту от ботов, требующую выполнения JavaScript. В таком случае,
-    может потребоваться использование библиотеки Playwright для полной имитации браузера.
-    См. WEB_SERVICE_CONNECTION_ISSUES.md для подробностей.
+    Поддерживает два типа авторизации:
+    1. XML API авторизация (приоритет) - используется при наличии ключа или подписи в настройках
+    2. JSON API авторизация (JWT токен) - используется по умолчанию, если XML API параметры не указаны
+    
+    Примечание: Playwright отключен. Используется только оригинальный API (XML или JSON).
     """
     
-    def __init__(self, base_url: str, username: str, password: str, currency: str = "RUB"):
+    def __init__(
+        self, 
+        base_url: str, 
+        username: str, 
+        password: str, 
+        currency: str = "RUB",
+        use_xml_api: bool = False,
+        xml_api_key: Optional[str] = None,
+        xml_api_signature: Optional[str] = None,
+        xml_api_salt: Optional[str] = None,
+        xml_api_cod_azs: Optional[int] = None,
+        xml_api_endpoint: Optional[str] = None
+    ):
         """
         Инициализация адаптера веб-сервиса
         
@@ -269,12 +285,24 @@ class WebAdapter:
             username: Имя пользователя для авторизации
             password: Пароль для авторизации
             currency: Валюта по умолчанию
+            use_xml_api: Использовать XML API авторизацию (вместо JSON)
+            xml_api_key: Ключ для XML API (например, "i#188;t#0;k#545")
+            xml_api_signature: Подпись для XML API (например, "545.1AFB41693CD79C72796D7B56F2D727B8B343BF17")
+            xml_api_salt: Salt для хеширования пароля (если требуется вычисление sha1(salt + password))
+            xml_api_cod_azs: Код АЗС для XML API (например, 1000001)
+            xml_api_endpoint: Кастомный endpoint для XML API (если не указан, пробуются стандартные пути)
         """
         # Нормализуем базовый URL (убираем лишние слэши и пробелы)
         self.base_url = base_url.strip().rstrip('/')
         self.username = username
         self.password = password
         self.currency = currency
+        self.use_xml_api = use_xml_api
+        self.xml_api_key = xml_api_key
+        self.xml_api_signature = xml_api_signature
+        self.xml_api_salt = xml_api_salt
+        self.xml_api_cod_azs = xml_api_cod_azs or 1000001
+        self.xml_api_endpoint = xml_api_endpoint
         # Настраиваем клиент с заголовками по умолчанию для имитации браузера
         # Используем тот же User-Agent, что и в браузере пользователя
         default_headers = {
@@ -299,6 +327,467 @@ class WebAdapter:
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.client.aclose()
+    
+    def _parse_xml_api_key(self, key: str) -> Dict[str, int]:
+        """
+        Парсит ключ XML API вида "i#188;t#0;k#545"
+        
+        Args:
+            key: Ключ в формате "i#188;t#0;k#545"
+            
+        Returns:
+            Словарь с распарсенными значениями
+        """
+        result = {}
+        parts = key.split(';')
+        for part in parts:
+            if '#' in part:
+                key_part, value_part = part.split('#', 1)
+                try:
+                    result[key_part.strip()] = int(value_part.strip())
+                except ValueError:
+                    pass
+        return result
+    
+    def _create_xml_auth_request(
+        self, 
+        login: str, 
+        password_hash: str,
+        cod_azs: int = 1000001
+    ) -> str:
+        """
+        Создает XML запрос для авторизации согласно спецификации API СНК
+        
+        Args:
+            login: Логин пользователя
+            password_hash: Хешированный пароль (sha1(salt + password))
+            cod_azs: Код АЗС
+            
+        Returns:
+            XML строка запроса
+        """
+        xml_request = ET.Element('RequestDS')
+        
+        # Элемент Request
+        request_elem = ET.SubElement(xml_request, 'Request')
+        ET.SubElement(request_elem, 'RequestKey').text = '0'
+        ET.SubElement(request_elem, 'sncAppCode').text = '17'
+        ET.SubElement(request_elem, 'ShopRequestKey').text = '0'
+        ET.SubElement(request_elem, 'SelectName').text = 'Authorization'
+        ET.SubElement(request_elem, 'COD_AZS').text = str(cod_azs)
+        ET.SubElement(request_elem, 'COD_Q').text = '0'
+        
+        # Элементы Details
+        details_new_login = ET.SubElement(xml_request, 'Details')
+        ET.SubElement(details_new_login, 'DetailsSelectName').text = 'NewLogin'
+        ET.SubElement(details_new_login, 'DetailsValue').text = ''
+        
+        details_login = ET.SubElement(xml_request, 'Details')
+        ET.SubElement(details_login, 'DetailsSelectName').text = 'login'
+        ET.SubElement(details_login, 'DetailsValue').text = login
+        
+        details_password = ET.SubElement(xml_request, 'Details')
+        ET.SubElement(details_password, 'DetailsSelectName').text = 'password'
+        ET.SubElement(details_password, 'DetailsValue').text = password_hash
+        
+        details_roles = ET.SubElement(xml_request, 'Details')
+        ET.SubElement(details_roles, 'DetailsSelectName').text = 'Roles'
+        ET.SubElement(details_roles, 'DetailsValue').text = '0'
+        
+        details_import = ET.SubElement(xml_request, 'Details')
+        ET.SubElement(details_import, 'DetailsSelectName').text = 'ImportData'
+        ET.SubElement(details_import, 'DetailsValue').text = ''
+        
+        # Преобразуем в строку
+        ET.indent(xml_request, space='  ')
+        xml_string = ET.tostring(xml_request, encoding='utf-8', xml_declaration=True).decode('utf-8')
+        return xml_string
+    
+    def _hash_password(self, password: str, salt: str) -> str:
+        """
+        Хеширует пароль по алгоритму sha1(salt + password)
+        
+        Args:
+            password: Пароль пользователя
+            salt: Соль для хеширования
+            
+        Returns:
+            Хеш пароля в hex формате
+        """
+        combined = salt + password
+        hash_obj = hashlib.sha1(combined.encode('utf-8'))
+        return hash_obj.hexdigest()
+    
+    async def _authenticate_xml_api(self) -> bool:
+        """
+        Авторизация через XML API согласно спецификации API СНК (раздел 6.2)
+        
+        Returns:
+            True если авторизация успешна, иначе False
+        """
+        print(f"\n{'='*80}")
+        print(f"=== WebAdapter._authenticate_xml_api НАЧАЛО ===")
+        print(f"base_url: {self.base_url}")
+        print(f"username: {self.username}")
+        print(f"use_xml_api: {self.use_xml_api}")
+        print(f"xml_api_key: {self.xml_api_key}")
+        print(f"xml_api_signature: {self.xml_api_signature}")
+        print(f"xml_api_salt: {self.xml_api_salt}")
+        print(f"xml_api_cod_azs: {self.xml_api_cod_azs}")
+        print(f"{'='*80}\n")
+        
+        logger.info("=== НАЧАЛО XML API АВТОРИЗАЦИИ ===", extra={
+            "base_url": self.base_url,
+            "username": self.username,
+            "use_xml_api": self.use_xml_api,
+            "has_key": bool(self.xml_api_key),
+            "has_signature": bool(self.xml_api_signature),
+            "has_salt": bool(self.xml_api_salt),
+            "cod_azs": self.xml_api_cod_azs
+        })
+        
+        try:
+            # Определяем хеш пароля согласно спецификации: password = sha1(salt + inputPassword)
+            password_hash = None
+            hash_source = None
+            
+            # Приоритет 1: Если есть готовая подпись, используем её как готовый хеш пароля
+            # Подпись в формате "545.1AFB41693CD79C72796D7B56F2D727B8B343BF17"
+            # где часть после точки - это готовый хеш sha1(salt + password)
+            if self.xml_api_signature:
+                # Извлекаем хеш (часть после точки)
+                if '.' in self.xml_api_signature:
+                    password_hash = self.xml_api_signature.split('.', 1)[1]
+                    hash_source = f"signature (извлечен из '{self.xml_api_signature[:20]}...')"
+                else:
+                    password_hash = self.xml_api_signature
+                    hash_source = f"signature (использован полностью)"
+                logger.info(f"✓ Используется готовая подпись как хеш пароля: {hash_source}")
+                print(f"✓ Хеш пароля из подписи: {password_hash[:20]}... (длина: {len(password_hash)})")
+            
+            # Приоритет 2: Если есть salt, вычисляем хеш sha1(salt + password)
+            elif self.xml_api_salt:
+                password_hash = self._hash_password(self.password, self.xml_api_salt)
+                hash_source = f"salt (вычислен sha1(salt + password))"
+                logger.info(f"✓ Вычислен хеш пароля с использованием salt")
+                print(f"✓ Хеш пароля вычислен из salt: {password_hash[:20]}... (длина: {len(password_hash)})")
+            
+            # Приоритет 3: Если нет ни подписи, ни salt, используем пароль как есть (не рекомендуется)
+            else:
+                logger.warning("⚠ Нет подписи и salt, используем пароль как есть (небезопасно)")
+                password_hash = self.password
+                hash_source = "password (без хеширования)"
+            
+            if not password_hash:
+                logger.error("✗ Не удалось определить хеш пароля")
+                return False
+            
+            logger.info(f"Итоговый хеш пароля: {hash_source}, длина: {len(password_hash)}")
+            
+            # Парсим ключ для извлечения параметров (COD_AZS из i#188)
+            # Ключ в формате "i#188;t#0;k#545" где:
+            # - i#188 - COD_AZS = 188
+            # - t#0 - возможно тип или другой параметр
+            # - k#545 - возможно другой параметр
+            cod_azs_from_key = None
+            if self.xml_api_key:
+                parsed_key = self._parse_xml_api_key(self.xml_api_key)
+                logger.info(f"✓ Ключ распарсен: {parsed_key}")
+                print(f"✓ Распарсенные параметры из ключа '{self.xml_api_key}': {parsed_key}")
+                
+                # Если в ключе есть значение для COD_AZS (параметр 'i'), используем его
+                if 'i' in parsed_key:
+                    cod_azs_from_key = parsed_key['i']
+                    self.xml_api_cod_azs = cod_azs_from_key
+                    logger.info(f"✓ COD_AZS извлечен из ключа: {cod_azs_from_key}")
+                    print(f"✓ COD_AZS из ключа: {cod_azs_from_key}")
+                else:
+                    logger.warning(f"⚠ В ключе не найден параметр 'i' для COD_AZS, используем значение по умолчанию: {self.xml_api_cod_azs}")
+            else:
+                logger.info(f"Ключ не указан, используем COD_AZS по умолчанию: {self.xml_api_cod_azs}")
+            
+            # Создаем XML запрос согласно спецификации
+            logger.info("Создание XML запроса авторизации", extra={
+                "login": self.username,
+                "password_hash_length": len(password_hash),
+                "password_hash_preview": password_hash[:20] + "..." if len(password_hash) > 20 else password_hash,
+                "cod_azs": self.xml_api_cod_azs,
+                "hash_source": hash_source
+            })
+            
+            xml_request = self._create_xml_auth_request(
+                login=self.username,
+                password_hash=password_hash,
+                cod_azs=self.xml_api_cod_azs
+            )
+            
+            logger.info("✓ XML запрос создан", extra={
+                "xml_length": len(xml_request),
+                "xml_preview": xml_request[:500]
+            })
+            print(f"\n{'='*80}")
+            print(f"XML ЗАПРОС АВТОРИЗАЦИИ:")
+            print(f"{'='*80}")
+            print(xml_request)
+            print(f"{'='*80}\n")
+            
+            # Заголовки для XML API согласно спецификации СНК-ЛК
+            # Важно: Content-Length вычисляется автоматически httpx
+            xml_request_bytes = xml_request.encode('utf-8')
+            headers = {
+                "Content-Type": "text/xml; charset=utf-8",
+                "Return-type": "json",  # Ответ приходит в формате JSON, несмотря на XML-запрос
+                "Connection": "open",
+                "Accept": "application/json, text/xml, */*",
+                "User-Agent": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36",
+                "Content-Length": str(len(xml_request_bytes)),  # Явно указываем длину
+            }
+            
+            logger.info(f"Отправка XML запроса (размер: {len(xml_request_bytes)} байт, кодировка: UTF-8)")
+            logger.info(f"Заголовки запроса: {headers}")
+            
+            # Определяем URL для отправки XML запроса
+            # Согласно спецификации: URL: BASE_URL
+            # Правильный endpoint для СНК API: BASE_URL/sncapi/
+            if self.xml_api_endpoint:
+                # Если указан кастомный endpoint, используем его
+                if self.xml_api_endpoint.startswith('http://') or self.xml_api_endpoint.startswith('https://'):
+                    # Полный URL - используем как есть
+                    xml_endpoints = [self.xml_api_endpoint]
+                    logger.info(f"Используется кастомный XML API endpoint (полный URL): {xml_endpoints[0]}")
+                else:
+                    # Если указан относительный путь, добавляем к base_url
+                    endpoint_url = f"{self.base_url.rstrip('/')}/{self.xml_api_endpoint.lstrip('/')}"
+                    xml_endpoints = [endpoint_url]
+                    logger.info(f"Используется кастомный XML API endpoint (относительный путь): {xml_endpoints[0]}")
+            else:
+                # Пробуем стандартные endpoints
+                xml_endpoints = [
+                    self.base_url,  # Пробуем корневой URL (как в спецификации)
+                    f"{self.base_url}/api",  # Стандартный API endpoint
+                    f"{self.base_url}/xml",  # XML endpoint
+                    f"{self.base_url}/soap",  # SOAP endpoint
+                    f"{self.base_url}/api/xml",  # API/XML endpoint
+                ]
+                logger.info(f"Пробуем стандартные endpoints для XML API")
+            
+            response = None
+            last_error = None
+            
+            for endpoint_url in xml_endpoints:
+                try:
+                    logger.info(f"Пробуем отправить XML запрос на {endpoint_url}")
+                    print(f"Пробуем endpoint: {endpoint_url}")
+                    
+                    # Отправляем XML запрос с правильной кодировкой UTF-8
+                    # httpx автоматически установит Content-Length
+                    response = await self.client.post(
+                        endpoint_url,
+                        content=xml_request_bytes,
+                        headers=headers,
+                        timeout=30.0
+                    )
+                    
+                    logger.info(f"Получен ответ от {endpoint_url}: статус {response.status_code}")
+                    
+                    # Если получили успешный ответ или ошибку авторизации (не 405), используем этот endpoint
+                    if response.status_code != 405:
+                        logger.info(f"✓ Найден рабочий endpoint: {endpoint_url}")
+                        print(f"✓ Рабочий endpoint: {endpoint_url}")
+                        break
+                    else:
+                        # Логируем заголовки ответа для диагностики
+                        allow_methods = response.headers.get('Allow', 'не указано')
+                        logger.warning(f"Endpoint {endpoint_url} вернул 405 Method Not Allowed. Allow: {allow_methods}")
+                        print(f"✗ {endpoint_url} вернул 405. Разрешенные методы: {allow_methods}")
+                        print(f"  Заголовки ответа: {dict(response.headers)}")
+                        response = None
+                        
+                except httpx.HTTPStatusError as e:
+                    # Если это не 405, значит endpoint правильный, но есть другая ошибка
+                    if e.response.status_code != 405:
+                        response = e.response
+                        logger.info(f"✓ Endpoint {endpoint_url} принял запрос (статус {e.response.status_code})")
+                        print(f"✓ Endpoint {endpoint_url} принял запрос (статус {e.response.status_code})")
+                        break
+                    last_error = e
+                    response = None
+                except Exception as e:
+                    last_error = e
+                    logger.warning(f"Ошибка при запросе к {endpoint_url}: {str(e)}")
+                    response = None
+                    continue
+            
+            if response is None:
+                # Если все endpoints вернули 405, возможно нужен другой метод или путь
+                error_msg = (
+                    f"Не удалось найти рабочий endpoint для XML API. "
+                    f"Все пробованные endpoints вернули 405 Method Not Allowed.\n"
+                    f"Пробованные endpoints:\n" + "\n".join(f"  - {ep}" for ep in xml_endpoints) + "\n\n"
+                    f"Возможные решения:\n"
+                    f"1. Уточните правильный endpoint для XML API у администратора СНК-ЛК\n"
+                    f"2. Укажите endpoint явно в настройках подключения (поле 'endpoint')\n"
+                    f"3. Проверьте, что сервер СНК-HTTP запущен и доступен"
+                )
+                logger.error(error_msg)
+                print(f"\n{'='*80}")
+                print(f"✗ ОШИБКА: {error_msg}")
+                print(f"{'='*80}\n")
+                raise ValueError(error_msg)
+            
+            logger.info(f"Получен ответ: статус {response.status_code}")
+            print(f"\n{'='*80}")
+            print(f"ОТВЕТ ОТ СЕРВЕРА:")
+            print(f"  Статус: {response.status_code}")
+            print(f"  Заголовки: {dict(response.headers)}")
+            print(f"  Тело ответа: {response.text[:1000]}")
+            print(f"{'='*80}\n")
+            
+            # Проверяем статус ответа
+            if response.status_code == 405:
+                error_msg = "Метод POST не поддерживается на этом endpoint. Попробуйте указать другой endpoint для XML API в настройках."
+                logger.error(error_msg)
+                raise httpx.HTTPStatusError(
+                    error_msg,
+                    request=response.request,
+                    response=response
+                )
+            
+            response.raise_for_status()
+            
+            # Парсим ответ (согласно спецификации, ответ приходит в формате JSON)
+            response_text = response.text
+            
+            # Ответ должен быть в формате JSON (благодаря заголовку Return-type: json)
+            try:
+                response_data = response.json()
+                logger.info("✓ Ответ получен в формате JSON")
+                print(f"\n{'='*80}")
+                print(f"JSON ОТВЕТ ОТ СЕРВЕРА:")
+                print(f"{'='*80}")
+                print(json.dumps(response_data, ensure_ascii=False, indent=2))
+                print(f"{'='*80}\n")
+            except json.JSONDecodeError as json_error:
+                # Если не JSON, пробуем парсить XML (на случай, если сервер вернул XML)
+                logger.warning(f"Ответ не в формате JSON, пробуем парсить как XML: {str(json_error)}")
+                try:
+                    root = ET.fromstring(response_text)
+                    logger.info("Ответ получен в формате XML")
+                    # Преобразуем XML в словарь для удобства
+                    response_data = self._xml_to_dict(root)
+                    print(f"XML ответ (преобразовано): {response_data}")
+                except Exception as xml_error:
+                    logger.error(f"Не удалось распарсить ответ (ни JSON, ни XML): {str(xml_error)}")
+                    logger.error(f"Сырой ответ: {response_text[:500]}")
+                    return False
+            except Exception as parse_error:
+                logger.error(f"Ошибка при парсинге ответа: {str(parse_error)}")
+                logger.error(f"Сырой ответ: {response_text[:500]}")
+                return False
+            
+            # Проверяем результат авторизации
+            # Ищем поле AuthorizationState в ответе
+            auth_state = None
+            
+            # Функция для поиска AuthorizationState в JSON ответе
+            # Структура ответа: { "Request": {...}, "Details": [{ "DetailsSelectName": "AuthorizationState", "DetailsValue": "..." }] }
+            def find_auth_state(data, path=""):
+                if isinstance(data, dict):
+                    # Проверяем текущий уровень - может быть DetailsSelectName и DetailsValue
+                    if 'DetailsSelectName' in data and data.get('DetailsSelectName') == 'AuthorizationState':
+                        return data.get('DetailsValue', '')
+                    
+                    # Проверяем массив Details
+                    if 'Details' in data and isinstance(data['Details'], list):
+                        for detail in data['Details']:
+                            if isinstance(detail, dict):
+                                if detail.get('DetailsSelectName') == 'AuthorizationState':
+                                    return detail.get('DetailsValue', '')
+                    
+                    # Рекурсивно ищем во вложенных структурах
+                    for key, value in data.items():
+                        result = find_auth_state(value, f"{path}.{key}")
+                        if result is not None:
+                            return result
+                elif isinstance(data, list):
+                    for i, item in enumerate(data):
+                        result = find_auth_state(item, f"{path}[{i}]")
+                        if result is not None:
+                            return result
+                return None
+            
+            auth_state = find_auth_state(response_data)
+            
+            logger.info(f"AuthorizationState: {auth_state}")
+            
+            # Если AuthorizationState пустое, авторизация успешна
+            if auth_state == '' or auth_state is None:
+                logger.info("=== XML API АВТОРИЗАЦИЯ УСПЕШНА ===")
+                # Сохраняем информацию о пользователе из ответа
+                # В будущем можно использовать для получения дополнительных данных
+                self.access_token = "XML_API_AUTHENTICATED"  # Заглушка, так как XML API может не использовать токены
+                return True
+            else:
+                logger.error(f"=== XML API АВТОРИЗАЦИЯ НЕУДАЧНА: {auth_state} ===")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Ошибка при XML API авторизации: {str(e)}", exc_info=True)
+            print(f"Ошибка: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            return False
+    
+    def _xml_to_dict(self, element: ET.Element) -> Dict[str, Any]:
+        """
+        Преобразует XML элемент в словарь
+        
+        Args:
+            element: XML элемент
+            
+        Returns:
+            Словарь с данными из XML
+        """
+        result = {}
+        
+        # Если у элемента есть текст и нет дочерних элементов
+        if len(element) == 0:
+            return element.text
+        
+        # Обрабатываем дочерние элементы
+        children = {}
+        details_list = []
+        
+        for child in element:
+            if child.tag == 'Details':
+                # Для Details создаем список словарей
+                detail_dict = {}
+                for detail_child in child:
+                    detail_dict[detail_child.tag] = detail_child.text
+                details_list.append(detail_dict)
+            elif child.tag == 'Request':
+                # Для Request создаем словарь
+                request_dict = {}
+                for request_child in child:
+                    request_dict[request_child.tag] = request_child.text
+                children['Request'] = request_dict
+            else:
+                # Для остальных элементов рекурсивно обрабатываем
+                if len(child) == 0:
+                    children[child.tag] = child.text
+                else:
+                    children[child.tag] = self._xml_to_dict(child)
+        
+        # Если есть Details, добавляем их как список
+        if details_list:
+            children['Details'] = details_list
+        
+        # Если это корневой элемент RequestDS, возвращаем его содержимое
+        if element.tag == 'RequestDS':
+            return children
+        
+        result[element.tag] = children if children else element.text
+        return result
     
     async def _authenticate_with_playwright(self, base_url: str) -> Optional[str]:
         """
@@ -869,14 +1358,26 @@ class WebAdapter:
         print(f"base_url: {base_url}")
         print(f"login_url: {login_url}")
         print(f"username: {self.username}")
+        print(f"use_xml_api: {self.use_xml_api}")
         print(f"{'='*80}\n")
         
         logger.info(f"=== НАЧАЛО АВТОРИЗАЦИИ В ВЕБ-СЕРВИСЕ ===", extra={
             "base_url": base_url,
             "login_url": login_url,
             "username": self.username,
-            "method": "WebAdapter._authenticate"
+            "method": "WebAdapter._authenticate",
+            "use_xml_api": self.use_xml_api
         })
+        
+        # Если включен XML API, пробуем сначала его
+        if self.use_xml_api:
+            logger.info("Используется XML API авторизация")
+            xml_auth_success = await self._authenticate_xml_api()
+            if xml_auth_success:
+                logger.info("XML API авторизация успешна")
+                return
+            else:
+                logger.warning("XML API авторизация не удалась, пробуем JSON API")
         
         try:
             # Сначала делаем запрос к странице логина для получения cookies/CSRF токена
@@ -980,35 +1481,13 @@ class WebAdapter:
             
             logger.info(f"Получен ответ: статус {response.status_code}")
             
-            # Если получили 403, сразу пробуем Playwright
+            # Playwright отключен - используем только XML API или JSON API
+            # Если получили 403, просто выбрасываем ошибку
             if response.status_code == 403:
-                print(f"\n{'!'*80}")
-                print(f"!!! ПОЛУЧЕН 403 FORBIDDEN, ЗАПУСКАЕМ PLAYWRIGHT !!!")
-                print(f"Тело ответа: {response.text[:500]}")
-                print(f"{'!'*80}\n")
-                
-                logger.error("=== ПОЛУЧЕН 403 FORBIDDEN, ЗАПУСКАЕМ PLAYWRIGHT ===")
+                logger.error("=== ПОЛУЧЕН 403 FORBIDDEN ===")
                 logger.error(f"Тело ответа: {response.text[:500]}")
-                try:
-                    print("Вызываем _authenticate_with_playwright...")
-                    playwright_token = await self._authenticate_with_playwright(base_url)
-                    if playwright_token:
-                        print(f"!!! PLAYWRIGHT УСПЕШНО ВЕРНУЛ ТОКЕН !!!")
-                        self.access_token = playwright_token
-                        logger.info("=== АВТОРИЗАЦИЯ ЧЕРЕЗ PLAYWRIGHT УСПЕШНА! ===")
-                        return
-                    else:
-                        print(f"!!! PLAYWRIGHT НЕ ВЕРНУЛ ТОКЕН !!!")
-                        logger.error("=== PLAYWRIGHT НЕ ВЕРНУЛ ТОКЕН ===")
-                        # Если Playwright не вернул токен, все равно пробуем продолжить с ошибкой
-                        response.raise_for_status()
-                except Exception as pw_error:
-                    print(f"!!! ОШИБКА ПРИ ИСПОЛЬЗОВАНИИ PLAYWRIGHT: {str(pw_error)} !!!")
-                    import traceback
-                    print(traceback.format_exc())
-                    logger.error(f"=== ОШИБКА ПРИ ИСПОЛЬЗОВАНИИ PLAYWRIGHT: {str(pw_error)} ===", exc_info=True)
-                    # Если Playwright упал с ошибкой, пробуем продолжить с исходной ошибкой
-                    response.raise_for_status()
+                logger.warning("Playwright отключен. Убедитесь, что используются правильные параметры XML API (ключ и подпись)")
+                response.raise_for_status()
             
             response.raise_for_status()
             data = response.json()
@@ -1040,21 +1519,10 @@ class WebAdapter:
                 "base_url": base_url
             })
             
-            # Если это 403, пробуем несколько альтернативных подходов
+            # Если это 403, пробуем несколько альтернативных подходов (без Playwright)
             if e.response.status_code == 403:
                 logger.error("=== В БЛОКЕ EXCEPT: ПОЛУЧЕН 403 FORBIDDEN ===")
-                logger.warning("Получен 403 Forbidden, пробуем альтернативные подходы")
-                
-                # Сначала пробуем Playwright (самый надежный способ)
-                logger.info("Пробуем подход 0: Авторизация через Playwright (полная имитация браузера)")
-                try:
-                    playwright_token = await self._authenticate_with_playwright(base_url)
-                    if playwright_token:
-                        self.access_token = playwright_token
-                        logger.info("=== АВТОРИЗАЦИЯ ЧЕРЕЗ PLAYWRIGHT УСПЕШНА (из блока except)! ===")
-                        return
-                except Exception as playwright_error:
-                    logger.warning(f"Playwright подход не сработал: {str(playwright_error)}")
+                logger.warning("Получен 403 Forbidden, пробуем альтернативные подходы (Playwright отключен)")
                 
                 # Подход 1: Без предварительного запроса к странице логина
                 try:
@@ -1133,19 +1601,10 @@ class WebAdapter:
                 except Exception as form_error:
                     logger.warning(f"Подход 2 не сработал: {str(form_error)}")
                 
-                # Подход 3: Использование Playwright для полной имитации браузера
-                logger.info("Пробуем подход 3: Авторизация через Playwright (полная имитация браузера)")
-                try:
-                    playwright_token = await self._authenticate_with_playwright(base_url)
-                    if playwright_token:
-                        self.access_token = playwright_token
-                        logger.info("Авторизация через Playwright успешна!")
-                        return
-                except Exception as playwright_error:
-                    logger.warning(f"Playwright подход не сработал: {str(playwright_error)}")
-                
+                # Playwright отключен - используем только XML API или JSON API
                 # Если все подходы не сработали, выбрасываем исходную ошибку
                 logger.error("Все альтернативные подходы не сработали, возвращаем исходную ошибку 403")
+                logger.warning("Убедитесь, что используются правильные параметры XML API (ключ и подпись) в настройках подключения")
             
             raise
         except httpx.RequestError as e:
@@ -1342,7 +1801,48 @@ class ApiProviderService:
             if not password:
                 raise ValueError("Не указан пароль (password или pass)")
             
-            return WebAdapter(base_url, username, password, currency)
+            # Параметры для XML API (если указаны)
+            use_xml_api = settings.get("use_xml_api", False)
+            xml_api_key = settings.get("xml_api_key") or settings.get("key")
+            xml_api_signature = settings.get("xml_api_signature") or settings.get("signature")
+            xml_api_salt = settings.get("xml_api_salt") or settings.get("salt")
+            xml_api_cod_azs = settings.get("xml_api_cod_azs") or settings.get("cod_azs")
+            xml_api_endpoint = settings.get("xml_api_endpoint") or settings.get("endpoint")
+            
+            # Если указан ключ или подпись, автоматически включаем XML API
+            if xml_api_key or xml_api_signature:
+                use_xml_api = True
+                logger.info("✓ Обнаружены параметры XML API, включаем XML API авторизацию", extra={
+                    "has_key": bool(xml_api_key),
+                    "key_preview": xml_api_key[:30] + "..." if xml_api_key and len(xml_api_key) > 30 else xml_api_key,
+                    "has_signature": bool(xml_api_signature),
+                    "signature_preview": xml_api_signature[:30] + "..." if xml_api_signature and len(xml_api_signature) > 30 else xml_api_signature,
+                    "has_salt": bool(xml_api_salt),
+                    "salt_preview": xml_api_salt[:20] + "..." if xml_api_salt and len(xml_api_salt) > 20 else xml_api_salt,
+                    "cod_azs": xml_api_cod_azs
+                })
+                print(f"\n{'='*80}")
+                print(f"XML API ПАРАМЕТРЫ ОБНАРУЖЕНЫ:")
+                print(f"  Ключ (key): {xml_api_key}")
+                print(f"  Подпись (signature): {xml_api_signature[:50]}..." if xml_api_signature and len(xml_api_signature) > 50 else f"  Подпись (signature): {xml_api_signature}")
+                print(f"  Salt: {xml_api_salt if xml_api_salt else 'не указан'}")
+                print(f"  COD_AZS: {xml_api_cod_azs}")
+                print(f"{'='*80}\n")
+            else:
+                logger.info("XML API параметры не указаны, будет использоваться JSON API (JWT токен)")
+            
+            return WebAdapter(
+                base_url=base_url,
+                username=username,
+                password=password,
+                currency=currency,
+                use_xml_api=use_xml_api,
+                xml_api_key=xml_api_key,
+                xml_api_signature=xml_api_signature,
+                xml_api_salt=xml_api_salt,
+                xml_api_cod_azs=xml_api_cod_azs,
+                xml_api_endpoint=xml_api_endpoint
+            )
         
         # Для типа "api" используем существующую логику
         provider_type = settings.get("provider_type", "petrolplus")

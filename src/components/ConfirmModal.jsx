@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from './ui'
 import './ConfirmModal.css'
 
@@ -66,7 +67,7 @@ const ConfirmModal = ({
     }
   }
 
-  return (
+  const modalContent = (
     <div 
       className="confirm-modal-overlay" 
       onClick={handleOverlayClick}
@@ -111,6 +112,9 @@ const ConfirmModal = ({
       </div>
     </div>
   )
+
+  // Рендерим модальное окно через Portal на уровне body, чтобы оно было поверх всех элементов
+  return createPortal(modalContent, document.body)
 }
 
 export default ConfirmModal

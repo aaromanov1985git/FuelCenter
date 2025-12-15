@@ -26,6 +26,42 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         
         # Логируем начало запроса
         if should_log:
+            # Специальная обработка для всех POST запросов к /api/v1/templates
+            if request.url.path.startswith("/api/v1/templates") and request.method == "POST":
+                import sys
+                print(f"\n{'='*80}", file=sys.stdout, flush=True)
+                print(f"MIDDLEWARE: POST {request.url.path} ЗАПРОС ПОЛУЧЕН", file=sys.stdout, flush=True)
+                print(f"Client IP: {client_ip}", file=sys.stdout, flush=True)
+                print(f"Full URL: {request.url}", file=sys.stdout, flush=True)
+                print(f"Headers: {dict(request.headers)}", file=sys.stdout, flush=True)
+                print(f"{'='*80}\n", file=sys.stdout, flush=True)
+                logger.info(f"MIDDLEWARE: POST {request.url.path} ЗАПРОС ПОЛУЧЕН", extra={
+                    "method": request.method,
+                    "path": request.url.path,
+                    "full_url": str(request.url),
+                    "client_ip": client_ip,
+                    "headers": dict(request.headers),
+                    "event_type": "request",
+                    "event_category": "templates_post"
+                })
+            
+            # Специальная обработка для auto-load endpoint
+            if request.url.path == "/api/v1/templates/auto-load" and request.method == "POST":
+                import sys
+                print(f"\n{'!'*80}", file=sys.stdout, flush=True)
+                print(f"!!! MIDDLEWARE: POST /api/v1/templates/auto-load ЗАПРОС ПОЛУЧЕН !!!", file=sys.stdout, flush=True)
+                print(f"Client IP: {client_ip}", file=sys.stdout, flush=True)
+                print(f"Headers: {dict(request.headers)}", file=sys.stdout, flush=True)
+                print(f"{'!'*80}\n", file=sys.stdout, flush=True)
+                logger.info("!!! MIDDLEWARE: POST /api/v1/templates/auto-load ЗАПРОС ПОЛУЧЕН !!!", extra={
+                    "method": request.method,
+                    "path": request.url.path,
+                    "client_ip": client_ip,
+                    "headers": dict(request.headers),
+                    "event_type": "request",
+                    "event_category": "auto_load_manual"
+                })
+            
             logger.info(
                 f"Входящий запрос: {request.method} {request.url.path}",
                 extra={

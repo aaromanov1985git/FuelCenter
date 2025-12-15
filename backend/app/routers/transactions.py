@@ -442,8 +442,26 @@ async def load_from_api(
     Загрузка транзакций через API или веб-сервис провайдера
     """
     from datetime import date as date_type
+    import sys
+    
+    msg = f"\n{'='*80}\nPOST /api/v1/transactions/load-from-api ВЫЗВАН (РУЧНАЯ ЗАГРУЗКА)\nTemplate ID: {template_id}\nDate from: {date_from}\nDate to: {date_to}\nCard numbers: {card_numbers}\n{'='*80}\n"
+    print(msg, file=sys.stderr, flush=True)
+    print(msg, file=sys.stdout, flush=True)
     
     template = db.query(ProviderTemplate).filter(ProviderTemplate.id == template_id).first()
+    
+    logger.info("=" * 80)
+    logger.info("Начало загрузки данных из API (ручная загрузка)", extra={
+        "template_id": template_id,
+        "date_from": date_from,
+        "date_to": date_to,
+        "card_numbers": card_numbers,
+        "user_id": current_user.id if current_user else None,
+        "username": current_user.username if current_user else None,
+        "event_type": "manual_load",
+        "event_category": "api"
+    })
+    logger.info("=" * 80)
     if not template:
         raise HTTPException(status_code=404, detail="Шаблон не найден")
     
@@ -527,6 +545,80 @@ async def load_from_api(
             "template_id": template_id,
             "transactions_count": len(transactions_data)
         })
+        
+        # Парсим маппинг видов топлива (если указан)
+        fuel_type_mapping = None
+        try:
+            if template.fuel_type_mapping:
+                fuel_type_mapping = parse_template_json(template.fuel_type_mapping)
+                import sys
+                print(f"✓ Маппинг топлива загружен для шаблона {template.id} (ручная загрузка API): {list(fuel_type_mapping.keys()) if isinstance(fuel_type_mapping, dict) else 'не словарь'}", file=sys.stderr, flush=True)
+                logger.info("Маппинг видов топлива (API, ручная загрузка) загружен", extra={
+                    "template_id": template.id,
+                    "template_name": template.name,
+                    "mapping_keys": list(fuel_type_mapping.keys()) if isinstance(fuel_type_mapping, dict) else None,
+                    "mapping": fuel_type_mapping if isinstance(fuel_type_mapping, dict) else None,
+                    "event_type": "manual_load",
+                    "event_category": "fuel_mapping"
+                })
+            else:
+                fuel_type_mapping = None
+                import sys
+                print(f"✗ Маппинг топлива НЕ НАЙДЕН для шаблона {template.id} (ручная загрузка API)", file=sys.stderr, flush=True)
+        except Exception as fuel_map_err:
+            import sys
+            print(f"✗ ОШИБКА при загрузке маппинга топлива для шаблона {template.id}: {fuel_map_err}", file=sys.stderr, flush=True)
+            logger.warning("Не удалось разобрать маппинг видов топлива (ручная загрузка API)", extra={
+                "template_id": template.id,
+                "template_name": template.name,
+                "error": str(fuel_map_err),
+                "event_type": "manual_load",
+                "event_category": "fuel_mapping"
+            })
+        
+        # Применяем маппинг топлива к транзакциям (если указан)
+        if fuel_type_mapping and isinstance(fuel_type_mapping, dict):
+            # Функция для сопоставления топлива с маппингом (из auto_load_service)
+            def _match_fuel(fuel_name: str, mapping: dict) -> Optional[str]:
+                if not fuel_name or not mapping:
+                    return None
+                norm = str(fuel_name).strip().lower().replace(" ", "").replace("-", "")
+                for source_name, target_name in mapping.items():
+                    src_norm = str(source_name).strip().lower().replace(" ", "").replace("-", "")
+                    if src_norm == norm:
+                        return target_name
+                    # Проверяем обратное соответствие: если в данных уже "нормализованное" значение, оставляем как есть
+                    if target_name:
+                        tgt_norm = str(target_name).strip().lower().replace(" ", "").replace("-", "")
+                        if tgt_norm == norm:
+                            return target_name
+                return None
+            
+            from app import services as app_services
+            mapped_count = 0
+            for transaction in transactions_data:
+                if "product" in transaction:
+                    raw_fuel = str(transaction["product"] or "")
+                    if raw_fuel:
+                        mapped = _match_fuel(raw_fuel, fuel_type_mapping)
+                        if mapped:
+                            transaction["product"] = mapped
+                            mapped_count += 1
+                            import sys
+                            if mapped_count <= 5:  # Логируем только первые 5 для избежания спама
+                                print(f"  → Маппинг применен (ручная загрузка API): '{raw_fuel}' → '{mapped}'", file=sys.stderr, flush=True)
+                            logger.info("Маппинг топлива применен (API, ручная загрузка)", extra={
+                                "template_id": template.id,
+                                "template_name": template.name,
+                                "raw_fuel": raw_fuel,
+                                "mapped_fuel": mapped,
+                                "event_type": "manual_load",
+                                "event_category": "fuel_mapping"
+                            })
+            
+            if mapped_count > 0:
+                import sys
+                print(f"✓ Применен маппинг топлива к {mapped_count} транзакциям (ручная загрузка API)", file=sys.stderr, flush=True)
         
         # Создаем транзакции в БД с батчевой обработкой
         batch_processor = TransactionBatchProcessor(db)
@@ -628,10 +720,25 @@ async def load_from_firebird(
     - date_from: Начальная дата (включительно). Если не указана, фильтрация не применяется.
     - date_to: Конечная дата (включительно). Если не указана, фильтрация не применяется.
     """
+    import sys
+    msg = f"\n{'='*80}\nPOST /api/v1/transactions/load-from-firebird ВЫЗВАН (РУЧНАЯ ЗАГРУЗКА)\nTemplate ID: {template_id}\nDate from: {date_from}\nDate to: {date_to}\n{'='*80}\n"
+    print(msg, file=sys.stderr, flush=True)
+    print(msg, file=sys.stdout, flush=True)
+    
     # Проверяем доступность Firebird
     firebird_service_class = get_firebird_service()
     
-    logger.info("Начало загрузки данных из Firebird", extra={"template_id": template_id})
+    logger.info("=" * 80)
+    logger.info("Начало загрузки данных из Firebird (ручная загрузка)", extra={
+        "template_id": template_id,
+        "date_from": date_from,
+        "date_to": date_to,
+        "user_id": current_user.id if current_user else None,
+        "username": current_user.username if current_user else None,
+        "event_type": "manual_load",
+        "event_category": "firebird"
+    })
+    logger.info("=" * 80)
     
     # Получаем шаблон
     template = db.query(ProviderTemplate).filter(
@@ -664,6 +771,42 @@ async def load_from_firebird(
         # Парсим маппинг полей
         field_mapping = parse_template_json(template.field_mapping)
         
+        # Парсим маппинг видов топлива
+        fuel_type_mapping = None
+        try:
+            if template.fuel_type_mapping:
+                fuel_type_mapping = parse_template_json(template.fuel_type_mapping)
+                import sys
+                print(f"✓ Маппинг топлива загружен для шаблона {template.id} (ручная загрузка)", file=sys.stderr, flush=True)
+                if isinstance(fuel_type_mapping, dict):
+                    print(f"  Ключи маппинга (исходные значения): {list(fuel_type_mapping.keys())}", file=sys.stderr, flush=True)
+                    print(f"  Значения маппинга (нормализованные): {list(fuel_type_mapping.values())}", file=sys.stderr, flush=True)
+                    print(f"  Полный маппинг: {fuel_type_mapping}", file=sys.stderr, flush=True)
+                else:
+                    print(f"  ⚠ Маппинг не является словарем: {type(fuel_type_mapping)}", file=sys.stderr, flush=True)
+                logger.info("Маппинг видов топлива (Firebird, ручная загрузка) загружен", extra={
+                    "template_id": template.id,
+                    "template_name": template.name,
+                    "mapping_keys": list(fuel_type_mapping.keys()) if isinstance(fuel_type_mapping, dict) else None,
+                    "mapping": fuel_type_mapping if isinstance(fuel_type_mapping, dict) else None,
+                    "event_type": "manual_load",
+                    "event_category": "fuel_mapping"
+                })
+            else:
+                fuel_type_mapping = None
+                import sys
+                print(f"✗ Маппинг топлива НЕ НАЙДЕН для шаблона {template.id} (ручная загрузка)", file=sys.stderr, flush=True)
+        except Exception as fuel_map_err:
+            import sys
+            print(f"✗ ОШИБКА при загрузке маппинга топлива для шаблона {template.id}: {fuel_map_err}", file=sys.stderr, flush=True)
+            logger.warning("Не удалось разобрать маппинг видов топлива (ручная загрузка)", extra={
+                "template_id": template.id,
+                "template_name": template.name,
+                "error": str(fuel_map_err),
+                "event_type": "manual_load",
+                "event_category": "fuel_mapping"
+            })
+        
         # Парсим даты периода, если указаны
         parsed_date_from, parsed_date_to = parse_date_range(date_from, date_to)
         
@@ -681,6 +824,22 @@ async def load_from_firebird(
         logger.info("Данные прочитаны из Firebird", extra={
             "rows_count": len(firebird_data),
             "template_id": template_id
+        })
+        
+        # Собираем уникальные значения топлива из базы данных для диагностики
+        unique_fuel_values = set()
+        for row in firebird_data[:100]:  # Проверяем первые 100 строк
+            fuel_val = str(row.get("fuel") or row.get("product") or "").strip()
+            if fuel_val:
+                unique_fuel_values.add(fuel_val)
+        
+        import sys
+        print(f"  [DEBUG] Уникальные значения топлива из БД (первые 100 строк): {sorted(unique_fuel_values)}", file=sys.stderr, flush=True)
+        logger.info("Уникальные значения топлива из базы данных", extra={
+            "template_id": template_id,
+            "unique_fuel_values": sorted(unique_fuel_values),
+            "event_type": "manual_load",
+            "event_category": "fuel_mapping"
         })
         
         # Преобразуем данные из Firebird в формат транзакций
@@ -817,7 +976,79 @@ async def load_from_firebird(
                 kazs_value = str(row.get("kazs") or row.get("azs_number") or "").strip()
                 transaction_data["azs_number"] = app_services.extract_azs_number(kazs_value)
                 transaction_data["azs_original_name"] = kazs_value  # Сохраняем оригинальное название АЗС
-                transaction_data["product"] = app_services.normalize_fuel(str(row.get("fuel") or row.get("product") or ""))
+                # Применяем маппинг топлива (если указан)
+                raw_fuel = str(row.get("fuel") or row.get("product") or "")
+                
+                # Логируем исходное значение из базы данных (только первые несколько для отладки)
+                if row_idx < 5 and raw_fuel:
+                    import sys
+                    print(f"  [DEBUG] Исходное значение топлива из БД (строка {row_idx + 1}): '{raw_fuel}'", file=sys.stderr, flush=True)
+                
+                # Функция для сопоставления топлива с маппингом (из auto_load_service)
+                def _match_fuel(fuel_name: str, mapping: dict) -> Optional[str]:
+                    if not fuel_name or not mapping:
+                        return None
+                    norm = str(fuel_name).strip().lower().replace(" ", "").replace("-", "")
+                    for source_name, target_name in mapping.items():
+                        src_norm = str(source_name).strip().lower().replace(" ", "").replace("-", "")
+                        if src_norm == norm:
+                            return target_name
+                        # Проверяем обратное соответствие: если в данных уже "нормализованное" значение, оставляем как есть
+                        if target_name:
+                            tgt_norm = str(target_name).strip().lower().replace(" ", "").replace("-", "")
+                            if tgt_norm == norm:
+                                return target_name
+                    return None
+                
+                normalized_fuel = raw_fuel
+                mapping_applied = False
+                if raw_fuel and fuel_type_mapping:
+                    # Логируем маппинг для отладки (только первые несколько)
+                    if row_idx < 5:
+                        import sys
+                        print(f"  [DEBUG] Пробуем применить маппинг для '{raw_fuel}'", file=sys.stderr, flush=True)
+                        print(f"  [DEBUG] Доступные ключи маппинга: {list(fuel_type_mapping.keys())}", file=sys.stderr, flush=True)
+                    
+                    mapped = _match_fuel(raw_fuel, fuel_type_mapping)
+                    if mapped:
+                        normalized_fuel = mapped
+                        mapping_applied = True
+                        import sys
+                        # Логируем только если значение изменилось или первые 10 для отладки
+                        if normalized_fuel != raw_fuel or row_idx < 10:
+                            print(f"  → Маппинг применен (ручная загрузка): '{raw_fuel}' → '{normalized_fuel}'", file=sys.stderr, flush=True)
+                        logger.info("Маппинг топлива применен (Firebird, ручная загрузка)", extra={
+                            "template_id": template.id,
+                            "template_name": template.name,
+                            "raw_fuel": raw_fuel,
+                            "mapped_fuel": normalized_fuel,
+                            "event_type": "manual_load",
+                            "event_category": "fuel_mapping"
+                        })
+                    else:
+                        import sys
+                        # Логируем только первые несколько для отладки
+                        if row_idx < 5:
+                            print(f"  → Маппинг НЕ НАЙДЕН для '{raw_fuel}' (ручная загрузка), используем нормализацию", file=sys.stderr, flush=True)
+                
+                # ВАЖНО: Если маппинг применился, НЕ вызываем normalize_fuel,
+                # чтобы избежать обратной нормализации (например, "ДТ" -> "Дизельное топливо")
+                # normalize_fuel содержит логику, которая преобразует "ДТ" обратно в "Дизельное топливо"
+                if not mapping_applied and normalized_fuel == raw_fuel:
+                    # Только если маппинг не сработал, применяем стандартную нормализацию
+                    normalized_fuel_before = normalized_fuel
+                    normalized_fuel = app_services.normalize_fuel(raw_fuel)
+                    # Логируем, если нормализация изменила значение
+                    if normalized_fuel != normalized_fuel_before and row_idx < 5:
+                        import sys
+                        print(f"  [DEBUG] normalize_fuel изменил значение: '{normalized_fuel_before}' -> '{normalized_fuel}'", file=sys.stderr, flush=True)
+                
+                # Логируем финальное значение перед сохранением в transaction_data (только первые несколько)
+                if row_idx < 5:
+                    import sys
+                    print(f"  [DEBUG] Финальное значение product перед сохранением в transaction_data: '{normalized_fuel}'", file=sys.stderr, flush=True)
+                
+                transaction_data["product"] = normalized_fuel
                 transaction_data["operation_type"] = "Покупка"
                 transaction_data["currency"] = "RUB"
                 transaction_data["exchange_rate"] = Decimal("1")
