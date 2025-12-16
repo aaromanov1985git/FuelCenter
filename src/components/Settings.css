@@ -210,6 +210,111 @@
   flex-shrink: 0;
 }
 
+/* Настройки внешнего вида */
+.appearance-option-card {
+  max-width: 600px;
+}
+
+.appearance-option-content {
+  padding: var(--padding-section);
+}
+
+.appearance-option-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-block);
+}
+
+.appearance-option-info {
+  flex: 1;
+}
+
+.appearance-option-label {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--spacing-small);
+  color: var(--color-text-primary);
+}
+
+.appearance-option-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+}
+
+.font-size-value {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  min-width: 60px;
+  text-align: right;
+}
+
+.font-size-slider-container {
+  margin-top: var(--spacing-block);
+}
+
+.font-size-slider {
+  width: 100%;
+  height: 8px;
+  border-radius: var(--radius-small);
+  background: var(--color-bg-secondary);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.font-size-slider:hover {
+  background: var(--color-bg-hover);
+}
+
+.font-size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: 2px solid var(--color-bg-card);
+  box-shadow: var(--shadow-md);
+  transition: all 0.2s;
+}
+
+.font-size-slider::-webkit-slider-thumb:hover {
+  background: var(--color-primary-hover);
+  transform: scale(1.1);
+  box-shadow: var(--shadow-lg);
+}
+
+.font-size-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: 2px solid var(--color-bg-card);
+  box-shadow: var(--shadow-md);
+  transition: all 0.2s;
+}
+
+.font-size-slider::-moz-range-thumb:hover {
+  background: var(--color-primary-hover);
+  transform: scale(1.1);
+  box-shadow: var(--shadow-lg);
+}
+
+.font-size-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--spacing-small);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
   .settings-container {
@@ -238,5 +343,18 @@
   .settings-tab {
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
+  }
+
+  .appearance-option-content {
+    padding: var(--padding-element);
+  }
+
+  .appearance-option-header {
+    flex-direction: column;
+    gap: var(--spacing-small);
+  }
+
+  .font-size-value {
+    text-align: left;
   }
 }

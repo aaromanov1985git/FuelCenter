@@ -329,7 +329,7 @@
   text-align: left;
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
+  font-size: 0.75rem;
   border-bottom: 2px solid var(--color-border-light);
 }
 
@@ -340,6 +340,7 @@
   min-height: 40px;
   background: var(--color-bg-card);
   vertical-align: middle;
+  font-size: 0.75rem;
 }
 
 .mapping-table tr.required {

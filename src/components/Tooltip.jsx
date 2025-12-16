@@ -43,32 +43,30 @@ const Tooltip = ({
 
     const wrapperRect = wrapperRef.current.getBoundingClientRect()
     const tooltipRect = tooltipRef.current.getBoundingClientRect()
-    const scrollY = window.scrollY
-    const scrollX = window.scrollX
 
     let top = 0
     let left = 0
 
     switch (position) {
       case 'top':
-        top = wrapperRect.top + scrollY - tooltipRect.height - 8
-        left = wrapperRect.left + scrollX + (wrapperRect.width / 2) - (tooltipRect.width / 2)
+        top = wrapperRect.top - tooltipRect.height - 8
+        left = wrapperRect.left + (wrapperRect.width / 2) - (tooltipRect.width / 2)
         break
       case 'bottom':
-        top = wrapperRect.bottom + scrollY + 8
-        left = wrapperRect.left + scrollX + (wrapperRect.width / 2) - (tooltipRect.width / 2)
+        top = wrapperRect.bottom + 8
+        left = wrapperRect.left + (wrapperRect.width / 2) - (tooltipRect.width / 2)
         break
       case 'left':
-        top = wrapperRect.top + scrollY + (wrapperRect.height / 2) - (tooltipRect.height / 2)
-        left = wrapperRect.left + scrollX - tooltipRect.width - 8
+        top = wrapperRect.top + (wrapperRect.height / 2) - (tooltipRect.height / 2)
+        left = wrapperRect.left - tooltipRect.width - 8
         break
       case 'right':
-        top = wrapperRect.top + scrollY + (wrapperRect.height / 2) - (tooltipRect.height / 2)
-        left = wrapperRect.right + scrollX + 8
+        top = wrapperRect.top + (wrapperRect.height / 2) - (tooltipRect.height / 2)
+        left = wrapperRect.right + 8
         break
       default:
-        top = wrapperRect.top + scrollY - tooltipRect.height - 8
-        left = wrapperRect.left + scrollX + (wrapperRect.width / 2) - (tooltipRect.width / 2)
+        top = wrapperRect.top - tooltipRect.height - 8
+        left = wrapperRect.left + (wrapperRect.width / 2) - (tooltipRect.width / 2)
     }
 
     // Корректировка позиции, чтобы tooltip не выходил за границы экрана
@@ -79,10 +77,10 @@ const Tooltip = ({
       left = window.innerWidth - tooltipRect.width - margin
     }
 
-    if (top < scrollY + margin) {
-      top = scrollY + margin
-    } else if (top + tooltipRect.height > scrollY + window.innerHeight - margin) {
-      top = scrollY + window.innerHeight - tooltipRect.height - margin
+    if (top < margin) {
+      top = margin
+    } else if (top + tooltipRect.height > window.innerHeight - margin) {
+      top = window.innerHeight - tooltipRect.height - margin
     }
 
     setTooltipPosition({ top, left })
@@ -145,6 +143,7 @@ const Tooltip = ({
           ref={tooltipRef}
           className={`tooltip tooltip-${position} ${isVisible ? 'tooltip-visible' : ''}`}
           style={{
+            position: 'fixed',
             top: `${tooltipPosition.top}px`,
             left: `${tooltipPosition.left}px`,
             maxWidth: `${maxWidth}px`

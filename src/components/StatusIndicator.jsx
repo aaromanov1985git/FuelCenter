@@ -17,38 +17,51 @@ const StatusIndicator = ({
   const [apiStatus, setApiStatus] = useState('checking') // 'online', 'offline', 'checking'
   const [lastChecked, setLastChecked] = useState(null)
 
-  // Проверка статуса API
-  const checkApiStatus = async () => {
-    if (!apiUrl) {
-      setApiStatus('online') // Если нет URL, считаем что онлайн
-      return
-    }
-
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 секунд таймаут
-
-      const response = await fetch(`${apiUrl}/health`, {
-        method: 'GET',
-        signal: controller.signal,
-        cache: 'no-cache'
-      })
-
-      clearTimeout(timeoutId)
-
-      if (response.ok) {
-        setApiStatus('online')
-        setLastChecked(new Date())
-      } else {
-        setApiStatus('offline')
-      }
-    } catch (error) {
-      setApiStatus('offline')
-    }
-  }
-
   // Отслеживание статуса сети браузера
   useEffect(() => {
+    let abortController = null
+    let timeoutId = null
+
+    // Проверка статуса API
+    const checkApiStatus = async () => {
+      if (!apiUrl) {
+        setApiStatus('online') // Если нет URL, считаем что онлайн
+        return
+      }
+
+      // Отменяем предыдущий запрос, если он еще выполняется
+      if (abortController) {
+        abortController.abort()
+      }
+
+      abortController = new AbortController()
+      timeoutId = setTimeout(() => abortController.abort(), 5000) // 5 секунд таймаут
+
+      try {
+        const response = await fetch(`${apiUrl}/health`, {
+          method: 'GET',
+          signal: abortController.signal,
+          cache: 'no-cache'
+        })
+
+        clearTimeout(timeoutId)
+
+        if (response.ok) {
+          setApiStatus('online')
+          setLastChecked(new Date())
+        } else {
+          setApiStatus('offline')
+        }
+      } catch (error) {
+        // Игнорируем ошибки отмены запроса
+        if (error.name !== 'AbortError') {
+          setApiStatus('offline')
+        }
+      } finally {
+        timeoutId = null
+      }
+    }
+
     const handleOnline = () => {
       setIsOnline(true)
       checkApiStatus()
@@ -76,6 +89,13 @@ const StatusIndicator = ({
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
       clearInterval(intervalId)
+      // Отменяем активный запрос при unmount
+      if (abortController) {
+        abortController.abort()
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
     }
   }, [apiUrl, checkInterval, isOnline])
 

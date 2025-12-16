@@ -1,7 +1,8 @@
 """
 Главный модуль FastAPI приложения
 """
-from fastapi import FastAPI, Depends, Request, status
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Depends, Request, status, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -73,115 +74,13 @@ if auto_migrate:
 else:
     logger.info("Автоматическое применение миграций отключено (AUTO_MIGRATE=false)")
 
-app = FastAPI(
-    title="GSM Converter API",
-    description="API для конвертации и хранения транзакций ГСМ",
-    version=settings.api_version
-)
-
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     """
-    Обработчик ошибок валидации Pydantic для детального логирования
+    Управление жизненным циклом приложения (startup и shutdown)
+    Заменяет устаревшие @app.on_event("startup") и @app.on_event("shutdown")
     """
-    errors = exc.errors()
-    error_details = []
-    for error in errors:
-        error_details.append({
-            "loc": error["loc"],
-            "msg": error["msg"],
-            "type": error["type"]
-        })
-    
-    # Пытаемся получить тело запроса для логирования
-    body = None
-    try:
-        if request.method in ["POST", "PUT", "PATCH"]:
-            body_bytes = await request.body()
-            body = body_bytes.decode('utf-8') if body_bytes else None
-    except Exception:
-        pass
-    
-    logger.error("Ошибка валидации запроса", extra={
-        "path": request.url.path,
-        "method": request.method,
-        "errors": error_details,
-        "body": body
-    })
-    
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={
-            "detail": error_details
-        }
-    )
-
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    """
-    Глобальный обработчик исключений для логирования всех ошибок
-    """
-    logger.error(
-        f"Необработанное исключение: {type(exc).__name__}: {str(exc)}",
-        extra={
-            "path": request.url.path,
-            "method": request.method,
-            "error_type": type(exc).__name__,
-            "error_message": str(exc)
-        },
-        exc_info=True
-    )
-    
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "detail": f"Внутренняя ошибка сервера: {str(exc)}"
-        }
-    )
-
-
-# Настройка CORS из конфигурации
-allowed_origins = settings.get_allowed_origins_list()
-
-# Добавляем middleware для логирования запросов
-app.add_middleware(LoggingMiddleware)
-
-# Настройка Rate Limiting
-setup_rate_limiting(app)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[origin.strip() for origin in allowed_origins],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-)
-
-# Подключаем роутеры
-app.include_router(auth.router)
-app.include_router(transactions.router)
-app.include_router(vehicles.router)
-app.include_router(fuel_cards.router)
-app.include_router(gas_stations.router)
-app.include_router(providers.router)
-app.include_router(templates.router)
-app.include_router(dashboard.router)
-app.include_router(upload_period_lock.router)
-app.include_router(upload_events.router)
-app.include_router(users.router)
-app.include_router(organizations.router)
-app.include_router(logs.router)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """
-    Инициализация при старте приложения
-    Создание начальных данных (провайдер "РП-газпром")
-    Запуск планировщика автоматической загрузки
-    """
+    # Startup
     from sqlalchemy.orm import Session
     from sqlalchemy import text
     from app.services.logging_service import logging_service
@@ -208,7 +107,7 @@ async def startup_event():
                 level="INFO",
                 message="Приложение запущено",
                 module="main",
-                function="startup_event",
+                function="lifespan",
                 event_type="system",
                 event_category="startup",
                 extra_data={"version": settings.api_version}
@@ -279,7 +178,7 @@ async def startup_event():
                     level="ERROR",
                     message=f"Критическая ошибка при инициализации планировщика: {str(e)}",
                     module="main",
-                    function="startup_event",
+                    function="lifespan",
                     event_type="scheduler",
                     event_category="startup",
                     extra_data={"error": str(e), "error_type": type(e).__name__},
@@ -434,7 +333,7 @@ async def startup_event():
                 level="INFO",
                 message="Инициализация приложения завершена",
                 module="main",
-                function="startup_event",
+                function="lifespan",
                 event_type="system",
                 event_category="startup",
                 extra_data={"status": "success"}
@@ -452,7 +351,7 @@ async def startup_event():
                 level="ERROR",
                 message=f"Ошибка при инициализации приложения: {str(e)}",
                 module="main",
-                function="startup_event",
+                function="lifespan",
                 event_type="system",
                 event_category="startup",
                 extra_data={"error": str(e)},
@@ -463,13 +362,10 @@ async def startup_event():
     finally:
         db.close()
         logger.info("Инициализация завершена")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """
-    Остановка планировщика при завершении приложения
-    """
+    
+    yield  # Приложение работает
+    
+    # Shutdown
     try:
         from app.services.scheduler_service import SchedulerService
         scheduler = SchedulerService.get_instance()
@@ -477,6 +373,130 @@ async def shutdown_event():
         logger.info("Планировщик автоматической загрузки остановлен")
     except Exception as e:
         logger.error(f"Ошибка при остановке планировщика: {e}", extra={"error": str(e)}, exc_info=True)
+
+
+app = FastAPI(
+    title="GSM Converter API",
+    description="API для конвертации и хранения транзакций ГСМ",
+    version=settings.api_version,
+    lifespan=lifespan
+)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Обработчик ошибок валидации Pydantic для детального логирования
+    """
+    errors = exc.errors()
+    error_details = []
+    for error in errors:
+        error_details.append({
+            "loc": error["loc"],
+            "msg": error["msg"],
+            "type": error["type"]
+        })
+    
+    # Пытаемся получить тело запроса для логирования
+    body = None
+    try:
+        if request.method in ["POST", "PUT", "PATCH"]:
+            body_bytes = await request.body()
+            body = body_bytes.decode('utf-8') if body_bytes else None
+    except Exception:
+        pass
+    
+    logger.error("Ошибка валидации запроса", extra={
+        "path": request.url.path,
+        "method": request.method,
+        "errors": error_details,
+        "body": body
+    })
+    
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "detail": error_details
+        }
+    )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Глобальный обработчик исключений для логирования всех ошибок
+    Скрывает внутренние детали ошибок от клиента для безопасности
+    """
+    from sqlalchemy.exc import SQLAlchemyError, DatabaseError
+    
+    # Логируем полную информацию об ошибке
+    logger.error(
+        f"Необработанное исключение: {type(exc).__name__}: {str(exc)}",
+        extra={
+            "path": request.url.path,
+            "method": request.method,
+            "error_type": type(exc).__name__,
+            "error_message": str(exc)
+        },
+        exc_info=True
+    )
+    
+    # Определяем безопасное сообщение для клиента
+    # Не раскрываем внутренние детали БД или системных ошибок
+    if isinstance(exc, (SQLAlchemyError, DatabaseError)):
+        # Ошибки БД - не раскрываем детали
+        client_message = "Ошибка базы данных. Обратитесь к администратору."
+    elif isinstance(exc, ValueError):
+        # Ошибки валидации - можно показать сообщение
+        client_message = str(exc)
+    elif isinstance(exc, PermissionError):
+        # Ошибки доступа
+        client_message = "Недостаточно прав для выполнения операции."
+    else:
+        # Остальные ошибки - общее сообщение
+        client_message = "Внутренняя ошибка сервера. Обратитесь к администратору."
+    
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "detail": client_message
+        }
+    )
+
+
+# Настройка CORS из конфигурации
+allowed_origins = settings.get_allowed_origins_list()
+
+# Добавляем middleware для логирования запросов
+app.add_middleware(LoggingMiddleware)
+
+# Настройка Rate Limiting
+setup_rate_limiting(app)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in allowed_origins],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+# Подключаем роутеры
+app.include_router(auth.router)
+app.include_router(transactions.router)
+app.include_router(vehicles.router)
+app.include_router(fuel_cards.router)
+app.include_router(gas_stations.router)
+app.include_router(providers.router)
+app.include_router(templates.router)
+app.include_router(dashboard.router)
+app.include_router(upload_period_lock.router)
+app.include_router(upload_events.router)
+app.include_router(users.router)
+app.include_router(organizations.router)
+app.include_router(logs.router)
+
+
 
 
 @app.get("/")

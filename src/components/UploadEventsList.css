@@ -224,7 +224,7 @@
 .upload-events__table table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--font-size-compact);
+  font-size: 0.75rem;
 }
 
 .upload-events__table th,
@@ -238,11 +238,11 @@
   color: var(--color-text-secondary);
   font-weight: var(--font-weight-semibold);
   background: var(--color-bg-hover);
-  font-size: var(--font-size-compact);
+  font-size: 0.75rem;
 }
 
 .upload-events__table td {
-  font-size: var(--font-size-compact);
+  font-size: 0.75rem;
   font-weight: var(--font-weight-normal);
 }
 
@@ -251,7 +251,7 @@
 }
 
 .cell-sub {
-  font-size: var(--font-size-compact);
+  font-size: 0.75rem;
   color: var(--color-text-secondary);
   margin-top: var(--spacing-tiny);
 }

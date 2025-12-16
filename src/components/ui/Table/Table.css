@@ -2,16 +2,86 @@
 .ui-table-wrapper {
   width: 100%;
   overflow-x: auto;
+  overflow-y: visible;
   border-radius: var(--radius-large);
   background: var(--color-bg-card);
   box-shadow: var(--shadow-sm);
+  /* Скроллбар - заметный и контрастный */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Для светлой темы используем темный скроллбар */
+:root .ui-table-wrapper {
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+:root .ui-table-wrapper::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+:root .ui-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Для темной темы используем светлый скроллбар */
+[data-theme="midnight"] .ui-table-wrapper,
+[data-theme="amber-glow"] .ui-table-wrapper {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.ui-table-wrapper::-webkit-scrollbar {
+  height: 10px;
+}
+
+.ui-table-wrapper::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 5px;
+}
+
+/* Светлая тема */
+:root .ui-table-wrapper::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Темная тема */
+[data-theme="midnight"] .ui-table-wrapper::-webkit-scrollbar-track,
+[data-theme="amber-glow"] .ui-table-wrapper::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ui-table-wrapper::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Светлая тема - темный скроллбар */
+:root .ui-table-wrapper::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+:root .ui-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Темная тема - светлый скроллбар */
+[data-theme="midnight"] .ui-table-wrapper::-webkit-scrollbar-thumb,
+[data-theme="amber-glow"] .ui-table-wrapper::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+[data-theme="midnight"] .ui-table-wrapper::-webkit-scrollbar-thumb:hover,
+[data-theme="amber-glow"] .ui-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.6);
 }
 
 /* Table Base */
 .ui-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--font-size-base);
+  font-size: 0.75rem;
   color: var(--color-text-primary);
   background: var(--color-bg-card);
   position: relative;
@@ -76,6 +146,9 @@
   padding: var(--spacing-element);
   border-bottom: 1px solid var(--color-border-light);
   vertical-align: middle;
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .ui-table-compact .ui-table-cell {

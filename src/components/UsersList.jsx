@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Card, Button, Input, Table, Modal, Select, Badge, Skeleton } from './ui'
+import { Card, Button, Input, Table, Modal, Select, Badge, Skeleton, Checkbox } from './ui'
 import ConfirmModal from './ConfirmModal'
 import StatusBadge from './StatusBadge'
 import IconButton from './IconButton'
@@ -418,7 +418,7 @@ const UsersList = () => {
           <Card.Actions>
             <Input
               type="search"
-              placeholder="Поиск по имени или email"
+              placeholder="Поиск по имени или электронной почте"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && loadUsers()}
@@ -549,31 +549,37 @@ const UsersList = () => {
         onClose={() => setAssignOrgsModal({ isOpen: false, userId: null, userName: '', selectedOrgs: [] })}
         title={`Назначить организации: ${assignOrgsModal.userName}`}
       >
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
-            Выберите организации:
-          </label>
-          <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '4px', padding: '0.5rem' }}>
-            {organizations.map(org => (
-              <label
-                key={org.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.5rem',
-                  cursor: 'pointer',
-                  borderRadius: '4px',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                <input
-                  type="checkbox"
-                  checked={assignOrgsModal.selectedOrgs.includes(org.id)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
+        <Modal.Body>
+          <div style={{ marginBottom: 'var(--spacing-element)' }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: 'var(--spacing-small)', 
+              fontWeight: 'var(--font-weight-semibold)',
+              color: 'var(--color-text-primary)'
+            }}>
+              Выберите организации:
+            </label>
+            <div style={{ 
+              maxHeight: '300px', 
+              overflowY: 'auto', 
+              border: '1px solid var(--color-border)', 
+              borderRadius: 'var(--radius-medium)', 
+              padding: 'var(--spacing-small)',
+              background: 'var(--color-bg-card)'
+            }}>
+              {organizations.length === 0 ? (
+                <div style={{ 
+                  padding: 'var(--spacing-element)', 
+                  textAlign: 'center', 
+                  color: 'var(--color-text-secondary)' 
+                }}>
+                  Нет доступных организаций
+                </div>
+              ) : (
+                organizations.map(org => {
+                  const isChecked = assignOrgsModal.selectedOrgs.includes(org.id)
+                  const handleToggle = (checked) => {
+                    if (checked) {
                       setAssignOrgsModal(prev => ({
                         ...prev,
                         selectedOrgs: [...prev.selectedOrgs, org.id]
@@ -584,22 +590,61 @@ const UsersList = () => {
                         selectedOrgs: prev.selectedOrgs.filter(id => id !== org.id)
                       }))
                     }
-                  }}
-                />
-                <div>
-                  <div style={{ fontWeight: 500 }}>{org.name}</div>
-                  {org.description && (
-                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
-                      {org.description}
+                  }
+                  
+                  return (
+                    <div
+                      key={org.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 'var(--spacing-small)',
+                        padding: 'var(--spacing-small)',
+                        cursor: 'pointer',
+                        borderRadius: 'var(--radius-small)',
+                        transition: 'background-color var(--duration-fast) var(--ease-in-out)',
+                        marginBottom: 'var(--spacing-tiny)'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <div 
+                        style={{ flexShrink: 0, marginTop: '2px' }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onChange={handleToggle}
+                        />
+                      </div>
+                      <div 
+                        style={{ flex: 1, minWidth: 0 }}
+                        onClick={() => handleToggle(!isChecked)}
+                      >
+                        <div style={{ 
+                          fontWeight: 'var(--font-weight-medium)',
+                          color: 'var(--color-text-primary)',
+                          marginBottom: 'var(--spacing-tiny)'
+                        }}>
+                          {org.name}
+                        </div>
+                        {org.description && (
+                          <div style={{ 
+                            fontSize: 'var(--font-size-sm)', 
+                            color: 'var(--color-text-secondary)'
+                          }}>
+                            {org.description}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  <Badge variant="secondary" style={{ marginTop: '0.25rem' }}>{org.code}</Badge>
-                </div>
-              </label>
-            ))}
+                  )
+                })
+              )}
+            </div>
           </div>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+        </Modal.Body>
+        <Modal.Footer>
           <Button
             variant="secondary"
             onClick={() => setAssignOrgsModal({ isOpen: false, userId: null, userName: '', selectedOrgs: [] })}
@@ -638,7 +683,7 @@ const UsersList = () => {
           >
             Назначить
           </Button>
-        </div>
+        </Modal.Footer>
       </Modal>
     </Card>
   )

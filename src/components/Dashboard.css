@@ -500,13 +500,13 @@
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   border-bottom: 2px solid var(--color-border-light);
-  font-size: var(--font-size-compact); /* 10px */
+  font-size: 0.75rem; /* 12px */
 }
 
 .leaders-table td {
   padding: var(--padding-small) var(--padding-element);
   border-bottom: 1px solid var(--color-border);
-  font-size: var(--font-size-compact); /* 10px */
+  font-size: 0.75rem; /* 12px */
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
 }
@@ -844,13 +844,13 @@
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   border-bottom: 2px solid var(--color-border-light);
-  font-size: var(--font-size-compact);
+  font-size: 0.75rem;
 }
 
 .errors-warnings-table td {
   padding: var(--padding-small) var(--padding-element);
   border-bottom: 1px solid var(--color-border);
-  font-size: var(--font-size-compact);
+  font-size: 0.75rem;
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
 }
@@ -1272,14 +1272,14 @@
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   border-bottom: 2px solid var(--color-border-light);
-  font-size: var(--font-size-compact);
+  font-size: 0.75rem;
   white-space: nowrap;
 }
 
 .vehicles-dashboard-table td {
   padding: var(--padding-small) var(--padding-element);
   border-bottom: 1px solid var(--color-border);
-  font-size: var(--font-size-compact);
+  font-size: 0.75rem;
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
 }
@@ -1320,12 +1320,13 @@
   }
   
   .vehicles-dashboard-table {
-    font-size: var(--font-size-xs);
+    font-size: 0.75rem;
   }
   
   .vehicles-dashboard-table th,
   .vehicles-dashboard-table td {
     padding: var(--padding-tiny) var(--padding-small);
+    font-size: 0.75rem;
   }
 }
 

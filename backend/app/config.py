@@ -42,12 +42,15 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 30
     
     # Настройки администратора по умолчанию (для первого запуска)
+    # ВАЖНО: Измените эти значения в production через переменные окружения!
+    # ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_EMAIL
     admin_username: str = "admin"
-    admin_password: str = "admin123"
+    admin_password: str = "admin123"  # ВАЖНО: Измените в production!
     admin_email: str = "admin@example.com"
     
-    # Включить/выключить аутентификацию (по умолчанию выключена для обратной совместимости)
-    enable_auth: bool = False
+    # Включить/выключить аутентификацию (по умолчанию включена для безопасности)
+    # Для отключения установите ENABLE_AUTH=false в переменных окружения
+    enable_auth: bool = True
     
     # Настройки Rate Limiting
     enable_rate_limit: bool = True  # Включить rate limiting

@@ -29,7 +29,6 @@ import UploadEventsList from './components/UploadEventsList'
 import UserActionLogsList from './components/UserActionLogsList'
 import Login from './components/Login'
 import Register from './components/Register'
-import ComponentsDemo from './components/ComponentsDemo'
 import Settings from './components/Settings'
 import { useToast } from './components/ToastContainer'
 import { useAuth } from './contexts/AuthContext'
@@ -74,7 +73,7 @@ const App = () => {
   })
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showClearProviderModal, setShowClearProviderModal] = useState(false)
-  const [activeTab, setActiveTab] = useState('transactions') // transactions, vehicles, cards, gas-stations, providers, templates, upload-events, organizations, users, ui-demo, settings
+  const [activeTab, setActiveTab] = useState('dashboard') // dashboard, transactions, vehicles, cards, gas-stations, providers, templates, upload-events, organizations, users, settings
   const [providers, setProviders] = useState([])
   const [selectedProviderTab, setSelectedProviderTab] = useState(null) // null = "Все", иначе ID провайдера
   const [dragActive, setDragActive] = useState(false)
@@ -164,6 +163,9 @@ const App = () => {
 
   // Проверка настроек аутентификации при загрузке приложения
   useEffect(() => {
+    let abortController = null
+    let timeoutId = null
+    
     // Резервный таймаут на случай, если authLoading зависнет
     const fallbackTimeout = setTimeout(() => {
       logger.warn('Таймаут проверки аутентификации - продолжаем работу')
@@ -172,8 +174,13 @@ const App = () => {
     }, 10000) // Максимум 10 секунд
 
     const checkAuthSettings = async () => {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 3000) // Таймаут 3 секунды
+      // Отменяем предыдущий запрос, если он еще выполняется
+      if (abortController) {
+        abortController.abort()
+      }
+      
+      abortController = new AbortController()
+      timeoutId = setTimeout(() => abortController.abort(), 3000) // Таймаут 3 секунды
       
       try {
         // Запрашиваем настройки из API
@@ -181,7 +188,7 @@ const App = () => {
         const configUrl = API_URL ? `${API_URL}/api/v1/config` : '/api/v1/config'
         const response = await authFetch(configUrl, {
           method: 'GET',
-          signal: controller.signal
+          signal: abortController.signal
         })
         
         if (response.ok) {
@@ -201,7 +208,10 @@ const App = () => {
         }
         setAuthEnabled(false)
       } finally {
-        clearTimeout(timeoutId)
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+          timeoutId = null
+        }
         clearTimeout(fallbackTimeout)
         // В любом случае завершаем проверку
         setCheckingAuth(false)
@@ -215,6 +225,13 @@ const App = () => {
 
     return () => {
       clearTimeout(fallbackTimeout)
+      // Отменяем активный запрос при unmount
+      if (abortController) {
+        abortController.abort()
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
     }
   }, [authLoading])
 
@@ -1470,6 +1487,12 @@ const App = () => {
           </div>
           <nav className="sidebar-nav">
             <button 
+              className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => setActiveTab('dashboard')}
+            >
+              Дашборд
+            </button>
+            <button 
               className={`nav-item ${activeTab === 'transactions' ? 'active' : ''}`}
               onClick={() => setActiveTab('transactions')}
             >
@@ -1529,23 +1552,11 @@ const App = () => {
                 Мои действия
               </button>
             )}
-            <button 
-              className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              Дашборд
-            </button>
             <button
               className={`nav-item ${activeTab === 'upload-events' ? 'active' : ''}`}
               onClick={() => setActiveTab('upload-events')}
             >
               События загрузок
-            </button>
-            <button
-              className={`nav-item ${activeTab === 'ui-demo' ? 'active' : ''}`}
-              onClick={() => setActiveTab('ui-demo')}
-            >
-              UI Компоненты
             </button>
             <button
               className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
@@ -1624,7 +1635,6 @@ const App = () => {
                 ...(activeTab === 'users' ? [{ label: 'Пользователи' }] : []),
                 ...(activeTab === 'my-actions' ? [{ label: 'Мои действия' }] : []),
                 ...(activeTab === 'upload-events' ? [{ label: 'События загрузок' }] : []),
-                ...(activeTab === 'ui-demo' ? [{ label: 'UI Компоненты' }] : []),
                 ...(activeTab === 'settings' ? [{ label: 'Настройки' }] : [])
               ]}
             />
@@ -1648,7 +1658,6 @@ const App = () => {
         {activeTab === 'my-actions' && <UserActionLogsList showMyActionsOnly={true} />}
         {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'upload-events' && <UploadEventsList />}
-        {activeTab === 'ui-demo' && <ComponentsDemo />}
         {activeTab === 'settings' && <Settings />}
         
         {activeTab === 'transactions' && (

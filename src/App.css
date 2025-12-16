@@ -1053,7 +1053,7 @@ h1 {
 .data-table th {
   padding: var(--padding-small) var(--padding-element);
   text-align: left;
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   text-transform: uppercase;
@@ -1104,7 +1104,7 @@ h1 {
 
 .data-table td {
   padding: var(--padding-small) var(--padding-element);
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   color: var(--color-text-primary);
   font-weight: var(--font-weight-normal);
   border-bottom: 1px solid var(--color-border);

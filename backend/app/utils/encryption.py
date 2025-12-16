@@ -49,10 +49,19 @@ def get_encryption_key() -> bytes:
     
     # Генерируем ключ Fernet из секретного ключа
     # Используем PBKDF2 для получения ключа фиксированной длины из произвольной строки
+    # ВАЖНО: Используем уникальную соль на основе секретного ключа для безопасности
+    # Это предотвращает rainbow table атаки, сохраняя консистентность ключа
+    # Соль генерируется детерминированно из секретного ключа, но не является фиксированной константой
+    salt_source = (secret_key + "gsm_converter_salt_2025").encode()
+    # Используем SHA256 для генерации соли фиксированной длины из секретного ключа
+    salt = hashes.Hash(hashes.SHA256())
+    salt.update(salt_source)
+    salt_bytes = salt.finalize()[:16]  # Берем первые 16 байт для соли
+    
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
-        salt=b'gsm_converter_salt_2025',  # Фиксированная соль для консистентности
+        salt=salt_bytes,
         iterations=100000,
     )
     

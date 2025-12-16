@@ -5,6 +5,7 @@ import ClearProviderModal from './ClearProviderModal'
 import SystemLogsList from './SystemLogsList'
 import UserActionLogsList from './UserActionLogsList'
 import UploadPeriodLock from './UploadPeriodLock'
+import ComponentsDemo from './ComponentsDemo'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
@@ -18,8 +19,14 @@ const Settings = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, title: '', message: '' })
   const [showClearProviderModal, setShowClearProviderModal] = useState(false)
   const [providers, setProviders] = useState([])
-  const [activeSection, setActiveSection] = useState('cleanup') // 'cleanup' или 'admin'
+  const [activeSection, setActiveSection] = useState('cleanup') // 'cleanup', 'admin', 'appearance'
   const [adminView, setAdminView] = useState(null) // 'system-logs', 'user-action-logs', 'period-lock'
+  const [appearanceView, setAppearanceView] = useState(null) // 'ui-components'
+  const [fontSize, setFontSize] = useState(() => {
+    // Загружаем сохраненный размер шрифта или используем 100% (базовый)
+    const saved = localStorage.getItem('font-size')
+    return saved ? parseFloat(saved) : 100
+  })
 
   // Загрузка провайдеров
   useEffect(() => {
@@ -36,6 +43,24 @@ const Settings = () => {
       }
     }
     loadProviders()
+  }, [])
+
+  // Применение размера шрифта
+  useEffect(() => {
+    const root = document.documentElement
+    root.style.fontSize = `${fontSize}%`
+    localStorage.setItem('font-size', fontSize.toString())
+  }, [fontSize])
+
+  // Загрузка размера шрифта при монтировании
+  useEffect(() => {
+    const saved = localStorage.getItem('font-size')
+    if (saved) {
+      const size = parseFloat(saved)
+      if (!isNaN(size) && size >= 75 && size <= 150) {
+        document.documentElement.style.fontSize = `${size}%`
+      }
+    }
   }, [])
 
   const clearOptions = [
@@ -290,6 +315,33 @@ const Settings = () => {
     )
   }
 
+  // Если открыт какой-то компонент внешнего вида, показываем его
+  if (appearanceView) {
+    let component = null
+    switch (appearanceView) {
+      case 'ui-components':
+        component = <ComponentsDemo />
+        break
+      default:
+        component = null
+    }
+
+    return (
+      <div className="settings-container">
+        <div className="settings-header">
+          <button 
+            className="settings-back-button"
+            onClick={() => setAppearanceView(null)}
+          >
+            ← Назад к настройкам
+          </button>
+          <h1>Настройки</h1>
+        </div>
+        {component}
+      </div>
+    )
+  }
+
   return (
     <div className="settings-container">
       <h1>Настройки</h1>
@@ -306,6 +358,12 @@ const Settings = () => {
           onClick={() => setActiveSection('admin')}
         >
           Администрирование
+        </button>
+        <button
+          className={`settings-tab ${activeSection === 'appearance' ? 'active' : ''}`}
+          onClick={() => setActiveSection('appearance')}
+        >
+          Внешний вид
         </button>
       </div>
 
@@ -405,6 +463,58 @@ const Settings = () => {
               </div>
             </Card>
           </div>
+        </div>
+      )}
+
+      {activeSection === 'appearance' && (
+        <div className="settings-section">
+          <h2 className="settings-section-title">Внешний вид</h2>
+          <p className="settings-section-description">
+            Настройте внешний вид интерфейса под свои предпочтения
+          </p>
+
+          <Card className="appearance-option-card">
+            <div className="appearance-option-content">
+              <div className="appearance-option-header">
+                <div className="appearance-option-info">
+                  <h3 className="appearance-option-label">Размер шрифта</h3>
+                  <p className="appearance-option-description">
+                    Измените размер шрифта для всего интерфейса
+                  </p>
+                </div>
+                <div className="font-size-value">{fontSize}%</div>
+              </div>
+              <div className="font-size-slider-container">
+                <input
+                  type="range"
+                  min="75"
+                  max="150"
+                  step="5"
+                  value={fontSize}
+                  onChange={(e) => setFontSize(parseFloat(e.target.value))}
+                  className="font-size-slider"
+                />
+                <div className="font-size-labels">
+                  <span>75%</span>
+                  <span>112.5%</span>
+                  <span>150%</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="appearance-option-card" onClick={() => setAppearanceView('ui-components')}>
+            <div className="appearance-option-content admin-option-content">
+              <div className="appearance-option-icon admin-option-icon">🎨</div>
+              <div className="appearance-option-info admin-option-info">
+                <h3 className="appearance-option-label admin-option-label">UI Компоненты</h3>
+                <p className="appearance-option-description admin-option-description">
+                  Демонстрация всех UI компонентов системы
+                </p>
+              </div>
+              <div className="admin-option-arrow">→</div>
+            </div>
+          </Card>
         </div>
       )}
 

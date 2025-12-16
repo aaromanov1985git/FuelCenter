@@ -1,0 +1,111 @@
+.error-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: var(--bg-color, #f5f5f5);
+}
+
+.error-boundary-content {
+  max-width: 600px;
+  padding: 2rem;
+  background: var(--card-bg, #ffffff);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.error-boundary-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: var(--text-color, #333);
+}
+
+.error-boundary-message {
+  color: var(--text-secondary, #666);
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+}
+
+.error-boundary-details {
+  text-align: left;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: var(--bg-secondary, #f9f9f9);
+  border-radius: 4px;
+  border: 1px solid var(--border-color, #e0e0e0);
+}
+
+.error-boundary-details summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-color, #333);
+  margin-bottom: 0.5rem;
+}
+
+.error-boundary-stack {
+  margin: 0.5rem 0 0 0;
+  padding: 1rem;
+  background: var(--bg-color, #fff);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-family: 'Courier New', monospace;
+  color: var(--error-color, #d32f2f);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-boundary-actions {
+  margin-top: 1.5rem;
+}
+
+.error-boundary-button {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #fff;
+  background: var(--primary-color, #1976d2);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.error-boundary-button:hover {
+  background: var(--primary-hover, #1565c0);
+}
+
+.error-boundary-button:active {
+  background: var(--primary-active, #0d47a1);
+}
+
+/* Темная тема */
+[data-theme="dark"] .error-boundary {
+  background: var(--bg-color, #1a1a1a);
+}
+
+[data-theme="dark"] .error-boundary-content {
+  background: var(--card-bg, #2d2d2d);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .error-boundary-title {
+  color: var(--text-color, #fff);
+}
+
+[data-theme="dark"] .error-boundary-message {
+  color: var(--text-secondary, #ccc);
+}
+
+[data-theme="dark"] .error-boundary-details {
+  background: var(--bg-secondary, #333);
+  border-color: var(--border-color, #444);
+}
+
+[data-theme="dark"] .error-boundary-stack {
+  background: var(--bg-color, #2d2d2d);
+  color: var(--error-color, #f44336);
+}

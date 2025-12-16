@@ -6,8 +6,8 @@
 
 /* Tooltip Container */
 .tooltip {
-  position: absolute;
-  z-index: 9999;
+  position: fixed;
+  z-index: 99999;
   max-width: 300px;
   padding: var(--spacing-small) var(--spacing-element);
   background: var(--color-text-primary);
@@ -20,6 +20,9 @@
   opacity: 0;
   animation: tooltipFadeIn 0.2s ease forwards;
   word-wrap: break-word;
+  /* Предотвращаем влияние на layout контейнера */
+  margin: 0;
+  transform: translateZ(0);
 }
 
 @keyframes tooltipFadeIn {
