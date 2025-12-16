@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { Card, Button } from './ui'
 import ConfirmModal from './ConfirmModal'
 import ClearProviderModal from './ClearProviderModal'
+import SystemLogsList from './SystemLogsList'
+import UserActionLogsList from './UserActionLogsList'
+import UploadPeriodLock from './UploadPeriodLock'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
@@ -15,6 +18,8 @@ const Settings = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, title: '', message: '' })
   const [showClearProviderModal, setShowClearProviderModal] = useState(false)
   const [providers, setProviders] = useState([])
+  const [activeSection, setActiveSection] = useState('cleanup') // 'cleanup' или 'admin'
+  const [adminView, setAdminView] = useState(null) // 'system-logs', 'user-action-logs', 'period-lock'
 
   // Загрузка провайдеров
   useEffect(() => {
@@ -252,15 +257,64 @@ const Settings = () => {
     setConfirmModal({ isOpen: false, type: null, title: '', message: '' })
   }
 
+  // Если открыт какой-то админский компонент, показываем его
+  if (adminView) {
+    let component = null
+    switch (adminView) {
+      case 'system-logs':
+        component = <SystemLogsList />
+        break
+      case 'user-action-logs':
+        component = <UserActionLogsList />
+        break
+      case 'period-lock':
+        component = <UploadPeriodLock />
+        break
+      default:
+        component = null
+    }
+
+    return (
+      <div className="settings-container">
+        <div className="settings-header">
+          <button 
+            className="settings-back-button"
+            onClick={() => setAdminView(null)}
+          >
+            ← Назад к настройкам
+          </button>
+          <h1>Настройки</h1>
+        </div>
+        {component}
+      </div>
+    )
+  }
+
   return (
     <div className="settings-container">
       <h1>Настройки</h1>
       
-      <div className="settings-section">
-        <h2 className="settings-section-title">Очистка</h2>
-        <p className="settings-section-description">
-          Очистка данных из базы. Внимание: эти действия необратимы.
-        </p>
+      <div className="settings-tabs">
+        <button
+          className={`settings-tab ${activeSection === 'cleanup' ? 'active' : ''}`}
+          onClick={() => setActiveSection('cleanup')}
+        >
+          Очистка
+        </button>
+        <button
+          className={`settings-tab ${activeSection === 'admin' ? 'active' : ''}`}
+          onClick={() => setActiveSection('admin')}
+        >
+          Администрирование
+        </button>
+      </div>
+
+      {activeSection === 'cleanup' && (
+        <div className="settings-section">
+          <h2 className="settings-section-title">Очистка</h2>
+          <p className="settings-section-description">
+            Очистка данных из базы. Внимание: эти действия необратимы.
+          </p>
 
         <div className="clear-options-grid">
           {clearOptions.map(option => (
@@ -307,7 +361,52 @@ const Settings = () => {
             </Card>
           ))}
         </div>
-      </div>
+        </div>
+      )}
+
+      {activeSection === 'admin' && (
+        <div className="settings-section">
+          <h2 className="settings-section-title">Администрирование</h2>
+          <p className="settings-section-description">
+            Управление логами и периодами загрузки
+          </p>
+
+          <div className="admin-options-grid">
+            <Card className="admin-option-card" onClick={() => setAdminView('system-logs')}>
+              <div className="admin-option-content">
+                <div className="admin-option-icon">📋</div>
+                <div className="admin-option-info">
+                  <h3 className="admin-option-label">Системные логи</h3>
+                  <p className="admin-option-description">Просмотр системных логов и ошибок</p>
+                </div>
+                <div className="admin-option-arrow">→</div>
+              </div>
+            </Card>
+
+            <Card className="admin-option-card" onClick={() => setAdminView('user-action-logs')}>
+              <div className="admin-option-content">
+                <div className="admin-option-icon">👤</div>
+                <div className="admin-option-info">
+                  <h3 className="admin-option-label">Действия пользователей</h3>
+                  <p className="admin-option-description">История действий пользователей системы</p>
+                </div>
+                <div className="admin-option-arrow">→</div>
+              </div>
+            </Card>
+
+            <Card className="admin-option-card" onClick={() => setAdminView('period-lock')}>
+              <div className="admin-option-content">
+                <div className="admin-option-icon">🔒</div>
+                <div className="admin-option-info">
+                  <h3 className="admin-option-label">Закрытие периода</h3>
+                  <p className="admin-option-description">Блокировка периодов для загрузки транзакций</p>
+                </div>
+                <div className="admin-option-arrow">→</div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={confirmModal.isOpen}

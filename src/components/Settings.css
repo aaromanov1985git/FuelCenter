@@ -5,10 +5,10 @@
 }
 
 .settings-container h1 {
-  font-size: 2rem;
-  font-weight: 600;
-  margin-bottom: 2rem;
-  color: var(--text-primary, #333);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--spacing-section);
+  color: var(--color-text-primary);
 }
 
 .settings-section {
@@ -16,17 +16,20 @@
 }
 
 .settings-section-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: var(--text-primary, #333);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--spacing-small);
+  color: var(--color-text-primary);
 }
 
 .settings-section-description {
-  font-size: 0.95rem;
-  color: var(--text-secondary, #666);
-  margin-bottom: 1.5rem;
-  line-height: 1.5;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
+  opacity: 0.95;
+  margin-bottom: var(--spacing-block);
+  line-height: var(--line-height-normal);
+  font-weight: var(--font-weight-normal);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .clear-options-grid {
@@ -62,17 +65,17 @@
 }
 
 .clear-option-label {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: var(--text-primary, #333);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--spacing-small);
+  color: var(--color-text-primary);
 }
 
 .clear-option-description {
-  font-size: 0.9rem;
-  color: var(--text-secondary, #666);
-  line-height: 1.5;
-  margin-bottom: 1rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+  margin-bottom: var(--spacing-element);
 }
 
 .clear-option-button {
@@ -93,16 +96,118 @@
   margin-top: 0;
 }
 
-/* Темная тема */
-[data-theme="midnight"] .settings-container h1,
-[data-theme="midnight"] .settings-section-title,
-[data-theme="midnight"] .clear-option-label {
-  color: var(--text-primary, #fff);
+/* Темная тема обрабатывается автоматически через CSS переменные */
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
 }
 
-[data-theme="midnight"] .settings-section-description,
-[data-theme="midnight"] .clear-option-description {
-  color: var(--text-secondary, #aaa);
+.settings-back-button {
+  padding: var(--padding-tiny) var(--padding-element);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  transition: all 0.2s;
+}
+
+.settings-back-button:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.settings-tabs {
+  display: flex;
+  gap: var(--spacing-element);
+  margin-bottom: var(--spacing-section);
+  border-bottom: 2px solid var(--color-border);
+  opacity: 0.9;
+}
+
+.settings-tab {
+  padding: var(--padding-small) var(--padding-card);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-primary);
+  opacity: 0.8;
+  transition: all 0.2s;
+  margin-bottom: -2px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.settings-tab:hover {
+  opacity: 1;
+  color: var(--color-text-primary);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.settings-tab.active {
+  color: var(--color-text-primary);
+  opacity: 1;
+  border-bottom-color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.admin-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.admin-option-card {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.admin-option-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.admin-option-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.admin-option-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.admin-option-info {
+  flex: 1;
+}
+
+.admin-option-label {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--spacing-small);
+  color: var(--color-text-primary);
+}
+
+.admin-option-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+}
+
+.admin-option-arrow {
+  font-size: var(--font-size-xl);
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
 }
 
 /* Адаптивность */
@@ -116,12 +221,22 @@
     margin-bottom: 1.5rem;
   }
 
-  .clear-options-grid {
+  .clear-options-grid,
+  .admin-options-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
 
   .settings-section-title {
     font-size: 1.25rem;
+  }
+
+  .settings-tabs {
+    gap: 0.5rem;
+  }
+
+  .settings-tab {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
   }
 }

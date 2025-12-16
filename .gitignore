@@ -51,4 +51,5 @@ alembic.ini.local
 # Logs
 *.log
 logs/
-
+/nul
+nul

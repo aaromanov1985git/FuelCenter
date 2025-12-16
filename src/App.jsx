@@ -6,7 +6,6 @@ import FuelCardsList from './components/FuelCardsList'
 import ProvidersList from './components/ProvidersList'
 import TemplatesList from './components/TemplatesList'
 import Dashboard from './components/Dashboard'
-import UploadPeriodLock from './components/UploadPeriodLock'
 import ConfirmModal from './components/ConfirmModal'
 import ClearProviderModal from './components/ClearProviderModal'
 import TemplateSelectModal from './components/TemplateSelectModal'
@@ -27,7 +26,6 @@ import UsersList from './components/UsersList'
 import OrganizationsList from './components/OrganizationsList'
 import ExportMenu from './components/ExportMenu'
 import UploadEventsList from './components/UploadEventsList'
-import SystemLogsList from './components/SystemLogsList'
 import UserActionLogsList from './components/UserActionLogsList'
 import Login from './components/Login'
 import Register from './components/Register'
@@ -76,7 +74,7 @@ const App = () => {
   })
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showClearProviderModal, setShowClearProviderModal] = useState(false)
-  const [activeTab, setActiveTab] = useState('transactions') // transactions, vehicles, cards, gas-stations, providers, templates, period-lock, upload-events, organizations, users, ui-demo, settings
+  const [activeTab, setActiveTab] = useState('transactions') // transactions, vehicles, cards, gas-stations, providers, templates, upload-events, organizations, users, ui-demo, settings
   const [providers, setProviders] = useState([])
   const [selectedProviderTab, setSelectedProviderTab] = useState(null) // null = "Все", иначе ID провайдера
   const [dragActive, setDragActive] = useState(false)
@@ -1521,18 +1519,6 @@ const App = () => {
                 >
                   Пользователи
                 </button>
-                <button 
-                  className={`nav-item ${activeTab === 'system-logs' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('system-logs')}
-                >
-                  Системные логи
-                </button>
-                <button 
-                  className={`nav-item ${activeTab === 'user-action-logs' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('user-action-logs')}
-                >
-                  Действия пользователей
-                </button>
               </>
             )}
             {user && !isAdmin && (
@@ -1554,12 +1540,6 @@ const App = () => {
               onClick={() => setActiveTab('upload-events')}
             >
               События загрузок
-            </button>
-            <button
-              className={`nav-item ${activeTab === 'period-lock' ? 'active' : ''}`}
-              onClick={() => setActiveTab('period-lock')}
-            >
-              Закрытие периода
             </button>
             <button
               className={`nav-item ${activeTab === 'ui-demo' ? 'active' : ''}`}
@@ -1642,11 +1622,8 @@ const App = () => {
                 ...(activeTab === 'templates' ? [{ label: 'Шаблоны' }] : []),
                 ...(activeTab === 'organizations' ? [{ label: 'Организации' }] : []),
                 ...(activeTab === 'users' ? [{ label: 'Пользователи' }] : []),
-                ...(activeTab === 'system-logs' ? [{ label: 'Системные логи' }] : []),
-                ...(activeTab === 'user-action-logs' ? [{ label: 'Действия пользователей' }] : []),
                 ...(activeTab === 'my-actions' ? [{ label: 'Мои действия' }] : []),
                 ...(activeTab === 'upload-events' ? [{ label: 'События загрузок' }] : []),
-                ...(activeTab === 'period-lock' ? [{ label: 'Блокировка периода' }] : []),
                 ...(activeTab === 'ui-demo' ? [{ label: 'UI Компоненты' }] : []),
                 ...(activeTab === 'settings' ? [{ label: 'Настройки' }] : [])
               ]}
@@ -1668,12 +1645,9 @@ const App = () => {
         {activeTab === 'templates' && <TemplatesList />}
         {activeTab === 'organizations' && <OrganizationsList />}
         {activeTab === 'users' && <UsersList />}
-        {activeTab === 'system-logs' && <SystemLogsList />}
-        {activeTab === 'user-action-logs' && <UserActionLogsList />}
         {activeTab === 'my-actions' && <UserActionLogsList showMyActionsOnly={true} />}
         {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'upload-events' && <UploadEventsList />}
-        {activeTab === 'period-lock' && <UploadPeriodLock />}
         {activeTab === 'ui-demo' && <ComponentsDemo />}
         {activeTab === 'settings' && <Settings />}
         

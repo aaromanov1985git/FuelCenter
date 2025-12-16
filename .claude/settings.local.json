@@ -6,7 +6,9 @@
       "Bash(tree:*)",
       "Bash(grep:*)",
       "Bash(python -m py_compile:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(dir /B)",
+      "Bash(find:*)"
     ]
   }
 }
