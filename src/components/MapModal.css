@@ -1,0 +1,63 @@
+.map-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-element);
+}
+
+.map-instructions {
+  padding: var(--spacing-small);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-medium);
+  border: 1px solid var(--color-border);
+}
+
+.map-instructions p {
+  margin: 0 0 var(--spacing-small) 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.coordinates-display {
+  padding: var(--spacing-small);
+  background: var(--color-bg-card);
+  border-radius: var(--radius-small);
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-light);
+}
+
+.map-container-wrapper {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  overflow: hidden;
+}
+
+.map-container {
+  width: 100%;
+  height: 500px;
+  z-index: 1;
+}
+
+/* Исправление стилей Leaflet для темной темы */
+[data-theme="midnight"] .leaflet-container,
+[data-theme="amber-glow"] .leaflet-container {
+  background: var(--color-bg-card);
+}
+
+/* Улучшение видимости контролов карты */
+.leaflet-control-zoom a {
+  background-color: var(--color-bg-card);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: var(--color-bg-hover);
+}
+
+[data-theme="midnight"] .leaflet-control-zoom a,
+[data-theme="amber-glow"] .leaflet-control-zoom a {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}

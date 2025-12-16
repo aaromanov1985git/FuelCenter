@@ -388,7 +388,7 @@
 .gas-station-edit-form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-element);
+  gap: var(--spacing-small);
 }
 
 .form-row {
@@ -400,21 +400,38 @@
 .form-row-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-element);
+  gap: var(--spacing-small);
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: var(--spacing-small);
+  align-items: end;
 }
 
 .form-actions {
   display: flex;
-  gap: var(--spacing-element);
+  gap: var(--spacing-small);
   justify-content: flex-end;
-  margin-top: var(--spacing-block);
-  padding-top: var(--spacing-block);
+  margin-top: var(--spacing-element);
+  padding-top: var(--spacing-element);
   border-top: 1px solid var(--color-border);
 }
 
 @media (max-width: 768px) {
-  .form-row-2 {
+  .form-row-2,
+  .form-row-3 {
     grid-template-columns: 1fr;
+  }
+  
+  .form-row-3 > div {
+    display: flex;
+    justify-content: stretch;
+  }
+  
+  .form-row-3 > div > button {
+    width: 100%;
   }
 }
 

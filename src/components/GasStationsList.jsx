@@ -4,6 +4,7 @@ import StatusBadge from './StatusBadge'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
 import { Card, Button, Input, Table, Badge, Skeleton, Alert, Select, Modal, Tooltip } from './ui'
+import MapModal from './MapModal'
 import './GasStationsList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
@@ -15,6 +16,7 @@ const GasStationsList = () => {
   const [error, setError] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showMapModal, setShowMapModal] = useState(false)
   const [editForm, setEditForm] = useState({ 
     original_name: '', 
     provider_id: null,
@@ -227,6 +229,14 @@ const GasStationsList = () => {
     setEditingId(null)
     setShowEditModal(false)
     setEditForm({ original_name: '', provider_id: null, azs_number: '', location: '', region: '', settlement: '', latitude: '', longitude: '' })
+  }
+
+  const handleMapConfirm = (lat, lng) => {
+    setEditForm(prev => ({
+      ...prev,
+      latitude: lat.toString(),
+      longitude: lng.toString()
+    }))
   }
 
   const getStatusBadge = (status) => {
@@ -542,7 +552,7 @@ const GasStationsList = () => {
               />
             </div>
 
-            <div className="form-row form-row-2">
+            <div className="form-row form-row-3">
               <Input
                 type="number"
                 step="any"
@@ -561,6 +571,25 @@ const GasStationsList = () => {
                 placeholder="Долгота"
                 fullWidth
               />
+              <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '0' }}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowMapModal(true)}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: 'var(--spacing-tiny)',
+                    height: 'fit-content',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                  </svg>
+                  Выбрать
+                </Button>
+              </div>
             </div>
 
             <div className="form-actions">
@@ -582,6 +611,15 @@ const GasStationsList = () => {
           </div>
         </Modal.Body>
       </Modal>
+
+      {/* Модальное окно выбора координат на карте */}
+      <MapModal
+        isOpen={showMapModal}
+        onClose={() => setShowMapModal(false)}
+        onConfirm={handleMapConfirm}
+        initialLat={editForm.latitude && editForm.latitude !== '' ? parseFloat(editForm.latitude) : null}
+        initialLng={editForm.longitude && editForm.longitude !== '' ? parseFloat(editForm.longitude) : null}
+      />
 
       {/* Модальное окно настроек полей */}
       {showColumnSettings && (
