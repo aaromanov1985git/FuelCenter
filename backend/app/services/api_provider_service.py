@@ -275,7 +275,9 @@ class WebAdapter:
         xml_api_signature: Optional[str] = None,
         xml_api_salt: Optional[str] = None,
         xml_api_cod_azs: Optional[int] = None,
-        xml_api_endpoint: Optional[str] = None
+        xml_api_endpoint: Optional[str] = None,
+        xml_api_certificate: Optional[str] = None,
+        xml_api_pos_code: Optional[int] = None
     ):
         """
         Инициализация адаптера веб-сервиса
@@ -291,6 +293,8 @@ class WebAdapter:
             xml_api_salt: Salt для хеширования пароля (если требуется вычисление sha1(salt + password))
             xml_api_cod_azs: Код АЗС для XML API (например, 1000001)
             xml_api_endpoint: Кастомный endpoint для XML API (если не указан, пробуются стандартные пути)
+            xml_api_certificate: Сертификат для XML API (например, "1.4703FECF75257F2E915")
+            xml_api_pos_code: Код POS для XML API (например, 23)
         """
         # Нормализуем базовый URL (убираем лишние слэши и пробелы)
         self.base_url = base_url.strip().rstrip('/')
@@ -303,6 +307,8 @@ class WebAdapter:
         self.xml_api_salt = xml_api_salt
         self.xml_api_cod_azs = xml_api_cod_azs or 1000001
         self.xml_api_endpoint = xml_api_endpoint
+        self.xml_api_certificate = xml_api_certificate
+        self.xml_api_pos_code = xml_api_pos_code or 23
         # Настраиваем клиент с заголовками по умолчанию для имитации браузера
         # Используем тот же User-Agent, что и в браузере пользователя
         default_headers = {
@@ -1369,15 +1375,15 @@ class WebAdapter:
             "use_xml_api": self.use_xml_api
         })
         
-        # Если включен XML API, пробуем сначала его
+        # Для XML API с сертификатом авторизация не требуется
+        if self.use_xml_api and self.xml_api_certificate:
+            logger.info("Используется XML API с сертификатом - авторизация не требуется")
+            self.access_token = "XML_API_CERTIFICATE"  # Заглушка для совместимости
+            return
+        
+        # Если XML API включен, но сертификат не указан - это ошибка
         if self.use_xml_api:
-            logger.info("Используется XML API авторизация")
-            xml_auth_success = await self._authenticate_xml_api()
-            if xml_auth_success:
-                logger.info("XML API авторизация успешна")
-                return
-            else:
-                logger.warning("XML API авторизация не удалась, пробуем JSON API")
+            raise ValueError("Для XML API требуется указать сертификат (certificate). Логин, пароль, ключ и подпись не используются.")
         
         try:
             # Сначала делаем запрос к странице логина для получения cookies/CSRF токена
@@ -1672,11 +1678,22 @@ class WebAdapter:
         Returns:
             Список номеров карт
         """
-        cards = await self._get_json("/api/cards")
-        # API возвращает список чисел, преобразуем в строки
-        if isinstance(cards, list):
-            return [str(card) for card in cards if card is not None]
-        return []
+        # Для XML API с сертификатом список карт нужно получать отдельно
+        # Пока возвращаем пустой список, так как нет отдельного endpoint для списка карт
+        if self.use_xml_api and self.xml_api_certificate:
+            logger.info("XML API с сертификатом: список карт нужно указывать вручную")
+            return []
+        
+        # Для JSON API пробуем стандартный endpoint
+        try:
+            cards = await self._get_json("/api/cards")
+            # API возвращает список чисел, преобразуем в строки
+            if isinstance(cards, list):
+                return [str(card) for card in cards if card is not None]
+            return []
+        except Exception as e:
+            logger.warning(f"Не удалось получить список карт: {str(e)}")
+            return []
     
     async def fetch_card_transactions(
         self,
@@ -1687,25 +1704,265 @@ class WebAdapter:
         """
         Получение транзакций по карте за период
         
-        Примечание: Этот метод возвращает пустой список, так как API для транзакций
-        не был найден. В будущем можно добавить веб-скрапинг или найти правильный endpoint.
-        
         Args:
             card_number: Номер карты
             date_from: Начальная дата периода
             date_to: Конечная дата периода
             
         Returns:
-            Список транзакций (пока пустой)
+            Список транзакций
         """
-        # TODO: Найти правильный API endpoint для получения транзакций
-        # Пока возвращаем пустой список, так как endpoint не найден
-        logger.warning("API endpoint для транзакций не найден", extra={
-            "card_number": card_number,
+        # Если используется XML API с сертификатом, используем XML метод
+        if self.use_xml_api and self.xml_api_certificate:
+            return await self._fetch_transactions_xml_api([card_number], date_from, date_to)
+        
+        # Для JSON API пробуем стандартный endpoint
+        try:
+            cards = await self._get_json("/api/cards")
+            # Если есть endpoint для транзакций, используем его
+            # Пока возвращаем пустой список, так как endpoint не найден
+            logger.warning("API endpoint для транзакций не найден (JSON API)", extra={
+                "card_number": card_number,
+                "date_from": str(date_from),
+                "date_to": str(date_to)
+            })
+            return []
+        except Exception as e:
+            logger.error(f"Ошибка при получении транзакций: {str(e)}")
+            return []
+    
+    def _create_xml_sale_request(
+        self,
+        card_numbers: List[str],
+        date_from: date,
+        date_to: date,
+        certificate: str,
+        pos_code: int = 23
+    ) -> str:
+        """
+        Создает XML запрос для получения транзакций согласно спецификации СНК API (раздел 4.2.1)
+        
+        Args:
+            card_numbers: Список номеров карт
+            date_from: Начальная дата периода
+            date_to: Конечная дата периода
+            certificate: Сертификат для доступа к API
+            pos_code: Код POS (по умолчанию 23)
+            
+        Returns:
+            XML строка запроса
+        """
+        xml_request = ET.Element('RequestDS')
+        
+        # Элемент Request
+        request_elem = ET.SubElement(xml_request, 'Request')
+        ET.SubElement(request_elem, 'Command').text = 'getsale'
+        ET.SubElement(request_elem, 'Version').text = '1'
+        ET.SubElement(request_elem, 'Certificate').text = certificate
+        ET.SubElement(request_elem, 'POSCode').text = str(pos_code)
+        
+        # Элементы Card для каждой карты
+        for card_number in card_numbers:
+            card_elem = ET.SubElement(xml_request, 'Card')
+            ET.SubElement(card_elem, 'CardNumber').text = str(card_number)
+            # Форматируем даты в формате "YYYY-MM-DD HH:MM:SS"
+            ET.SubElement(card_elem, 'StartDate').text = date_from.strftime('%Y-%m-%d 00:00:00')
+            ET.SubElement(card_elem, 'EndDate').text = date_to.strftime('%Y-%m-%d 23:59:59')
+        
+        # Преобразуем в строку
+        ET.indent(xml_request, space='  ')
+        xml_string = ET.tostring(xml_request, encoding='utf-8', xml_declaration=True).decode('utf-8')
+        return xml_string
+    
+    async def _fetch_transactions_xml_api(
+        self,
+        card_numbers: List[str],
+        date_from: date,
+        date_to: date
+    ) -> List[Dict[str, Any]]:
+        """
+        Получение транзакций через XML API с сертификатом
+        
+        Args:
+            card_numbers: Список номеров карт
+            date_from: Начальная дата периода
+            date_to: Конечная дата периода
+            
+        Returns:
+            Список транзакций
+        """
+        if not self.xml_api_certificate:
+            logger.error("Сертификат не указан для XML API")
+            return []
+        
+        logger.info("Получение транзакций через XML API", extra={
+            "card_numbers": card_numbers,
             "date_from": str(date_from),
-            "date_to": str(date_to)
+            "date_to": str(date_to),
+            "certificate": self.xml_api_certificate[:20] + "..." if len(self.xml_api_certificate) > 20 else self.xml_api_certificate
         })
-        return []
+        
+        try:
+            # Создаем XML запрос
+            xml_request = self._create_xml_sale_request(
+                card_numbers=card_numbers,
+                date_from=date_from,
+                date_to=date_to,
+                certificate=self.xml_api_certificate,
+                pos_code=self.xml_api_pos_code
+            )
+            
+            logger.info("XML запрос для получения транзакций создан", extra={
+                "xml_length": len(xml_request),
+                "cards_count": len(card_numbers)
+            })
+            print(f"\n{'='*80}")
+            print(f"XML ЗАПРОС ДЛЯ ПОЛУЧЕНИЯ ТРАНЗАКЦИЙ:")
+            print(f"{'='*80}")
+            print(xml_request)
+            print(f"{'='*80}\n")
+            
+            # Заголовки для XML API
+            xml_request_bytes = xml_request.encode('utf-8')
+            headers = {
+                "Content-Type": "text/xml; charset=utf-8",
+                "Accept": "application/xml, text/xml, */*",
+                "User-Agent": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36",
+            }
+            
+            # Endpoint для получения транзакций: BASE_URL/sncapi/sale
+            # Согласно спецификации: URL: BASE_URL/sncapi/sale
+            # Если указан полный URL endpoint, используем его
+            if self.xml_api_endpoint:
+                # Если указан кастомный endpoint, используем его
+                if self.xml_api_endpoint.startswith('http://') or self.xml_api_endpoint.startswith('https://'):
+                    sale_endpoint = self.xml_api_endpoint
+                else:
+                    # Если указан относительный путь, добавляем к base_url
+                    sale_endpoint = f"{self.base_url.rstrip('/')}/{self.xml_api_endpoint.lstrip('/')}"
+            else:
+                # Используем стандартный endpoint для получения транзакций
+                # Формат: BASE_URL/sncapi/sale
+                sale_endpoint = f"{self.base_url.rstrip('/')}/sncapi/sale"
+            
+            logger.info(f"Отправка XML запроса на {sale_endpoint}")
+            response = await self.client.post(
+                sale_endpoint,
+                content=xml_request_bytes,
+                headers=headers,
+                timeout=60.0  # Увеличиваем таймаут для больших объемов данных
+            )
+            
+            logger.info(f"Получен ответ: статус {response.status_code}")
+            response.raise_for_status()
+            
+            # Парсим XML ответ
+            response_text = response.text
+            logger.info(f"Размер ответа: {len(response_text)} байт")
+            
+            try:
+                root = ET.fromstring(response_text)
+                transactions = []
+                
+                # Ищем все элементы Sale в ответе
+                for sale_elem in root.findall('.//Sale'):
+                    transaction = {}
+                    
+                    # Извлекаем все поля из элемента Sale
+                    for child in sale_elem:
+                        tag = child.tag
+                        text = child.text if child.text else ""
+                        
+                        # Преобразуем значения в нужные типы
+                        if tag in ['COD_L', 'COD_O', 'COD_A', 'COD_OWN', 'COD_AZS', 'ResourceKey', 
+                                  'CollectionKey', 'VendorKey', 'WarehouseKey', 'ApplicationKey', 'TerminalRequestID']:
+                            try:
+                                transaction[tag] = int(text) if text else 0
+                            except ValueError:
+                                transaction[tag] = 0
+                        elif tag in ['BonusIn', 'BonusOut', 'Volume', 'ShopCost', 'ShopBaseCost', 'PersonCost']:
+                            try:
+                                transaction[tag] = float(text) if text else 0.0
+                            except ValueError:
+                                transaction[tag] = 0.0
+                        else:
+                            transaction[tag] = text
+                    
+                    # Преобразуем в стандартный формат транзакций
+                    standard_transaction = {
+                        "card_number": transaction.get("CardNumber", ""),
+                        "transaction_date": self._parse_datetime(transaction.get("TransactionDatetime", "")),
+                        "complete_date": self._parse_datetime(transaction.get("CompleteDatetime", "")),
+                        "product": transaction.get("ResourceName", ""),
+                        "volume": transaction.get("Volume", 0.0),
+                        "amount": abs(transaction.get("ShopCost", 0.0)),  # Используем абсолютное значение
+                        "azs_number": str(transaction.get("COD_AZS", "")),
+                        "azs_name": transaction.get("AZS_NAME", ""),
+                        "currency": self.currency,
+                        # Дополнительные поля из XML
+                        "cod_l": transaction.get("COD_L", 0),
+                        "cod_o": transaction.get("COD_O", 0),
+                        "cod_a": transaction.get("COD_A", 0),
+                        "cod_own": transaction.get("COD_OWN", 0),
+                        "bonus_in": transaction.get("BonusIn", 0.0),
+                        "bonus_out": transaction.get("BonusOut", 0.0),
+                        "shop_base_cost": transaction.get("ShopBaseCost", 0.0),
+                        "person_cost": transaction.get("PersonCost", 0.0),
+                        "resource_key": transaction.get("ResourceKey", 0),
+                        "collection_key": transaction.get("CollectionKey", 0),
+                        "vendor_key": transaction.get("VendorKey", 0),
+                        "warehouse_key": transaction.get("WarehouseKey", 0),
+                        "application_key": transaction.get("ApplicationKey", 0),
+                        "terminal_request_id": transaction.get("TerminalRequestID", 0),
+                    }
+                    
+                    transactions.append(standard_transaction)
+                
+                logger.info(f"Получено транзакций из XML API: {len(transactions)}")
+                return transactions
+                
+            except ET.ParseError as xml_error:
+                logger.error(f"Ошибка парсинга XML ответа: {str(xml_error)}")
+                logger.error(f"Сырой ответ: {response_text[:1000]}")
+                return []
+                
+        except Exception as e:
+            logger.error(f"Ошибка при получении транзакций через XML API: {str(e)}", exc_info=True)
+            return []
+    
+    def _parse_datetime(self, datetime_str: str) -> Optional[datetime]:
+        """
+        Парсит строку даты/времени в формате "YYYY-MM-DD HH:MM:SS"
+        
+        Args:
+            datetime_str: Строка с датой/временем
+            
+        Returns:
+            Объект datetime или None
+        """
+        if not datetime_str:
+            return None
+        
+        try:
+            # Пробуем разные форматы
+            formats = [
+                '%Y-%m-%d %H:%M:%S',
+                '%Y-%m-%dT%H:%M:%S',
+                '%Y-%m-%d %H:%M:%S.%f',
+                '%Y-%m-%dT%H:%M:%S.%f',
+            ]
+            
+            for fmt in formats:
+                try:
+                    return datetime.strptime(datetime_str.strip(), fmt)
+                except ValueError:
+                    continue
+            
+            logger.warning(f"Не удалось распарсить дату: {datetime_str}")
+            return None
+        except Exception as e:
+            logger.warning(f"Ошибка при парсинге даты {datetime_str}: {str(e)}")
+            return None
     
     async def healthcheck(self) -> Dict[str, Any]:
         """
@@ -1715,6 +1972,67 @@ class WebAdapter:
             Результат проверки
         """
         try:
+            # Для XML API с сертификатом проверяем доступность endpoint
+            if self.use_xml_api and self.xml_api_certificate:
+                # Пробуем отправить тестовый запрос с минимальными данными
+                try:
+                    # Определяем endpoint для тестирования
+                    if self.xml_api_endpoint:
+                        if self.xml_api_endpoint.startswith('http://') or self.xml_api_endpoint.startswith('https://'):
+                            test_endpoint = self.xml_api_endpoint
+                        else:
+                            test_endpoint = f"{self.base_url.rstrip('/')}/{self.xml_api_endpoint.lstrip('/')}"
+                    else:
+                        # Используем стандартный endpoint: BASE_URL/sncapi/sale
+                        test_endpoint = f"{self.base_url.rstrip('/')}/sncapi/sale"
+                    
+                    # Создаем минимальный тестовый запрос
+                    test_xml = self._create_xml_sale_request(
+                        card_numbers=["0000000000000000"],  # Тестовый номер карты
+                        date_from=date.today(),
+                        date_to=date.today(),
+                        certificate=self.xml_api_certificate,
+                        pos_code=self.xml_api_pos_code
+                    )
+                    
+                    headers = {
+                        "Content-Type": "text/xml; charset=utf-8",
+                        "Accept": "application/xml, text/xml, */*",
+                    }
+                    
+                    logger.info(f"Тестовый запрос к endpoint: {test_endpoint}")
+                    response = await self.client.post(
+                        test_endpoint,
+                        content=test_xml.encode('utf-8'),
+                        headers=headers,
+                        timeout=10.0
+                    )
+                    
+                    # Если получили ответ (даже с ошибкой валидации), значит endpoint доступен
+                    return {
+                        "status": "ok",
+                        "checked_at": datetime.now(timezone.utc),
+                        "endpoint": test_endpoint,
+                        "message": "XML API endpoint доступен"
+                    }
+                except httpx.HTTPStatusError as e:
+                    # Если получили ошибку, но не 405, значит endpoint работает
+                    if e.response.status_code != 405:
+                        return {
+                            "status": "ok",
+                            "checked_at": datetime.now(timezone.utc),
+                            "endpoint": test_endpoint,
+                            "message": f"XML API endpoint доступен (статус: {e.response.status_code})"
+                        }
+                    raise
+                except Exception as test_error:
+                    return {
+                        "status": "error",
+                        "checked_at": datetime.now(timezone.utc),
+                        "error": f"Не удалось подключиться к XML API endpoint: {str(test_error)}"
+                    }
+            
+            # Для JSON API пробуем получить список карт
             cards = await self.list_cards()
             return {
                 "status": "ok",
@@ -1733,9 +2051,26 @@ class WebAdapter:
         Получение списка полей из примера транзакции API
         
         Returns:
-            Список имен полей (пока стандартные, так как API для транзакций не найден)
+            Список имен полей
         """
-        # Возвращаем стандартные поля, так как API для транзакций не найден
+        # Для XML API возвращаем поля из спецификации
+        if self.use_xml_api and self.xml_api_certificate:
+            xml_api_fields = [
+                "CardNumber", "card_number",
+                "StartDate", "EndDate",
+                "COD_L", "COD_O", "COD_A", "COD_OWN", "COD_AZS",
+                "AZS_NAME", "azs_name", "azs_number",
+                "BonusIn", "BonusOut",
+                "CompleteDatetime", "TransactionDatetime", "transaction_date",
+                "Volume", "volume",
+                "ShopCost", "ShopBaseCost", "PersonCost", "amount",
+                "ResourceKey", "CollectionKey", "VendorKey", "WarehouseKey",
+                "ResourceName", "product",
+                "ApplicationKey", "TerminalRequestID",
+            ]
+            return xml_api_fields
+        
+        # Для JSON API возвращаем стандартные поля
         standard_fields = [
             "date", "transaction_date",
             "card_number", "card",
@@ -1791,15 +2126,18 @@ class ApiProviderService:
         # Для типа "web" используем WebAdapter
         if template.connection_type == "web":
             base_url = settings.get("base_url") or settings.get("api_url")
-            username = settings.get("username") or settings.get("login") or settings.get("user")
-            password = settings.get("password") or settings.get("pass")
+            certificate = settings.get("xml_api_certificate") or settings.get("certificate")
             
             if not base_url:
                 raise ValueError("Не указан базовый URL (base_url или api_url)")
-            if not username:
-                raise ValueError("Не указано имя пользователя (username, login или user)")
-            if not password:
-                raise ValueError("Не указан пароль (password или pass)")
+            
+            # Для XML API требуется только сертификат, username и password не используются
+            if not certificate:
+                raise ValueError("Для XML API требуется указать сертификат (certificate или xml_api_certificate)")
+            
+            # Для совместимости устанавливаем пустые значения, так как они не используются
+            username = settings.get("username") or settings.get("login") or settings.get("user") or ""
+            password = settings.get("password") or settings.get("pass") or ""
             
             # Параметры для XML API (если указаны)
             use_xml_api = settings.get("use_xml_api", False)
@@ -1808,28 +2146,26 @@ class ApiProviderService:
             xml_api_salt = settings.get("xml_api_salt") or settings.get("salt")
             xml_api_cod_azs = settings.get("xml_api_cod_azs") or settings.get("cod_azs")
             xml_api_endpoint = settings.get("xml_api_endpoint") or settings.get("endpoint")
+            xml_api_certificate = settings.get("xml_api_certificate") or settings.get("certificate")
+            xml_api_pos_code = settings.get("xml_api_pos_code") or settings.get("pos_code")
             
-            # Если указан ключ или подпись, автоматически включаем XML API
-            if xml_api_key or xml_api_signature:
+            # Если указан сертификат, автоматически включаем XML API
+            if xml_api_certificate:
                 use_xml_api = True
-                logger.info("✓ Обнаружены параметры XML API, включаем XML API авторизацию", extra={
-                    "has_key": bool(xml_api_key),
-                    "key_preview": xml_api_key[:30] + "..." if xml_api_key and len(xml_api_key) > 30 else xml_api_key,
-                    "has_signature": bool(xml_api_signature),
-                    "signature_preview": xml_api_signature[:30] + "..." if xml_api_signature and len(xml_api_signature) > 30 else xml_api_signature,
-                    "has_salt": bool(xml_api_salt),
-                    "salt_preview": xml_api_salt[:20] + "..." if xml_api_salt and len(xml_api_salt) > 20 else xml_api_salt,
-                    "cod_azs": xml_api_cod_azs
+                logger.info("✓ Обнаружен сертификат XML API, включаем XML API", extra={
+                    "has_certificate": bool(xml_api_certificate),
+                    "certificate_preview": xml_api_certificate[:30] + "..." if xml_api_certificate and len(xml_api_certificate) > 30 else xml_api_certificate,
+                    "pos_code": xml_api_pos_code
                 })
                 print(f"\n{'='*80}")
                 print(f"XML API ПАРАМЕТРЫ ОБНАРУЖЕНЫ:")
-                print(f"  Ключ (key): {xml_api_key}")
-                print(f"  Подпись (signature): {xml_api_signature[:50]}..." if xml_api_signature and len(xml_api_signature) > 50 else f"  Подпись (signature): {xml_api_signature}")
-                print(f"  Salt: {xml_api_salt if xml_api_salt else 'не указан'}")
-                print(f"  COD_AZS: {xml_api_cod_azs}")
+                print(f"  Сертификат (certificate): {xml_api_certificate[:50]}..." if len(xml_api_certificate) > 50 else f"  Сертификат (certificate): {xml_api_certificate}")
+                print(f"  POS Code: {xml_api_pos_code}")
+                print(f"  → Используется XML API с сертификатом (авторизация не требуется)")
+                print(f"  → Логин, пароль, ключ, подпись и salt не используются")
                 print(f"{'='*80}\n")
             else:
-                logger.info("XML API параметры не указаны, будет использоваться JSON API (JWT токен)")
+                logger.info("Сертификат XML API не указан. Для работы с XML API требуется сертификат.")
             
             return WebAdapter(
                 base_url=base_url,
@@ -1841,7 +2177,9 @@ class ApiProviderService:
                 xml_api_signature=xml_api_signature,
                 xml_api_salt=xml_api_salt,
                 xml_api_cod_azs=xml_api_cod_azs,
-                xml_api_endpoint=xml_api_endpoint
+                xml_api_endpoint=xml_api_endpoint,
+                xml_api_certificate=xml_api_certificate,
+                xml_api_pos_code=xml_api_pos_code
             )
         
         # Для типа "api" используем существующую логику
@@ -2038,47 +2376,90 @@ class ApiProviderService:
         
         try:
             async with adapter:
-                # Если карты не указаны, получаем список всех карт
+                # Если карты не указаны, пытаемся получить список всех карт
                 if not card_numbers:
                     cards_data = await adapter.list_cards()
                     # Для WebAdapter list_cards возвращает список строк, для PetrolPlusAdapter - список словарей
-                    if cards_data and isinstance(cards_data[0], dict):
-                        card_numbers = [str(card.get("cardNum") or "") for card in cards_data if card.get("cardNum")]
+                    if cards_data and len(cards_data) > 0:
+                        if isinstance(cards_data[0], dict):
+                            card_numbers = [str(card.get("cardNum") or "") for card in cards_data if card.get("cardNum")]
+                        else:
+                            card_numbers = [str(card) for card in cards_data if card]
+                        logger.info(f"Найдено карт для загрузки: {len(card_numbers)}", extra={
+                            "template_id": template.id
+                        })
                     else:
-                        card_numbers = [str(card) for card in cards_data if card]
-                    logger.info(f"Найдено карт для загрузки: {len(card_numbers)}", extra={
-                        "template_id": template.id
-                    })
+                        # Для XML API с сертификатом список карт нужно указывать вручную
+                        if isinstance(adapter, WebAdapter) and adapter.use_xml_api and adapter.xml_api_certificate:
+                            logger.warning("Для XML API с сертификатом список карт не может быть получен автоматически. Укажите номера карт в параметре card_numbers.", extra={
+                                "template_id": template.id
+                            })
+                            raise ValueError("Для XML API с сертификатом необходимо указать номера карт. Список карт не может быть получен автоматически.")
+                        else:
+                            logger.warning("Не удалось получить список карт. Укажите номера карт в параметре card_numbers.", extra={
+                                "template_id": template.id
+                            })
+                            raise ValueError("Не удалось получить список карт. Укажите номера карт в параметре card_numbers.")
                 
-                # Загружаем транзакции для каждой карты
-                for card_number in card_numbers:
-                    if not card_number:
-                        continue
-                    
+                # Для XML API с сертификатом можно загрузить транзакции для всех карт одним запросом
+                if isinstance(adapter, WebAdapter) and adapter.use_xml_api and adapter.xml_api_certificate:
+                    # Загружаем транзакции для всех карт одним запросом
                     try:
-                        transactions = await adapter.fetch_card_transactions(
-                            card_number,
+                        transactions = await adapter._fetch_transactions_xml_api(
+                            card_numbers,
                             date_from,
                             date_to
                         )
                         
                         # Преобразуем транзакции в формат системы
                         for trans in transactions:
-                            system_trans = self._convert_to_system_format(trans, template, card_number)
+                            # Извлекаем номер карты из транзакции
+                            card_num = trans.get("card_number", "")
+                            system_trans = self._convert_to_system_format(trans, template, card_num)
                             if system_trans:
                                 all_transactions.append(system_trans)
                         
-                        logger.debug(f"Загружено транзакций для карты {card_number}: {len(transactions)}", extra={
-                            "card_number": card_number,
-                            "template_id": template.id
+                        logger.info(f"Загружено транзакций через XML API: {len(transactions)}", extra={
+                            "template_id": template.id,
+                            "cards_count": len(card_numbers),
+                            "transactions_count": len(transactions)
                         })
                     except Exception as e:
-                        logger.warning(f"Ошибка при загрузке транзакций для карты {card_number}: {str(e)}", extra={
-                            "card_number": card_number,
+                        logger.error(f"Ошибка при загрузке транзакций через XML API: {str(e)}", extra={
                             "template_id": template.id,
                             "error": str(e)
-                        })
-                        continue
+                        }, exc_info=True)
+                        raise
+                else:
+                    # Для других типов API загружаем транзакции для каждой карты отдельно
+                    for card_number in card_numbers:
+                        if not card_number:
+                            continue
+                        
+                        try:
+                            transactions = await adapter.fetch_card_transactions(
+                                card_number,
+                                date_from,
+                                date_to
+                            )
+                            
+                            # Преобразуем транзакции в формат системы
+                            for trans in transactions:
+                                system_trans = self._convert_to_system_format(trans, template, card_number)
+                                if system_trans:
+                                    all_transactions.append(system_trans)
+                            
+                            logger.debug(f"Загружено транзакций для карты {card_number}: {len(transactions)}", extra={
+                                "card_number": card_number,
+                                "template_id": template.id
+                            })
+                        except Exception as e:
+                            logger.warning(f"Ошибка при загрузке транзакций для карты {card_number}: {str(e)}", extra={
+                                "card_number": card_number,
+                                "template_id": template.id,
+                                "error": str(e)
+                            })
+                            continue
             
             logger.info(f"Всего загружено транзакций: {len(all_transactions)}", extra={
                 "template_id": template.id,
@@ -2121,8 +2502,10 @@ class ApiProviderService:
         except (json.JSONDecodeError, TypeError):
             field_mapping = {}
         
-        # Преобразуем дату
+        # Преобразуем дату (поддерживаем разные форматы: стандартный API и XML API)
         transaction_date = self._parse_datetime(
+            api_transaction.get("transaction_date") or  # XML API
+            api_transaction.get("TransactionDatetime") or  # XML API (оригинальное поле)
             api_transaction.get("date") or
             api_transaction.get("dateReg") or
             api_transaction.get("dateRec")
@@ -2134,9 +2517,28 @@ class ApiProviderService:
             })
             return None
         
-        # Преобразуем сумму и количество
-        amount = self._parse_decimal(api_transaction.get("sum"), default=Decimal("0")) or Decimal("0")
-        quantity = self._parse_decimal(api_transaction.get("amount")) or Decimal("0")
+        # Преобразуем сумму и количество (поддерживаем разные форматы)
+        amount = self._parse_decimal(
+            api_transaction.get("amount") or  # Стандартный формат
+            api_transaction.get("ShopCost") or  # XML API
+            api_transaction.get("PersonCost") or  # XML API (альтернатива)
+            api_transaction.get("sum"),  # Стандартный формат
+            default=Decimal("0")
+        ) or Decimal("0")
+        
+        # Используем абсолютное значение суммы (в XML API могут быть отрицательные значения для возвратов)
+        amount = abs(amount)
+        
+        # Количество/объем (поддерживаем разные форматы)
+        quantity = self._parse_decimal(
+            api_transaction.get("volume") or  # XML API
+            api_transaction.get("Volume") or  # XML API (оригинальное поле)
+            api_transaction.get("quantity") or
+            api_transaction.get("amount")
+        ) or Decimal("0")
+        
+        # Используем абсолютное значение объема
+        quantity = abs(quantity)
         
         # Формируем адрес
         address_parts = [
@@ -2152,11 +2554,37 @@ class ApiProviderService:
             ", ".join(dict.fromkeys(address_candidates))
         )
         
-        # Получаем оригинальное название АЗС
-        azs_original_name = str(api_transaction.get("posName") or api_transaction.get("posBrand") or api_transaction.get("azsNumber") or "")
-        # Извлекаем номер АЗС из названия
-        from app.services.normalization_service import extract_azs_number
-        azs_number = extract_azs_number(azs_original_name) if azs_original_name else ""
+        # Получаем оригинальное название АЗС (поддерживаем разные форматы)
+        azs_original_name = str(
+            api_transaction.get("azs_name") or  # XML API (уже преобразованное)
+            api_transaction.get("AZS_NAME") or  # XML API (оригинальное поле)
+            api_transaction.get("posName") or
+            api_transaction.get("posBrand") or
+            api_transaction.get("azsNumber") or
+            ""
+        )
+        
+        # Номер АЗС (поддерживаем разные форматы)
+        azs_number = str(
+            api_transaction.get("azs_number") or  # XML API (уже преобразованное)
+            api_transaction.get("COD_AZS") or  # XML API (оригинальное поле)
+            api_transaction.get("azsNumber") or
+            ""
+        )
+        
+        # Если номер АЗС не найден напрямую, извлекаем из названия
+        if not azs_number and azs_original_name:
+            from app.services.normalization_service import extract_azs_number
+            azs_number = extract_azs_number(azs_original_name) or ""
+        
+        # Название товара/топлива (поддерживаем разные форматы)
+        product = (
+            api_transaction.get("product") or  # Стандартный формат или уже преобразованное
+            api_transaction.get("ResourceName") or  # XML API (оригинальное поле)
+            api_transaction.get("serviceName") or
+            api_transaction.get("service") or
+            ""
+        )
         
         # Создаем транзакцию в формате системы
         system_transaction = {
@@ -2170,7 +2598,7 @@ class ApiProviderService:
             "settlement": api_transaction.get("posTown") or api_transaction.get("settlement"),
             "location": resolved_address,
             "location_code": api_transaction.get("posCode") or api_transaction.get("locationCode"),
-            "product": api_transaction.get("serviceName") or api_transaction.get("product"),
+            "product": product,
             "operation_type": "Покупка",
             "quantity": quantity,
             "currency": api_transaction.get("currency") or self._get_currency_from_settings(template) or "RUB",

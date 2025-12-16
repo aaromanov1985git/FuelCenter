@@ -176,7 +176,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB' }
       }
       if (connectionType === 'web') {
-        return { base_url: '', username: '', password: '', currency: 'RUB', key: '', signature: '', salt: '', cod_azs: 1000001 }
+        return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: 23, key: '', signature: '', salt: '', cod_azs: 1000001 }
       }
       return { host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8' }
     }
@@ -188,7 +188,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
           return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB' }
         }
         if (connectionType === 'web') {
-          return { base_url: '', username: '', password: '', currency: 'RUB', key: '', signature: '', salt: '', cod_azs: 1000001 }
+          return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: 23, key: '', signature: '', salt: '', cod_azs: 1000001 }
         }
         return { host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8' }
       }
@@ -527,8 +527,14 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
     
     if (formData.connection_type === 'web') {
       // Для веб-сервиса проверяем настройки подключения
-      if (!connectionSettings.base_url || !connectionSettings.username || !connectionSettings.password) {
-        setError('Укажите базовый URL, имя пользователя и пароль для веб-сервиса')
+      // Для XML API требуется только сертификат
+      const hasCertificate = connectionSettings.certificate || connectionSettings.xml_api_certificate
+      if (!connectionSettings.base_url) {
+        setError('Укажите базовый URL для веб-сервиса')
+        return
+      }
+      if (!hasCertificate) {
+        setError('Для XML API требуется указать сертификат (Certificate)')
         return
       }
     }
@@ -685,6 +691,8 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                       username: '', 
                       password: '', 
                       currency: 'RUB',
+                      certificate: '',
+                      pos_code: 23,
                       key: '',
                       signature: '',
                       salt: '',
@@ -911,7 +919,8 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
               Настройки подключения к веб-сервису
             </h4>
             <p className="section-description">
-              Укажите параметры подключения к веб-сервису с авторизацией через JWT токен или XML API.
+              Укажите параметры подключения к веб-сервису. 
+              Для XML API используется только сертификат, авторизация не требуется.
             </p>
             
             <form onSubmit={(e) => e.preventDefault()} noValidate>
@@ -929,34 +938,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
               </label>
             </div>
             
-            <div className="form-row">
-              <div className="form-group">
-                <label>
-                  Имя пользователя: <span className="required-mark">*</span>
-                  <input
-                    type="text"
-                    value={connectionSettings.username || ''}
-                    onChange={(e) => setConnectionSettings({ ...connectionSettings, username: e.target.value })}
-                    placeholder="username"
-                    className="input-full-width"
-                    autoComplete="username"
-                  />
-                </label>
-              </div>
-              <div className="form-group">
-                <label>
-                  Пароль: <span className="required-mark">*</span>
-                  <input
-                    type="password"
-                    value={connectionSettings.password || ''}
-                    onChange={(e) => setConnectionSettings({ ...connectionSettings, password: e.target.value })}
-                    placeholder="password"
-                    className="input-full-width"
-                    autoComplete="current-password"
-                  />
-                </label>
-              </div>
-            </div>
+            {/* Поля логин/пароль скрыты, так как для XML API они не используются */}
             
             <div className="form-group">
               <label>
@@ -975,83 +957,68 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
             {/* Параметры XML API (опционально) */}
             <div className="form-section" style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
               <h5 style={{ marginTop: '0', marginBottom: '15px', fontSize: '14px', fontWeight: '600', color: '#495057' }}>
-                Параметры XML API (опционально)
+                Параметры XML API
               </h5>
               <p style={{ marginBottom: '15px', fontSize: '12px', color: '#6c757d' }}>
-                Если указаны ключ или подпись, будет использоваться XML API авторизация вместо JWT токена.
+                <strong>Важно:</strong> Для работы с XML API используется только сертификат. 
+                Логин, пароль, ключ, подпись и salt не используются.
               </p>
               
               <div className="form-group">
                 <label>
-                  Ключ (Key):
+                  Сертификат (Certificate): <span className="required-mark">*</span>
                   <input
                     type="text"
-                    value={connectionSettings.key || connectionSettings.xml_api_key || ''}
+                    value={connectionSettings.certificate || connectionSettings.xml_api_certificate || ''}
                     onChange={(e) => setConnectionSettings({ 
                       ...connectionSettings, 
-                      key: e.target.value,
-                      xml_api_key: e.target.value 
+                      certificate: e.target.value,
+                      xml_api_certificate: e.target.value 
                     })}
-                    placeholder="i#188;t#0;k#545"
+                    placeholder="1.4703FECF75257F2E915"
                     className="input-full-width"
                   />
-                  <span className="field-help">Ключ XML API (например: i#188;t#0;k#545)</span>
+                  <span className="field-help">Сертификат для доступа к XML API (например: 1.4703FECF75257F2E915). При наличии сертификата авторизация не требуется.</span>
                 </label>
               </div>
               
               <div className="form-group">
                 <label>
-                  Подпись (Signature):
+                  Код POS (POS Code):
                   <input
-                    type="text"
-                    value={connectionSettings.signature || connectionSettings.xml_api_signature || ''}
+                    type="number"
+                    value={connectionSettings.pos_code || connectionSettings.xml_api_pos_code || '23'}
                     onChange={(e) => setConnectionSettings({ 
                       ...connectionSettings, 
-                      signature: e.target.value,
-                      xml_api_signature: e.target.value 
+                      pos_code: parseInt(e.target.value) || 23,
+                      xml_api_pos_code: parseInt(e.target.value) || 23
                     })}
-                    placeholder="545.1AFB41693CD79C72796D7B56F2D727B8B343BF17"
+                    placeholder="23"
                     className="input-full-width"
                   />
-                  <span className="field-help">Подпись XML API (хеш пароля, например: 545.1AFB41693CD79C72796D7B56F2D727B8B343BF17)</span>
+                  <span className="field-help">Код POS для XML API (по умолчанию: 23)</span>
                 </label>
               </div>
               
-              <div className="form-row">
-                <div className="form-group">
-                  <label>
-                    Salt (опционально):
-                    <input
-                      type="text"
-                      value={connectionSettings.salt || connectionSettings.xml_api_salt || ''}
-                      onChange={(e) => setConnectionSettings({ 
-                        ...connectionSettings, 
-                        salt: e.target.value,
-                        xml_api_salt: e.target.value 
-                      })}
-                      placeholder="salt_string"
-                      className="input-full-width"
-                    />
-                    <span className="field-help">Соль для хеширования пароля (если требуется вычисление sha1(salt + password))</span>
-                  </label>
-                </div>
-                <div className="form-group">
-                  <label>
-                    Код АЗС (COD_AZS):
-                    <input
-                      type="number"
-                      value={connectionSettings.cod_azs || connectionSettings.xml_api_cod_azs || '1000001'}
-                      onChange={(e) => setConnectionSettings({ 
-                        ...connectionSettings, 
-                        cod_azs: parseInt(e.target.value) || 1000001,
-                        xml_api_cod_azs: parseInt(e.target.value) || 1000001
-                      })}
-                      placeholder="1000001"
-                      className="input-full-width"
-                    />
-                    <span className="field-help">Код АЗС для XML API (по умолчанию: 1000001)</span>
-                  </label>
-                </div>
+              <div className="form-group">
+                <label>
+                  Endpoint для получения транзакций (опционально):
+                  <input
+                    type="text"
+                    value={connectionSettings.endpoint || connectionSettings.xml_api_endpoint || ''}
+                    onChange={(e) => setConnectionSettings({ 
+                      ...connectionSettings, 
+                      endpoint: e.target.value,
+                      xml_api_endpoint: e.target.value 
+                    })}
+                    placeholder="http://176.222.217.51:1342/sncapi/sale"
+                    className="input-full-width"
+                  />
+                  <span className="field-help">
+                    Полный URL endpoint для получения транзакций (например: http://176.222.217.51:1342/sncapi/sale). 
+                    Если не указан, используется BASE_URL/sncapi/sale
+                  </span>
+                </label>
               </div>
             </div>
             
@@ -1060,8 +1027,13 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                 type="button"
                 className="btn btn-secondary"
                 onClick={async () => {
-                  if (!connectionSettings.base_url || !connectionSettings.username || !connectionSettings.password) {
-                    setError('Заполните все обязательные поля: базовый URL, имя пользователя и пароль')
+                  const hasCertificate = connectionSettings.certificate || connectionSettings.xml_api_certificate
+                  if (!connectionSettings.base_url) {
+                    setError('Укажите базовый URL')
+                    return
+                  }
+                  if (!hasCertificate) {
+                    setError('Для XML API требуется указать сертификат (Certificate)')
                     return
                   }
                   
@@ -1113,7 +1085,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                     setLoadingApiFields(false)
                   }
                 }}
-                disabled={loadingApiFields || !connectionSettings.base_url || !connectionSettings.username || !connectionSettings.password}
+                disabled={loadingApiFields || !connectionSettings.base_url || !(connectionSettings.certificate || connectionSettings.xml_api_certificate)}
                 title="Проверить подключение к веб-сервису"
               >
                 {loadingApiFields ? '⏳ Проверка...' : '🔍 Проверить подключение'}
@@ -1143,8 +1115,13 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                 type="button"
                 className="btn btn-secondary"
                 onClick={async () => {
-                  if (!connectionSettings.base_url || !connectionSettings.username || !connectionSettings.password) {
-                    setError('Заполните все обязательные поля: базовый URL, имя пользователя и пароль')
+                  const hasCertificate = connectionSettings.certificate || connectionSettings.xml_api_certificate
+                  if (!connectionSettings.base_url) {
+                    setError('Укажите базовый URL')
+                    return
+                  }
+                  if (!hasCertificate) {
+                    setError('Для XML API требуется указать сертификат (Certificate)')
                     return
                   }
                   
@@ -1198,7 +1175,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                     setLoadingApiFields(false)
                   }
                 }}
-                disabled={loadingApiFields || !connectionSettings.base_url || !connectionSettings.username || !connectionSettings.password}
+                disabled={loadingApiFields || !connectionSettings.base_url || !(connectionSettings.certificate || connectionSettings.xml_api_certificate)}
                 title="Загрузить список полей из веб-сервиса"
               >
                 {loadingApiFields ? '⏳ Загрузка...' : '🔍 Загрузить поля из веб-сервиса'}

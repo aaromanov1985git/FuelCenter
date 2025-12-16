@@ -57,11 +57,11 @@ const LoadApiModal = ({
             />
             
             <FormField
-              label="Номера карт (опционально)"
+              label="Номера карт"
               name="cardNumbers"
               value={cardNumbers || ''}
               onChange={(e) => onCardNumbersChange(e.target.value)}
-              helpText="Если оставить пустым, будут загружены транзакции для всех карт из API"
+              helpText="Укажите номера карт через запятую или каждую на новой строке. Для XML API с сертификатом карты обязательны."
             >
               <textarea
                 placeholder="Введите номера карт через запятую или каждую на новой строке. Например: 1234567890, 0987654321"

@@ -386,7 +386,7 @@ const TemplatesList = () => {
               Загрузить (Firebird)
             </Button>
           )}
-          {row.connection_type === 'api' && (
+          {(row.connection_type === 'api' || row.connection_type === 'web') && (
             <Button
               size="sm"
               variant="success"
@@ -396,7 +396,7 @@ const TemplatesList = () => {
                 templateName: row.name
               })}
             >
-              Загрузить (API)
+              Загрузить {row.connection_type === 'web' ? '(XML API)' : '(API)'}
             </Button>
           )}
           <Button size="sm" variant="primary" onClick={() => handleEditTemplate(row)}>
