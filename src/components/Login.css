@@ -1,14 +1,44 @@
-/* Контейнер страницы входа */
+/* Контейнер страницы входа - перекрывает фон App */
 .login-container {
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--padding-section);
-  position: relative;
-  overflow: hidden;
-  background: #f8fafc;
+  min-height: 100vh !important;
+  min-height: -webkit-fill-available !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #f8fafc !important;
+  background-image: none !important;
+  background-color: #f8fafc !important;
+  overflow: visible;
+  z-index: 9999 !important;
+  margin: 0 !important;
+}
+
+/* Переопределяем фон App для страницы логина */
+.app .login-container {
+  background: #f8fafc !important;
+  background-image: none !important;
+}
+
+/* Если браузер поддерживает :has() */
+.app:has(.login-container) {
+  background: #f8fafc !important;
+  background-image: none !important;
+  background-color: #f8fafc !important;
+}
+
+/* Переопределяем фон body когда есть login-container */
+body:has(.login-container) {
+  background: #f8fafc !important;
+  background-image: none !important;
+  background-color: #f8fafc !important;
 }
 
 .login-container *,
@@ -17,37 +47,19 @@
   box-sizing: border-box;
 }
 
-/* Фон */
+/* Предотвращаем горизонтальную прокрутку */
+.login-container {
+  overflow-x: hidden !important;
+}
+
+.login-content {
+  overflow-x: hidden;
+}
+
+/* Фон - скрываем градиент */
 .login-background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #6366f1 100%);
-  z-index: 0;
-}
-
-.login-background::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-  animation: backgroundPulse 20s ease-in-out infinite;
-}
-
-@keyframes backgroundPulse {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.5;
-  }
-  50% {
-    transform: translate(-10%, -10%) scale(1.1);
-    opacity: 0.8;
-  }
+  display: none !important;
+  visibility: hidden !important;
 }
 
 /* Контент */
@@ -55,73 +67,71 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 420px;
+  max-width: 400px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto;
 }
 
 .login-wrapper {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-section);
+  gap: 0;
 }
 
-/* Брендинг */
+/* Брендинг - убираем, так как он будет внутри карточки в минималистичном стиле */
 .login-brand {
-  text-align: center;
-  margin-bottom: var(--spacing-block);
+  display: none;
 }
 
-.login-brand-title {
-  font-size: var(--font-size-4xl);
-  font-weight: var(--font-weight-bold);
-  color: #ffffff;
-  margin: 0 0 var(--spacing-small) 0;
-  letter-spacing: -0.02em;
-  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
-}
-
-.login-brand-subtitle {
-  font-size: var(--font-size-lg);
-  color: rgba(255, 255, 255, 0.9);
-  margin: 0;
-  font-weight: var(--font-weight-normal);
-}
-
-/* Карточка */
-.login-card {
+/* Карточка - минималистичный стиль */
+.login-card,
+.login-card.card,
+.login-card.card-elevated {
   width: 100%;
-  background: #ffffff;
-  border-radius: var(--radius-large);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15),
-              0 0 0 1px rgba(0, 0, 0, 0.05);
-  border: none;
-  overflow: hidden;
+  background: white !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05) !important;
+  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+  margin: 0 !important;
+}
+
+.login-card:hover,
+.login-card.card:hover,
+.login-card.card-elevated:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08) !important;
 }
 
 .login-card-body {
-  padding: var(--padding-section);
+  padding: 32px;
   display: flex;
   flex-direction: column;
 }
 
+/* Заголовок внутри карточки - минималистичный */
 .login-card-header-inline {
-  margin-bottom: var(--spacing-block);
+  margin-bottom: 24px;
   text-align: center;
-  padding-bottom: var(--spacing-small);
-  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .login-form-title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  margin: 0 0 var(--spacing-small) 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 4px 0;
   text-align: center;
   line-height: 1.2;
+  letter-spacing: -0.5px;
 }
 
 .login-form-subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  font-size: 14px;
+  color: #64748b;
   margin: 0;
   text-align: center;
   line-height: 1.5;
@@ -131,37 +141,74 @@
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-element);
+  gap: 0;
   width: 100%;
 }
 
 .login-form-group {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-tiny);
+  gap: 6px;
   width: 100%;
+  margin-bottom: 20px;
 }
 
 .login-form-field {
   width: 100%;
 }
 
+/* Стили для полей ввода - минималистичные */
+.login-form-field :global(.input-label),
+.login-form-field :global(.form-field-label),
+.login-form-field :global(label) {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #334155 !important;
+  margin-bottom: 6px !important;
+}
+
+.login-form-field :global(.input-field),
+.login-form-field :global(.form-field-input),
+.login-form-field :global(input) {
+  width: 100% !important;
+  padding: 10px 14px !important;
+  border: 1px solid #cbd5e0 !important;
+  border-radius: 8px !important;
+  font-size: 15px !important;
+  transition: border-color 0.2s, box-shadow 0.2s !important;
+  background: white !important;
+}
+
+.login-form-field :global(.input-field:focus),
+.login-form-field :global(.form-field-input:focus),
+.login-form-field :global(input:focus) {
+  outline: none !important;
+  border-color: #4a00e0 !important;
+  box-shadow: 0 0 0 2px rgba(74, 0, 224, 0.1) !important;
+}
+
+.login-form-field :global(.input-wrapper),
+.login-form-field :global(.form-field) {
+  width: 100%;
+}
+
 .login-form-actions {
   display: flex;
-  justify-content: center;
-  margin-top: var(--spacing-small);
-  margin-bottom: 0;
+  justify-content: flex-end;
+  margin-top: 0;
+  margin-bottom: 20px;
   align-items: center;
+  text-align: right;
 }
 
 .login-link-button {
   background: none;
   border: none;
-  color: var(--color-primary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 400;
   cursor: pointer;
-  padding: var(--spacing-tiny) var(--spacing-small);
+  padding: 0;
   text-decoration: none;
   transition: color 0.2s ease;
   -webkit-tap-highlight-color: transparent;
@@ -169,8 +216,8 @@
 }
 
 .login-link-button:hover {
-  color: var(--color-primary-hover);
-  text-decoration: underline;
+  color: #4a00e0;
+  text-decoration: none;
 }
 
 .login-link-button:active {
@@ -178,121 +225,454 @@
 }
 
 .login-submit-button {
-  margin-top: var(--spacing-element);
-  min-height: 48px;
-  font-weight: var(--font-weight-semibold);
+  margin-top: 0;
+  min-height: auto !important;
+  height: auto !important;
+  padding: 12px !important;
+  font-weight: 500 !important;
+  font-size: 15px !important;
   width: 100%;
+  background: #4a00e0 !important;
+  background-image: none !important;
+  border: none !important;
+  border-radius: 8px !important;
+  color: white !important;
+  box-shadow: none !important;
+  transition: background 0.2s, transform 0.1s !important;
+}
+
+.login-submit-button:hover:not(:disabled) {
+  background: #3a00b0 !important;
+  transform: scale(1.02) !important;
+  box-shadow: none !important;
+}
+
+.login-submit-button:active:not(:disabled) {
+  transform: scale(1) !important;
+}
+
+.login-submit-button:disabled {
+  background: #cbd5e0 !important;
+  cursor: not-allowed;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+/* Стили для secondary кнопки в формах */
+.login-submit-button.btn-secondary {
+  background: #64748b !important;
+  background-image: none !important;
+  color: white !important;
+}
+
+.login-submit-button.btn-secondary:hover:not(:disabled) {
+  background: #475569 !important;
+  transform: scale(1.02) !important;
+  box-shadow: none !important;
+}
+
+.login-submit-button.btn-secondary:disabled {
+  background: #cbd5e0 !important;
 }
 
 .login-register-section {
   text-align: center;
-  margin-top: var(--spacing-block);
-  padding-top: var(--spacing-element);
-  border-top: 1px solid var(--color-border);
+  margin-top: 20px;
+  padding-top: 0;
+  border-top: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-tiny);
+  gap: 0;
   flex-wrap: wrap;
+  font-size: 14px;
+  color: #475569;
 }
 
 .login-register-text {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  font-size: 14px;
+  color: #475569;
 }
 
 .login-register-link {
-  font-weight: var(--font-weight-semibold);
+  font-weight: 500;
+  color: #4a00e0;
+  margin-left: 4px;
+}
+
+.login-register-link:hover {
+  text-decoration: underline;
 }
 
 /* Адаптивность - Планшеты */
 @media (max-width: 768px) {
   .login-container {
-    padding: var(--padding-element);
+    padding: 16px !important;
+    align-items: center !important;
   }
 
   .login-content {
-    max-width: 100%;
+    max-width: 100% !important;
+    width: 100% !important;
   }
 
-  .login-brand-title {
-    font-size: var(--font-size-3xl);
+  .login-card {
+    width: 100% !important;
+    max-width: 500px !important;
+    margin: 0 auto !important;
   }
 
-  .login-brand-subtitle {
-    font-size: var(--font-size-base);
+  .login-card-body {
+    padding: 28px 20px !important;
+  }
+
+  .login-form-title {
+    font-size: 19px !important;
+  }
+
+  .login-form-subtitle {
+    font-size: 13px !important;
+  }
+
+  .login-card-header-inline {
+    margin-bottom: 20px !important;
   }
 }
 
 /* Адаптивность - Мобильные устройства */
 @media (max-width: 480px) {
   .login-container {
-    padding: var(--padding-small);
-    align-items: flex-start;
-    padding-top: var(--padding-section);
+    padding: 12px !important;
+    align-items: center !important;
+  }
+
+  .login-content {
+    max-width: 100% !important;
+    width: 100% !important;
   }
 
   .login-card {
-    border-radius: var(--radius-medium);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    width: 100% !important;
+    border-radius: 12px !important;
+    margin: 0 !important;
   }
 
   .login-card-body {
-    padding: var(--padding-element);
-  }
-
-  .login-brand {
-    margin-bottom: var(--spacing-element);
-  }
-
-  .login-brand-title {
-    font-size: var(--font-size-2xl);
-  }
-
-  .login-brand-subtitle {
-    font-size: var(--font-size-sm);
+    padding: 24px 16px !important;
   }
 
   .login-form-title {
-    font-size: var(--font-size-xl);
+    font-size: 18px !important;
+    margin-bottom: 6px !important;
   }
 
-  .login-form-field .input-wrapper .input-field,
-  .login-form-field .form-field .form-field-input {
-    min-height: 52px;
-    font-size: 16px;
+  .login-form-subtitle {
+    font-size: 13px !important;
+  }
+
+  .login-card-header-inline {
+    margin-bottom: 20px !important;
+  }
+
+  .login-form-group {
+    margin-bottom: 18px !important;
+  }
+
+  .login-form-field :global(.input-label),
+  .login-form-field :global(.form-field-label),
+  .login-form-field :global(label) {
+    font-size: 14px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .login-form-field :global(.input-field),
+  .login-form-field :global(.form-field-input),
+  .login-form-field :global(input) {
+    min-height: 44px !important;
+    font-size: 16px !important;
+    padding: 10px 14px !important;
+  }
+
+  .login-form-field :global(.select-control) {
+    min-height: 44px !important;
+    font-size: 16px !important;
   }
 
   .login-submit-button {
-    min-height: 52px;
+    min-height: 44px !important;
+    font-size: 15px !important;
+    padding: 12px !important;
+  }
+
+  .login-link-button {
+    font-size: 13px !important;
+  }
+
+  .login-register-section {
+    margin-top: 20px !important;
+    font-size: 13px !important;
+  }
+
+  .login-register-text {
+    font-size: 13px !important;
+  }
+
+  .login-form-actions {
+    margin-bottom: 18px !important;
+  }
+}
+
+/* Очень маленькие экраны */
+@media (max-width: 360px) {
+  .login-container {
+    padding: 8px !important;
+  }
+
+  .login-card-body {
+    padding: 20px 12px !important;
+  }
+
+  .login-form-title {
+    font-size: 17px !important;
+  }
+
+  .login-form-subtitle {
+    font-size: 12px !important;
+  }
+
+  .login-form-group {
+    margin-bottom: 16px !important;
+  }
+}
+
+/* Ландшафтная ориентация на мобильных */
+@media (max-width: 768px) and (orientation: landscape) {
+  .login-container {
+    padding: 12px !important;
+    align-items: flex-start !important;
+    padding-top: 20px !important;
+  }
+
+  .login-card-body {
+    padding: 20px 16px !important;
+  }
+
+  .login-card-header-inline {
+    margin-bottom: 16px !important;
+  }
+
+  .login-form-title {
+    font-size: 18px !important;
+  }
+
+  .login-form-subtitle {
+    font-size: 12px !important;
+  }
+
+  .login-form-group {
+    margin-bottom: 16px !important;
+  }
+}
+
+/* Улучшения для touch-устройств */
+@media (hover: none) and (pointer: coarse) {
+  .login-link-button {
+    padding: 8px 12px !important;
+    min-height: 44px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .login-submit-button {
+    min-height: 48px !important;
+    padding: 14px !important;
+  }
+
+  .login-form-field :global(.input-field),
+  .login-form-field :global(.form-field-input),
+  .login-form-field :global(input) {
+    min-height: 48px !important;
+  }
+
+  .login-form-field :global(.select-control) {
+    min-height: 48px !important;
+  }
+}
+
+/* Предотвращаем зум при фокусе на iOS */
+@supports (-webkit-touch-callout: none) {
+  .login-form-field :global(.input-field),
+  .login-form-field :global(.form-field-input),
+  .login-form-field :global(input),
+  .login-form-field :global(select) {
+    font-size: 16px !important;
+  }
+}
+
+/* Улучшения для мобильных в темной теме */
+@media (max-width: 480px) {
+  [data-theme="midnight"] .login-card-body,
+  [data-theme="amber-glow"] .login-card-body {
+    padding: 24px 16px !important;
+  }
+
+  [data-theme="midnight"] .login-form-field :global(.input-field),
+  [data-theme="amber-glow"] .login-form-field :global(.input-field),
+  [data-theme="midnight"] .login-form-field :global(.form-field-input),
+  [data-theme="amber-glow"] .login-form-field :global(.form-field-input) {
+    min-height: 44px !important;
+    font-size: 16px !important;
   }
 }
 
 /* Темная тема */
 [data-theme="midnight"] .login-container,
 [data-theme="amber-glow"] .login-container {
-  background: #0f172a;
+  background: #0f172a !important;
+  background-color: #0f172a !important;
+  background-image: none !important;
 }
 
 [data-theme="midnight"] .login-card,
-[data-theme="amber-glow"] .login-card {
-  background: rgba(30, 41, 59, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+[data-theme="amber-glow"] .login-card,
+[data-theme="midnight"] .login-card.card,
+[data-theme="amber-glow"] .login-card.card,
+[data-theme="midnight"] .login-card.card-elevated,
+[data-theme="amber-glow"] .login-card.card-elevated {
+  background: #1e293b !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
 }
 
-[data-theme="midnight"] .login-brand-title,
-[data-theme="amber-glow"] .login-brand-title {
-  color: #ffffff;
+[data-theme="midnight"] .login-card:hover,
+[data-theme="amber-glow"] .login-card:hover {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4) !important;
 }
 
-[data-theme="midnight"] .login-brand-subtitle,
-[data-theme="amber-glow"] .login-brand-subtitle {
-  color: rgba(255, 255, 255, 0.9);
+[data-theme="midnight"] .login-form-title,
+[data-theme="amber-glow"] .login-form-title {
+  color: #ffffff !important;
 }
 
-/* Отключение анимаций для пользователей с prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce) {
-  .login-background::before {
-    animation: none;
+[data-theme="midnight"] .login-form-subtitle,
+[data-theme="amber-glow"] .login-form-subtitle {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme="midnight"] .login-form-field :global(.input-label),
+[data-theme="amber-glow"] .login-form-field :global(.input-label),
+[data-theme="midnight"] .login-form-field :global(.form-field-label),
+[data-theme="amber-glow"] .login-form-field :global(.form-field-label),
+[data-theme="midnight"] .login-form-field :global(label),
+[data-theme="amber-glow"] .login-form-field :global(label) {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme="midnight"] .login-form-field :global(.input-field),
+[data-theme="amber-glow"] .login-form-field :global(.input-field),
+[data-theme="midnight"] .login-form-field :global(.form-field-input),
+[data-theme="amber-glow"] .login-form-field :global(.form-field-input),
+[data-theme="midnight"] .login-form-field :global(input),
+[data-theme="amber-glow"] .login-form-field :global(input) {
+  background: #334155 !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="midnight"] .login-form-field :global(.input-field::placeholder),
+[data-theme="amber-glow"] .login-form-field :global(.input-field::placeholder),
+[data-theme="midnight"] .login-form-field :global(.form-field-input::placeholder),
+[data-theme="amber-glow"] .login-form-field :global(.form-field-input::placeholder),
+[data-theme="midnight"] .login-form-field :global(input::placeholder),
+[data-theme="amber-glow"] .login-form-field :global(input::placeholder) {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+[data-theme="midnight"] .login-form-field :global(.input-field:focus),
+[data-theme="amber-glow"] .login-form-field :global(.input-field:focus),
+[data-theme="midnight"] .login-form-field :global(.form-field-input:focus),
+[data-theme="amber-glow"] .login-form-field :global(.form-field-input:focus),
+[data-theme="midnight"] .login-form-field :global(input:focus),
+[data-theme="amber-glow"] .login-form-field :global(input:focus) {
+  border-color: #4a00e0 !important;
+  box-shadow: 0 0 0 2px rgba(74, 0, 224, 0.2) !important;
+}
+
+[data-theme="midnight"] .login-link-button,
+[data-theme="amber-glow"] .login-link-button {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme="midnight"] .login-link-button:hover,
+[data-theme="amber-glow"] .login-link-button:hover {
+  color: #818cf8 !important;
+}
+
+[data-theme="midnight"] .login-register-text,
+[data-theme="amber-glow"] .login-register-text {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme="midnight"] .login-register-link,
+[data-theme="amber-glow"] .login-register-link {
+  color: #818cf8 !important;
+}
+
+[data-theme="midnight"] .login-submit-button.btn-secondary,
+[data-theme="amber-glow"] .login-submit-button.btn-secondary {
+  background: #475569 !important;
+  color: white !important;
+}
+
+[data-theme="midnight"] .login-submit-button.btn-secondary:hover:not(:disabled),
+[data-theme="amber-glow"] .login-submit-button.btn-secondary:hover:not(:disabled) {
+  background: #64748b !important;
+}
+
+/* Темная тема для Select в формах */
+[data-theme="midnight"] .login-form-field :global(.select-label),
+[data-theme="amber-glow"] .login-form-field :global(.select-label),
+[data-theme="midnight"] .login-form-field :global(.select-wrapper label),
+[data-theme="amber-glow"] .login-form-field :global(.select-wrapper label) {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme="midnight"] .login-form-field :global(.select-trigger),
+[data-theme="amber-glow"] .login-form-field :global(.select-trigger),
+[data-theme="midnight"] .login-form-field :global(.select-control),
+[data-theme="amber-glow"] .login-form-field :global(.select-control) {
+  background: #334155 !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="midnight"] .login-form-field :global(.select-trigger:hover),
+[data-theme="amber-glow"] .login-form-field :global(.select-trigger:hover),
+[data-theme="midnight"] .login-form-field :global(.select-control:hover),
+[data-theme="amber-glow"] .login-form-field :global(.select-control:hover) {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Переопределяем фон App для темной темы */
+[data-theme="midnight"] .app:has(.login-container),
+[data-theme="amber-glow"] .app:has(.login-container) {
+  background: #0f172a !important;
+  background-color: #0f172a !important;
+  background-image: none !important;
+}
+
+[data-theme="midnight"] body:has(.login-container),
+[data-theme="amber-glow"] body:has(.login-container) {
+  background: #0f172a !important;
+  background-color: #0f172a !important;
+  background-image: none !important;
+}
+
+/* Адаптивность для темной темы */
+@media (max-width: 480px) {
+  [data-theme="midnight"] .login-card-body,
+  [data-theme="amber-glow"] .login-card-body {
+    padding: 24px 16px !important;
   }
 }

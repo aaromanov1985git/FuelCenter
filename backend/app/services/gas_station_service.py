@@ -50,6 +50,7 @@ class GasStationService:
         self,
         gas_station_id: int,
         original_name: Optional[str] = None,
+        name: Optional[str] = None,
         provider_id: Optional[int] = None,
         azs_number: Optional[str] = None,
         location: Optional[str] = None,
@@ -74,6 +75,8 @@ class GasStationService:
         # Игнорируем попытки изменения original_name при обновлении
         # if original_name is not None:
         #     gas_station.original_name = original_name
+        if name is not None:
+            gas_station.name = name
         if provider_id is not None:
             gas_station.provider_id = provider_id
         if azs_number is not None:
@@ -228,6 +231,7 @@ class GasStationService:
             # Создаем новую АЗС
             gas_station = GasStation(
                 original_name=original_name,
+                name=original_name,  # При создании name = original_name
                 azs_number=azs_number,
                 location=location,
                 region=region,

@@ -7,7 +7,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from app.repositories.transaction_repository import TransactionRepository
 from app.repositories.vehicle_repository import VehicleRepository
-from app.models import Transaction, Vehicle, Provider, UploadPeriodLock
+from app.models import Transaction, Vehicle, Provider, UploadPeriodLock, GasStation
 from app.logger import logger
 
 
@@ -78,6 +78,13 @@ class TransactionService:
             providers = self.db.query(Provider).filter(Provider.id.in_(provider_ids)).all()
             providers_dict = {provider.id: provider for provider in providers}
         
+        # Оптимизация N+1: загружаем все АЗС одним запросом
+        gas_station_ids = [trans.gas_station_id for trans in transactions if trans.gas_station_id]
+        gas_stations_dict = {}
+        if gas_station_ids:
+            gas_stations = self.db.query(GasStation).filter(GasStation.id.in_(gas_station_ids)).all()
+            gas_stations_dict = {gs.id: gs for gs in gas_stations}
+        
         # Формируем результат с дополнительными полями
         result_items = []
         for trans in transactions:
@@ -113,8 +120,14 @@ class TransactionService:
                 "created_at": trans.created_at,
                 "updated_at": trans.updated_at,
                 "vehicle_display_name": trans.vehicle,  # По умолчанию исходное название
-                "vehicle_has_errors": False
+                "vehicle_has_errors": False,
+                "gas_station_name": None  # Наименование АЗС из справочника
             }
+            
+            # Если есть gas_station_id, получаем наименование из справочника
+            if trans.gas_station_id and trans.gas_station_id in gas_stations_dict:
+                gas_station = gas_stations_dict[trans.gas_station_id]
+                trans_dict["gas_station_name"] = gas_station.name
             
             # Если есть vehicle_id, получаем исправленное название из справочника (из кэша)
             if trans.vehicle_id and trans.vehicle_id in vehicles_dict:

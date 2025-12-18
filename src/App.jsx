@@ -447,7 +447,7 @@ const App = () => {
         '№ карты': item.card_number || '',
         'Провайдер': item.provider_name || item.supplier || '-',
         'Закреплена за': item.vehicle_display_name || item.vehicle || '',
-        'Номер АЗС': item.azs_number || '',
+        'АЗС': item.gas_station_name || item.azs_number || '',
         'Товар / услуга': item.product || '',
         'Тип': item.operation_type || 'Покупка',
         'Кол-во': item.quantity || '',
@@ -1353,7 +1353,7 @@ const App = () => {
     '№ карты': 'card_number',
     'Провайдер': 'provider_id',
     'Закреплена за': 'vehicle',
-    'Номер АЗС': 'azs_number',
+    'АЗС': 'azs_number',  // Для сортировки используем azs_number, но отображаем gas_station_name
     'Товар / услуга': 'product',
     'Тип': 'operation_type',
     'Кол-во': 'quantity',
@@ -1367,7 +1367,7 @@ const App = () => {
     '№ карты', 
     'Провайдер',
     'Закреплена за', 
-    'Номер АЗС',
+    'АЗС',
     'Товар / услуга', 
     'Тип', 
     'Кол-во', 
@@ -1805,7 +1805,7 @@ const App = () => {
               },
               {
                 key: 'azs_number',
-                label: 'Номер АЗС',
+                label: 'АЗС',
                 placeholder: 'Введите номер АЗС',
                 type: 'text'
               },

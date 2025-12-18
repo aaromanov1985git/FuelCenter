@@ -1,7 +1,7 @@
 """
 Сервис для работы с API провайдеров (PetrolPlus и другие)
 """
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
 import httpx
@@ -308,7 +308,8 @@ class WebAdapter:
         self.xml_api_cod_azs = xml_api_cod_azs or 1000001
         self.xml_api_endpoint = xml_api_endpoint
         self.xml_api_certificate = xml_api_certificate
-        self.xml_api_pos_code = xml_api_pos_code or 23
+        # POS Code может быть None - в таком случае запрос будет по всем POS
+        self.xml_api_pos_code = xml_api_pos_code if xml_api_pos_code else None
         # Настраиваем клиент с заголовками по умолчанию для имитации браузера
         # Используем тот же User-Agent, что и в браузере пользователя
         default_headers = {
@@ -1733,58 +1734,59 @@ class WebAdapter:
     
     def _create_xml_sale_request(
         self,
-        card_numbers: List[str],
         date_from: date,
         date_to: date,
         certificate: str,
-        pos_code: int = 23
+        pos_code: Optional[int] = None
     ) -> str:
         """
-        Создает XML запрос для получения транзакций согласно спецификации СНК API (раздел 4.2.1)
+        Создает XML запрос для получения транзакций согласно спецификации СНК API
+        Использует метод getsaleext с Restriction вместо getsale с Card элементами
         
         Args:
-            card_numbers: Список номеров карт
             date_from: Начальная дата периода
             date_to: Конечная дата периода
             certificate: Сертификат для доступа к API
-            pos_code: Код POS (по умолчанию 23)
+            pos_code: Код POS (опционально, если не указан - запрос по всем POS)
             
         Returns:
-            XML строка запроса
+            XML строка запроса в кодировке UTF-8 без BOM
         """
         xml_request = ET.Element('RequestDS')
         
         # Элемент Request
         request_elem = ET.SubElement(xml_request, 'Request')
-        ET.SubElement(request_elem, 'Command').text = 'getsale'
+        ET.SubElement(request_elem, 'Command').text = 'getsaleext'  # Используем getsaleext вместо getsale
         ET.SubElement(request_elem, 'Version').text = '1'
         ET.SubElement(request_elem, 'Certificate').text = certificate
-        ET.SubElement(request_elem, 'POSCode').text = str(pos_code)
+        # POSCode добавляем только если указан
+        if pos_code is not None:
+            ET.SubElement(request_elem, 'POSCode').text = str(pos_code)
         
-        # Элементы Card для каждой карты
-        for card_number in card_numbers:
-            card_elem = ET.SubElement(xml_request, 'Card')
-            ET.SubElement(card_elem, 'CardNumber').text = str(card_number)
-            # Форматируем даты в формате "YYYY-MM-DD HH:MM:SS"
-            ET.SubElement(card_elem, 'StartDate').text = date_from.strftime('%Y-%m-%d 00:00:00')
-            ET.SubElement(card_elem, 'EndDate').text = date_to.strftime('%Y-%m-%d 23:59:59')
+        # Элемент Restriction с датами (вместо Card элементов)
+        restriction_elem = ET.SubElement(xml_request, 'Restriction')
+        # Форматируем даты в формате "YYYY-MM-DD HH:MM:SS"
+        ET.SubElement(restriction_elem, 'StartDate').text = date_from.strftime('%Y-%m-%d 00:00:00')
+        ET.SubElement(restriction_elem, 'EndDate').text = date_to.strftime('%Y-%m-%d 23:59:59')
         
-        # Преобразуем в строку
+        # Преобразуем в строку без BOM
         ET.indent(xml_request, space='  ')
+        # Используем encoding='utf-8' без BOM
         xml_string = ET.tostring(xml_request, encoding='utf-8', xml_declaration=True).decode('utf-8')
         return xml_string
     
     async def _fetch_transactions_xml_api(
         self,
-        card_numbers: List[str],
+        card_numbers: Optional[List[str]],
         date_from: date,
         date_to: date
     ) -> List[Dict[str, Any]]:
         """
         Получение транзакций через XML API с сертификатом
+        Использует метод getsaleext и разбивает период на части по 3-4 дня для избежания ошибки 500
         
         Args:
-            card_numbers: Список номеров карт
+            card_numbers: Список номеров карт (опционально, не используется в getsaleext - метод возвращает все транзакции за период)
             date_from: Начальная дата периода
             date_to: Конечная дата периода
             
@@ -1795,54 +1797,98 @@ class WebAdapter:
             logger.error("Сертификат не указан для XML API")
             return []
         
-        logger.info("Получение транзакций через XML API", extra={
-            "card_numbers": card_numbers,
+        logger.info("Получение транзакций через XML API (getsaleext)", extra={
             "date_from": str(date_from),
             "date_to": str(date_to),
+            "pos_code": self.xml_api_pos_code if self.xml_api_pos_code else "не указан (по всем POS)",
             "certificate": self.xml_api_certificate[:20] + "..." if len(self.xml_api_certificate) > 20 else self.xml_api_certificate
         })
         
+        # Разбиваем период на части по 3-4 дня для избежания ошибки 500
+        MAX_PERIOD_DAYS = 3  # Максимальный период запроса в днях
+        all_transactions = []
+        current_date = date_from
+        
+        while current_date <= date_to:
+            # Определяем конечную дату для текущего запроса
+            period_end = min(current_date + timedelta(days=MAX_PERIOD_DAYS - 1), date_to)
+            
+            logger.info(f"Запрос транзакций за период: {current_date} - {period_end}", extra={
+                "period_start": str(current_date),
+                "period_end": str(period_end),
+                "days": (period_end - current_date).days + 1
+            })
+            
+            try:
+                period_transactions = await self._fetch_transactions_xml_api_period(
+                    current_date,
+                    period_end
+                )
+                all_transactions.extend(period_transactions)
+                logger.info(f"Загружено транзакций за период {current_date} - {period_end}: {len(period_transactions)}")
+            except Exception as e:
+                logger.error(f"Ошибка при загрузке транзакций за период {current_date} - {period_end}: {str(e)}", exc_info=True)
+                # Продолжаем загрузку следующих периодов даже при ошибке
+                if "500" in str(e) or "Internal Server Error" in str(e):
+                    logger.warning("Получена ошибка 500 - возможно период слишком большой. Продолжаем с меньшими периодами.")
+            
+            # Переходим к следующему периоду
+            current_date = period_end + timedelta(days=1)
+        
+        logger.info(f"Всего загружено транзакций: {len(all_transactions)}")
+        return all_transactions
+    
+    async def _fetch_transactions_xml_api_period(
+        self,
+        date_from: date,
+        date_to: date
+    ) -> List[Dict[str, Any]]:
+        """
+        Получение транзакций за один период через XML API с сертификатом
+        
+        Args:
+            date_from: Начальная дата периода
+            date_to: Конечная дата периода
+            
+        Returns:
+            Список транзакций
+        """
         try:
             # Создаем XML запрос
+            # Если POS Code не указан (None или 0), отправляем запрос без POSCode (по всем POS)
+            pos_code_to_use = self.xml_api_pos_code if self.xml_api_pos_code else None
             xml_request = self._create_xml_sale_request(
-                card_numbers=card_numbers,
                 date_from=date_from,
                 date_to=date_to,
                 certificate=self.xml_api_certificate,
-                pos_code=self.xml_api_pos_code
+                pos_code=pos_code_to_use
             )
             
             logger.info("XML запрос для получения транзакций создан", extra={
-                "xml_length": len(xml_request),
-                "cards_count": len(card_numbers)
+                "xml_length": len(xml_request)
             })
             print(f"\n{'='*80}")
-            print(f"XML ЗАПРОС ДЛЯ ПОЛУЧЕНИЯ ТРАНЗАКЦИЙ:")
+            print(f"XML ЗАПРОС ДЛЯ ПОЛУЧЕНИЯ ТРАНЗАКЦИЙ (getsaleext):")
             print(f"{'='*80}")
             print(xml_request)
             print(f"{'='*80}\n")
             
             # Заголовки для XML API
+            # Отправляем XML без BOM в кодировке UTF-8
             xml_request_bytes = xml_request.encode('utf-8')
             headers = {
-                "Content-Type": "text/xml; charset=utf-8",
+                "Content-Type": "text/xml",
                 "Accept": "application/xml, text/xml, */*",
                 "User-Agent": "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36",
             }
             
             # Endpoint для получения транзакций: BASE_URL/sncapi/sale
-            # Согласно спецификации: URL: BASE_URL/sncapi/sale
-            # Если указан полный URL endpoint, используем его
             if self.xml_api_endpoint:
-                # Если указан кастомный endpoint, используем его
                 if self.xml_api_endpoint.startswith('http://') or self.xml_api_endpoint.startswith('https://'):
                     sale_endpoint = self.xml_api_endpoint
                 else:
-                    # Если указан относительный путь, добавляем к base_url
                     sale_endpoint = f"{self.base_url.rstrip('/')}/{self.xml_api_endpoint.lstrip('/')}"
             else:
-                # Используем стандартный endpoint для получения транзакций
-                # Формат: BASE_URL/sncapi/sale
                 sale_endpoint = f"{self.base_url.rstrip('/')}/sncapi/sale"
             
             logger.info(f"Отправка XML запроса на {sale_endpoint}")
@@ -1850,25 +1896,44 @@ class WebAdapter:
                 sale_endpoint,
                 content=xml_request_bytes,
                 headers=headers,
-                timeout=60.0  # Увеличиваем таймаут для больших объемов данных
+                timeout=60.0
             )
             
             logger.info(f"Получен ответ: статус {response.status_code}")
+            
+            # Обрабатываем ошибку 500 (слишком большой период)
+            if response.status_code == 500:
+                error_text = response.text[:500] if response.text else ""
+                logger.error(f"Ошибка 500 Internal Server Error - возможно период слишком большой", extra={
+                    "error_preview": error_text
+                })
+                raise Exception(f"Ошибка 500: период запроса слишком большой. Попробуйте уменьшить период до 3-4 дней.")
+            
             response.raise_for_status()
             
             # Парсим XML ответ
             response_text = response.text
             logger.info(f"Размер ответа: {len(response_text)} байт")
             
+            # Логируем первые 500 символов ответа для отладки
+            logger.debug(f"Начало XML ответа: {response_text[:500]}")
+            
             try:
                 root = ET.fromstring(response_text)
                 transactions = []
                 
-                # Ищем все элементы Sale в ответе
-                for sale_elem in root.findall('.//Sale'):
+                # Ищем все элементы sale в ответе (в нижнем регистре согласно примеру)
+                sale_elements = root.findall('.//sale')
+                if not sale_elements:
+                    # Пробуем также в верхнем регистре для совместимости
+                    sale_elements = root.findall('.//Sale')
+                
+                logger.info(f"Найдено элементов sale в ответе: {len(sale_elements)}")
+                
+                for idx, sale_elem in enumerate(sale_elements):
                     transaction = {}
                     
-                    # Извлекаем все поля из элемента Sale
+                    # Извлекаем все поля из элемента sale
                     for child in sale_elem:
                         tag = child.tag
                         text = child.text if child.text else ""
@@ -1880,7 +1945,7 @@ class WebAdapter:
                                 transaction[tag] = int(text) if text else 0
                             except ValueError:
                                 transaction[tag] = 0
-                        elif tag in ['BonusIn', 'BonusOut', 'Volume', 'ShopCost', 'ShopBaseCost', 'PersonCost']:
+                        elif tag in ['BonusIn', 'BonusOut', 'VOLUM', 'Volume', 'COST', 'ShopCost', 'ShopBaseCost', 'PersonCost', 'BINPC']:
                             try:
                                 transaction[tag] = float(text) if text else 0.0
                             except ValueError:
@@ -1888,23 +1953,50 @@ class WebAdapter:
                         else:
                             transaction[tag] = text
                     
+                    # Получаем объем (может быть VOLUM или Volume)
+                    volume = transaction.get('VOLUM') or transaction.get('Volume', 0.0)
+                    
+                    # Игнорируем транзакции с VOLUM < 0 (возвраты)
+                    if volume < 0:
+                        logger.debug(f"Пропущена транзакция с отрицательным объемом: VOLUM={volume}")
+                        continue
+                    
                     # Преобразуем в стандартный формат транзакций
+                    # В ответе getsaleext используется ID_SMP как дата/время транзакции
+                    transaction_datetime_str = transaction.get("ID_SMP", "") or transaction.get("TransactionDatetime", "")
+                    complete_datetime_str = transaction.get("CompleteDatetime", "")
+                    
+                    parsed_transaction_date = self._parse_datetime(transaction_datetime_str)
+                    parsed_complete_date = self._parse_datetime(complete_datetime_str)
+                    
+                    # Логируем первые несколько транзакций для отладки
+                    if idx < 3:
+                        logger.info(f"Транзакция {idx + 1}: NUM_EMAP={transaction.get('NUM_EMAP')}, "
+                                  f"ID_SMP='{transaction_datetime_str}' -> {parsed_transaction_date}, "
+                                  f"SECORT={transaction.get('SECORT')}, "
+                                  f"VOLUM={volume}, COST={transaction.get('COST')}, ERPKEY={transaction.get('ERPKEY')}")
+                    
+                    # Получаем стоимость (может быть COST или ShopCost)
+                    cost = transaction.get('COST') or transaction.get('ShopCost', 0.0)
+                    
                     standard_transaction = {
-                        "card_number": transaction.get("CardNumber", ""),
-                        "transaction_date": self._parse_datetime(transaction.get("TransactionDatetime", "")),
-                        "complete_date": self._parse_datetime(transaction.get("CompleteDatetime", "")),
-                        "product": transaction.get("ResourceName", ""),
-                        "volume": transaction.get("Volume", 0.0),
-                        "amount": abs(transaction.get("ShopCost", 0.0)),  # Используем абсолютное значение
+                        "card_number": transaction.get("NUM_EMAP", ""),  # Номер карты из NUM_EMAP
+                        "transaction_date": parsed_transaction_date,
+                        "complete_date": parsed_complete_date,
+                        "product": transaction.get("SECORT", ""),  # Вид топлива из SECORT
+                        "volume": volume,
+                        "amount": abs(cost),  # Используем абсолютное значение
                         "azs_number": str(transaction.get("COD_AZS", "")),
                         "azs_name": transaction.get("AZS_NAME", ""),
                         "currency": self.currency,
+                        # Сохраняем ERPKEY (GUID контрагента)
+                        "erpkey": transaction.get("ERPKEY", ""),
                         # Дополнительные поля из XML
                         "cod_l": transaction.get("COD_L", 0),
                         "cod_o": transaction.get("COD_O", 0),
                         "cod_a": transaction.get("COD_A", 0),
                         "cod_own": transaction.get("COD_OWN", 0),
-                        "bonus_in": transaction.get("BonusIn", 0.0),
+                        "bonus_in": transaction.get("BINPC", 0.0) or transaction.get("BonusIn", 0.0),
                         "bonus_out": transaction.get("BonusOut", 0.0),
                         "shop_base_cost": transaction.get("ShopBaseCost", 0.0),
                         "person_cost": transaction.get("PersonCost", 0.0),
@@ -1916,9 +2008,14 @@ class WebAdapter:
                         "terminal_request_id": transaction.get("TerminalRequestID", 0),
                     }
                     
+                    # Проверяем, что дата транзакции успешно распарсена
+                    if not parsed_transaction_date:
+                        logger.warning(f"Не удалось распарсить дату транзакции: '{transaction_datetime_str}'")
+                        continue  # Пропускаем транзакцию без даты
+                    
                     transactions.append(standard_transaction)
                 
-                logger.info(f"Получено транзакций из XML API: {len(transactions)}")
+                logger.info(f"Успешно обработано транзакций из XML API: {len(transactions)} из {len(sale_elements)}")
                 return transactions
                 
             except ET.ParseError as xml_error:
@@ -1926,9 +2023,13 @@ class WebAdapter:
                 logger.error(f"Сырой ответ: {response_text[:1000]}")
                 return []
                 
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 500:
+                raise Exception(f"Ошибка 500: период запроса слишком большой. Попробуйте уменьшить период до 3-4 дней.")
+            raise
         except Exception as e:
             logger.error(f"Ошибка при получении транзакций через XML API: {str(e)}", exc_info=True)
-            return []
+            raise
     
     def _parse_datetime(self, datetime_str: str) -> Optional[datetime]:
         """
@@ -1987,12 +2088,13 @@ class WebAdapter:
                         test_endpoint = f"{self.base_url.rstrip('/')}/sncapi/sale"
                     
                     # Создаем минимальный тестовый запрос
+                    # Если POS Code не указан, отправляем запрос без POSCode (по всем POS)
+                    pos_code_to_use = self.xml_api_pos_code if self.xml_api_pos_code else None
                     test_xml = self._create_xml_sale_request(
-                        card_numbers=["0000000000000000"],  # Тестовый номер карты
                         date_from=date.today(),
                         date_to=date.today(),
                         certificate=self.xml_api_certificate,
-                        pos_code=self.xml_api_pos_code
+                        pos_code=pos_code_to_use
                     )
                     
                     headers = {
@@ -2147,7 +2249,9 @@ class ApiProviderService:
             xml_api_cod_azs = settings.get("xml_api_cod_azs") or settings.get("cod_azs")
             xml_api_endpoint = settings.get("xml_api_endpoint") or settings.get("endpoint")
             xml_api_certificate = settings.get("xml_api_certificate") or settings.get("certificate")
-            xml_api_pos_code = settings.get("xml_api_pos_code") or settings.get("pos_code")
+            # POS Code опциональный - если не указан или 0, будет None (запрос по всем POS)
+            pos_code_raw = settings.get("xml_api_pos_code") or settings.get("pos_code")
+            xml_api_pos_code = int(pos_code_raw) if pos_code_raw and str(pos_code_raw).strip() and int(pos_code_raw) > 0 else None
             
             # Если указан сертификат, автоматически включаем XML API
             if xml_api_certificate:
@@ -2160,7 +2264,10 @@ class ApiProviderService:
                 print(f"\n{'='*80}")
                 print(f"XML API ПАРАМЕТРЫ ОБНАРУЖЕНЫ:")
                 print(f"  Сертификат (certificate): {xml_api_certificate[:50]}..." if len(xml_api_certificate) > 50 else f"  Сертификат (certificate): {xml_api_certificate}")
-                print(f"  POS Code: {xml_api_pos_code}")
+                if xml_api_pos_code:
+                    print(f"  POS Code: {xml_api_pos_code}")
+                else:
+                    print(f"  POS Code: не указан (запрос по всем POS)")
                 print(f"  → Используется XML API с сертификатом (авторизация не требуется)")
                 print(f"  → Логин, пароль, ключ, подпись и salt не используются")
                 print(f"{'='*80}\n")
@@ -2283,7 +2390,7 @@ class ApiProviderService:
                 "success": False,
                 "message": error_msg,
                 "details": {"error": error_text, "status_code": status_code, "error_type": "http"}
-            }
+                }
         except Exception as e:
             print(f"\n[ApiProviderService.test_connection] ИСКЛЮЧЕНИЕ: {type(e).__name__}: {str(e)}")
             import traceback
@@ -2376,25 +2483,31 @@ class ApiProviderService:
         
         try:
             async with adapter:
+                # Для XML API с сертификатом метод getsaleext может работать без указания карт
+                # Он возвращает все транзакции за указанный период
+                is_xml_api_with_cert = isinstance(adapter, WebAdapter) and adapter.use_xml_api and adapter.xml_api_certificate
+                
                 # Если карты не указаны, пытаемся получить список всех карт
+                # Для XML API с сертификатом это не обязательно - можно загрузить все транзакции
                 if not card_numbers:
-                    cards_data = await adapter.list_cards()
-                    # Для WebAdapter list_cards возвращает список строк, для PetrolPlusAdapter - список словарей
-                    if cards_data and len(cards_data) > 0:
-                        if isinstance(cards_data[0], dict):
-                            card_numbers = [str(card.get("cardNum") or "") for card in cards_data if card.get("cardNum")]
-                        else:
-                            card_numbers = [str(card) for card in cards_data if card]
-                        logger.info(f"Найдено карт для загрузки: {len(card_numbers)}", extra={
+                    if is_xml_api_with_cert:
+                        # Для XML API с сертификатом можно работать без карт
+                        logger.info("Для XML API с сертификатом карты не указаны. Будет загружены все транзакции за указанный период.", extra={
                             "template_id": template.id
                         })
+                        card_numbers = []  # Пустой список - метод getsaleext вернет все транзакции
                     else:
-                        # Для XML API с сертификатом список карт нужно указывать вручную
-                        if isinstance(adapter, WebAdapter) and adapter.use_xml_api and adapter.xml_api_certificate:
-                            logger.warning("Для XML API с сертификатом список карт не может быть получен автоматически. Укажите номера карт в параметре card_numbers.", extra={
+                        # Для других типов API пытаемся получить список карт
+                        cards_data = await adapter.list_cards()
+                        # Для WebAdapter list_cards возвращает список строк, для PetrolPlusAdapter - список словарей
+                        if cards_data and len(cards_data) > 0:
+                            if isinstance(cards_data[0], dict):
+                                card_numbers = [str(card.get("cardNum") or "") for card in cards_data if card.get("cardNum")]
+                            else:
+                                card_numbers = [str(card) for card in cards_data if card]
+                            logger.info(f"Найдено карт для загрузки: {len(card_numbers)}", extra={
                                 "template_id": template.id
                             })
-                            raise ValueError("Для XML API с сертификатом необходимо указать номера карт. Список карт не может быть получен автоматически.")
                         else:
                             logger.warning("Не удалось получить список карт. Укажите номера карт в параметре card_numbers.", extra={
                                 "template_id": template.id
@@ -2402,7 +2515,7 @@ class ApiProviderService:
                             raise ValueError("Не удалось получить список карт. Укажите номера карт в параметре card_numbers.")
                 
                 # Для XML API с сертификатом можно загрузить транзакции для всех карт одним запросом
-                if isinstance(adapter, WebAdapter) and adapter.use_xml_api and adapter.xml_api_certificate:
+                if is_xml_api_with_cert:
                     # Загружаем транзакции для всех карт одним запросом
                     try:
                         transactions = await adapter._fetch_transactions_xml_api(
@@ -2519,26 +2632,34 @@ class ApiProviderService:
         
         # Преобразуем сумму и количество (поддерживаем разные форматы)
         amount = self._parse_decimal(
-            api_transaction.get("amount") or  # Стандартный формат
+            api_transaction.get("amount") or  # Стандартный формат или уже преобразованное
             api_transaction.get("ShopCost") or  # XML API
             api_transaction.get("PersonCost") or  # XML API (альтернатива)
             api_transaction.get("sum"),  # Стандартный формат
             default=Decimal("0")
         ) or Decimal("0")
         
-        # Используем абсолютное значение суммы (в XML API могут быть отрицательные значения для возвратов)
+        # Для XML API могут быть отрицательные значения для возвратов
+        # Используем абсолютное значение суммы для отображения
         amount = abs(amount)
         
         # Количество/объем (поддерживаем разные форматы)
         quantity = self._parse_decimal(
-            api_transaction.get("volume") or  # XML API
+            api_transaction.get("volume") or  # XML API (уже преобразованное)
             api_transaction.get("Volume") or  # XML API (оригинальное поле)
             api_transaction.get("quantity") or
             api_transaction.get("amount")
         ) or Decimal("0")
         
-        # Используем абсолютное значение объема
+        # Для объема также используем абсолютное значение
         quantity = abs(quantity)
+        
+        # Определяем тип операции на основе знака суммы/объема в исходных данных
+        # Если в исходных данных было отрицательное значение, это возврат
+        raw_amount = api_transaction.get("ShopCost") or api_transaction.get("amount") or 0
+        raw_volume = api_transaction.get("Volume") or api_transaction.get("volume") or 0
+        operation_type = "Возврат" if (isinstance(raw_amount, (int, float)) and raw_amount < 0) or \
+                                       (isinstance(raw_volume, (int, float)) and raw_volume < 0) else "Покупка"
         
         # Формируем адрес
         address_parts = [
@@ -2599,7 +2720,7 @@ class ApiProviderService:
             "location": resolved_address,
             "location_code": api_transaction.get("posCode") or api_transaction.get("locationCode"),
             "product": product,
-            "operation_type": "Покупка",
+            "operation_type": operation_type,
             "quantity": quantity,
             "currency": api_transaction.get("currency") or self._get_currency_from_settings(template) or "RUB",
             "exchange_rate": Decimal("1"),

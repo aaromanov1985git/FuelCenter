@@ -48,8 +48,10 @@ const Input = ({
     <div className={wrapperClasses}>
       {label && (
         <label className="input-label" htmlFor={name}>
-          {label}
-          {required && <span className="input-required">*</span>}
+          <span className="input-label-text">
+            {label}
+            {required && <span className="input-required">*</span>}
+          </span>
         </label>
       )}
 

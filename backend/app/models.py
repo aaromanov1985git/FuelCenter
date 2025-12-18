@@ -258,6 +258,9 @@ class GasStation(Base):
     # Исходное наименование из файла
     original_name = Column(String(200), nullable=False, index=True, comment="Исходное наименование АЗС")
     
+    # Наименование АЗС (редактируемое, при создании равно original_name)
+    name = Column(String(200), nullable=False, comment="Наименование АЗС (редактируемое)")
+    
     # Нормализованные данные
     azs_number = Column(String(50), index=True, comment="Номер АЗС")
     location = Column(String(500), comment="Местоположение")

@@ -35,14 +35,13 @@
 }
 
 .icon-button-primary {
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
+  background: transparent;
+  color: var(--color-primary);
 }
 
 .icon-button-primary:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  background: var(--color-primary-light);
+  color: var(--color-primary-hover);
 }
 
 .icon-button-success {

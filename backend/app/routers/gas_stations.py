@@ -86,6 +86,7 @@ async def update_gas_station(
     gas_station = gas_station_service.update_gas_station(
         gas_station_id=gas_station_id,
         original_name=None,  # Не изменяем original_name
+        name=gas_station_update.name,  # Позволяем изменять наименование
         provider_id=gas_station_update.provider_id,
         azs_number=gas_station_update.azs_number,
         location=gas_station_update.location,

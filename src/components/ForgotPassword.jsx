@@ -1,21 +1,15 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useToast } from './ToastContainer'
 import FormField from './FormField'
 import { useFormValidation } from '../hooks/useFormValidation'
 import { Card, Button } from './ui'
-import logo from '../assets/logo.svg'
 import { getApiUrl } from '../utils/api'
 import './Login.css'
 
 const ForgotPassword = ({ onSuccess, onCancel }) => {
   const { success, error: showError } = useToast()
   const [loading, setLoading] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const validationRules = {
     email: {
@@ -76,43 +70,30 @@ const ForgotPassword = ({ onSuccess, onCancel }) => {
   if (emailSent) {
     return (
       <div className="login-container">
-        <div className="login-background">
-          <div className="login-background-circle login-background-circle-1"></div>
-          <div className="login-background-circle login-background-circle-2"></div>
-          <div className="login-background-circle login-background-circle-3"></div>
-        </div>
+        <div className="login-content">
+          <Card variant="elevated" className="login-card">
+            <Card.Body className="login-card-body">
+              <div className="login-card-header-inline">
+                <h1 className="login-form-title">Проверьте почту</h1>
+                <p className="login-form-subtitle">
+                  Инструкции по восстановлению пароля отправлены на {values.email || 'ваш email'}
+                </p>
+              </div>
 
-        <div className={`login-content ${mounted ? 'login-content-visible' : ''}`}>
-          <div className={`login-logo-wrapper ${mounted ? 'login-logo-visible' : ''}`}>
-            <img src={logo} alt="GSM Logo" className="login-logo" />
-            <div className="login-logo-glow"></div>
-          </div>
-
-          <Card className={`login-card ${mounted ? 'login-card-visible' : ''}`}>
-            <Card.Header>
-              <Card.Title className="login-title-animated">Проверьте почту</Card.Title>
-              <p className="login-subtitle login-subtitle-animated">
-                Инструкции по восстановлению пароля отправлены на {values.email || 'ваш email'}
-              </p>
-            </Card.Header>
-
-            <Card.Body>
-              <div className="forgot-password-success">
+              <div style={{ marginBottom: '20px', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
                 <p>Если письмо не пришло, проверьте папку "Спам" или свяжитесь с администратором.</p>
               </div>
 
               {onCancel && (
-                <div className={`login-button-wrapper ${mounted ? 'login-button-visible' : ''}`} style={{ animationDelay: '0.2s' }}>
-                  <Button
-                    type="button"
-                    onClick={onCancel}
-                    variant="secondary"
-                    fullWidth
-                    className="login-submit-button"
-                  >
-                    Вернуться к входу
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  onClick={onCancel}
+                  variant="secondary"
+                  fullWidth
+                  className="login-submit-button"
+                >
+                  Вернуться к входу
+                </Button>
               )}
             </Card.Body>
           </Card>
@@ -123,65 +104,53 @@ const ForgotPassword = ({ onSuccess, onCancel }) => {
 
   return (
     <div className="login-container">
-      <div className="login-background">
-        <div className="login-background-circle login-background-circle-1"></div>
-        <div className="login-background-circle login-background-circle-2"></div>
-        <div className="login-background-circle login-background-circle-3"></div>
-      </div>
+      <div className="login-content">
+        <Card variant="elevated" className="login-card">
+          <Card.Body className="login-card-body">
+            <div className="login-card-header-inline">
+              <h1 className="login-form-title">Восстановление пароля</h1>
+            </div>
 
-      <div className={`login-content ${mounted ? 'login-content-visible' : ''}`}>
-        <div className={`login-logo-wrapper ${mounted ? 'login-logo-visible' : ''}`}>
-          <img src={logo} alt="GSM Logo" className="login-logo" />
-          <div className="login-logo-glow"></div>
-        </div>
-
-        <Card className={`login-card ${mounted ? 'login-card-visible' : ''}`}>
-          <Card.Header>
-            <Card.Title className="login-title-animated">Восстановление пароля</Card.Title>
-          </Card.Header>
-
-          <Card.Body>
             <form onSubmit={handleSubmit} className="login-form">
-              <FormField
-                label="Email"
-                name="email"
-                type="email"
-                value={values.email}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched.email && errors.email ? errors.email : ''}
-                touched={touched.email}
-                required
-                autoComplete="email"
-                className={`login-form-field ${mounted ? 'login-form-field-visible' : ''}`}
-                style={{ animationDelay: '0.2s' }}
-              />
-
-              <div className={`login-button-wrapper ${mounted ? 'login-button-visible' : ''}`} style={{ animationDelay: '0.3s' }}>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  fullWidth
-                  loading={loading}
-                  disabled={loading}
-                  className="login-submit-button"
-                >
-                  {loading ? 'Отправка...' : 'Отправить'}
-                </Button>
+              <div className="login-form-group">
+                <FormField
+                  label="Email"
+                  name="email"
+                  type="email"
+                  value={values.email}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={touched.email && errors.email ? errors.email : ''}
+                  touched={touched.email}
+                  required
+                  autoComplete="email"
+                  placeholder="Введите email"
+                  className="login-form-field"
+                />
               </div>
 
+              <Button
+                type="submit"
+                variant="primary"
+                fullWidth
+                loading={loading}
+                disabled={loading}
+                className="login-submit-button"
+              >
+                {loading ? 'Отправка...' : 'Отправить'}
+              </Button>
+
               {onCancel && (
-                <div className={`login-button-wrapper ${mounted ? 'login-button-visible' : ''}`} style={{ animationDelay: '0.4s' }}>
-                  <Button
-                    type="button"
-                    onClick={onCancel}
-                    variant="secondary"
-                    fullWidth
-                    className="login-submit-button"
-                  >
-                    Отмена
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  onClick={onCancel}
+                  variant="secondary"
+                  fullWidth
+                  className="login-submit-button"
+                  style={{ marginTop: '12px' }}
+                >
+                  Отмена
+                </Button>
               )}
             </form>
           </Card.Body>

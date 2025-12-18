@@ -14,11 +14,19 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
+  display: block;
+  line-height: 1.4;
+}
+
+.select-label-text {
+  display: inline-block;
+  white-space: nowrap;
 }
 
 .select-required {
   color: var(--color-error);
-  margin-left: var(--spacing-tiny);
+  margin-left: 4px;
+  display: inline;
 }
 
 .select-control {

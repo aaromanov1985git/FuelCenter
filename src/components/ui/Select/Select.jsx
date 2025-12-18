@@ -132,8 +132,10 @@ const Select = ({
     <div className={wrapperClasses} ref={selectRef}>
       {label && (
         <label className="select-label" htmlFor={name}>
-          {label}
-          {required && <span className="select-required">*</span>}
+          <span className="select-label-text">
+            {label}
+            {required && <span className="select-required">*</span>}
+          </span>
         </label>
       )}
 

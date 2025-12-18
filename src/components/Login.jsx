@@ -105,23 +105,14 @@ const Login = ({ onSuccess }) => {
 
   return (
     <div className="login-container">
-      <div className="login-background"></div>
-      
       <div className="login-content">
-        <div className="login-wrapper">
-          {/* Заголовок */}
-          <div className="login-brand">
-            <h1 className="login-brand-title">Конвертер ГСМ</h1>
-            <p className="login-brand-subtitle">Система управления транзакциями</p>
-          </div>
-
-          {/* Форма входа */}
-          <Card variant="elevated" className="login-card">
-            <Card.Body className="login-card-body">
-              <div className="login-card-header-inline">
-                <h2 className="login-form-title">Вход</h2>
-                <p className="login-form-subtitle">Войдите в свой аккаунт</p>
-              </div>
+        <Card variant="elevated" className="login-card">
+          <Card.Body className="login-card-body">
+            {/* Заголовок */}
+            <div className="login-card-header-inline">
+              <h1 className="login-form-title">Конвертер ГСМ</h1>
+              <p className="login-form-subtitle">Система управления транзакциями</p>
+            </div>
 
               <form onSubmit={handleSubmit} className="login-form" noValidate>
                 <div className="login-form-group">
@@ -191,9 +182,8 @@ const Login = ({ onSuccess }) => {
                   </button>
                 </div>
               </form>
-            </Card.Body>
-          </Card>
-        </div>
+          </Card.Body>
+        </Card>
       </div>
     </div>
   )

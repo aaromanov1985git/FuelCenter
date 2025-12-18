@@ -176,7 +176,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB' }
       }
       if (connectionType === 'web') {
-        return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: 23, key: '', signature: '', salt: '', cod_azs: 1000001 }
+        return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: '', key: '', signature: '', salt: '', cod_azs: 1000001 }
       }
       return { host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8' }
     }
@@ -188,7 +188,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
           return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB' }
         }
         if (connectionType === 'web') {
-          return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: 23, key: '', signature: '', salt: '', cod_azs: 1000001 }
+          return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: '', key: '', signature: '', salt: '', cod_azs: 1000001 }
         }
         return { host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8' }
       }
@@ -692,7 +692,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                       password: '', 
                       currency: 'RUB',
                       certificate: '',
-                      pos_code: 23,
+                      pos_code: '',
                       key: '',
                       signature: '',
                       salt: '',
@@ -984,19 +984,24 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
               
               <div className="form-group">
                 <label>
-                  Код POS (POS Code):
+                  Код POS (POS Code) (опционально):
                   <input
                     type="number"
-                    value={connectionSettings.pos_code || connectionSettings.xml_api_pos_code || '23'}
-                    onChange={(e) => setConnectionSettings({ 
-                      ...connectionSettings, 
-                      pos_code: parseInt(e.target.value) || 23,
-                      xml_api_pos_code: parseInt(e.target.value) || 23
-                    })}
-                    placeholder="23"
+                    value={connectionSettings.pos_code || connectionSettings.xml_api_pos_code || ''}
+                    onChange={(e) => {
+                      const value = e.target.value.trim()
+                      setConnectionSettings({ 
+                        ...connectionSettings, 
+                        pos_code: value ? parseInt(value) || null : null,
+                        xml_api_pos_code: value ? parseInt(value) || null : null
+                      })
+                    }}
+                    placeholder="Оставьте пустым для запроса по всем POS"
                     className="input-full-width"
                   />
-                  <span className="field-help">Код POS для XML API (по умолчанию: 23)</span>
+                  <span className="field-help">
+                    Код POS для XML API. Если не указан, запрос будет отправлен по всем POS.
+                  </span>
                 </label>
               </div>
               

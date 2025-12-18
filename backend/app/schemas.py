@@ -83,6 +83,7 @@ class TransactionResponse(BaseModel):
     vehicle_has_errors: Optional[bool] = False
     provider_id: Optional[int] = None
     provider_name: Optional[str] = None
+    gas_station_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -194,6 +195,7 @@ class GasStationBase(BaseModel):
     """
     provider_id: Optional[int] = Field(None, description="ID провайдера")
     original_name: str = Field(..., max_length=200, description="Исходное наименование АЗС")
+    name: Optional[str] = Field(None, max_length=200, description="Наименование АЗС (редактируемое)")
     azs_number: Optional[str] = Field(None, max_length=50, description="Номер АЗС")
     location: Optional[str] = Field(None, max_length=500, description="Местоположение")
     region: Optional[str] = Field(None, max_length=200, description="Регион")
@@ -215,6 +217,7 @@ class GasStationUpdate(BaseModel):
     """
     provider_id: Optional[int] = Field(None, description="ID провайдера")
     original_name: Optional[str] = Field(None, max_length=200)
+    name: Optional[str] = Field(None, max_length=200, description="Наименование АЗС (редактируемое)")
     azs_number: Optional[str] = Field(None, max_length=50)
     location: Optional[str] = Field(None, max_length=500)
     region: Optional[str] = Field(None, max_length=200)

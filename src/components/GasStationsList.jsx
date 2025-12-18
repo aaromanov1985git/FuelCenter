@@ -5,6 +5,7 @@ import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
 import { Card, Button, Input, Table, Badge, Skeleton, Alert, Select, Modal, Tooltip } from './ui'
 import MapModal from './MapModal'
+import ConfirmModal from './ConfirmModal'
 import './GasStationsList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
@@ -19,6 +20,7 @@ const GasStationsList = () => {
   const [showMapModal, setShowMapModal] = useState(false)
   const [editForm, setEditForm] = useState({ 
     original_name: '', 
+    name: '',
     provider_id: null,
     azs_number: '', 
     location: '', 
@@ -27,8 +29,13 @@ const GasStationsList = () => {
     latitude: '',
     longitude: ''
   })
+  const [formErrors, setFormErrors] = useState({})
   const [providers, setProviders] = useState([])
   const [filter, setFilter] = useState('all') // all, pending, valid, invalid
+  const [originalProviderId, setOriginalProviderId] = useState(null)
+  const [hasTransactions, setHasTransactions] = useState(false)
+  const [showProviderChangeConfirm, setShowProviderChangeConfirm] = useState(false)
+  const [pendingProviderId, setPendingProviderId] = useState(null)
   
   // Пагинация
   const [currentPage, setCurrentPage] = useState(1)
@@ -54,15 +61,16 @@ const GasStationsList = () => {
     // Значения по умолчанию - все колонки видимы
     return {
       original_name: { visible: true, order: 0 },
-      provider: { visible: true, order: 1 },
-      azs_number: { visible: true, order: 2 },
-      location: { visible: true, order: 3 },
-      region: { visible: true, order: 4 },
-      settlement: { visible: true, order: 5 },
-      coordinates: { visible: true, order: 6 },
-      status: { visible: true, order: 7 },
-      errors: { visible: true, order: 8 },
-      actions: { visible: true, order: 9 }
+      name: { visible: true, order: 1 },
+      provider: { visible: true, order: 2 },
+      azs_number: { visible: true, order: 3 },
+      location: { visible: true, order: 4 },
+      region: { visible: true, order: 5 },
+      settlement: { visible: true, order: 6 },
+      coordinates: { visible: true, order: 7 },
+      status: { visible: true, order: 8 },
+      errors: { visible: true, order: 9 },
+      actions: { visible: true, order: 10 }
     }
   })
   const [draggedColumn, setDraggedColumn] = useState(null)
@@ -153,11 +161,31 @@ const GasStationsList = () => {
     loadProviders()
   }, [])
 
-  const handleEdit = useCallback((gasStation) => {
+  const checkHasTransactions = async (azsNumber) => {
+    try {
+      // Проверяем наличие транзакций через API с фильтром по номеру АЗС
+      if (!azsNumber) {
+        return false
+      }
+      const response = await authFetch(`${API_URL}/api/v1/transactions?azs_number=${encodeURIComponent(azsNumber)}&limit=1`)
+      if (response.ok) {
+        const data = await response.json()
+        return data.total > 0
+      }
+      return false
+    } catch (err) {
+      console.error('Ошибка проверки транзакций:', err)
+      return false
+    }
+  }
+
+  const handleEdit = useCallback(async (gasStation) => {
     setEditingId(gasStation.id)
+    const providerId = gasStation.provider_id || null
     setEditForm({
       original_name: gasStation.original_name || '',
-      provider_id: gasStation.provider_id || null,
+      name: gasStation.name || gasStation.original_name || '',
+      provider_id: providerId,
       azs_number: gasStation.azs_number || '',
       location: gasStation.location || '',
       region: gasStation.region || '',
@@ -165,10 +193,30 @@ const GasStationsList = () => {
       latitude: gasStation.latitude !== null && gasStation.latitude !== undefined ? gasStation.latitude.toString() : '',
       longitude: gasStation.longitude !== null && gasStation.longitude !== undefined ? gasStation.longitude.toString() : ''
     })
+    setOriginalProviderId(providerId)
+    setFormErrors({})
+    
+    // Проверяем наличие транзакций по номеру АЗС
+    const hasTrans = await checkHasTransactions(gasStation.azs_number)
+    setHasTransactions(hasTrans)
+    
     setShowEditModal(true)
   }, [])
 
   const handleSave = async (gasStationId) => {
+    // Проверяем валидность координат перед отправкой
+    const latError = validateCoordinate(editForm.latitude, 'latitude')
+    const lngError = validateCoordinate(editForm.longitude, 'longitude')
+    
+    if (latError || lngError) {
+      setFormErrors({
+        latitude: latError || undefined,
+        longitude: lngError || undefined
+      })
+      showError('Исправьте ошибки в координатах перед сохранением')
+      return
+    }
+
     try {
       setLoading(true)
       // Исключаем original_name из данных для отправки - это поле нельзя редактировать
@@ -205,10 +253,11 @@ const GasStationsList = () => {
 
       setEditingId(null)
       setShowEditModal(false)
+      setFormErrors({})
       await loadGasStations()
       await loadStats()
       setError('')
-      success('АЗС успешно обновлена')
+      success('Данные АЗС успешно обновлены')
     } catch (err) {
       const errorMessage = 'Ошибка сохранения: ' + err.message
       setError(errorMessage)
@@ -228,7 +277,54 @@ const GasStationsList = () => {
   const handleCancel = () => {
     setEditingId(null)
     setShowEditModal(false)
-    setEditForm({ original_name: '', provider_id: null, azs_number: '', location: '', region: '', settlement: '', latitude: '', longitude: '' })
+    setEditForm({ original_name: '', name: '', provider_id: null, azs_number: '', location: '', region: '', settlement: '', latitude: '', longitude: '' })
+    setFormErrors({})
+    setOriginalProviderId(null)
+    setHasTransactions(false)
+    setShowProviderChangeConfirm(false)
+    setPendingProviderId(null)
+  }
+
+  const handleProviderChangeConfirm = () => {
+    setEditForm({...editForm, provider_id: pendingProviderId})
+    setShowProviderChangeConfirm(false)
+    setPendingProviderId(null)
+  }
+
+  const handleProviderChangeCancel = () => {
+    // Возвращаем исходное значение провайдера
+    setEditForm({...editForm, provider_id: originalProviderId})
+    setShowProviderChangeConfirm(false)
+    setPendingProviderId(null)
+  }
+
+  const validateCoordinate = (value, type) => {
+    if (!value || value.trim() === '') return null // Координаты необязательны
+    const num = parseFloat(value)
+    if (isNaN(num)) {
+      return `Введите корректное число`
+    }
+    if (type === 'latitude' && (num < -90 || num > 90)) {
+      return `Широта должна быть от -90 до 90`
+    }
+    if (type === 'longitude' && (num < -180 || num > 180)) {
+      return `Долгота должна быть от -180 до 180`
+    }
+    return null
+  }
+
+  const handleLatitudeChange = (e) => {
+    const value = e.target.value
+    setEditForm({...editForm, latitude: value})
+    const error = validateCoordinate(value, 'latitude')
+    setFormErrors(prev => ({ ...prev, latitude: error || undefined }))
+  }
+
+  const handleLongitudeChange = (e) => {
+    const value = e.target.value
+    setEditForm({...editForm, longitude: value})
+    const error = validateCoordinate(value, 'longitude')
+    setFormErrors(prev => ({ ...prev, longitude: error || undefined }))
   }
 
   const handleMapConfirm = (lat, lng) => {
@@ -236,6 +332,12 @@ const GasStationsList = () => {
       ...prev,
       latitude: lat.toString(),
       longitude: lng.toString()
+    }))
+    // Очищаем ошибки координат при выборе на карте
+    setFormErrors(prev => ({
+      ...prev,
+      latitude: undefined,
+      longitude: undefined
     }))
   }
 
@@ -257,6 +359,7 @@ const GasStationsList = () => {
   const tableColumns = useMemo(() => {
     const allColumns = [
       { key: 'original_name', header: 'Исходное наименование' },
+      { key: 'name', header: 'Наименование' },
       { key: 'provider', header: 'Провайдер' },
       { key: 'azs_number', header: 'Номер АЗС' },
       { key: 'location', header: 'Местоположение' },
@@ -287,6 +390,7 @@ const GasStationsList = () => {
       const location = gasStation.location || '-'
       const errors = gasStation.validation_errors || ''
       const originalName = gasStation.original_name || '-'
+      const name = gasStation.name || originalName || '-'
       
       return {
         id: gasStation.id,
@@ -296,6 +400,13 @@ const GasStationsList = () => {
           </Tooltip>
         ) : (
           originalName
+        ),
+        name: name !== '-' && name.length > 40 ? (
+          <Tooltip content={name} position="top" maxWidth={400}>
+            <span className="text-truncate">{name}</span>
+          </Tooltip>
+        ) : (
+          name
         ),
         provider: getProviderName(gasStation.provider_id),
         azs_number: gasStation.azs_number || '-',
@@ -475,7 +586,7 @@ const GasStationsList = () => {
       <Modal
         isOpen={showEditModal}
         onClose={handleCancel}
-        title={`Редактирование АЗС ${editForm.azs_number || ''}`}
+        title={editForm.name ? `Редактирование АЗС: "${editForm.name}"` : `Редактирование АЗС №${editForm.azs_number || '?'}`}
         size="md"
         closeOnOverlayClick={true}
         closeOnEsc={true}
@@ -483,111 +594,149 @@ const GasStationsList = () => {
       >
         <Modal.Body>
           <div className="gas-station-edit-form">
-            <div className="form-row">
-              <Input
-                type="text"
-                label="Исходное наименование"
-                value={editForm.original_name}
-                onChange={(e) => setEditForm({...editForm, original_name: e.target.value})}
-                disabled
-                fullWidth
-                title="Исходное наименование нельзя редактировать"
-              />
-            </div>
-            
-            <div className="form-row">
-              <Select
-                label="Провайдер"
-                value={editForm.provider_id ? editForm.provider_id.toString() : ''}
-                onChange={(value) => setEditForm({...editForm, provider_id: value ? parseInt(value) : null})}
-                options={[
-                  { value: '', label: 'Не указан' },
-                  ...providers.filter(p => p.is_active).map(provider => ({
-                    value: provider.id.toString(),
-                    label: provider.name
-                  }))
-                ]}
-                fullWidth
-              />
-            </div>
-
-            <div className="form-row">
-              <Input
-                type="text"
-                label="Номер АЗС"
-                value={editForm.azs_number}
-                onChange={(e) => setEditForm({...editForm, azs_number: e.target.value})}
-                placeholder="Номер АЗС"
-                fullWidth
-              />
-            </div>
-
-            <div className="form-row">
-              <Input
-                type="text"
-                label="Местоположение"
-                value={editForm.location}
-                onChange={(e) => setEditForm({...editForm, location: e.target.value})}
-                placeholder="Местоположение"
-                fullWidth
-              />
-            </div>
-
-            <div className="form-row form-row-2">
-              <Input
-                type="text"
-                label="Регион"
-                value={editForm.region}
-                onChange={(e) => setEditForm({...editForm, region: e.target.value})}
-                placeholder="Регион"
-                fullWidth
-              />
-              <Input
-                type="text"
-                label="Населенный пункт"
-                value={editForm.settlement}
-                onChange={(e) => setEditForm({...editForm, settlement: e.target.value})}
-                placeholder="Населенный пункт"
-                fullWidth
-              />
+            {/* Основная информация */}
+            <div className="form-section">
+              <h4 className="form-section-title">📝 Основная информация</h4>
+              
+              <div className="form-row">
+                <Input
+                  type="text"
+                  label="Текущее название (для справки)"
+                  value={editForm.original_name}
+                  onChange={(e) => setEditForm({...editForm, original_name: e.target.value})}
+                  disabled
+                  fullWidth
+                  name="original_name"
+                />
+              </div>
+              
+              <div className="form-row">
+                <Input
+                  type="text"
+                  label="Новое название АЗС"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                  fullWidth
+                  placeholder="Введите наименование АЗС"
+                  required
+                  name="name"
+                />
+              </div>
+              
+              <div className="form-row form-row-2">
+                <Select
+                  label="Провайдер"
+                  value={editForm.provider_id ? editForm.provider_id.toString() : ''}
+                  onChange={(value) => {
+                    const newProviderId = value ? parseInt(value) : null
+                    // Если провайдер изменился и есть транзакции - показываем предупреждение
+                    if (hasTransactions && newProviderId !== originalProviderId) {
+                      setPendingProviderId(newProviderId)
+                      setShowProviderChangeConfirm(true)
+                    } else {
+                      setEditForm({...editForm, provider_id: newProviderId})
+                    }
+                  }}
+                  options={[
+                    { value: '', label: 'Не указан' },
+                    ...providers.filter(p => p.is_active).map(provider => ({
+                      value: provider.id.toString(),
+                      label: provider.name
+                    }))
+                  ]}
+                  fullWidth
+                  required
+                />
+                <Input
+                  type="text"
+                  label="Номер АЗС"
+                  value={editForm.azs_number}
+                  onChange={(e) => setEditForm({...editForm, azs_number: e.target.value})}
+                  placeholder="Номер АЗС"
+                  fullWidth
+                  required
+                  name="azs_number"
+                />
+              </div>
             </div>
 
-            <div className="form-row form-row-3">
-              <Input
-                type="number"
-                step="any"
-                label="Широта"
-                value={editForm.latitude}
-                onChange={(e) => setEditForm({...editForm, latitude: e.target.value})}
-                placeholder="Широта"
-                fullWidth
-              />
-              <Input
-                type="number"
-                step="any"
-                label="Долгота"
-                value={editForm.longitude}
-                onChange={(e) => setEditForm({...editForm, longitude: e.target.value})}
-                placeholder="Долгота"
-                fullWidth
-              />
-              <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '0' }}>
+            {/* География */}
+            <div className="form-section">
+              <h4 className="form-section-title">📍 География</h4>
+
+              <div className="form-row">
+                <Input
+                  type="text"
+                  label="Адрес"
+                  value={editForm.location}
+                  onChange={(e) => setEditForm({...editForm, location: e.target.value})}
+                  placeholder="Улица, дом, корпус"
+                  fullWidth
+                  required
+                  name="location"
+                />
+              </div>
+
+              <div className="form-row form-row-2">
+                <Input
+                  type="text"
+                  label="Регион"
+                  value={editForm.region}
+                  onChange={(e) => setEditForm({...editForm, region: e.target.value})}
+                  placeholder="Например: Московская область"
+                  fullWidth
+                  required
+                  name="region"
+                />
+                <Input
+                  type="text"
+                  label="Населенный пункт"
+                  value={editForm.settlement}
+                  onChange={(e) => setEditForm({...editForm, settlement: e.target.value})}
+                  placeholder="Город или деревня"
+                  fullWidth
+                  required
+                  name="settlement"
+                />
+              </div>
+
+              <div className="form-row form-row-2">
+                <Input
+                  type="number"
+                  step="any"
+                  label="Широта"
+                  value={editForm.latitude}
+                  onChange={handleLatitudeChange}
+                  placeholder="Например: 55.7558"
+                  fullWidth
+                  error={formErrors.latitude}
+                  name="latitude"
+                />
+                <Input
+                  type="number"
+                  step="any"
+                  label="Долгота"
+                  value={editForm.longitude}
+                  onChange={handleLongitudeChange}
+                  placeholder="Например: 37.6176"
+                  fullWidth
+                  error={formErrors.longitude}
+                  name="longitude"
+                />
+              </div>
+
+              <div className="form-row">
                 <Button
                   variant="secondary"
                   onClick={() => setShowMapModal(true)}
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    gap: 'var(--spacing-tiny)',
-                    height: 'fit-content',
-                    whiteSpace: 'nowrap'
-                  }}
+                  icon={
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                    </svg>
+                  }
+                  iconPosition="left"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  Выбрать
+                  Выбрать на карте
                 </Button>
               </div>
             </div>
@@ -597,6 +746,12 @@ const GasStationsList = () => {
                 variant="secondary"
                 onClick={handleCancel}
                 disabled={loading}
+                icon={
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                }
+                iconPosition="left"
               >
                 Отмена
               </Button>
@@ -604,6 +759,13 @@ const GasStationsList = () => {
                 variant="primary"
                 onClick={() => editingId && handleSave(editingId)}
                 disabled={loading}
+                loading={loading}
+                icon={
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                }
+                iconPosition="left"
               >
                 {loading ? 'Сохранение...' : 'Сохранить'}
               </Button>
@@ -648,6 +810,7 @@ const GasStationsList = () => {
                 .map(([key, settings]) => {
                   const columnLabels = {
                     original_name: 'Исходное наименование',
+                    name: 'Наименование',
                     provider: 'Провайдер',
                     azs_number: 'Номер АЗС',
                     location: 'Местоположение',
@@ -724,15 +887,16 @@ const GasStationsList = () => {
                   // Сброс к значениям по умолчанию
                   setColumnSettings({
                     original_name: { visible: true, order: 0 },
-                    provider: { visible: true, order: 1 },
-                    azs_number: { visible: true, order: 2 },
-                    location: { visible: true, order: 3 },
-                    region: { visible: true, order: 4 },
-                    settlement: { visible: true, order: 5 },
-                    coordinates: { visible: true, order: 6 },
-                    status: { visible: true, order: 7 },
-                    errors: { visible: true, order: 8 },
-                    actions: { visible: true, order: 9 }
+                    name: { visible: true, order: 1 },
+                    provider: { visible: true, order: 2 },
+                    azs_number: { visible: true, order: 3 },
+                    location: { visible: true, order: 4 },
+                    region: { visible: true, order: 5 },
+                    settlement: { visible: true, order: 6 },
+                    coordinates: { visible: true, order: 7 },
+                    status: { visible: true, order: 8 },
+                    errors: { visible: true, order: 9 },
+                    actions: { visible: true, order: 10 }
                   })
                 }}
               >
@@ -749,6 +913,18 @@ const GasStationsList = () => {
           </div>
         </div>
       )}
+
+      {/* Модальное окно подтверждения изменения Провайдера */}
+      <ConfirmModal
+        isOpen={showProviderChangeConfirm}
+        onConfirm={handleProviderChangeConfirm}
+        onCancel={handleProviderChangeCancel}
+        title="Изменение Провайдера"
+        message="У данной АЗС есть связанные транзакции, загруженные при импорте. Изменение Провайдера может привести к несоответствию данных. Вы уверены, что хотите изменить Провайдера?"
+        confirmText="Да, изменить"
+        cancelText="Отмена"
+        variant="warning"
+      />
     </>
   )
 }

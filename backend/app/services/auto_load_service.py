@@ -13,6 +13,7 @@ from app.utils import (
 )
 from app.services.api_provider_service import ApiProviderService
 from app.services.upload_event_service import UploadEventService
+from app import services as app_services
 
 
 class AutoLoadService:
@@ -288,7 +289,6 @@ class AutoLoadService:
             Словарь с результатом загрузки
         """
         from app.services.transaction_batch_processor import TransactionBatchProcessor
-        from app import services as app_services
         from decimal import Decimal
 
         # Проверяем доступность Firebird
