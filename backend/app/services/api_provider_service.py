@@ -297,7 +297,12 @@ class WebAdapter:
             xml_api_pos_code: Код POS для XML API (например, 23)
         """
         # Нормализуем базовый URL (убираем лишние слэши и пробелы)
-        self.base_url = base_url.strip().rstrip('/')
+        base_url = base_url.strip()
+        # Убираем завершающий слэш, если есть
+        self.base_url = base_url.rstrip('/')
+        # Проверяем, что base_url содержит протокол
+        if not self.base_url.startswith('http://') and not self.base_url.startswith('https://'):
+            raise ValueError(f"base_url должен начинаться с http:// или https://. Получено: {base_url}")
         self.username = username
         self.password = password
         self.currency = currency
@@ -1731,6 +1736,235 @@ class WebAdapter:
         except Exception as e:
             logger.error(f"Ошибка при получении транзакций: {str(e)}")
             return []
+    
+    def _create_xml_card_info_request(
+        self,
+        card_number: str,
+        certificate: str,
+        pos_code: Optional[int] = None,
+        flags: int = 23
+    ) -> str:
+        """
+        Создает XML запрос для получения информации по карте (команда getinfo)
+        
+        Args:
+            card_number: Номер карты
+            certificate: Сертификат для доступа к API
+            pos_code: Код POS (опционально, по умолчанию используется self.xml_api_pos_code)
+            flags: Битовая маска реквизитов (1=FirstName, 2=LastName, 4=Patronymic, 8=BirthDate, 16=PhoneNumber, 32=Sex)
+                  По умолчанию 23 (1+2+4+16) = ФИО + телефон
+        
+        Returns:
+            XML строка запроса в кодировке UTF-8 без BOM
+        """
+        xml_request = ET.Element('RequestDS')
+        
+        # Элемент Request
+        request_elem = ET.SubElement(xml_request, 'Request')
+        ET.SubElement(request_elem, 'Command').text = 'getinfo'
+        ET.SubElement(request_elem, 'Version').text = '1'
+        ET.SubElement(request_elem, 'Certificate').text = certificate
+        # POSCode добавляем только если указан
+        if pos_code is not None:
+            ET.SubElement(request_elem, 'POSCode').text = str(pos_code)
+        
+        # Элемент Card
+        card_elem = ET.SubElement(xml_request, 'Card')
+        ET.SubElement(card_elem, 'CardNumber').text = card_number
+        ET.SubElement(card_elem, 'Flags').text = str(flags)
+        
+        # Преобразуем в строку без BOM
+        ET.indent(xml_request, space='  ')
+        xml_string = ET.tostring(xml_request, encoding='utf-8', xml_declaration=True).decode('utf-8')
+        return xml_string
+    
+    async def get_card_info(
+        self,
+        card_number: str,
+        flags: int = 23
+    ) -> Dict[str, Any]:
+        """
+        Получение информации по карте через XML API (команда getinfo)
+        
+        Args:
+            card_number: Номер карты
+            flags: Битовая маска реквизитов (1=FirstName, 2=LastName, 4=Patronymic, 8=BirthDate, 16=PhoneNumber, 32=Sex)
+                  По умолчанию 23 (1+2+4+16) = ФИО + телефон
+        
+        Returns:
+            Словарь с информацией по карте
+        
+        Raises:
+            ValueError: если не указан сертификат или не используется XML API
+            httpx.HTTPError: при ошибке HTTP запроса
+        """
+        if not self.use_xml_api:
+            raise ValueError("Метод get_card_info доступен только для XML API")
+        
+        if not self.xml_api_certificate:
+            raise ValueError("Сертификат не указан для XML API")
+        
+        # Используем xml_api_pos_code если он указан, иначе None
+        pos_code = self.xml_api_pos_code
+        
+        # Создаем XML запрос
+        xml_request = self._create_xml_card_info_request(
+            card_number=card_number,
+            certificate=self.xml_api_certificate,
+            pos_code=pos_code,
+            flags=flags
+        )
+        
+        logger.info(f"Запрос информации по карте: {card_number}", extra={
+            "card_number": card_number,
+            "flags": flags,
+            "pos_code": pos_code,
+            "base_url": self.base_url,
+            "xml_api_endpoint": self.xml_api_endpoint
+        })
+        
+        # Определяем endpoint для запроса информации по карте
+        # Для команды getinfo всегда используем /sncapi/card, независимо от xml_api_endpoint
+        # (который может быть настроен для транзакций /sncapi/sale)
+        base = self.base_url.rstrip('/')
+        url = f"{base}/sncapi/card"
+        
+        # Валидация URL
+        if not url.startswith('http://') and not url.startswith('https://'):
+            raise ValueError(f"Некорректный URL: {url}. URL должен начинаться с http:// или https://")
+        
+        logger.debug(f"Сформированный URL для запроса информации по карте: {url}", extra={
+            "card_number": card_number,
+            "url": url,
+            "base_url": self.base_url,
+            "xml_api_endpoint": self.xml_api_endpoint
+        })
+        
+        # Заголовки для XML API
+        headers = {
+            "Content-Type": "text/xml",
+            "Content-Version": "2"
+        }
+        
+        try:
+            response = await self.client.post(
+                url,
+                content=xml_request.encode('utf-8'),
+                headers=headers,
+                timeout=30.0
+            )
+            response.raise_for_status()
+            
+            # Парсим XML ответ
+            response_text = response.text
+            
+            # Убираем BOM если есть
+            if response_text.startswith('\ufeff'):
+                response_text = response_text[1:]
+            
+            # Парсим XML
+            try:
+                root = ET.fromstring(response_text)
+                card_info = self._parse_card_info_response(root)
+                logger.info(f"Информация по карте получена: {card_number}", extra={
+                    "card_number": card_number,
+                    "has_info": bool(card_info)
+                })
+                return card_info
+            except ET.ParseError as e:
+                logger.error(f"Ошибка парсинга XML ответа: {str(e)}", extra={
+                    "card_number": card_number,
+                    "response_text": response_text[:500]
+                })
+                raise ValueError(f"Ошибка парсинга XML ответа: {str(e)}")
+                
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Ошибка HTTP при запросе информации по карте: {e.response.status_code}", extra={
+                "url": url,
+                "card_number": card_number,
+                "status_code": e.response.status_code,
+                "response_text": e.response.text[:500]
+            })
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Ошибка запроса информации по карте: {str(e)}", extra={
+                "url": url,
+                "card_number": card_number
+            })
+            raise
+    
+    def _parse_card_info_response(self, root: ET.Element) -> Dict[str, Any]:
+        """
+        Парсит XML ответ с информацией по карте
+        
+        Args:
+            root: Корневой XML элемент
+        
+        Returns:
+            Словарь с информацией по карте
+        """
+        result = {}
+        
+        # Ищем элемент Card в ответе
+        card_elem = root.find('.//Card')
+        if card_elem is not None:
+            # Парсим основные поля
+            for child in card_elem:
+                tag = child.tag
+                text = child.text
+                
+                if tag == 'CardNumber':
+                    result['card_number'] = text
+                elif tag == 'COD_A':
+                    result['cod_a'] = text
+                elif tag == 'COD_OWN':
+                    result['cod_own'] = text
+                elif tag == 'ApplicationType':
+                    result['application_type'] = int(text) if text and text.isdigit() else None
+                    result['application_type_name'] = 'дисконт' if result['application_type'] == 1 else 'топливо'
+                elif tag == 'ApplicationKey':
+                    result['application_key'] = text
+                elif tag == 'Balance':
+                    result['balance'] = float(text) if text and text.replace('.', '').replace('-', '').isdigit() else 0.0
+                elif tag == 'BonusProgram':
+                    result['bonus_program'] = int(text) if text and text.replace('-', '').isdigit() else None
+                elif tag == 'State':
+                    result['state'] = int(text) if text and text.isdigit() else 0
+                    result['state_name'] = self._parse_card_state(result['state'])
+                elif tag == 'PersonName':
+                    result['person_name'] = text
+                elif tag == 'FirstName':
+                    result['first_name'] = text
+                elif tag == 'LastName':
+                    result['last_name'] = text
+                elif tag == 'Patronymic':
+                    result['patronymic'] = text
+                elif tag == 'BirthDate':
+                    result['birth_date'] = text
+                elif tag == 'PhoneNumber':
+                    result['phone_number'] = text
+                elif tag == 'Sex':
+                    result['sex'] = text
+        
+        return result
+    
+    def _parse_card_state(self, state: int) -> str:
+        """
+        Парсит состояние карты из числового значения
+        
+        Args:
+            state: Числовое значение состояния
+        
+        Returns:
+            Текстовое описание состояния
+        """
+        state_map = {
+            0: "работает",
+            1: "заблокирована",
+            2: "заблокирована",
+            4: "заблокирована"
+        }
+        return state_map.get(state, f"неизвестно ({state})")
     
     def _create_xml_sale_request(
         self,

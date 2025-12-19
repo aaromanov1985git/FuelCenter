@@ -230,6 +230,10 @@ class FuelCard(Base):
     # Статус блокировки карты
     is_blocked = Column(Boolean, default=False, index=True, comment="Карта заблокирована")
     
+    # Данные владельца
+    original_owner_name = Column(String(200), comment="Исходное наименование Владельца")
+    normalized_owner = Column(String(200), index=True, comment="Нормализованный владелец")
+    
     # Метаданные
     created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления")
@@ -503,6 +507,108 @@ class SystemLog(Base):
         Index('idx_system_logs_event_type', 'event_type'),
         Index('idx_system_logs_event_category', 'event_category'),
         Index('idx_system_logs_level_created', 'level', 'created_at'),
+    )
+
+
+class NormalizationSettings(Base):
+    """
+    Настройки нормализации для справочников
+    """
+    __tablename__ = "normalization_settings"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    
+    # Тип справочника: 'fuel_card_owner', 'vehicle', 'gas_station', 'fuel_type'
+    dictionary_type = Column(String(50), nullable=False, unique=True, index=True, comment="Тип справочника")
+    
+    # Опции нормализации (JSON)
+    # {
+    #   "case": "upper" | "lower" | "title" | "preserve" - регистр
+    #   "remove_special_chars": true/false - удалять спецсимволы
+    #   "remove_extra_spaces": true/false - удалять лишние пробелы
+    #   "trim": true/false - обрезать пробелы в начале/конце
+    #   "priority_license_plate": true/false - приоритет госномера
+    #   "priority_garage_number": true/false - приоритет гаражного номера
+    #   "min_garage_number_length": 2 - минимальная длина гаражного номера
+    #   "max_garage_number_length": 10 - максимальная длина гаражного номера
+    #   "remove_chars": ["символ1", "символ2"] - список символов для удаления
+    # }
+    options = Column(Text, comment="JSON настройки нормализации")
+    
+    # Метаданные
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления")
+    
+    __table_args__ = (
+        Index('idx_normalization_settings_type', 'dictionary_type', unique=True),
+    )
+
+
+class CardInfoSchedule(Base):
+    """
+    Регламент получения информации по топливным картам через Web API
+    """
+    __tablename__ = "card_info_schedules"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    
+    # Название регламента
+    name = Column(String(200), nullable=False, comment="Название регламента")
+    
+    # Описание
+    description = Column(String(500), comment="Описание регламента")
+    
+    # ID шаблона провайдера с типом подключения "web"
+    provider_template_id = Column(Integer, ForeignKey("provider_templates.id"), nullable=False, index=True, comment="ID шаблона провайдера")
+    
+    # Расписание (cron-выражение или простой формат: "daily", "hourly", "weekly")
+    # Примеры cron: "0 2 * * *" - каждый день в 2:00, "0 */6 * * *" - каждые 6 часов
+    schedule = Column(String(100), nullable=False, comment="Расписание (cron-выражение)")
+    
+    # Фильтр карт для обработки (JSON)
+    # {
+    #   "provider_ids": [1, 2, 3] - только карты этих провайдеров
+    #   "card_numbers": ["1100018800004794", ...] - конкретные номера карт (если пусто - все карты провайдера)
+    #   "only_with_vehicle": true/false - только карты, привязанные к ТС
+    #   "only_blocked": true/false - только заблокированные карты
+    #   "only_active": true/false - только активные карты
+    # }
+    filter_options = Column(Text, comment="JSON фильтр карт для обработки")
+    
+    # Автоматически обновлять карты данными из API
+    auto_update = Column(Boolean, default=True, comment="Автоматически обновлять карты")
+    
+    # Флаги реквизитов для запроса (битовая маска)
+    # 1=FirstName, 2=LastName, 4=Patronymic, 8=BirthDate, 16=PhoneNumber, 32=Sex
+    # По умолчанию 23 (1+2+4+16 = ФИО + телефон)
+    flags = Column(Integer, default=23, comment="Флаги реквизитов для запроса")
+    
+    # Активен ли регламент
+    is_active = Column(Boolean, default=True, comment="Активен")
+    
+    # Дата и время последнего выполнения
+    last_run_date = Column(DateTime, comment="Дата и время последнего выполнения")
+    
+    # Результат последнего выполнения (JSON)
+    # {
+    #   "status": "success" | "error" | "partial",
+    #   "cards_processed": 10,
+    #   "cards_updated": 8,
+    #   "cards_failed": 2,
+    #   "error_message": "..."
+    # }
+    last_run_result = Column(Text, comment="JSON результат последнего выполнения")
+    
+    # Метаданные
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления")
+    
+    # Связи
+    provider_template = relationship("ProviderTemplate", backref="card_info_schedules")
+    
+    __table_args__ = (
+        Index('idx_card_info_schedules_template', 'provider_template_id'),
+        Index('idx_card_info_schedules_active', 'is_active'),
     )
 
 

@@ -32,7 +32,9 @@ from app.routers import (
     auth,
     users,
     organizations,
-    logs
+    logs,
+    normalization_settings,
+    card_info_schedules
 )
 
 from app.models import Provider, User
@@ -497,6 +499,8 @@ app.include_router(upload_events.router)
 app.include_router(users.router)
 app.include_router(organizations.router)
 app.include_router(logs.router)
+app.include_router(normalization_settings.router)
+app.include_router(card_info_schedules.router)
 
 
 

@@ -1,0 +1,55 @@
+.normalization-settings {
+  padding: 1rem;
+}
+
+.normalization-settings .form-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.normalization-settings .form-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.normalization-settings .form-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.normalization-settings .form-group {
+  margin-bottom: 1rem;
+}
+
+.normalization-settings .form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.normalization-settings .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.normalization-settings .form-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
+  .normalization-settings .form-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -179,6 +179,7 @@ const FuelCardsList = () => {
   const handleSave = async (cardId, data) => {
     try {
       setLoading(true)
+      setError('')
       
       const response = await authFetch(`${API_URL}/api/v1/fuel-cards/${cardId}`, {
         method: 'PUT',
@@ -193,10 +194,19 @@ const FuelCardsList = () => {
         throw new Error(errorData.detail || 'Ошибка сохранения')
       }
 
-      setEditingCard(null)
-      await loadCards()
-      setError('')
+      // Показываем уведомление об успешном сохранении СРАЗУ
       success('Топливная карта успешно обновлена')
+
+      // Получаем обновленные данные карты и обновляем форму
+      const updatedCardResponse = await authFetch(`${API_URL}/api/v1/fuel-cards/${cardId}`)
+      if (updatedCardResponse.ok) {
+        const updatedCard = await updatedCardResponse.json()
+        // Обновляем карту в состоянии - это обновит форму
+        setEditingCard(updatedCard)
+      }
+
+      // Обновляем список карт в фоне (не блокируем UI)
+      loadCards().catch(() => {})
     } catch (err) {
       // Не показываем ошибку при 401 - это обрабатывается централизованно
       if (err.isUnauthorized) {
@@ -237,6 +247,7 @@ const FuelCardsList = () => {
   const tableColumns = [
     { key: 'card_number', header: 'Номер карты' },
     { key: 'provider', header: 'Провайдер' },
+    { key: 'owner', header: 'Владелец' },
     { key: 'vehicle', header: 'Закреплена за ТС' },
     { key: 'status', header: 'Статус' },
     { key: 'actions', header: 'Действия' }
@@ -246,6 +257,7 @@ const FuelCardsList = () => {
     id: card.id,
     card_number: card.card_number,
     provider: getProviderName(card.provider_id),
+    owner: card.normalized_owner || card.original_owner_name || '-',
     vehicle: getVehicleName(card.vehicle_id),
     status: card.is_blocked ? (
       <Badge variant="error" size="sm">Заблокирована</Badge>
@@ -411,6 +423,21 @@ const FuelCardsList = () => {
         onSave={handleSave}
         onCancel={handleCancel}
         loading={loading}
+        onCardUpdated={async () => {
+          // Перезагружаем данные карты после обновления из API
+          if (editingCard) {
+            try {
+              const response = await authFetch(`${API_URL}/api/v1/fuel-cards/${editingCard.id}`)
+              if (response.ok) {
+                const updatedCard = await response.json()
+                setEditingCard(updatedCard)
+                await loadCards()
+              }
+            } catch (err) {
+              // Игнорируем ошибки
+            }
+          }
+        }}
       />
     </>
   )

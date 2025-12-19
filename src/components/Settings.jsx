@@ -6,6 +6,8 @@ import SystemLogsList from './SystemLogsList'
 import UserActionLogsList from './UserActionLogsList'
 import UploadPeriodLock from './UploadPeriodLock'
 import ComponentsDemo from './ComponentsDemo'
+import NormalizationSettings from './NormalizationSettings'
+import CardInfoSchedulesList from './CardInfoSchedulesList'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
@@ -19,7 +21,7 @@ const Settings = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, title: '', message: '' })
   const [showClearProviderModal, setShowClearProviderModal] = useState(false)
   const [providers, setProviders] = useState([])
-  const [activeSection, setActiveSection] = useState('cleanup') // 'cleanup', 'admin', 'appearance'
+  const [activeSection, setActiveSection] = useState('cleanup') // 'cleanup', 'admin', 'appearance', 'normalization', 'card-info-schedules'
   const [adminView, setAdminView] = useState(null) // 'system-logs', 'user-action-logs', 'period-lock'
   const [appearanceView, setAppearanceView] = useState(null) // 'ui-components'
   const [fontSize, setFontSize] = useState(() => {
@@ -365,6 +367,18 @@ const Settings = () => {
         >
           Внешний вид
         </button>
+        <button
+          className={`settings-tab ${activeSection === 'normalization' ? 'active' : ''}`}
+          onClick={() => setActiveSection('normalization')}
+        >
+          Нормализация
+        </button>
+        <button
+          className={`settings-tab ${activeSection === 'card-info-schedules' ? 'active' : ''}`}
+          onClick={() => setActiveSection('card-info-schedules')}
+        >
+          Регламенты получения информации по картам
+        </button>
       </div>
 
       {activeSection === 'cleanup' && (
@@ -463,6 +477,18 @@ const Settings = () => {
               </div>
             </Card>
           </div>
+        </div>
+      )}
+
+      {activeSection === 'normalization' && (
+        <div className="settings-section">
+          <NormalizationSettings />
+        </div>
+      )}
+
+      {activeSection === 'card-info-schedules' && (
+        <div className="settings-section">
+          <CardInfoSchedulesList />
         </div>
       )}
 

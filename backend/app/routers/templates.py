@@ -3,6 +3,7 @@
 """
 from fastapi import APIRouter, UploadFile, File, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import Optional, Dict, Any
 from app.database import get_db
 from app.logger import logger
@@ -26,6 +27,41 @@ from app.services.api_provider_service import ApiProviderService
 from app.services.auto_load_service import AutoLoadService
 
 router = APIRouter(prefix="/api/v1/templates", tags=["templates"])
+
+
+@router.get("", response_model=ProviderTemplateListResponse)
+async def get_templates(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    is_active: Optional[bool] = Query(None, description="Фильтр по активности"),
+    connection_type: Optional[str] = Query(None, description="Фильтр по типу подключения"),
+    db: Session = Depends(get_db)
+):
+    """
+    Получение списка всех шаблонов провайдеров
+    """
+    query = db.query(ProviderTemplate)
+    
+    if is_active is not None:
+        query = query.filter(ProviderTemplate.is_active == is_active)
+    
+    if connection_type:
+        # Фильтрация без учета регистра
+        query = query.filter(func.lower(ProviderTemplate.connection_type) == connection_type.lower())
+    
+    total = query.count()
+    templates = query.offset(skip).limit(limit).all()
+    
+    logger.debug("Список шаблонов загружен", extra={
+        "total": total,
+        "returned": len(templates),
+        "filters": {
+            "is_active": is_active,
+            "connection_type": connection_type
+        }
+    })
+    
+    return ProviderTemplateListResponse(total=total, items=templates)
 
 
 @router.get("/{template_id}", response_model=ProviderTemplateResponse)

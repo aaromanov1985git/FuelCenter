@@ -307,6 +307,8 @@ class FuelCardBase(BaseModel):
     assignment_end_date: Optional[date] = Field(None, description="Дата окончания закрепления")
     is_active_assignment: Optional[bool] = Field(True, description="Активное закрепление")
     is_blocked: Optional[bool] = Field(False, description="Карта заблокирована")
+    original_owner_name: Optional[str] = Field(None, max_length=200, description="Исходное наименование Владельца")
+    normalized_owner: Optional[str] = Field(None, max_length=200, description="Нормализованный владелец")
 
 
 class FuelCardCreate(FuelCardBase):
@@ -326,6 +328,8 @@ class FuelCardUpdate(BaseModel):
     assignment_end_date: Optional[date] = None
     is_active_assignment: Optional[bool] = None
     is_blocked: Optional[bool] = None
+    original_owner_name: Optional[str] = Field(None, max_length=200, description="Исходное наименование Владельца")
+    normalized_owner: Optional[str] = Field(None, max_length=200, description="Нормализованный владелец")
     
     @model_validator(mode='after')
     def validate_dates(self):
@@ -356,6 +360,193 @@ class FuelCardListResponse(BaseModel):
     """
     total: int
     items: list[FuelCardResponse]
+
+
+class CardInfoResponse(BaseModel):
+    """
+    Схема ответа с информацией по карте из Web API
+    """
+    card_number: Optional[str] = None
+    cod_a: Optional[str] = None
+    cod_own: Optional[str] = None
+    application_type: Optional[int] = None
+    application_type_name: Optional[str] = None
+    application_key: Optional[str] = None
+    balance: Optional[float] = None
+    bonus_program: Optional[int] = None
+    state: Optional[int] = None
+    state_name: Optional[str] = None
+    person_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    patronymic: Optional[str] = None
+    birth_date: Optional[str] = None
+    phone_number: Optional[str] = None
+    sex: Optional[str] = None
+
+
+class NormalizeOwnerRequest(BaseModel):
+    """
+    Схема запроса на нормализацию владельца
+    """
+    owner_name: str = Field(..., description="Исходное наименование владельца")
+
+
+class NormalizeOwnerResponse(BaseModel):
+    """
+    Схема ответа с нормализованными данными владельца
+    """
+    normalized: Optional[str] = None
+    license_plate: Optional[str] = None
+    garage_number: Optional[str] = None
+    company_name: Optional[str] = None
+
+
+class NormalizationOptions(BaseModel):
+    """
+    Опции нормализации
+    """
+    case: Optional[str] = Field("preserve", description="Регистр: upper, lower, title, preserve")
+    remove_special_chars: Optional[bool] = Field(False, description="Удалять спецсимволы")
+    remove_extra_spaces: Optional[bool] = Field(True, description="Удалять лишние пробелы")
+    trim: Optional[bool] = Field(True, description="Обрезать пробелы в начале/конце")
+    priority_license_plate: Optional[bool] = Field(True, description="Приоритет госномера")
+    priority_garage_number: Optional[bool] = Field(True, description="Приоритет гаражного номера")
+    min_garage_number_length: Optional[int] = Field(2, description="Минимальная длина гаражного номера")
+    max_garage_number_length: Optional[int] = Field(10, description="Максимальная длина гаражного номера")
+    remove_chars: Optional[list[str]] = Field(default_factory=list, description="Список символов для удаления")
+
+
+class NormalizationSettingsBase(BaseModel):
+    """
+    Базовая схема настроек нормализации
+    """
+    dictionary_type: str = Field(..., description="Тип справочника: fuel_card_owner, vehicle, gas_station, fuel_type")
+    options: NormalizationOptions = Field(..., description="Опции нормализации")
+
+
+class NormalizationSettingsCreate(NormalizationSettingsBase):
+    """
+    Схема для создания настроек нормализации
+    """
+    pass
+
+
+class NormalizationSettingsUpdate(BaseModel):
+    """
+    Схема для обновления настроек нормализации
+    """
+    options: Optional[NormalizationOptions] = Field(None, description="Опции нормализации")
+
+
+class NormalizationSettingsResponse(NormalizationSettingsBase):
+    """
+    Схема ответа с настройками нормализации
+    """
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class NormalizationSettingsListResponse(BaseModel):
+    """
+    Схема ответа со списком настроек нормализации
+    """
+    total: int
+    items: list[NormalizationSettingsResponse]
+
+
+class CardInfoScheduleFilterOptions(BaseModel):
+    """
+    Опции фильтрации карт для регламента
+    
+    Примечание: provider_ids не используется, так как провайдер определяется выбранным шаблоном провайдера
+    """
+    card_numbers: Optional[list[str]] = Field(default_factory=list, description="Конкретные номера карт (если пусто - все карты провайдера)")
+    only_with_vehicle: Optional[bool] = Field(False, description="Только карты, привязанные к ТС")
+    only_blocked: Optional[bool] = Field(False, description="Только заблокированные карты")
+    only_active: Optional[bool] = Field(False, description="Только активные карты")
+
+
+class CardInfoScheduleBase(BaseModel):
+    """
+    Базовая схема регламента получения информации по картам
+    """
+    name: str = Field(..., max_length=200, description="Название регламента")
+    description: Optional[str] = Field(None, max_length=500, description="Описание")
+    provider_template_id: int = Field(..., description="ID шаблона провайдера с типом 'web'")
+    schedule: str = Field(..., max_length=100, description="Расписание (cron-выражение или daily/hourly/weekly)")
+    filter_options: Optional[CardInfoScheduleFilterOptions] = Field(default_factory=CardInfoScheduleFilterOptions, description="Фильтр карт")
+    auto_update: Optional[bool] = Field(True, description="Автоматически обновлять карты")
+    flags: Optional[int] = Field(23, description="Флаги реквизитов для запроса (1+2+4+16=ФИО+телефон)")
+    is_active: Optional[bool] = Field(True, description="Активен")
+
+
+class CardInfoScheduleCreate(CardInfoScheduleBase):
+    """
+    Схема для создания регламента
+    """
+    pass
+
+
+class CardInfoScheduleUpdate(BaseModel):
+    """
+    Схема для обновления регламента
+    """
+    name: Optional[str] = Field(None, max_length=200)
+    description: Optional[str] = Field(None, max_length=500)
+    provider_template_id: Optional[int] = None
+    schedule: Optional[str] = Field(None, max_length=100)
+    filter_options: Optional[CardInfoScheduleFilterOptions] = None
+    auto_update: Optional[bool] = None
+    flags: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class CardInfoScheduleRunResult(BaseModel):
+    """
+    Результат выполнения регламента
+    """
+    status: str = Field(..., description="success, error, partial")
+    cards_processed: int = Field(0, description="Количество обработанных карт")
+    cards_updated: int = Field(0, description="Количество обновленных карт")
+    cards_failed: int = Field(0, description="Количество карт с ошибками")
+    error_message: Optional[str] = Field(None, description="Сообщение об ошибке")
+
+
+class CardInfoScheduleResponse(CardInfoScheduleBase):
+    """
+    Схема ответа с регламентом
+    """
+    id: int
+    last_run_date: Optional[datetime] = None
+    last_run_result: Optional[CardInfoScheduleRunResult] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CardInfoScheduleListResponse(BaseModel):
+    """
+    Схема ответа со списком регламентов
+    """
+    total: int
+    items: list[CardInfoScheduleResponse]
+
+
+class CardInfoRequest(BaseModel):
+    """
+    Схема запроса информации по карте
+    """
+    card_number: str = Field(..., description="Номер карты")
+    flags: Optional[int] = Field(23, description="Битовая маска реквизитов (1=FirstName, 2=LastName, 4=Patronymic, 8=BirthDate, 16=PhoneNumber, 32=Sex)")
+    provider_template_id: Optional[int] = Field(None, description="ID шаблона провайдера с настройками Web API")
+    update_card: Optional[bool] = Field(True, description="Автоматически обновить топливную карту данными из API")
 
 
 class ProviderBase(BaseModel):

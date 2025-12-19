@@ -1,0 +1,46 @@
+.card-info-schedule-form {
+  padding: 0.5rem 0;
+}
+
+.card-info-schedule-form .form-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-info-schedule-form .form-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.card-info-schedule-form .form-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.card-info-schedule-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.card-info-schedule-form .form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.card-info-schedule-form .form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .card-info-schedule-form .form-row {
+    grid-template-columns: 1fr;
+  }
+}

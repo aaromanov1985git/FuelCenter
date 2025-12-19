@@ -20,6 +20,12 @@
   border-top: none;
 }
 
+.fuel-card-edit-modal-fields .form-section.compact {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
 .fuel-card-edit-modal-fields .form-section h3 {
   margin-bottom: 0.5rem;
   margin-top: 0;
@@ -45,8 +51,25 @@
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+  align-items: start;
 }
 
 .fuel-card-edit-modal-fields .form-row .form-group {
   margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Компактный стиль для формы редактирования карты */
+.form-section.compact .form-row {
+  margin-bottom: 0.75rem;
+}
+
+.form-section.compact .form-row:last-child {
+  margin-bottom: 0;
+}
+
+.form-section.compact .form-group label {
+  margin-bottom: 0.25rem;
+  font-size: 0.8125rem;
 }

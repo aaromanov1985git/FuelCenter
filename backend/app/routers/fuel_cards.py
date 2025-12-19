@@ -6,10 +6,12 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
 from app.logger import logger
-from app.models import Vehicle, FuelCard, User
+from app.models import Vehicle, FuelCard, User, ProviderTemplate
+from app.services.normalization_service import normalize_owner_name, get_normalization_settings
 from app.schemas import (
     FuelCardResponse, FuelCardUpdate, FuelCardListResponse,
-    CardAssignmentRequest, CardAssignmentResponse, MergeRequest, MergeResponse
+    CardAssignmentRequest, CardAssignmentResponse, MergeRequest, MergeResponse,
+    CardInfoRequest, CardInfoResponse, NormalizeOwnerRequest, NormalizeOwnerResponse
 )
 from app.services import assign_card_to_vehicle
 from app.auth import require_auth_if_enabled, require_admin
@@ -86,6 +88,14 @@ async def update_fuel_card(
         card.is_active_assignment = card_data.is_active_assignment
     if card_data.is_blocked is not None:
         card.is_blocked = card_data.is_blocked
+    if card_data.normalized_owner is not None:
+        card.normalized_owner = card_data.normalized_owner
+    
+    # Если изменился original_owner_name (через API), нормализуем его
+    if card.original_owner_name and not card.normalized_owner:
+        normalized_data = normalize_owner_name(card.original_owner_name, db=db, dictionary_type="fuel_card_owner")
+        if normalized_data.get('normalized'):
+            card.normalized_owner = normalized_data['normalized']
     
     db.commit()
     db.refresh(card)
@@ -328,3 +338,175 @@ async def clear_all_fuel_cards(
         db.rollback()
         logger.error(f"Ошибка при очистке топливных карт", extra={"error": str(e)}, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Ошибка при очистке топливных карт: {str(e)}")
+
+
+@router.post("/info", response_model=CardInfoResponse)
+async def get_card_info(
+    request: CardInfoRequest,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
+):
+    """
+    Получение информации по карте через Web API (XML API getinfo)
+    
+    Требуется шаблон провайдера с типом подключения "web" и настройками XML API
+    """
+    from app.services.api_provider_service import ApiProviderService
+    
+    # Получаем шаблон провайдера
+    if not request.provider_template_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Не указан provider_template_id. Укажите ID шаблона провайдера с настройками Web API"
+        )
+    
+    template = db.query(ProviderTemplate).filter(
+        ProviderTemplate.id == request.provider_template_id
+    ).first()
+    
+    if not template:
+        raise HTTPException(status_code=404, detail="Шаблон провайдера не найден")
+    
+    if template.connection_type != "web":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Шаблон имеет тип подключения '{template.connection_type}', требуется 'web'"
+        )
+    
+    try:
+        # Создаем сервис и адаптер
+        api_service = ApiProviderService(db)
+        adapter = api_service.create_adapter(template)
+        
+        # Получаем информацию по карте
+        async with adapter:
+            card_info = await adapter.get_card_info(
+                card_number=request.card_number,
+                flags=request.flags or 23
+            )
+        
+        # Обновляем топливную карту, если указано
+        updated_card = None
+        if request.update_card:
+            # Ищем карту по номеру
+            card = db.query(FuelCard).filter(FuelCard.card_number == request.card_number).first()
+            
+            if card:
+                # Обновляем поля из полученной информации
+                updated_fields = []
+                
+                # PersonName -> original_owner_name с нормализацией
+                if card_info.get('person_name'):
+                    card.original_owner_name = card_info['person_name']
+                    # Нормализуем и сохраняем в normalized_owner (с настройками из БД)
+                    normalized_data = normalize_owner_name(card_info['person_name'], db=db, dictionary_type="fuel_card_owner")
+                    if normalized_data.get('normalized'):
+                        card.normalized_owner = normalized_data['normalized']
+                    updated_fields.append('original_owner_name')
+                    if normalized_data.get('normalized'):
+                        updated_fields.append('normalized_owner')
+                
+                # State -> is_blocked (0 = работает, 1/2/4 = заблокирована)
+                if 'state' in card_info:
+                    new_is_blocked = card_info['state'] != 0
+                    if card.is_blocked != new_is_blocked:
+                        card.is_blocked = new_is_blocked
+                        updated_fields.append('is_blocked')
+                
+                if updated_fields:
+                    db.commit()
+                    db.refresh(card)
+                    updated_card = card
+                    logger.info(f"Топливная карта обновлена данными из API: {request.card_number}", extra={
+                        "card_id": card.id,
+                        "card_number": request.card_number,
+                        "updated_fields": updated_fields
+                    })
+            else:
+                logger.warning(f"Топливная карта не найдена для обновления: {request.card_number}", extra={
+                    "card_number": request.card_number
+                })
+        
+        # Логируем действие пользователя
+        if current_user:
+            try:
+                action_type = "update" if updated_card else "view"
+                action_description = (
+                    f"Получена и обновлена информация по карте: {request.card_number}"
+                    if updated_card
+                    else f"Получена информация по карте: {request.card_number}"
+                )
+                
+                logging_service.log_user_action(
+                    db=db,
+                    user_id=current_user.id,
+                    username=current_user.username,
+                    action_type=action_type,
+                    action_description=action_description,
+                    action_category="fuel_card",
+                    entity_type="FuelCard",
+                    entity_id=updated_card.id if updated_card else None,
+                    status="success",
+                    extra_data={
+                        "card_number": request.card_number,
+                        "template_id": request.provider_template_id,
+                        "updated": bool(updated_card)
+                    }
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+        
+        logger.info(f"Информация по карте получена: {request.card_number}", extra={
+            "card_number": request.card_number,
+            "template_id": request.provider_template_id,
+            "card_updated": bool(updated_card)
+        })
+        
+        return CardInfoResponse(**card_info)
+        
+    except ValueError as e:
+        logger.error(f"Ошибка при получении информации по карте: {str(e)}", extra={
+            "card_number": request.card_number,
+            "template_id": request.provider_template_id
+        })
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Ошибка при получении информации по карте: {str(e)}", extra={
+            "card_number": request.card_number,
+            "template_id": request.provider_template_id
+        }, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Ошибка при получении информации по карте: {str(e)}")
+
+
+@router.post("/normalize-owner", response_model=NormalizeOwnerResponse)
+async def normalize_owner(
+    request: NormalizeOwnerRequest,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
+):
+    """
+    Нормализация исходного наименования владельца карты
+    
+    Приоритет:
+    1. Поиск госномера (российский формат) - если включен в настройках
+    2. Если только цифры - гаражный номер - если включен в настройках
+    3. Остальное - название компании или ФИО
+    
+    Использует настройки нормализации из базы данных
+    """
+    try:
+        normalized_data = normalize_owner_name(request.owner_name, db=db, dictionary_type="fuel_card_owner")
+        
+        logger.info(f"Нормализация владельца выполнена", extra={
+            "original": request.owner_name,
+            "normalized": normalized_data.get('normalized'),
+            "license_plate": normalized_data.get('license_plate'),
+            "garage_number": normalized_data.get('garage_number')
+        })
+        
+        return NormalizeOwnerResponse(**normalized_data)
+    except Exception as e:
+        logger.error(f"Ошибка при нормализации владельца: {str(e)}", extra={
+            "owner_name": request.owner_name
+        }, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Ошибка при нормализации владельца: {str(e)}")

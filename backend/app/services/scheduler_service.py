@@ -9,8 +9,9 @@ from apscheduler.triggers.date import DateTrigger
 from datetime import datetime
 from typing import Optional, Dict
 from sqlalchemy.orm import Session
-from app.models import ProviderTemplate
+from app.models import ProviderTemplate, CardInfoSchedule
 from app.services.auto_load_service import AutoLoadService
+from app.services.card_info_schedule_service import CardInfoScheduleService
 from app.logger import logger
 from app.database import SessionLocal
 
@@ -125,6 +126,10 @@ class SchedulerService:
                 "event_type": "scheduler",
                 "event_category": "startup"
             })
+            
+            # Загружаем регламенты получения информации по картам
+            self._load_card_info_schedules(db)
+            
         except Exception as e:
             logger.error("Ошибка при загрузке расписаний", extra={"error": str(e)}, exc_info=True)
         finally:
@@ -438,11 +443,185 @@ class SchedulerService:
         # Удаляем все существующие задачи
         jobs = self._scheduler.get_jobs()
         for job in jobs:
-            if job.id.startswith("auto_load_template_"):
+            if job.id.startswith("auto_load_template_") or job.id.startswith("card_info_schedule_"):
                 self._scheduler.remove_job(job.id)
         
         # Загружаем заново
         self._load_all_schedules()
+    
+    def _load_card_info_schedules(self, db: Session):
+        """
+        Загрузить все регламенты получения информации по картам
+        """
+        try:
+            schedules = db.query(CardInfoSchedule).filter(
+                CardInfoSchedule.is_active == True,
+                CardInfoSchedule.schedule.isnot(None),
+                CardInfoSchedule.schedule != ''
+            ).all()
+            
+            logger.info("Загрузка регламентов получения информации по картам", extra={
+                "schedules_count": len(schedules),
+                "event_type": "scheduler",
+                "event_category": "startup"
+            })
+            
+            if len(schedules) == 0:
+                logger.info("Не найдено активных регламентов получения информации по картам")
+            
+            scheduled_count = 0
+            failed_count = 0
+            
+            for schedule in schedules:
+                try:
+                    self._add_card_info_schedule(schedule)
+                    scheduled_count += 1
+                except Exception as e:
+                    failed_count += 1
+                    logger.error("Ошибка при добавлении регламента получения информации по картам", extra={
+                        "schedule_id": schedule.id,
+                        "schedule_name": schedule.name,
+                        "schedule": schedule.schedule,
+                        "error": str(e),
+                        "event_type": "scheduler",
+                        "event_category": "startup"
+                    }, exc_info=True)
+            
+            logger.info("Регламенты получения информации по картам загружены", extra={
+                "total_schedules": len(schedules),
+                "scheduled_schedules": scheduled_count,
+                "failed_schedules": failed_count,
+                "event_type": "scheduler",
+                "event_category": "startup"
+            })
+        except Exception as e:
+            logger.error("Ошибка при загрузке регламентов получения информации по картам", extra={
+                "error": str(e)
+            }, exc_info=True)
+    
+    def _add_card_info_schedule(self, schedule: CardInfoSchedule):
+        """
+        Добавить регламент получения информации по картам в планировщик
+        
+        Args:
+            schedule: Регламент получения информации по картам
+        """
+        schedule_str = schedule.schedule.strip()
+        
+        if not schedule_str:
+            return
+        
+        # Удаляем старое расписание, если оно существует
+        job_id = f"card_info_schedule_{schedule.id}"
+        if self._scheduler.get_job(job_id):
+            self._scheduler.remove_job(job_id)
+        
+        # Парсим cron-выражение
+        try:
+            trigger = self._parse_schedule(schedule_str)
+            
+            # Добавляем задачу в планировщик
+            import asyncio
+            async def run_async():
+                try:
+                    logger.info("Запуск регламента получения информации по картам", extra={
+                        "schedule_id": schedule.id,
+                        "schedule_name": schedule.name,
+                        "job_id": job_id,
+                        "event_type": "scheduler",
+                        "event_category": "card_info_schedule"
+                    })
+                    await self._run_card_info_schedule(schedule.id)
+                    logger.info("Регламент получения информации по картам завершен", extra={
+                        "schedule_id": schedule.id,
+                        "job_id": job_id,
+                        "event_type": "scheduler",
+                        "event_category": "card_info_schedule"
+                    })
+                except Exception as e:
+                    logger.error("Ошибка при выполнении регламента получения информации по картам", extra={
+                        "schedule_id": schedule.id,
+                        "job_id": job_id,
+                        "error": str(e),
+                        "event_type": "scheduler",
+                        "event_category": "card_info_schedule"
+                    }, exc_info=True)
+            
+            self._scheduler.add_job(
+                func=run_async,
+                trigger=trigger,
+                id=job_id,
+                replace_existing=True,
+                max_instances=1,
+                misfire_grace_time=300
+            )
+            
+            # Получаем информацию о следующем запуске
+            job = self._scheduler.get_job(job_id)
+            next_run = job.next_run_time.isoformat() if job and job.next_run_time else None
+            
+            logger.info("Добавлен регламент получения информации по картам", extra={
+                "schedule_id": schedule.id,
+                "schedule_name": schedule.name,
+                "schedule": schedule_str,
+                "job_id": job_id,
+                "next_run_time": next_run,
+                "event_type": "scheduler",
+                "event_category": "startup"
+            })
+        except Exception as e:
+            logger.error("Ошибка при парсинге расписания регламента", extra={
+                "schedule_id": schedule.id,
+                "schedule_name": schedule.name,
+                "schedule": schedule_str,
+                "error": str(e)
+            }, exc_info=True)
+            raise
+    
+    async def _run_card_info_schedule(self, schedule_id: int):
+        """
+        Выполнить регламент получения информации по картам
+        
+        Args:
+            schedule_id: ID регламента
+        """
+        db = SessionLocal()
+        try:
+            schedule = db.query(CardInfoSchedule).filter(CardInfoSchedule.id == schedule_id).first()
+            
+            if not schedule:
+                logger.error(f"Регламент не найден: {schedule_id}")
+                return
+            
+            if not schedule.is_active:
+                logger.warning(f"Регламент неактивен: {schedule.name}", extra={
+                    "schedule_id": schedule_id
+                })
+                return
+            
+            # Создаем сервис и выполняем регламент
+            service = CardInfoScheduleService(db)
+            result = await service.execute_schedule(schedule)
+            
+            logger.info(f"Результат выполнения регламента: {schedule.name}", extra={
+                "schedule_id": schedule_id,
+                "status": result.get("status"),
+                "cards_processed": result.get("cards_processed"),
+                "cards_updated": result.get("cards_updated"),
+                "cards_failed": result.get("cards_failed")
+            })
+        except Exception as e:
+            logger.error(f"Ошибка при выполнении регламента получения информации по картам", extra={
+                "schedule_id": schedule_id,
+                "error": str(e)
+            }, exc_info=True)
+        finally:
+            try:
+                db.close()
+            except Exception as close_error:
+                logger.error("Ошибка при закрытии сессии БД", extra={
+                    "error": str(close_error)
+                })
     
     def get_scheduled_jobs(self) -> Dict:
         """
