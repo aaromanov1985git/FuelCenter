@@ -1,0 +1,28 @@
+.analysis-form {
+  padding: var(--spacing-section);
+}
+
+.analysis-form .form-section {
+  margin-bottom: var(--spacing-element);
+}
+
+.analysis-form .form-section label {
+  display: block;
+  margin-bottom: calc(var(--spacing-element) / 2);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.analysis-form .form-section h3 {
+  margin: var(--spacing-element) 0;
+  color: var(--color-text-primary);
+}
+
+.analysis-form .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-element);
+  margin-top: var(--spacing-section);
+  padding-top: var(--spacing-section);
+  border-top: 1px solid var(--color-border);
+}

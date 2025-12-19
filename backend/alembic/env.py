@@ -16,7 +16,8 @@ from app.config import get_settings
 from app.database import Base, engine
 from app.models import (
     Transaction, Vehicle, Provider, ProviderTemplate, 
-    FuelCard, UploadPeriodLock, User, GasStation, NormalizationSettings, CardInfoSchedule
+    FuelCard, UploadPeriodLock, User, GasStation, NormalizationSettings, CardInfoSchedule,
+    VehicleRefuel, VehicleLocation, FuelCardAnalysisResult
 )
 
 # Конфигурация Alembic

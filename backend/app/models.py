@@ -662,3 +662,135 @@ class UserActionLog(Base):
         Index('idx_user_action_logs_status', 'status'),
         Index('idx_user_action_logs_user_created', 'user_id', 'created_at'),
     )
+
+
+class VehicleRefuel(Base):
+    """
+    Данные о фактических заправках транспортных средств
+    Получаются из внешних систем (GLONASS, телематика и т.д.)
+    """
+    __tablename__ = "vehicle_refuels"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    
+    # Связь с ТС
+    vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=False, index=True, comment="ID транспортного средства")
+    
+    # Данные о заправке
+    refuel_date = Column(DateTime, nullable=False, index=True, comment="Дата и время заправки")
+    fuel_type = Column(String(200), index=True, comment="Тип топлива")
+    quantity = Column(Numeric(10, 2), nullable=False, comment="Количество заправленного топлива (литры)")
+    
+    # Данные о состоянии ТС
+    fuel_level_before = Column(Numeric(5, 2), comment="Уровень топлива до заправки (% или литры)")
+    fuel_level_after = Column(Numeric(5, 2), comment="Уровень топлива после заправки (% или литры)")
+    odometer_reading = Column(Numeric(10, 1), comment="Показания одометра на момент заправки")
+    
+    # Источник данных
+    source_system = Column(String(100), nullable=False, index=True, comment="Источник данных (GLONASS, телематика, ручной ввод)")
+    source_id = Column(String(200), index=True, comment="ID записи в системе-источнике")
+    
+    # Геолокация
+    latitude = Column(Numeric(10, 8), comment="Широта места заправки")
+    longitude = Column(Numeric(11, 8), comment="Долгота места заправки")
+    location_accuracy = Column(Numeric(8, 2), comment="Точность определения местоположения (метры)")
+    
+    # Метаданные
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания записи")
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления записи")
+    
+    # Связи
+    vehicle = relationship("Vehicle", backref="refuels")
+    
+    __table_args__ = (
+        Index('idx_vehicle_refuel_vehicle_date', 'vehicle_id', 'refuel_date'),
+        Index('idx_vehicle_refuel_source', 'source_system', 'source_id'),
+    )
+
+
+class VehicleLocation(Base):
+    """
+    История местоположений транспортных средств
+    Данные из систем GLONASS/GPS/телематики
+    """
+    __tablename__ = "vehicle_locations"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    
+    # Связь с ТС
+    vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=False, index=True, comment="ID транспортного средства")
+    
+    # Данные о местоположении
+    timestamp = Column(DateTime, nullable=False, index=True, comment="Дата и время фиксации местоположения")
+    latitude = Column(Numeric(10, 8), nullable=False, comment="Широта")
+    longitude = Column(Numeric(11, 8), nullable=False, comment="Долгота")
+    
+    # Дополнительные данные
+    speed = Column(Numeric(6, 2), comment="Скорость движения (км/ч)")
+    heading = Column(Numeric(5, 2), comment="Направление движения (градусы)")
+    accuracy = Column(Numeric(8, 2), comment="Точность определения местоположения (метры)")
+    
+    # Источник данных
+    source = Column(String(100), nullable=False, default="GLONASS", index=True, comment="Источник данных (GLONASS, GPS, телематика)")
+    
+    # Метаданные
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания записи")
+    
+    # Связи
+    vehicle = relationship("Vehicle", backref="locations")
+    
+    __table_args__ = (
+        Index('idx_vehicle_location_vehicle_timestamp', 'vehicle_id', 'timestamp'),
+        Index('idx_vehicle_location_timestamp', 'timestamp'),
+    )
+
+
+class FuelCardAnalysisResult(Base):
+    """
+    Результаты анализа соответствия транзакций по картам и фактических заправок ТС
+    """
+    __tablename__ = "fuel_card_analysis_results"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    
+    # Связи с основными сущностями
+    transaction_id = Column(Integer, ForeignKey("transactions.id"), nullable=False, index=True, comment="ID транзакции по карте")
+    refuel_id = Column(Integer, ForeignKey("vehicle_refuels.id"), index=True, nullable=True, comment="ID заправки ТС (если найдено соответствие)")
+    fuel_card_id = Column(Integer, ForeignKey("fuel_cards.id"), index=True, nullable=True, comment="ID топливной карты")
+    vehicle_id = Column(Integer, ForeignKey("vehicles.id"), index=True, nullable=True, comment="ID транспортного средства")
+    
+    # Данные анализа
+    analysis_date = Column(DateTime, nullable=False, index=True, server_default=func.now(), comment="Дата проведения анализа")
+    
+    # Статус соответствия
+    match_status = Column(String(50), nullable=False, index=True, comment="Статус соответствия: matched, no_refuel, location_mismatch, quantity_mismatch, time_mismatch, multiple_matches")
+    match_confidence = Column(Numeric(5, 2), comment="Уверенность в соответствии (0-100%)")
+    
+    # Метрики соответствия
+    distance_to_azs = Column(Numeric(10, 2), comment="Расстояние от ТС до АЗС в момент транзакции (метры)")
+    time_difference = Column(Integer, comment="Разница во времени между транзакцией и заправкой (секунды)")
+    quantity_difference = Column(Numeric(10, 2), comment="Разница в количестве топлива (литры)")
+    
+    # Детальная информация об анализе (JSON)
+    analysis_details = Column(Text, comment="JSON с детальной информацией об анализе")
+    
+    # Флаги аномалий
+    is_anomaly = Column(Boolean, default=False, index=True, comment="Флаг аномалии (требует внимания)")
+    anomaly_type = Column(String(50), index=True, comment="Тип аномалии: fuel_theft, card_misuse, data_error, equipment_failure")
+    
+    # Метаданные
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания записи")
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления записи")
+    
+    # Связи
+    transaction = relationship("Transaction", backref="analysis_results")
+    refuel = relationship("VehicleRefuel", backref="analysis_results")
+    fuel_card = relationship("FuelCard", backref="analysis_results")
+    vehicle = relationship("Vehicle", backref="analysis_results")
+    
+    __table_args__ = (
+        Index('idx_fuel_card_analysis_transaction', 'transaction_id'),
+        Index('idx_fuel_card_analysis_status', 'match_status', 'is_anomaly'),
+        Index('idx_fuel_card_analysis_anomaly', 'is_anomaly', 'anomaly_type'),
+        Index('idx_fuel_card_analysis_date', 'analysis_date'),
+    )

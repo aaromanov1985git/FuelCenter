@@ -34,7 +34,8 @@ from app.routers import (
     organizations,
     logs,
     normalization_settings,
-    card_info_schedules
+    card_info_schedules,
+    fuel_card_analysis
 )
 
 from app.models import Provider, User
@@ -501,6 +502,7 @@ app.include_router(organizations.router)
 app.include_router(logs.router)
 app.include_router(normalization_settings.router)
 app.include_router(card_info_schedules.router)
+app.include_router(fuel_card_analysis.router)
 
 
 

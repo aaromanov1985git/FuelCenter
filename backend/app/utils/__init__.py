@@ -11,6 +11,13 @@ from .encryption import (
     decrypt_connection_settings
 )
 from .firebird_utils import check_firebird_available, require_firebird, get_firebird_service
+from .geolocation_utils import (
+    calculate_distance_haversine,
+    calculate_distance_with_accuracy,
+    is_point_in_radius,
+    validate_coordinates,
+    format_distance
+)
 
 __all__ = [
     "parse_date_range",
@@ -22,6 +29,11 @@ __all__ = [
     "serialize_template_json",
     "check_firebird_available",
     "require_firebird",
-    "get_firebird_service"
+    "get_firebird_service",
+    "calculate_distance_haversine",
+    "calculate_distance_with_accuracy",
+    "is_point_in_radius",
+    "validate_coordinates",
+    "format_distance"
 ]
 

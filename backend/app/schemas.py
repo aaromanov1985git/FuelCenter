@@ -4,7 +4,7 @@ Pydantic схемы для валидации данных API
 from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import datetime, date
 from decimal import Decimal
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import json
 import re
 
@@ -1134,3 +1134,162 @@ class UserActionLogListResponse(BaseModel):
     """
     total: int
     items: list[UserActionLogResponse]
+
+
+# ==================== Схемы для анализа топливных карт ====================
+
+class VehicleRefuelBase(BaseModel):
+    """
+    Базовая схема заправки ТС
+    """
+    vehicle_id: int = Field(..., description="ID транспортного средства")
+    refuel_date: datetime = Field(..., description="Дата и время заправки")
+    fuel_type: Optional[str] = Field(None, max_length=200, description="Тип топлива")
+    quantity: Decimal = Field(..., description="Количество заправленного топлива (литры)")
+    fuel_level_before: Optional[Decimal] = Field(None, description="Уровень топлива до заправки")
+    fuel_level_after: Optional[Decimal] = Field(None, description="Уровень топлива после заправки")
+    odometer_reading: Optional[Decimal] = Field(None, description="Показания одометра")
+    source_system: str = Field(..., max_length=100, description="Источник данных")
+    source_id: Optional[str] = Field(None, max_length=200, description="ID записи в системе-источнике")
+    latitude: Optional[Decimal] = Field(None, description="Широта места заправки")
+    longitude: Optional[Decimal] = Field(None, description="Долгота места заправки")
+    location_accuracy: Optional[Decimal] = Field(None, description="Точность определения местоположения (метры)")
+
+
+class VehicleRefuelCreate(VehicleRefuelBase):
+    """
+    Схема для создания заправки ТС
+    """
+    pass
+
+
+class VehicleRefuelResponse(VehicleRefuelBase):
+    """
+    Схема ответа с заправкой ТС
+    """
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class VehicleLocationBase(BaseModel):
+    """
+    Базовая схема местоположения ТС
+    """
+    vehicle_id: int = Field(..., description="ID транспортного средства")
+    timestamp: datetime = Field(..., description="Дата и время фиксации местоположения")
+    latitude: Decimal = Field(..., description="Широта")
+    longitude: Decimal = Field(..., description="Долгота")
+    speed: Optional[Decimal] = Field(None, description="Скорость движения (км/ч)")
+    heading: Optional[Decimal] = Field(None, description="Направление движения (градусы)")
+    accuracy: Optional[Decimal] = Field(None, description="Точность определения местоположения (метры)")
+    source: str = Field(default="GLONASS", max_length=100, description="Источник данных")
+
+
+class VehicleLocationCreate(VehicleLocationBase):
+    """
+    Схема для создания местоположения ТС
+    """
+    pass
+
+
+class VehicleLocationResponse(VehicleLocationBase):
+    """
+    Схема ответа с местоположением ТС
+    """
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class FuelCardAnalysisResultResponse(BaseModel):
+    """
+    Схема ответа с результатом анализа
+    """
+    id: int
+    transaction_id: int
+    refuel_id: Optional[int] = None
+    fuel_card_id: Optional[int] = None
+    vehicle_id: Optional[int] = None
+    analysis_date: datetime
+    match_status: str
+    match_confidence: Optional[Decimal] = None
+    distance_to_azs: Optional[Decimal] = None
+    time_difference: Optional[int] = None
+    quantity_difference: Optional[Decimal] = None
+    analysis_details: Optional[str] = None
+    is_anomaly: bool
+    anomaly_type: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class FuelCardAnalysisResultListResponse(BaseModel):
+    """
+    Схема ответа со списком результатов анализа
+    """
+    total: int
+    items: list[FuelCardAnalysisResultResponse]
+
+
+class AnalyzePeriodRequest(BaseModel):
+    """
+    Схема запроса для массового анализа
+    """
+    date_from: datetime = Field(..., description="Начальная дата периода")
+    date_to: datetime = Field(..., description="Конечная дата периода")
+    card_ids: Optional[List[int]] = Field(None, description="Список ID карт для фильтрации")
+    vehicle_ids: Optional[List[int]] = Field(None, description="Список ID ТС для фильтрации")
+    organization_ids: Optional[List[int]] = Field(None, description="Список ID организаций для фильтрации")
+    time_window_minutes: Optional[int] = Field(None, description="Временное окно в минутах")
+    quantity_tolerance_percent: Optional[float] = Field(None, description="Допустимое отклонение количества в %")
+    azs_radius_meters: Optional[int] = Field(None, description="Радиус АЗС в метрах")
+
+
+class AnalyzePeriodResponse(BaseModel):
+    """
+    Схема ответа для массового анализа
+    """
+    statistics: Dict[str, Any] = Field(..., description="Статистика анализа")
+    errors: List[Dict[str, Any]] = Field(default_factory=list, description="Ошибки при анализе")
+
+
+class AnomalyStatsResponse(BaseModel):
+    """
+    Схема ответа со статистикой по аномалиям
+    """
+    total_anomalies: int
+    by_type: Dict[str, int] = Field(default_factory=dict, description="Количество аномалий по типам")
+    by_status: Dict[str, int] = Field(default_factory=dict, description="Количество аномалий по статусам")
+    date_from: Optional[datetime] = None
+    date_to: Optional[datetime] = None
+
+
+class BulkRefuelsUploadRequest(BaseModel):
+    """
+    Схема запроса для массовой загрузки заправок
+    """
+    refuels: List[VehicleRefuelCreate] = Field(..., description="Список заправок для загрузки")
+
+
+class BulkLocationsUploadRequest(BaseModel):
+    """
+    Схема запроса для массовой загрузки местоположений
+    """
+    locations: List[VehicleLocationCreate] = Field(..., description="Список местоположений для загрузки")
+
+
+class BulkUploadResponse(BaseModel):
+    """
+    Схема ответа для массовой загрузки
+    """
+    created: int = Field(..., description="Количество созданных записей")
+    errors: List[Dict[str, Any]] = Field(default_factory=list, description="Ошибки при загрузке")

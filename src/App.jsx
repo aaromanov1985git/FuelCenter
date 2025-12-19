@@ -5,6 +5,9 @@ import VehiclesList from './components/VehiclesList'
 import GasStationsList from './components/GasStationsList'
 import FuelTypesList from './components/FuelTypesList'
 import FuelCardsList from './components/FuelCardsList'
+import FuelCardAnalysisList from './components/FuelCardAnalysisList'
+import RefuelsUpload from './components/RefuelsUpload'
+import LocationsUpload from './components/LocationsUpload'
 import ProvidersList from './components/ProvidersList'
 import TemplatesList from './components/TemplatesList'
 import CardInfoSchedulesList from './components/CardInfoSchedulesList'
@@ -42,6 +45,7 @@ import { useDebounce } from './hooks/useDebounce'
 import { useTouchGestures } from './hooks/useTouchGestures'
 import { logger } from './utils/logger'
 import { authFetch, getApiUrl } from './utils/api'
+import { Card, Button } from './components/ui'
 import './App.css'
 
 // Используем прокси Vite в режиме разработки или прямой URL
@@ -78,7 +82,9 @@ const App = () => {
   })
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showClearProviderModal, setShowClearProviderModal] = useState(false)
-  const [activeTab, setActiveTab] = useState('dashboard') // dashboard, transactions, vehicles, cards, gas-stations, fuel-types, providers, templates, upload-events, organizations, users, settings
+  const [activeTab, setActiveTab] = useState('dashboard') // dashboard, transactions, vehicles, cards, fuel-card-analysis, gas-stations, fuel-types, providers, templates, upload-events, organizations, users, settings
+  const [showRefuelsUpload, setShowRefuelsUpload] = useState(false)
+  const [showLocationsUpload, setShowLocationsUpload] = useState(false)
   const [providers, setProviders] = useState([])
   const [selectedProviderTab, setSelectedProviderTab] = useState(null) // null = "Все", иначе ID провайдера
   const [dragActive, setDragActive] = useState(false)
@@ -1535,6 +1541,12 @@ const App = () => {
               Топливные карты
             </button>
             <button 
+              className={`nav-item ${activeTab === 'fuel-card-analysis' ? 'active' : ''}`}
+              onClick={() => setActiveTab('fuel-card-analysis')}
+            >
+              Анализ карт
+            </button>
+            <button 
               className={`nav-item ${activeTab === 'gas-stations' ? 'active' : ''}`}
               onClick={() => setActiveTab('gas-stations')}
             >
@@ -1658,6 +1670,7 @@ const App = () => {
                 ...(activeTab === 'transactions' ? [{ label: 'Транзакции' }] : []),
                 ...(activeTab === 'vehicles' ? [{ label: 'Транспорт' }] : []),
                 ...(activeTab === 'cards' ? [{ label: 'Топливные карты' }] : []),
+                ...(activeTab === 'fuel-card-analysis' ? [{ label: 'Анализ топливных карт' }] : []),
                 ...(activeTab === 'gas-stations' ? [{ label: 'АЗС' }] : []),
                 ...(activeTab === 'fuel-types' ? [{ label: 'Виды топлива' }] : []),
                 ...(activeTab === 'providers' ? [{ label: 'Провайдеры' }] : []),
@@ -1681,6 +1694,29 @@ const App = () => {
         {/* Контент вкладок */}
         {activeTab === 'vehicles' && <VehiclesList />}
         {activeTab === 'cards' && <FuelCardsList />}
+        {activeTab === 'fuel-card-analysis' && (
+          <>
+            <FuelCardAnalysisList />
+            <Card style={{ marginTop: 'var(--spacing-section)' }}>
+              <Card.Body>
+                <div style={{ display: 'flex', gap: 'var(--spacing-element)', flexWrap: 'wrap' }}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowRefuelsUpload(true)}
+                  >
+                    Загрузить заправки
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowLocationsUpload(true)}
+                  >
+                    Загрузить местоположения
+                  </Button>
+                </div>
+              </Card.Body>
+            </Card>
+          </>
+        )}
         {activeTab === 'gas-stations' && <GasStationsList />}
         {activeTab === 'fuel-types' && <FuelTypesList />}
         {activeTab === 'providers' && <ProvidersList />}
@@ -2290,6 +2326,16 @@ const App = () => {
 
       {/* Кнопка "Наверх" */}
       <ScrollToTop />
+
+      {/* Модальные окна для загрузки данных анализа */}
+      <RefuelsUpload
+        isOpen={showRefuelsUpload}
+        onClose={() => setShowRefuelsUpload(false)}
+      />
+      <LocationsUpload
+        isOpen={showLocationsUpload}
+        onClose={() => setShowLocationsUpload(false)}
+      />
     </div>
   )
 }
