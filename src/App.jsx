@@ -680,7 +680,7 @@ const App = () => {
             await loadTransactions()
             await loadStats()
             
-            let message = `Успешно загружено ${result.transactions_created} транзакций`
+            let message = `✅ Файл успешно загружен. Обработано ${result.transactions_created} транзакций`
             if (result.transactions_skipped > 0) {
               message += `. Пропущено дубликатов: ${result.transactions_skipped}`
             }
@@ -688,7 +688,7 @@ const App = () => {
             if (result.validation_warnings && result.validation_warnings.length > 0) {
               const warningsText = result.validation_warnings.join(', ')
               success(message)
-              info(`Предупреждения валидации: ${warningsText}`, 10000)
+              info(`⚠️ Предупреждения валидации: ${warningsText}`, 10000)
             } else {
               success(message)
             }
@@ -921,7 +921,7 @@ const App = () => {
             await loadTransactions()
             await loadStats()
             
-            let message = `Успешно загружено ${result.transactions_created} транзакций`
+            let message = `✅ Файл успешно загружен. Обработано ${result.transactions_created} транзакций`
             if (result.transactions_skipped > 0) {
               message += `. Пропущено дубликатов: ${result.transactions_skipped}`
             }
@@ -930,7 +930,7 @@ const App = () => {
             if (result.validation_warnings && result.validation_warnings.length > 0) {
               const warningsText = result.validation_warnings.join(', ')
               success(message)
-              info(`Предупреждения валидации: ${warningsText}`, 10000)
+              info(`⚠️ Предупреждения валидации: ${warningsText}`, 10000)
               setError(message) // Оставляем для обратной совместимости
               setTimeout(() => setError(''), 15000)
             } else {
@@ -1672,8 +1672,8 @@ const App = () => {
             {/* Заголовок показываем только для транзакций */}
             {activeTab === 'transactions' && (
               <>
-            <h1>Загрузчик транзакций ГСМ</h1>
-            <p className="subtitle">Загрузите файл «Отпуск ГСМ...xlsx» для преобразования</p>
+            <h1>Транзакции ГСМ</h1>
+            <p className="subtitle">Загрузите файл для импорта, затем просматривайте и фильтруйте данные</p>
               </>
             )}
 
@@ -1790,16 +1790,28 @@ const App = () => {
               </div>
               {selectedProviderTab !== null && (
                 <div className="upload-dashboard-subvalue">
-                  Фильтр: {providers.find(p => p.id === selectedProviderTab)?.name || '—'}
+                  <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>
+                    Фильтр: {providers.find(p => p.id === selectedProviderTab)?.name || '—'}
+                  </span>
+                  <button
+                    onClick={() => setSelectedProviderTab(null)}
+                    style={{
+                      marginLeft: '8px',
+                      padding: '2px 8px',
+                      fontSize: '12px',
+                      background: 'var(--color-error-light)',
+                      color: 'var(--color-error-dark)',
+                      border: '1px solid var(--color-error)',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                    title="Сбросить фильтр"
+                  >
+                    ✕ Сбросить
+                  </button>
                 </div>
               )}
             </div>
-            {stats?.products && Object.keys(stats.products).length > 0 && (
-              <div className="upload-dashboard-card">
-                <div className="upload-dashboard-label">Видов топлива</div>
-                <div className="upload-dashboard-value">{Object.keys(stats.products).length}</div>
-              </div>
-            )}
             {fileMatchInfo && fileMatchInfo.provider_name && (
               <div className="upload-dashboard-card upload-dashboard-card-highlight">
                 <div className="upload-dashboard-label">Последний провайдер</div>
@@ -1861,7 +1873,7 @@ const App = () => {
                   icon="settings" 
                   variant="primary" 
                   onClick={() => setShowColumnSettings(true)}
-                  title="Настройка колонок"
+                  title="⚙️ Настройка колонок таблицы"
                   size="medium"
                 />
                 <ExportMenu
@@ -1895,14 +1907,14 @@ const App = () => {
                       showError('Не удалось скопировать данные')
                     }
                   }}
-                  title="Копировать все данные в буфер обмена (CSV формат)"
+                  title="📋 Копировать данные в буфер обмена (CSV)"
                   size="medium"
                 />
                 <IconButton 
                   icon="refresh" 
                   variant="primary" 
                   onClick={() => loadTransactions()}
-                  title="Обновить"
+                  title="🔄 Обновить данные"
                   size="medium"
                 />
                 {isAdmin && (

@@ -62,7 +62,7 @@ const ClearMenu = ({ onClearAll, onClearByProvider, disabled = false }) => {
           variant="error"
           onClick={() => setIsOpen(!isOpen)}
           disabled={disabled}
-          title="Очистка транзакций"
+          title="🗑️ Удалить транзакции (все или по провайдеру)"
           size="medium"
           className="clear-menu-icon-button"
         />

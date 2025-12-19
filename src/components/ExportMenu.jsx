@@ -105,7 +105,7 @@ const ExportMenu = ({ data, headers, onExportExcel, filename = 'transactions' })
           icon="export"
           variant="primary"
           onClick={() => setIsOpen(!isOpen)}
-          title="Экспорт данных"
+          title="⬇️ Экспорт данных (Excel, CSV, JSON, TXT, PDF)"
           size="medium"
           className="export-menu-icon-button"
         />
