@@ -27,7 +27,8 @@ class ProviderService:
         self,
         skip: int = 0,
         limit: int = 100,
-        is_active: Optional[bool] = None
+        is_active: Optional[bool] = None,
+        organization_id: Optional[int] = None
     ) -> Tuple[List[Provider], int]:
         """
         Получение списка провайдеров с фильтрацией
@@ -39,6 +40,9 @@ class ProviderService:
         
         if is_active is not None:
             query = query.filter(Provider.is_active == is_active)
+        
+        if organization_id is not None:
+            query = query.filter(Provider.organization_id == organization_id)
         
         total = query.count()
         providers = query.offset(skip).limit(limit).all()

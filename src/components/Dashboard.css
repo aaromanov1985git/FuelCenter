@@ -1,5 +1,5 @@
 .dashboard {
-  padding: var(--padding-section);
+  padding: var(--spacing-block);
   max-width: 1680px;
   margin: 0 auto;
 }
@@ -8,16 +8,16 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-section);
+  margin-bottom: var(--spacing-block);
   flex-wrap: wrap;
-  gap: var(--spacing-element);
+  gap: var(--spacing-small);
 }
 
 .dashboard-header h2 {
   margin: 0;
   color: var(--color-text-primary);
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
 }
 
 .period-selector {
@@ -52,17 +52,17 @@
 .dashboard-section {
   background: var(--color-bg-card);
   border-radius: var(--radius-medium);
-  padding: var(--padding-section);
-  margin-bottom: var(--spacing-block);
+  padding: var(--padding-element);
+  margin-bottom: var(--spacing-element);
   box-shadow: var(--shadow-md);
 }
 
 .dashboard-section h3 {
   margin: 0;
-  margin-bottom: var(--spacing-block);
+  margin-bottom: var(--spacing-small);
   color: var(--color-text-primary);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
 }
 
 /* Стили для секции "Загрузка по расписанию" */
@@ -70,43 +70,57 @@
   border-left: 4px solid var(--color-primary);
 }
 
+.auto-load-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-small);
+  gap: var(--spacing-small);
+  flex-wrap: wrap;
+}
+
+.auto-load-header h3 {
+  margin: 0;
+}
+
 .auto-load-stats {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-block);
+  gap: var(--spacing-small);
 }
 
 .auto-load-period {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  font-weight: var(--font-weight-semibold);
-  padding: var(--padding-tiny) var(--padding-element);
+  font-weight: var(--font-weight-medium);
+  padding: var(--padding-tiny) var(--padding-small);
   background: var(--color-bg-secondary);
   border-radius: var(--radius-small);
   display: inline-block;
   width: fit-content;
+  white-space: nowrap;
 }
 
 .auto-load-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-element);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--spacing-small);
 }
 
 .auto-load-card {
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-medium);
-  padding: var(--padding-element);
+  border-radius: var(--radius-small);
+  padding: var(--padding-small);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-small);
+  gap: var(--spacing-tiny);
   min-width: 0;
   overflow: hidden;
 }
 
 .auto-load-card-label {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
@@ -114,15 +128,16 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-bottom: 2px;
 }
 
 .auto-load-card-value {
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   display: flex;
   align-items: center;
-  gap: var(--spacing-small);
+  gap: var(--spacing-tiny);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -149,8 +164,8 @@
 .auto-load-providers-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-small);
-  max-height: 200px;
+  gap: var(--spacing-tiny);
+  max-height: 150px;
   overflow-y: auto;
 }
 
@@ -162,7 +177,7 @@
   background: var(--color-bg-card);
   border-radius: var(--radius-small);
   border: 1px solid var(--color-border-light);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 }
 
 .provider-name {
@@ -1058,51 +1073,57 @@
 .auto-load-stats {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-element);
+  gap: var(--spacing-small);
 }
 
 .auto-load-period {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   font-weight: var(--font-weight-medium);
-  margin-bottom: var(--spacing-small);
-  padding-bottom: var(--spacing-small);
-  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-tiny);
+  padding: var(--padding-tiny) var(--padding-small);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-small);
+  display: inline-block;
+  width: fit-content;
 }
 
 .auto-load-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-element);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--spacing-small);
 }
 
 .auto-load-card {
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-medium);
-  padding: var(--padding-element);
+  border-radius: var(--radius-small);
+  padding: var(--padding-small);
   transition: all 0.2s;
 }
 
 .auto-load-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
 .auto-load-card-label {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-small);
-  font-weight: var(--font-weight-medium);
+  margin-bottom: 2px;
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .auto-load-card-value {
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   display: flex;
   align-items: center;
-  gap: var(--spacing-small);
+  gap: var(--spacing-tiny);
+  line-height: 1.2;
 }
 
 .auto-load-card-value.has-errors {
@@ -1115,7 +1136,7 @@
 
 .error-icon,
 .success-icon {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-base);
 }
 
 .auto-load-card-providers {
@@ -1125,8 +1146,8 @@
 .auto-load-providers-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-small);
-  max-height: 200px;
+  gap: var(--spacing-tiny);
+  max-height: 150px;
   overflow-y: auto;
 }
 
@@ -1137,7 +1158,7 @@
   padding: var(--padding-tiny) var(--padding-small);
   background: var(--color-bg-card);
   border-radius: var(--radius-small);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
 }
 
 .provider-name {

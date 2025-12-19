@@ -39,9 +39,38 @@
   color: var(--color-primary);
 }
 
+.icon-button-primary svg {
+  color: var(--color-primary);
+  fill: var(--color-primary);
+}
+
 .icon-button-primary:hover:not(:disabled) {
   background: var(--color-primary-light);
   color: var(--color-primary-hover);
+}
+
+.icon-button-primary:hover:not(:disabled) svg {
+  color: var(--color-primary-hover);
+  fill: var(--color-primary-hover);
+}
+
+/* Улучшенная видимость для светлой темы - используем более темный цвет */
+:not([data-theme]) .icon-button-primary {
+  color: #312e81;
+}
+
+:not([data-theme]) .icon-button-primary svg {
+  color: #312e81;
+  fill: #312e81;
+}
+
+:not([data-theme]) .icon-button-primary:hover:not(:disabled) {
+  color: #1e1b4b;
+}
+
+:not([data-theme]) .icon-button-primary:hover:not(:disabled) svg {
+  color: #1e1b4b;
+  fill: #1e1b4b;
 }
 
 .icon-button-success {
@@ -56,14 +85,13 @@
 }
 
 .icon-button-error {
-  background: var(--color-error);
-  color: var(--color-text-on-primary);
+  background: transparent;
+  color: var(--color-error);
 }
 
 .icon-button-error:hover:not(:disabled) {
-  background: var(--color-error-dark);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  background: var(--color-error-light);
+  color: var(--color-error-dark);
 }
 
 .icon-button-secondary {

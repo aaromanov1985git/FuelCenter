@@ -6,6 +6,11 @@
   border: 1px solid var(--color-border-light);
 }
 
+/* Когда сайдбар скрыт, кнопка меню на left: 20px, нужен отступ для breadcrumbs */
+.sidebar-hidden ~ .main-content .breadcrumbs {
+  margin-left: 60px; /* Кнопка на left: 20px, ширина 40px, отступ 20px */
+}
+
 .breadcrumbs-list {
   display: flex;
   flex-wrap: wrap;
@@ -79,6 +84,7 @@
     padding: var(--spacing-element);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    margin-left: 60px; /* Отступ для кнопки меню на мобильных (10px left + 40px ширина + 10px отступ) */
   }
 
   .breadcrumbs-list {

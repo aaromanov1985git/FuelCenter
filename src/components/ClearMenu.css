@@ -17,12 +17,22 @@
   position: absolute;
   right: 4px;
   bottom: 4px;
-  color: var(--text-secondary, #666);
+  color: var(--color-text-primary, #1e293b);
   pointer-events: none;
   transition: transform 0.2s;
-  background: var(--bg-primary, #fff);
+  background: var(--color-bg-card, #fff);
   border-radius: 2px;
   padding: 1px;
+  fill: var(--color-text-primary, #1e293b);
+  opacity: 1;
+}
+
+/* Улучшенная видимость для светлой темы */
+[data-theme="light"] .clear-menu-arrow,
+:not([data-theme]) .clear-menu-arrow {
+  color: #1e293b;
+  fill: #1e293b;
+  background: var(--color-bg-card);
 }
 
 .clear-menu.dropdown-open .clear-menu-arrow {

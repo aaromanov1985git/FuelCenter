@@ -24,6 +24,7 @@ async def get_providers(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     is_active: Optional[bool] = Query(None, description="Фильтр по активности"),
+    organization_id: Optional[int] = Query(None, description="Фильтр по организации"),
     db: Session = Depends(get_db)
 ):
     """
@@ -33,7 +34,8 @@ async def get_providers(
     providers, total = provider_service.get_providers(
         skip=skip,
         limit=limit,
-        is_active=is_active
+        is_active=is_active,
+        organization_id=organization_id
     )
     
     logger.debug("Список провайдеров загружен", extra={"total": total, "returned": len(providers)})

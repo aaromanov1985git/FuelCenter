@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import * as XLSX from 'xlsx'
 import VehiclesList from './components/VehiclesList'
 import GasStationsList from './components/GasStationsList'
+import FuelTypesList from './components/FuelTypesList'
 import FuelCardsList from './components/FuelCardsList'
 import ProvidersList from './components/ProvidersList'
 import TemplatesList from './components/TemplatesList'
@@ -17,6 +19,7 @@ import Pagination from './components/Pagination'
 import Highlight from './components/Highlight'
 import Breadcrumbs from './components/Breadcrumbs'
 import AdvancedSearch from './components/AdvancedSearch'
+import './components/ColumnSettingsModal.css'
 import StatusIndicator from './components/StatusIndicator'
 import ScrollToTop from './components/ScrollToTop'
 import EmptyState from './components/EmptyState'
@@ -62,6 +65,7 @@ const App = () => {
     return saved ? parseInt(saved, 10) : 100
   })
   const [total, setTotal] = useState(0)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false) // Флаг для отслеживания первой загрузки
   const [filters, setFilters] = useState({
     card_number: '',
     azs_number: '',
@@ -73,7 +77,7 @@ const App = () => {
   })
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showClearProviderModal, setShowClearProviderModal] = useState(false)
-  const [activeTab, setActiveTab] = useState('dashboard') // dashboard, transactions, vehicles, cards, gas-stations, providers, templates, upload-events, organizations, users, settings
+  const [activeTab, setActiveTab] = useState('dashboard') // dashboard, transactions, vehicles, cards, gas-stations, fuel-types, providers, templates, upload-events, organizations, users, settings
   const [providers, setProviders] = useState([])
   const [selectedProviderTab, setSelectedProviderTab] = useState(null) // null = "Все", иначе ID провайдера
   const [dragActive, setDragActive] = useState(false)
@@ -458,6 +462,7 @@ const App = () => {
       
       setData(converted)
       setTotal(result.total)
+      setHasLoadedOnce(true) // Отмечаем, что данные были загружены хотя бы раз
       logger.info('Транзакции загружены', { count: converted.length, total: result.total })
     } catch (err) {
       // Не показываем ошибку при 401 - это обрабатывается централизованно
@@ -1325,6 +1330,24 @@ const App = () => {
     }
   }
 
+  // Обработка события для установки фильтра транзакций и переключения вкладки
+  useEffect(() => {
+    const handleSetTransactionFilter = (event) => {
+      const { product, tab } = event.detail || {}
+      if (product) {
+        setFilters(prev => ({ ...prev, product }))
+        if (tab) {
+          setActiveTab(tab)
+        }
+      }
+    }
+    
+    window.addEventListener('setTransactionFilterAndTab', handleSetTransactionFilter)
+    return () => {
+      window.removeEventListener('setTransactionFilterAndTab', handleSetTransactionFilter)
+    }
+  }, [])
+
   // Сброс страницы при изменении debounced фильтров или провайдера
   useEffect(() => {
     setPage(0)
@@ -1517,6 +1540,12 @@ const App = () => {
               АЗС
             </button>
             <button 
+              className={`nav-item ${activeTab === 'fuel-types' ? 'active' : ''}`}
+              onClick={() => setActiveTab('fuel-types')}
+            >
+              Виды топлива
+            </button>
+            <button 
               className={`nav-item ${activeTab === 'providers' ? 'active' : ''}`}
               onClick={() => setActiveTab('providers')}
             >
@@ -1629,6 +1658,7 @@ const App = () => {
                 ...(activeTab === 'vehicles' ? [{ label: 'Транспорт' }] : []),
                 ...(activeTab === 'cards' ? [{ label: 'Топливные карты' }] : []),
                 ...(activeTab === 'gas-stations' ? [{ label: 'АЗС' }] : []),
+                ...(activeTab === 'fuel-types' ? [{ label: 'Виды топлива' }] : []),
                 ...(activeTab === 'providers' ? [{ label: 'Провайдеры' }] : []),
                 ...(activeTab === 'templates' ? [{ label: 'Шаблоны' }] : []),
                 ...(activeTab === 'organizations' ? [{ label: 'Организации' }] : []),
@@ -1651,6 +1681,7 @@ const App = () => {
         {activeTab === 'vehicles' && <VehiclesList />}
         {activeTab === 'cards' && <FuelCardsList />}
         {activeTab === 'gas-stations' && <GasStationsList />}
+        {activeTab === 'fuel-types' && <FuelTypesList />}
         {activeTab === 'providers' && <ProvidersList />}
         {activeTab === 'templates' && <TemplatesList />}
         {activeTab === 'organizations' && <OrganizationsList />}
@@ -1790,7 +1821,8 @@ const App = () => {
           </div>
         </div>
 
-        {data.length > 0 && (
+        {/* Показываем расширенный поиск, если данные были загружены хотя бы раз */}
+        {hasLoadedOnce && (
           <AdvancedSearch
             filters={filters}
             onFiltersChange={setFilters}
@@ -1819,7 +1851,8 @@ const App = () => {
           />
         )}
 
-        {data.length > 0 && (
+        {/* Показываем таблицу всегда, когда данные были загружены хотя бы раз */}
+        {hasLoadedOnce && (
           <>
             <div className="result-header">
               <h2>Результат ({total} записей, показано {data.length})</h2>
@@ -2067,20 +2100,20 @@ const App = () => {
       />
 
       {/* Модальное окно настройки колонок */}
-      {showColumnSettings && (
-        <div className="modal-overlay" onClick={() => setShowColumnSettings(false)}>
-          <div className="modal-content column-settings-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Настройка колонок</h3>
+      {showColumnSettings && createPortal(
+        <div className="column-settings-modal" onClick={() => setShowColumnSettings(false)}>
+          <div className="column-settings-content" onClick={(e) => e.stopPropagation()}>
+            <div className="column-settings-header">
+              <h3 className="column-settings-title">Настройка колонок</h3>
               <button 
-                className="modal-close" 
+                className="column-settings-close" 
                 onClick={() => setShowColumnSettings(false)}
                 aria-label="Закрыть"
               >
                 ×
               </button>
             </div>
-            <div className="modal-body">
+            <div className="column-settings-list">
               <div className="column-settings-grid">
                 {allHeaders.map((header) => {
                   const isVisible = visibleColumns[header] !== false
@@ -2096,23 +2129,24 @@ const App = () => {
                   )
                 })}
               </div>
-              <div className="modal-footer">
-                <button 
-                  className="btn btn-secondary btn-sm" 
-                  onClick={resetColumnVisibility}
-                >
-                  Сбросить
-                </button>
-                <button 
-                  className="btn btn-primary btn-sm" 
-                  onClick={() => setShowColumnSettings(false)}
-                >
-                  Готово
-                </button>
-              </div>
+            </div>
+            <div className="column-settings-actions">
+              <button 
+                className="btn btn-secondary btn-sm" 
+                onClick={resetColumnVisibility}
+              >
+                Сбросить
+              </button>
+              <button 
+                className="btn btn-primary btn-sm" 
+                onClick={() => setShowColumnSettings(false)}
+              >
+                Готово
+              </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {showKeyboardHint && (

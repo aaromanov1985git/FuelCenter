@@ -28,6 +28,16 @@
   z-index: 10;
   fill: var(--color-text-primary);
   opacity: 0.9;
+  background: var(--color-bg-card);
+  border-radius: 2px;
+  padding: 1px;
+}
+
+/* Улучшенная видимость для светлой темы */
+[data-theme="light"] .export-menu-arrow,
+:not([data-theme]) .export-menu-arrow {
+  fill: #1e293b;
+  opacity: 1;
 }
 
 .export-menu-dropdown {

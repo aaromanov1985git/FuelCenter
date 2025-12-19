@@ -9,6 +9,7 @@ from typing import List, Dict, Tuple, Set, Optional, Optional
 from datetime import datetime
 from app.models import Transaction, Vehicle, FuelCard
 from app.services.gas_station_service import GasStationService
+from app.services.fuel_type_service import FuelTypeService
 # Импортируем функции из основного модуля services (не из папки services/)
 from app import services as app_services
 from app.logger import logger
@@ -115,6 +116,8 @@ class TransactionBatchProcessor:
         vehicles_map = self._process_vehicles_batch(new_transactions, warnings)
         cards_map = self._process_cards_batch(new_transactions, vehicles_map, warnings)
         gas_stations_map = self._process_gas_stations_batch(new_transactions, warnings)
+        # Регистрируем виды топлива автоматически
+        self._process_fuel_types_batch(new_transactions, warnings)
         
         # Создаем транзакции
         for trans_data in new_transactions:
@@ -556,6 +559,66 @@ class TransactionBatchProcessor:
                 continue
         
         return gas_stations_map
+    
+    def _process_fuel_types_batch(
+        self,
+        transactions: List[Dict],
+        warnings: List[str]
+    ) -> None:
+        """
+        Батчевая обработка видов топлива
+        Автоматически регистрирует виды топлива в справочнике
+        """
+        fuel_type_service = FuelTypeService(self.db)
+        
+        # Собираем все уникальные значения product
+        fuel_types = set()
+        for trans_data in transactions:
+            product = trans_data.get("product")
+            if product and str(product).strip():
+                fuel_types.add(str(product).strip())
+        
+        if not fuel_types:
+            return
+        
+        # Регистрируем каждый вид топлива
+        for fuel_type_name in fuel_types:
+            try:
+                # Используем название из транзакции как original_name
+                # normalized_name будет равен original_name (можно будет отредактировать вручную позже)
+                fuel_type, fuel_type_warnings = fuel_type_service.get_or_create_fuel_type(
+                    original_name=fuel_type_name,
+                    normalized_name=fuel_type_name
+                )
+                # Собираем предупреждения (если есть)
+                warnings.extend(fuel_type_warnings)
+                
+                logger.debug(
+                    "Вид топлива зарегистрирован/найден",
+                    extra={
+                        "fuel_type_id": fuel_type.id,
+                        "original_name": fuel_type.original_name,
+                        "normalized_name": fuel_type.normalized_name,
+                        "event_type": "fuel_type_registration",
+                        "event_category": "auto_registration"
+                    }
+                )
+            except Exception as e:
+                error_msg = str(e)
+                warnings.append(f"Ошибка при регистрации вида топлива '{fuel_type_name}': {error_msg}")
+                logger.error(
+                    "Ошибка при регистрации вида топлива",
+                    extra={
+                        "fuel_type_name": fuel_type_name,
+                        "error": error_msg,
+                        "error_type": type(e).__name__,
+                        "event_type": "fuel_type_registration",
+                        "event_category": "error"
+                    },
+                    exc_info=True
+                )
+                # Продолжаем обработку других видов топлива
+                continue
     
     def process_transactions_batch(
         self,

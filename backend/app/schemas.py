@@ -249,6 +249,53 @@ class GasStationListResponse(BaseModel):
     items: list[GasStationResponse]
 
 
+class FuelTypeBase(BaseModel):
+    """
+    Базовая схема вида топлива
+    """
+    original_name: str = Field(..., max_length=200, description="Исходное наименование вида топлива")
+    normalized_name: Optional[str] = Field(None, max_length=200, description="Нормализованное наименование вида топлива (редактируемое)")
+
+
+class FuelTypeCreate(FuelTypeBase):
+    """
+    Схема для создания вида топлива
+    """
+    pass
+
+
+class FuelTypeUpdate(BaseModel):
+    """
+    Схема для обновления вида топлива
+    """
+    original_name: Optional[str] = Field(None, max_length=200)
+    normalized_name: Optional[str] = Field(None, max_length=200, description="Нормализованное наименование вида топлива (редактируемое)")
+    is_validated: Optional[str] = Field(None, max_length=10)
+
+
+class FuelTypeResponse(FuelTypeBase):
+    """
+    Схема ответа с видом топлива
+    """
+    id: int
+    is_validated: str = "pending"
+    validation_errors: Optional[str] = None
+    transactions_count: Optional[int] = Field(None, description="Количество транзакций с этим видом топлива")
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class FuelTypeListResponse(BaseModel):
+    """
+    Схема ответа со списком видов топлива
+    """
+    total: int
+    items: list[FuelTypeResponse]
+
+
 class FuelCardBase(BaseModel):
     """
     Базовая схема топливной карты

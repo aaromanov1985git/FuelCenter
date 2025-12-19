@@ -268,7 +268,14 @@ const Dashboard = () => {
 
       {/* Секция "Загрузка по расписанию" */}
       <div className="dashboard-section auto-load-section">
-        <h3>Загрузка по расписанию</h3>
+        <div className="auto-load-header">
+          <h3>Загрузка по расписанию</h3>
+          {autoLoadStats && (
+            <div className="auto-load-period">
+              За последние {autoLoadStats.period_hours} ч
+            </div>
+          )}
+        </div>
         {autoLoadLoading ? (
           <div className="auto-load-skeleton-grid">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -277,9 +284,6 @@ const Dashboard = () => {
           </div>
         ) : autoLoadStats ? (
           <div className="auto-load-stats">
-            <div className="auto-load-period">
-              За последние {autoLoadStats.period_hours} ч
-            </div>
             <div className="auto-load-grid">
               <div className="auto-load-card">
                 <div className="auto-load-card-label">Транзакций</div>

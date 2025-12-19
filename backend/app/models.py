@@ -288,6 +288,34 @@ class GasStation(Base):
     )
 
 
+class FuelType(Base):
+    """
+    Справочник видов топлива
+    """
+    __tablename__ = "fuel_types"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    
+    # Исходное наименование из транзакций
+    original_name = Column(String(200), nullable=False, index=True, comment="Исходное наименование вида топлива")
+    
+    # Нормализованное наименование (редактируемое, при создании равно original_name)
+    normalized_name = Column(String(200), nullable=False, comment="Нормализованное наименование вида топлива (редактируемое)")
+    
+    # Статус валидации
+    is_validated = Column(String(10), default="pending", comment="Статус: pending, valid, invalid")
+    validation_errors = Column(String(500), comment="Ошибки валидации")
+    
+    # Метаданные
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления")
+    
+    # Уникальность по исходному наименованию
+    __table_args__ = (
+        Index('idx_fuel_type_original', 'original_name', unique=True),
+    )
+
+
 class UploadPeriodLock(Base):
     """
     Модель закрытия периода загрузки

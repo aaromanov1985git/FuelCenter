@@ -23,6 +23,7 @@ from app.routers import (
     vehicles,
     fuel_cards,
     gas_stations,
+    fuel_types,
     providers,
     templates,
     dashboard,
@@ -487,6 +488,7 @@ app.include_router(transactions.router)
 app.include_router(vehicles.router)
 app.include_router(fuel_cards.router)
 app.include_router(gas_stations.router)
+app.include_router(fuel_types.router)
 app.include_router(providers.router)
 app.include_router(templates.router)
 app.include_router(dashboard.router)

@@ -23,6 +23,7 @@ const ProvidersList = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [newForm, setNewForm] = useState({ name: '', code: '', is_active: true, organization_id: null })
   const [organizations, setOrganizations] = useState([])
+  const [organizationFilter, setOrganizationFilter] = useState(null) // Фильтр по организации
 
   // Валидация формы добавления провайдера
   const validationRules = {
@@ -92,6 +93,11 @@ const ProvidersList = () => {
       params.append('skip', ((currentPage - 1) * limit).toString())
       params.append('limit', limit.toString())
       
+      // Добавляем фильтр по организации, если выбран
+      if (organizationFilter) {
+        params.append('organization_id', organizationFilter.toString())
+      }
+      
       const response = await authFetch(`${API_URL}/api/v1/providers?${params}`)
       if (!response.ok) throw new Error('Ошибка загрузки данных')
       
@@ -121,10 +127,17 @@ const ProvidersList = () => {
     }
   }
 
+  // Загружаем организации один раз при монтировании
+  useEffect(() => {
+    loadOrganizations()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Загружаем провайдеров при изменении страницы или фильтра
   useEffect(() => {
     loadProviders()
-    loadOrganizations()
-  }, [currentPage])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, organizationFilter])
 
   const handleEdit = (provider) => {
     setEditingId(provider.id)
@@ -429,6 +442,28 @@ const ProvidersList = () => {
               {error}
             </Alert>
           )}
+
+          {/* Фильтр по организации */}
+          <div style={{ marginBottom: 'var(--spacing-element)', display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)' }}>
+              Фильтр по организации:
+            </label>
+            <Select
+              value={organizationFilter ? organizationFilter.toString() : ''}
+              onChange={(value) => {
+                setOrganizationFilter(value ? parseInt(value) : null)
+                setCurrentPage(1) // Сбрасываем на первую страницу при изменении фильтра
+              }}
+              options={[
+                { value: '', label: 'Все организации' },
+                ...organizations.filter(o => o.is_active).map(org => ({
+                  value: org.id.toString(),
+                  label: org.name
+                }))
+              ]}
+              style={{ minWidth: '200px' }}
+            />
+          </div>
 
           {loading && providers.length === 0 ? (
             <Skeleton rows={10} columns={5} />
