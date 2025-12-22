@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import Optional, List, Dict, Any
 import httpx
 import hashlib
+import base64
 import json
 import xml.etree.ElementTree as ET
 from sqlalchemy.orm import Session
@@ -2421,6 +2422,431 @@ class WebAdapter:
         return standard_fields
 
 
+class RnCardAdapter:
+    """
+    Адаптер для работы с API провайдера РН-Карт (WebAPI EMV v2)
+    
+    Документация: https://lkapi.rn-card.ru
+    """
+    
+    def __init__(
+        self,
+        base_url: str,
+        login: str,
+        password: str,
+        contract: str,
+        currency: str = "RUB",
+        use_md5_hash: bool = True
+    ):
+        """
+        Инициализация адаптера РН-Карт
+        
+        Args:
+            base_url: Базовый URL API (например, "https://lkapi.rn-card.ru")
+            login: Логин из Личного кабинета РН-Карт
+            password: Пароль из Личного кабинета РН-Карт
+            contract: Код договора
+            currency: Валюта по умолчанию
+            use_md5_hash: Использовать MD5-хеш пароля (рекомендуется, True по умолчанию)
+        """
+        self.base_url = base_url.rstrip('/')
+        self.login = login
+        self.password = password
+        self.contract = contract
+        self.currency = currency
+        self.use_md5_hash = use_md5_hash
+        # Создаем клиент с настройками по умолчанию
+        # httpx автоматически добавляет необходимые заголовки (Host, Connection и т.д.)
+        self.client = httpx.AsyncClient(timeout=30.0)
+    
+    async def __aenter__(self):
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.client.aclose()
+    
+    def _prepare_password(self) -> str:
+        """
+        Подготовка пароля для заголовка авторизации
+        
+        Returns:
+            Base64-кодированная строка (MD5-хеш пароля или сам пароль)
+        """
+        if self.use_md5_hash:
+            # Рекомендуемый способ: MD5-хеш пароля → hex-строка → Base64
+            # Это соответствует PowerShell:
+            # $md5 = [System.Security.Cryptography.MD5]::Create()
+            # $bytes = [System.Text.Encoding]::UTF8.GetBytes($password)
+            # $hashBytes = $md5.ComputeHash($bytes)
+            # $hashHex = -join ($hashBytes | ForEach-Object { "{0:x2}" -f $_ })
+            # $base64Auth = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($hashHex))
+            
+            # Шаг 1: Пароль → UTF-8 байты
+            password_bytes = self.password.encode('utf-8')
+            
+            # Шаг 2: UTF-8 байты → MD5 хеш (байты)
+            password_hash_bytes = hashlib.md5(password_bytes).digest()
+            
+            # Шаг 3: Байты MD5 → hex-строка (lowercase, по 2 символа на байт, как "{0:x2}" в PowerShell)
+            password_hash_hex = ''.join(f'{b:02x}' for b in password_hash_bytes)
+            
+            # Шаг 4: Hex-строка → UTF-8 байты → Base64
+            password_encoded = base64.b64encode(password_hash_hex.encode('utf-8')).decode('utf-8')
+            
+            # Логируем для отладки (без пароля, только хеш)
+            logger.info(f"Подготовка пароля для РН-Карт (MD5)", extra={
+                "password_length": len(self.password) if self.password else 0,
+                "password_preview": self.password[:3] + "***" if self.password and len(self.password) > 3 else "***",
+                "hash_hex": password_hash_hex,
+                "hash_hex_length": len(password_hash_hex),
+                "base64_encoded": password_encoded,
+                "base64_length": len(password_encoded),
+                "login": self.login,
+                "contract": self.contract,
+                "use_md5_hash": self.use_md5_hash
+            })
+        else:
+            # Альтернативный способ: просто Base64 пароля
+            password_encoded = base64.b64encode(self.password.encode('utf-8')).decode('utf-8')
+            logger.info(f"Подготовка пароля для РН-Карт (Base64 без MD5)", extra={
+                "password_length": len(self.password) if self.password else 0,
+                "password_preview": self.password[:3] + "***" if self.password and len(self.password) > 3 else "***",
+                "base64_encoded": password_encoded,
+                "base64_length": len(password_encoded),
+                "login": self.login,
+                "contract": self.contract
+            })
+        
+        return password_encoded
+    
+    def _auth_headers(self, request_id: Optional[str] = None) -> Dict[str, str]:
+        """
+        Формирование заголовков авторизации
+        
+        Args:
+            request_id: Уникальный идентификатор запроса (GUID) для диагностики
+            
+        Returns:
+            Словарь с заголовками
+        """
+        password_encoded = self._prepare_password()
+        
+        headers = {
+            "RnCard-Identity-Account-Pass": password_encoded,
+            "Accept": "application/json",
+            # Не добавляем User-Agent, чтобы соответствовать PowerShell скрипту
+        }
+        
+        # Добавляем RequestId для диагностики (рекомендуется)
+        if request_id:
+            headers["RnCard-RequestId"] = request_id
+        else:
+            import uuid
+            headers["RnCard-RequestId"] = str(uuid.uuid4())
+        
+        # Логируем заголовки для отладки (без пароля)
+        logger.debug(f"Заголовки авторизации для РН-Карт", extra={
+            "has_password_header": bool(password_encoded),
+            "password_header_length": len(password_encoded),
+            "password_header_preview": password_encoded[:20] + "..." if len(password_encoded) > 20 else password_encoded,
+            "request_id": headers.get("RnCard-RequestId"),
+            "user_agent": headers.get("User-Agent")
+        })
+        
+        return headers
+    
+    async def _get_json(
+        self,
+        path: str,
+        params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Выполнение GET запроса к API
+        
+        Args:
+            path: Путь API endpoint
+            params: Параметры запроса
+            
+        Returns:
+            Ответ API в виде словаря
+            
+        Raises:
+            httpx.HTTPError: при ошибке HTTP запроса
+        """
+        headers = self._auth_headers()
+        
+        # Добавляем обязательные параметры
+        query = {
+            "u": self.login,
+            "contract": self.contract,
+            "type": "json"
+        }
+        
+        if params:
+            query.update({k: v for k, v in params.items() if v is not None})
+        
+        url = f"{self.base_url}{path}"
+        
+        try:
+            # Логируем информацию о запросе для диагностики (без пароля)
+            logger.debug(f"Запрос к API РН-Карт: {url}", extra={
+                "url": url,
+                "login": self.login,
+                "contract": self.contract,
+                "use_md5_hash": self.use_md5_hash,
+                "has_password": bool(self.password),
+                "request_id": headers.get("RnCard-RequestId"),
+                "has_auth_header": "RnCard-Identity-Account-Pass" in headers,
+                "auth_header_length": len(headers.get("RnCard-Identity-Account-Pass", "")) if "RnCard-Identity-Account-Pass" in headers else 0
+            })
+            
+            # Логируем заголовки для отладки (без значения пароля)
+            logger.debug(f"Заголовки запроса к API РН-Карт", extra={
+                "headers_keys": list(headers.keys()),
+                "has_accept": "Accept" in headers,
+                "has_request_id": "RnCard-RequestId" in headers,
+                "has_user_agent": "User-Agent" in headers,
+                "auth_header_exists": "RnCard-Identity-Account-Pass" in headers,
+                "auth_header_length": len(headers.get("RnCard-Identity-Account-Pass", ""))
+            })
+            
+            # Детальное логирование для диагностики 403
+            logger.info(f"Детальная информация о запросе к API РН-Карт", extra={
+                "url": url,
+                "method": "GET",
+                "all_headers": {k: (v[:20] + "..." if k == "RnCard-Identity-Account-Pass" and len(v) > 20 else v) for k, v in headers.items()},
+                "params": query,
+                "login": self.login,
+                "contract": self.contract,
+                "use_md5_hash": self.use_md5_hash
+            })
+            
+            response = await self.client.get(url, headers=headers, params=query)
+            
+            # Логируем ответ
+            logger.info(f"Ответ от API РН-Карт", extra={
+                "status_code": response.status_code,
+                "response_headers": dict(response.headers) if hasattr(response, 'headers') else {},
+                "response_preview": response.text[:200] if hasattr(response, 'text') else "N/A"
+            })
+            
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            status_code = e.response.status_code
+            error_text = e.response.text[:1000] if hasattr(e.response, 'text') else str(e)
+            
+            # Логируем детальную информацию об ошибке для диагностики
+            logger.error(f"HTTP ошибка {status_code} при запросе к API РН-Карт", extra={
+                "url": url,
+                "status_code": status_code,
+                "error_text": error_text,
+                "request_headers": dict(e.request.headers) if hasattr(e.request, 'headers') else {},
+                "response_headers": dict(e.response.headers) if hasattr(e.response, 'headers') else {},
+                "login": self.login,
+                "contract": self.contract,
+                "auth_header_sent": "RnCard-Identity-Account-Pass" in (dict(e.request.headers) if hasattr(e.request, 'headers') else {}),
+                "auth_header_value_preview": dict(e.request.headers).get("RnCard-Identity-Account-Pass", "")[:30] + "..." if hasattr(e.request, 'headers') and "RnCard-Identity-Account-Pass" in dict(e.request.headers) else "N/A"
+            })
+            
+            # Формируем более информативное сообщение об ошибке
+            if status_code == 403:
+                error_message = (
+                    f"Ошибка 403 Forbidden при запросе к API РН-Карт. "
+                    f"Возможные причины:\n"
+                    f"1. IP-адрес вашего сервера не добавлен в белый список в Личном кабинете РН-Карт (раздел 1.4 регламента)\n"
+                    f"2. Неправильные учетные данные (логин/пароль)\n"
+                    f"3. Неправильный формат заголовка авторизации\n"
+                    f"4. Учетная запись заблокирована\n\n"
+                    f"URL: {url}\n"
+                    f"Логин: {self.login}\n"
+                    f"Договор: {self.contract}\n"
+                    f"Ответ сервера: {error_text}"
+                )
+            elif status_code == 404:
+                error_message = (
+                    f"Ошибка 404 Not Found при запросе к API РН-Карт. "
+                    f"Возможные причины:\n"
+                    f"1. Неправильный URL или версия API\n"
+                    f"2. IP-адрес не в белом списке (сервер может возвращать 404 вместо 403)\n"
+                    f"3. Неправильный код договора\n\n"
+                    f"URL: {url}\n"
+                    f"Ответ сервера: {error_text}"
+                )
+            else:
+                error_message = f"Ошибка HTTP {status_code} при запросе к API РН-Карт: {error_text}"
+            
+            logger.error(error_message, extra={
+                "url": url,
+                "status_code": status_code,
+                "response_text": error_text,
+                "login": self.login,
+                "contract": self.contract
+            })
+            
+            # Сохраняем улучшенное сообщение в атрибуте исключения для последующего использования
+            e._rncard_error_message = error_message
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"Ошибка запроса к API РН-Карт: {str(e)}", extra={"url": url})
+            raise
+    
+    async def list_cards(self) -> List[Dict[str, Any]]:
+        """
+        Получение списка топливных карт по договору
+        
+        Returns:
+            Список карт в формате [{"Num": "...", "Rem": "...", "SName": "...", "SCode": "...", "CardGrp": "..."}, ...]
+        """
+        payload = await self._get_json("/api/emv/v1/GetCardsByContract")
+        
+        # API возвращает список карт напрямую
+        if isinstance(payload, list):
+            return payload
+        
+        # Или может быть обернут в объект
+        return payload.get("cards") or payload.get("Cards") or []
+    
+    async def fetch_card_transactions(
+        self,
+        card_number: str,
+        date_from: date,
+        date_to: date
+    ) -> List[Dict[str, Any]]:
+        """
+        Получение транзакций по договору за период
+        
+        Args:
+            card_number: Номер карты (не используется напрямую, но может быть полезен для фильтрации)
+            date_from: Начальная дата периода
+            date_to: Конечная дата периода (максимум 2 месяца от date_from)
+            
+        Returns:
+            Список транзакций из OperationList
+        """
+        # Проверяем, что период не превышает 2 месяца
+        if (date_to - date_from).days > 60:
+            raise ValueError("Период не может превышать 2 месяца (60 дней)")
+        
+        # Форматируем даты в ISO 8601: yyyy-MM-ddTHH:mm:ss
+        begin_str = date_from.strftime("%Y-%m-%dT00:00:00")
+        end_str = date_to.strftime("%Y-%m-%dT23:59:59")
+        
+        params = {
+            "begin": begin_str,
+            "end": end_str
+        }
+        
+        payload = await self._get_json("/api/emv/v2/GetOperByContract", params=params)
+        
+        # API возвращает объект с полем OperationList
+        operations = payload.get("OperationList") or payload.get("operationList") or []
+        
+        # Фильтруем по номеру карты, если указан
+        if card_number:
+            operations = [
+                op for op in operations
+                if str(op.get("Card", "")).strip() == str(card_number).strip()
+            ]
+        
+        return operations
+    
+    async def fetch_transactions_by_last_modified(
+        self,
+        last_hours: int = 24
+    ) -> List[Dict[str, Any]]:
+        """
+        Получение транзакций по дате последнего изменения (для синхронизации)
+        
+        Args:
+            last_hours: Сколько часов назад импортировались или изменялись операции (макс. 120 часов)
+            
+        Returns:
+            Список транзакций из OperationList
+        """
+        if last_hours > 120:
+            raise ValueError("Параметр lastHours не может превышать 120 часов")
+        
+        params = {
+            "lastHours": last_hours
+        }
+        
+        payload = await self._get_json("/api/emv/v2/GetOperByContractLM", params=params)
+        
+        # API возвращает объект с полем OperationList
+        return payload.get("OperationList") or payload.get("operationList") or []
+    
+    async def healthcheck(self) -> Dict[str, Any]:
+        """
+        Проверка доступности API
+        
+        Returns:
+            Результат проверки
+        """
+        try:
+            # Пробуем получить список карт - это простой метод для проверки
+            await self._get_json("/api/emv/v1/GetCardsByContract")
+            return {"status": "ok", "checked_at": datetime.now(timezone.utc)}
+        except Exception as e:
+            return {
+                "status": "error",
+                "checked_at": datetime.now(timezone.utc),
+                "error": str(e)
+            }
+    
+    async def get_transaction_fields(self) -> List[str]:
+        """
+        Получение списка полей из примера транзакции API
+        
+        Returns:
+            Список имен полей из API ответа
+        """
+        try:
+            # Получаем транзакции за последние 30 дней
+            date_to = date.today()
+            date_from = date_to - timedelta(days=30)
+            
+            try:
+                transactions = await self.fetch_card_transactions("", date_from, date_to)
+            except ValueError:
+                # Если период слишком большой, пробуем меньший
+                date_from = date_to - timedelta(days=1)
+                transactions = await self.fetch_card_transactions("", date_from, date_to)
+            
+            if not transactions:
+                logger.warning("Список транзакций пуст при получении полей из API РН-Карт")
+                # Возвращаем стандартные поля на основе документации
+                return [
+                    "Date", "Card", "Type", "Value", "Sum", "DSum",
+                    "Price", "DPrice", "Contract", "AZS", "AZSName",
+                    "Product", "Region", "Settlement", "Address"
+                ]
+            
+            # Извлекаем все уникальные ключи из транзакций
+            all_fields = set()
+            for trans in transactions[:10]:  # Проверяем первые 10 транзакций
+                if isinstance(trans, dict):
+                    all_fields.update(trans.keys())
+            
+            fields_list = sorted(list(all_fields))
+            
+            logger.info(f"Получено полей из API РН-Карт: {len(fields_list)}", extra={
+                "fields_count": len(fields_list),
+                "sample_fields": fields_list[:10]
+            })
+            
+            return fields_list
+            
+        except Exception as e:
+            logger.error(f"Ошибка при получении полей из API РН-Карт: {str(e)}", extra={"error": str(e)}, exc_info=True)
+            # Возвращаем стандартные поля на основе документации
+            return [
+                "Date", "Card", "Type", "Value", "Sum", "DSum",
+                "Price", "DPrice", "Contract", "AZS", "AZSName",
+                "Product", "Region", "Settlement", "Address"
+            ]
+
+
 class ApiProviderService:
     """
     Сервис для работы с API провайдерами
@@ -2447,6 +2873,8 @@ class ApiProviderService:
         
         # Парсим настройки подключения
         import json
+        from app.utils.encryption import decrypt_connection_settings
+        
         try:
             if isinstance(template.connection_settings, str):
                 settings = json.loads(template.connection_settings)
@@ -2454,6 +2882,9 @@ class ApiProviderService:
                 raise ValueError("Настройки подключения не указаны")
             else:
                 settings = template.connection_settings
+            
+            # Расшифровываем пароль, если он зашифрован
+            settings = decrypt_connection_settings(settings)
         except (json.JSONDecodeError, TypeError) as e:
             raise ValueError(f"Неверный формат настроек подключения: {str(e)}")
         
@@ -2526,15 +2957,65 @@ class ApiProviderService:
         # Для типа "api" используем существующую логику
         provider_type = settings.get("provider_type", "petrolplus")
         base_url = settings.get("base_url") or settings.get("api_url")
-        api_token = settings.get("api_token") or settings.get("token") or settings.get("api_key")
         
         if not base_url:
             raise ValueError("Не указан базовый URL API (base_url или api_url)")
-        if not api_token:
-            raise ValueError("Не указан токен авторизации (api_token, token или api_key)")
         
-        if provider_type.lower() == "petrolplus":
+        provider_type_lower = provider_type.lower()
+        
+        if provider_type_lower == "petrolplus":
+            api_token = settings.get("api_token") or settings.get("token") or settings.get("api_key")
+            if not api_token:
+                raise ValueError("Не указан токен авторизации (api_token, token или api_key)")
             return PetrolPlusAdapter(base_url, api_token, currency)
+        
+        elif provider_type_lower == "rncard" or provider_type_lower == "rn-card":
+            # Для РН-Карт требуется логин, пароль и код договора
+            login = settings.get("login") or settings.get("username") or settings.get("user")
+            password = settings.get("password") or settings.get("pass")
+            contract = settings.get("contract") or settings.get("contract_code")
+            use_md5_hash = settings.get("use_md5_hash", True)  # По умолчанию используем MD5
+            
+            # Убираем пробелы в начале и конце (на случай, если они были добавлены при вводе)
+            if login:
+                login = str(login).strip()
+            if password:
+                password = str(password).strip()
+            if contract:
+                contract = str(contract).strip()
+            
+            # Логируем параметры для диагностики (без пароля)
+            logger.info(f"Создание адаптера РН-Карт", extra={
+                "login": login,
+                "login_length": len(login) if login else 0,
+                "has_password": bool(password),
+                "password_length": len(password) if password else 0,
+                "contract": contract,
+                "contract_length": len(contract) if contract else 0,
+                "use_md5_hash": use_md5_hash,
+                "base_url": base_url
+            })
+            
+            if not login:
+                raise ValueError("Не указан логин (login, username или user)")
+            if not password:
+                raise ValueError("Не указан пароль (password или pass)")
+            if not contract:
+                raise ValueError("Не указан код договора (contract или contract_code)")
+            
+            # Если base_url не указан, используем стандартный URL РН-Карт
+            if not base_url or base_url.strip() == "":
+                base_url = "https://lkapi.rn-card.ru"
+            
+            return RnCardAdapter(
+                base_url=base_url,
+                login=login,
+                password=password,
+                contract=contract,
+                currency=currency,
+                use_md5_hash=use_md5_hash
+            )
+        
         else:
             raise ValueError(f"Неподдерживаемый тип провайдера API: {provider_type}")
     
@@ -2595,9 +3076,32 @@ class ApiProviderService:
             except:
                 error_text = str(e)
             
-            if status_code == 403:
-                # Проверяем, может быть это из-за капчи
-                if 'captcha' in error_text.lower() or 'капча' in error_text.lower():
+            # Проверяем, есть ли улучшенное сообщение об ошибке от адаптера
+            if hasattr(e, '_rncard_error_message'):
+                error_msg = e._rncard_error_message
+            elif status_code == 403:
+                # Специальная обработка для РН-Карт
+                # Проверяем тип провайдера из настроек шаблона
+                import json
+                try:
+                    settings = json.loads(template.connection_settings) if isinstance(template.connection_settings, str) else template.connection_settings
+                    provider_type = settings.get("provider_type", "").lower() if settings else ""
+                    is_rncard = provider_type in ["rncard", "rn-card"]
+                except:
+                    is_rncard = False
+                
+                if is_rncard:
+                    error_msg = (
+                        "Ошибка 403 Forbidden при подключении к API РН-Карт.\n\n"
+                        "Возможные причины:\n"
+                        "1. IP-адрес вашего сервера не добавлен в белый список в Личном кабинете РН-Карт\n"
+                        "   (раздел 1.4 технического регламента). Убедитесь, что IP-адрес добавлен в ЛК.\n"
+                        "2. Неправильные учетные данные (логин/пароль)\n"
+                        "3. Неправильный формат заголовка авторизации\n"
+                        "4. Учетная запись заблокирована\n\n"
+                        f"Ответ сервера: {error_text}"
+                    )
+                elif 'captcha' in error_text.lower() or 'капча' in error_text.lower():
                     error_msg = (
                         "Сервер требует решение капчи для авторизации. "
                         "Автоматическая авторизация невозможна. "
@@ -2610,6 +3114,28 @@ class ApiProviderService:
                         f"или сервер блокирует автоматизированные запросы. "
                         f"Ответ сервера: {error_text}"
                     )
+            elif status_code == 404:
+                # Специальная обработка для РН-Карт
+                # Проверяем тип провайдера из настроек шаблона
+                import json
+                try:
+                    settings = json.loads(template.connection_settings) if isinstance(template.connection_settings, str) else template.connection_settings
+                    provider_type = settings.get("provider_type", "").lower() if settings else ""
+                    is_rncard = provider_type in ["rncard", "rn-card"]
+                except:
+                    is_rncard = False
+                
+                if is_rncard:
+                    error_msg = (
+                        "Ошибка 404 Not Found при подключении к API РН-Карт.\n\n"
+                        "Возможные причины:\n"
+                        "1. IP-адрес не в белом списке (сервер может возвращать 404 вместо 403)\n"
+                        "2. Неправильный URL или версия API\n"
+                        "3. Неправильный код договора\n\n"
+                        f"Ответ сервера: {error_text}"
+                    )
+                else:
+                    error_msg = f"Ошибка HTTP {status_code}: {error_text}"
             else:
                 error_msg = f"Ошибка HTTP {status_code}: {error_text}"
             
@@ -2733,10 +3259,15 @@ class ApiProviderService:
                     else:
                         # Для других типов API пытаемся получить список карт
                         cards_data = await adapter.list_cards()
-                        # Для WebAdapter list_cards возвращает список строк, для PetrolPlusAdapter - список словарей
+                        # Для WebAdapter list_cards возвращает список строк, для PetrolPlusAdapter - список словарей, для RnCardAdapter - список словарей с полем "Num"
                         if cards_data and len(cards_data) > 0:
                             if isinstance(cards_data[0], dict):
-                                card_numbers = [str(card.get("cardNum") or "") for card in cards_data if card.get("cardNum")]
+                                # Для РН-Карт поле называется "Num", для PetrolPlus - "cardNum"
+                                card_numbers = [
+                                    str(card.get("Num") or card.get("cardNum") or "")
+                                    for card in cards_data
+                                    if card.get("Num") or card.get("cardNum")
+                                ]
                             else:
                                 card_numbers = [str(card) for card in cards_data if card]
                             logger.info(f"Найдено карт для загрузки: {len(card_numbers)}", extra={
@@ -2749,6 +3280,9 @@ class ApiProviderService:
                             raise ValueError("Не удалось получить список карт. Укажите номера карт в параметре card_numbers.")
                 
                 # Для XML API с сертификатом можно загрузить транзакции для всех карт одним запросом
+                # Для РН-Карт также загружаем все транзакции по договору одним запросом
+                is_rncard_adapter = isinstance(adapter, RnCardAdapter)
+                
                 if is_xml_api_with_cert:
                     # Загружаем транзакции для всех карт одним запросом
                     try:
@@ -2773,6 +3307,42 @@ class ApiProviderService:
                         })
                     except Exception as e:
                         logger.error(f"Ошибка при загрузке транзакций через XML API: {str(e)}", extra={
+                            "template_id": template.id,
+                            "error": str(e)
+                        }, exc_info=True)
+                        raise
+                elif is_rncard_adapter:
+                    # Для РН-Карт загружаем все транзакции по договору одним запросом
+                    try:
+                        # Используем пустую строку для card_number, чтобы получить все транзакции
+                        transactions = await adapter.fetch_card_transactions(
+                            "",
+                            date_from,
+                            date_to
+                        )
+                        
+                        # Фильтруем по указанным картам, если они указаны
+                        if card_numbers:
+                            transactions = [
+                                trans for trans in transactions
+                                if str(trans.get("Card", "")).strip() in [str(cn).strip() for cn in card_numbers]
+                            ]
+                        
+                        # Преобразуем транзакции в формат системы
+                        for trans in transactions:
+                            # Извлекаем номер карты из транзакции
+                            card_num = str(trans.get("Card", "")).strip()
+                            system_trans = self._convert_to_system_format(trans, template, card_num)
+                            if system_trans:
+                                all_transactions.append(system_trans)
+                        
+                        logger.info(f"Загружено транзакций через API РН-Карт: {len(transactions)}", extra={
+                            "template_id": template.id,
+                            "cards_count": len(card_numbers) if card_numbers else "all",
+                            "transactions_count": len(transactions)
+                        })
+                    except Exception as e:
+                        logger.error(f"Ошибка при загрузке транзакций через API РН-Карт: {str(e)}", extra={
                             "template_id": template.id,
                             "error": str(e)
                         }, exc_info=True)
@@ -2849,10 +3419,11 @@ class ApiProviderService:
         except (json.JSONDecodeError, TypeError):
             field_mapping = {}
         
-        # Преобразуем дату (поддерживаем разные форматы: стандартный API и XML API)
+        # Преобразуем дату (поддерживаем разные форматы: стандартный API, XML API и РН-Карт)
         transaction_date = self._parse_datetime(
             api_transaction.get("transaction_date") or  # XML API
             api_transaction.get("TransactionDatetime") or  # XML API (оригинальное поле)
+            api_transaction.get("Date") or  # РН-Карт
             api_transaction.get("date") or
             api_transaction.get("dateReg") or
             api_transaction.get("dateRec")
@@ -2867,6 +3438,7 @@ class ApiProviderService:
         # Преобразуем сумму и количество (поддерживаем разные форматы)
         amount = self._parse_decimal(
             api_transaction.get("amount") or  # Стандартный формат или уже преобразованное
+            api_transaction.get("Sum") or  # РН-Карт
             api_transaction.get("ShopCost") or  # XML API
             api_transaction.get("PersonCost") or  # XML API (альтернатива)
             api_transaction.get("sum"),  # Стандартный формат
@@ -2881,6 +3453,7 @@ class ApiProviderService:
         quantity = self._parse_decimal(
             api_transaction.get("volume") or  # XML API (уже преобразованное)
             api_transaction.get("Volume") or  # XML API (оригинальное поле)
+            api_transaction.get("Value") or  # РН-Карт (объем)
             api_transaction.get("quantity") or
             api_transaction.get("amount")
         ) or Decimal("0")
@@ -2890,14 +3463,15 @@ class ApiProviderService:
         
         # Определяем тип операции на основе знака суммы/объема в исходных данных
         # Если в исходных данных было отрицательное значение, это возврат
-        raw_amount = api_transaction.get("ShopCost") or api_transaction.get("amount") or 0
-        raw_volume = api_transaction.get("Volume") or api_transaction.get("volume") or 0
+        raw_amount = api_transaction.get("Sum") or api_transaction.get("ShopCost") or api_transaction.get("amount") or 0
+        raw_volume = api_transaction.get("Value") or api_transaction.get("Volume") or api_transaction.get("volume") or 0
         operation_type = "Возврат" if (isinstance(raw_amount, (int, float)) and raw_amount < 0) or \
                                        (isinstance(raw_volume, (int, float)) and raw_volume < 0) else "Покупка"
         
         # Формируем адрес
         address_parts = [
             api_transaction.get("posAddress") or api_transaction.get("address"),
+            api_transaction.get("Address"),  # РН-Карт
             api_transaction.get("posTown"),
             api_transaction.get("posStreet"),
             api_transaction.get("posHouse"),
@@ -2906,6 +3480,7 @@ class ApiProviderService:
         resolved_address = (
             api_transaction.get("fullAddress") or
             api_transaction.get("posFullAddress") or
+            api_transaction.get("Address") or  # РН-Карт
             ", ".join(dict.fromkeys(address_candidates))
         )
         
@@ -2913,6 +3488,7 @@ class ApiProviderService:
         azs_original_name = str(
             api_transaction.get("azs_name") or  # XML API (уже преобразованное)
             api_transaction.get("AZS_NAME") or  # XML API (оригинальное поле)
+            api_transaction.get("AZSName") or  # РН-Карт
             api_transaction.get("posName") or
             api_transaction.get("posBrand") or
             api_transaction.get("azsNumber") or
@@ -2923,6 +3499,7 @@ class ApiProviderService:
         azs_number = str(
             api_transaction.get("azs_number") or  # XML API (уже преобразованное)
             api_transaction.get("COD_AZS") or  # XML API (оригинальное поле)
+            api_transaction.get("AZS") or  # РН-Карт
             api_transaction.get("azsNumber") or
             ""
         )
@@ -2935,24 +3512,51 @@ class ApiProviderService:
         # Название товара/топлива (поддерживаем разные форматы)
         product = (
             api_transaction.get("product") or  # Стандартный формат или уже преобразованное
+            api_transaction.get("Product") or  # РН-Карт
             api_transaction.get("ResourceName") or  # XML API (оригинальное поле)
             api_transaction.get("serviceName") or
             api_transaction.get("service") or
             ""
         )
         
+        # Парсим координаты из поля PosCoord (формат: "широта,долгота")
+        latitude = None
+        longitude = None
+        pos_coord = api_transaction.get("PosCoord") or api_transaction.get("posCoord") or api_transaction.get("pos_coord")
+        if pos_coord:
+            try:
+                # Формат: "52.261365,104.35507"
+                coords = str(pos_coord).strip().split(",")
+                if len(coords) == 2:
+                    lat_str = coords[0].strip()
+                    lon_str = coords[1].strip()
+                    latitude = float(lat_str) if lat_str else None
+                    longitude = float(lon_str) if lon_str else None
+                    # Проверяем валидность координат
+                    if latitude is not None and (latitude < -90 or latitude > 90):
+                        logger.warning(f"Некорректная широта: {latitude}", extra={"pos_coord": pos_coord})
+                        latitude = None
+                    if longitude is not None and (longitude < -180 or longitude > 180):
+                        logger.warning(f"Некорректная долгота: {longitude}", extra={"pos_coord": pos_coord})
+                        longitude = None
+            except (ValueError, AttributeError) as e:
+                logger.debug(f"Не удалось распарсить координаты из PosCoord: {pos_coord}", extra={
+                    "pos_coord": pos_coord,
+                    "error": str(e)
+                })
+        
         # Создаем транзакцию в формате системы
         system_transaction = {
             "transaction_date": transaction_date,
-            "card_number": card_number,
+            "card_number": card_number or api_transaction.get("Card", ""),  # РН-Карт
             "vehicle": None,  # Будет определяться по маппингу или привязкам карты
             "azs_number": azs_number,
             "azs_original_name": azs_original_name,  # Сохраняем оригинальное название АЗС
             "supplier": api_transaction.get("supplier"),
-            "region": api_transaction.get("region"),
-            "settlement": api_transaction.get("posTown") or api_transaction.get("settlement"),
-            "location": resolved_address,
-            "location_code": api_transaction.get("posCode") or api_transaction.get("locationCode"),
+            "region": api_transaction.get("region") or api_transaction.get("Region"),  # РН-Карт
+            "settlement": api_transaction.get("posTown") or api_transaction.get("settlement") or api_transaction.get("Settlement"),  # РН-Карт
+            "location": resolved_address or api_transaction.get("Address"),  # РН-Карт
+            "location_code": api_transaction.get("posCode") or api_transaction.get("locationCode") or api_transaction.get("PosCode"),  # РН-Карт
             "product": product,
             "operation_type": operation_type,
             "quantity": quantity,
@@ -2961,6 +3565,9 @@ class ApiProviderService:
             "amount": amount,
             "provider_id": template.provider_id,
             "source_file": f"API_{template.provider_id}_{card_number}",
+            # Координаты АЗС для сохранения при создании/обновлении АЗС
+            "azs_latitude": latitude,
+            "azs_longitude": longitude,
         }
         
         return system_transaction

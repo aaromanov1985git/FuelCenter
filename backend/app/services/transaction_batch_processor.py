@@ -489,13 +489,15 @@ class TransactionBatchProcessor:
         if not gas_station_names:
             return gas_stations_map
         
-        # Обрабатываем каждую АЗС
+            # Обрабатываем каждую АЗС
         for gas_station_name in gas_station_names:
             # Находим первую транзакцию с этой АЗС для получения данных
             azs_number = None
             location = None
             region = None
             settlement = None
+            latitude = None
+            longitude = None
             provider_id = None
             
             for trans_data in transactions:
@@ -509,6 +511,8 @@ class TransactionBatchProcessor:
                     location = trans_data.get("location")
                     region = trans_data.get("region")
                     settlement = trans_data.get("settlement")
+                    latitude = trans_data.get("azs_latitude")
+                    longitude = trans_data.get("azs_longitude")
                     provider_id = trans_data.get("provider_id")
                     break
             
@@ -534,6 +538,8 @@ class TransactionBatchProcessor:
                     location=location,
                     region=region,
                     settlement=settlement,
+                    latitude=latitude,
+                    longitude=longitude,
                     provider_id=provider_id
                 )
                 gas_stations_map[gas_station_name] = gas_station.id

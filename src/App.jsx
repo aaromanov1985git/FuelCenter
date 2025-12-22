@@ -74,7 +74,8 @@ const App = () => {
   const [filters, setFilters] = useState({
     card_number: '',
     azs_number: '',
-    product: ''
+    product: '',
+    provider: ''
   })
   const [sortConfig, setSortConfig] = useState({
     field: 'transaction_date',
@@ -112,6 +113,7 @@ const App = () => {
   const debouncedCardNumber = useDebounce(filters.card_number, 500)
   const debouncedAzsNumber = useDebounce(filters.azs_number, 500)
   const debouncedProduct = useDebounce(filters.product, 500)
+  const debouncedProvider = useDebounce(filters.provider, 500)
 
   // Применение темы к документу
   const applyTheme = (themeName) => {
@@ -281,7 +283,19 @@ const App = () => {
       if (debouncedCardNumber) params.append('card_number', debouncedCardNumber)
       if (debouncedAzsNumber) params.append('azs_number', debouncedAzsNumber)
       if (debouncedProduct) params.append('product', debouncedProduct)
-      if (selectedProviderTab !== null) {
+      
+      // Обрабатываем фильтр по провайдеру
+      // Приоритет у фильтра из расширенного поиска, если он установлен
+      if (debouncedProvider) {
+        // Ищем провайдера по названию (без учета регистра)
+        const foundProvider = providers.find(p => 
+          p.name && p.name.toLowerCase().includes(debouncedProvider.toLowerCase())
+        )
+        if (foundProvider) {
+          params.append('provider_id', foundProvider.id.toString())
+        }
+      } else if (selectedProviderTab !== null) {
+        // Если фильтр из расширенного поиска не установлен, используем выбранную вкладку
         params.append('provider_id', selectedProviderTab.toString())
       }
       
@@ -438,7 +452,19 @@ const App = () => {
       if (debouncedCardNumber) params.append('card_number', debouncedCardNumber)
       if (debouncedAzsNumber) params.append('azs_number', debouncedAzsNumber)
       if (debouncedProduct) params.append('product', debouncedProduct)
-      if (selectedProviderTab !== null) {
+      
+      // Обрабатываем фильтр по провайдеру
+      // Приоритет у фильтра из расширенного поиска, если он установлен
+      if (debouncedProvider) {
+        // Ищем провайдера по названию (без учета регистра)
+        const foundProvider = providers.find(p => 
+          p.name && p.name.toLowerCase().includes(debouncedProvider.toLowerCase())
+        )
+        if (foundProvider) {
+          params.append('provider_id', foundProvider.id.toString())
+        }
+      } else if (selectedProviderTab !== null) {
+        // Если фильтр из расширенного поиска не установлен, используем выбранную вкладку
         params.append('provider_id', selectedProviderTab.toString())
       }
       
@@ -1875,7 +1901,7 @@ const App = () => {
           <AdvancedSearch
             filters={filters}
             onFiltersChange={setFilters}
-            onClear={() => setFilters({ card_number: '', azs_number: '', product: '' })}
+            onClear={() => setFilters({ card_number: '', azs_number: '', product: '', provider: '' })}
             loading={loading}
             filterConfig={[
               {
@@ -1894,6 +1920,12 @@ const App = () => {
                 key: 'product',
                 label: 'Товар',
                 placeholder: 'Введите название товара',
+                type: 'text'
+              },
+              {
+                key: 'provider',
+                label: 'Провайдер',
+                placeholder: 'Введите название провайдера',
                 type: 'text'
               }
             ]}
