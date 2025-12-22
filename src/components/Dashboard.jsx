@@ -102,6 +102,21 @@ const Dashboard = () => {
     return formatNumber(num) + ' л'
   }
 
+  // Форматирование для оси Y: всегда в тысячах литров, округление до целых
+  const formatLitersThousands = (num) => {
+    const thousands = Math.round(num / 1000)
+    return new Intl.NumberFormat('ru-RU').format(thousands)
+  }
+
+  // Форматирование для отображения под столбцами: в тысячах литров с 2 знаками
+  const formatLitersForColumn = (num) => {
+    const thousands = num / 1000
+    return new Intl.NumberFormat('ru-RU', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    }).format(thousands) + ' тыс. л'
+  }
+
   const formatPeriodLabel = (periodStr, periodType) => {
     if (periodType === 'day') {
       // Формат: "01.12.2025" -> "01 дек"
@@ -378,7 +393,7 @@ const Dashboard = () => {
               <div className="chart-y-axis">
                 {yAxisValues.reverse().map((value, idx) => (
                   <div key={idx} className="y-axis-label">
-                    {formatNumber(value)}
+                    {formatLitersThousands(value)}
                   </div>
                 ))}
               </div>
@@ -454,7 +469,11 @@ const Dashboard = () => {
                   
                   return (
                     <div key={periodIdx} className="chart-bar-wrapper">
-                      <div className="chart-bar-stacked" style={{ height: `${heightPx}px` }}>
+                      <div 
+                        className="chart-bar-stacked" 
+                        style={{ height: `${heightPx}px` }}
+                        title={`${formatLitersForColumn(totalQuantity)}, ${totalCount} транз.`}
+                      >
                         {providerData.map((provider, provIdx) => {
                           const segmentHeight = totalQuantity > 0 
                             ? (provider.quantity / totalQuantity) * 100 
@@ -473,7 +492,7 @@ const Dashboard = () => {
                                 background: `linear-gradient(to top, ${provider.color}, ${darkerColor})`,
                                 width: '100%'
                               }}
-                              title={`${provider.name}: ${formatNumber(provider.quantity)} л`}
+                              title={`${provider.name}: ${formatNumber(provider.quantity)} л, ${provider.count} транз.`}
                             />
                           )
                         })}
@@ -483,6 +502,7 @@ const Dashboard = () => {
                         {formatPeriodLabel(period, period)}
                       </div>
                       <div className="chart-count">{totalCount} транз.</div>
+                      <div className="chart-liters">{formatLitersForColumn(totalQuantity)}</div>
                     </div>
                   )
                 })
@@ -505,6 +525,7 @@ const Dashboard = () => {
                           backgroundColor: 'var(--color-primary)',
                           backgroundImage: 'linear-gradient(to top, var(--color-primary), var(--color-primary-hover))'
                         }}
+                        title={`${formatLitersForColumn(quantity)}, ${item.count} транз.`}
                       >
                         <span className="chart-value">{formatLiters(quantity)}</span>
                       </div>
@@ -512,6 +533,7 @@ const Dashboard = () => {
                         {formatPeriodLabel(item.period, period)}
                       </div>
                       <div className="chart-count">{item.count} транз.</div>
+                      <div className="chart-liters">{formatLitersForColumn(quantity)}</div>
                     </div>
                   )
                 })
@@ -973,7 +995,7 @@ const Dashboard = () => {
                 <div className="chart-y-axis">
                   {yAxisValues.reverse().map((value, idx) => (
                     <div key={idx} className="y-axis-label">
-                      {formatNumber(value)}
+                      {formatLitersThousands(value)}
                     </div>
                   ))}
                 </div>

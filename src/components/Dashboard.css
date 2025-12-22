@@ -401,6 +401,17 @@
   padding: 0 var(--spacing-tiny);
 }
 
+.chart-liters {
+  margin-top: var(--spacing-tiny);
+  font-size: var(--font-size-compact);
+  color: var(--color-text-tertiary);
+  text-align: center;
+  word-break: break-word;
+  max-width: 100%;
+  padding: 0 var(--spacing-tiny);
+  font-weight: var(--font-weight-medium);
+}
+
 .auto-load-skeleton-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

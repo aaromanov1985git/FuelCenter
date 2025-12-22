@@ -24,7 +24,7 @@ const FuelCardsList = () => {
   // Пагинация
   const [currentPage, setCurrentPage] = useState(1)
   const [total, setTotal] = useState(0)
-  const [limit] = useState(50) // Количество записей на странице
+  const [limit, setLimit] = useState(10) // Количество записей на странице
   
   // Фильтры
   const [filters, setFilters] = useState({
@@ -87,13 +87,24 @@ const FuelCardsList = () => {
           const providerName = getProviderName(card.provider_id).toLowerCase()
           return providerName.includes(debouncedProvider.toLowerCase())
         })
-        // Обновляем total для фильтрации по провайдеру
+        // При фильтрации по провайдеру на клиенте нужно загрузить все данные для правильного total
+        // Пока используем длину текущей страницы, но это не идеально
+        // В будущем лучше добавить фильтрацию по провайдеру на сервере
         setTotal(filteredItems.length)
+        setCards(filteredItems)
       } else {
-        setTotal(result.total)
+        // Устанавливаем total из ответа API
+        setTotal(result.total || 0)
+        setCards(filteredItems)
       }
       
-      setCards(filteredItems)
+      logger.debug('Карты загружены', { 
+        total: result.total, 
+        itemsCount: result.items.length, 
+        filteredCount: filteredItems.length,
+        currentPage,
+        limit
+      })
     } catch (err) {
       // Не показываем ошибку при 401 - это обрабатывается централизованно
       if (err.isUnauthorized) {
@@ -170,7 +181,7 @@ const FuelCardsList = () => {
 
   useEffect(() => {
     loadCards()
-  }, [currentPage, debouncedCardNumber, debouncedProvider, filters.status])
+  }, [currentPage, debouncedCardNumber, debouncedProvider, filters.status, limit])
 
   const handleEdit = (card) => {
     setEditingCard(card)
@@ -197,16 +208,11 @@ const FuelCardsList = () => {
       // Показываем уведомление об успешном сохранении СРАЗУ
       success('Топливная карта успешно обновлена')
 
-      // Получаем обновленные данные карты и обновляем форму
-      const updatedCardResponse = await authFetch(`${API_URL}/api/v1/fuel-cards/${cardId}`)
-      if (updatedCardResponse.ok) {
-        const updatedCard = await updatedCardResponse.json()
-        // Обновляем карту в состоянии - это обновит форму
-        setEditingCard(updatedCard)
-      }
-
       // Обновляем список карт в фоне (не блокируем UI)
       loadCards().catch(() => {})
+
+      // Закрываем форму после успешного сохранения
+      setEditingCard(null)
     } catch (err) {
       // Не показываем ошибку при 401 - это обрабатывается централизованно
       if (err.isUnauthorized) {
@@ -395,22 +401,27 @@ const FuelCardsList = () => {
           {loading && cards.length === 0 ? (
             <Skeleton rows={10} columns={5} />
           ) : (
-            <Table
-              columns={tableColumns}
-              data={tableData}
-              emptyMessage="Нет данных для отображения"
-            >
-              {total > limit && (
+            <>
+              <Table
+                columns={tableColumns}
+                data={tableData}
+                emptyMessage="Нет данных для отображения"
+              />
+              {total > 0 && Math.ceil(total / limit) > 1 && (
                 <Table.Pagination
                   currentPage={currentPage}
                   totalPages={Math.ceil(total / limit)}
-                  totalItems={total}
-                  itemsPerPage={limit}
+                  total={total}
+                  pageSize={limit}
                   onPageChange={setCurrentPage}
-                  disabled={loading}
+                  onPageSizeChange={(newLimit) => {
+                    setLimit(newLimit)
+                    setCurrentPage(1)
+                  }}
+                  pageSizeOptions={[10, 25, 50, 100]}
                 />
               )}
-            </Table>
+            </>
           )}
         </Card.Body>
       </Card>
