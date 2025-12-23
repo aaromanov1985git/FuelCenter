@@ -214,17 +214,19 @@ class GasStationService:
             if similar_gas_stations:
                 # Берем самую похожую запись, если схожесть >= 95%
                 best_match, score = similar_gas_stations[0]
+                # Округляем схожесть до сотых
+                score_rounded = round(score, 2)
                 if score >= 95:
                     gas_station = best_match
                     warnings.append(
                         f"АЗС '{original_name}' объединена с существующей '{best_match.original_name}' "
-                        f"(схожесть: {score}%)"
+                        f"(схожесть: {score_rounded:.2f}%)"
                     )
                 elif score >= 85:
                     # Предупреждаем о возможном дубле
                     warnings.append(
                         f"Возможный дубль АЗС: найдена похожая запись '{best_match.original_name}' "
-                        f"(схожесть: {score}%). Проверьте вручную."
+                        f"(схожесть: {score_rounded:.2f}%). Проверьте вручную."
                     )
 
         if not gas_station:
@@ -244,7 +246,7 @@ class GasStationService:
             self.db.add(gas_station)
             self.db.flush()
         else:
-            # Обновляем данные, если они были пустыми
+            # Обновляем данные, если они были пустыми или если новые данные более полные
             updated = False
             if not gas_station.azs_number and azs_number:
                 gas_station.azs_number = azs_number
@@ -252,12 +254,24 @@ class GasStationService:
             if not gas_station.location and location:
                 gas_station.location = location
                 updated = True
-            if not gas_station.region and region:
-                gas_station.region = region
-                updated = True
-            if not gas_station.settlement and settlement:
-                gas_station.settlement = settlement
-                updated = True
+            # Обновляем region, если он был пустым или новый более полный
+            if region:
+                if not gas_station.region:
+                    gas_station.region = region
+                    updated = True
+                elif len(region) > len(gas_station.region or ""):
+                    # Если новый region более полный (длиннее), обновляем
+                    gas_station.region = region
+                    updated = True
+            # Обновляем settlement, если он был пустым или новый более полный
+            if settlement:
+                if not gas_station.settlement:
+                    gas_station.settlement = settlement
+                    updated = True
+                elif len(settlement) > len(gas_station.settlement or ""):
+                    # Если новый settlement более полный (длиннее), обновляем
+                    gas_station.settlement = settlement
+                    updated = True
             if gas_station.latitude is None and latitude is not None:
                 gas_station.latitude = latitude
                 updated = True
@@ -271,6 +285,13 @@ class GasStationService:
 
             if updated:
                 self.db.flush()
+                logger.info("Обновлены данные АЗС", extra={
+                    "gas_station_id": gas_station.id,
+                    "original_name": gas_station.original_name,
+                    "region": gas_station.region,
+                    "settlement": gas_station.settlement,
+                    "location": gas_station.location
+                })
 
         # Валидация данных
         validation_result = validate_gas_station_data(

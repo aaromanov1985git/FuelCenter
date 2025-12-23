@@ -6,6 +6,7 @@ import GasStationsList from './components/GasStationsList'
 import FuelTypesList from './components/FuelTypesList'
 import FuelCardsList from './components/FuelCardsList'
 import FuelCardAnalysisList from './components/FuelCardAnalysisList'
+import ProviderAnalysisDashboard from './components/ProviderAnalysisDashboard'
 import RefuelsUpload from './components/RefuelsUpload'
 import LocationsUpload from './components/LocationsUpload'
 import ProvidersList from './components/ProvidersList'
@@ -286,14 +287,9 @@ const App = () => {
       
       // Обрабатываем фильтр по провайдеру
       // Приоритет у фильтра из расширенного поиска, если он установлен
-      if (debouncedProvider) {
-        // Ищем провайдера по названию (без учета регистра)
-        const foundProvider = providers.find(p => 
-          p.name && p.name.toLowerCase().includes(debouncedProvider.toLowerCase())
-        )
-        if (foundProvider) {
-          params.append('provider_id', foundProvider.id.toString())
-        }
+      if (debouncedProvider && debouncedProvider !== '') {
+        // debouncedProvider теперь содержит ID провайдера (строка)
+        params.append('provider_id', debouncedProvider)
       } else if (selectedProviderTab !== null) {
         // Если фильтр из расширенного поиска не установлен, используем выбранную вкладку
         params.append('provider_id', selectedProviderTab.toString())
@@ -455,19 +451,33 @@ const App = () => {
       
       // Обрабатываем фильтр по провайдеру
       // Приоритет у фильтра из расширенного поиска, если он установлен
-      if (debouncedProvider) {
-        // Ищем провайдера по названию (без учета регистра)
-        const foundProvider = providers.find(p => 
-          p.name && p.name.toLowerCase().includes(debouncedProvider.toLowerCase())
-        )
-        if (foundProvider) {
-          params.append('provider_id', foundProvider.id.toString())
-        }
+      // Проверяем, что значение не пустое (может быть '', null, undefined)
+      const providerIdStr = debouncedProvider && String(debouncedProvider).trim() !== '' 
+        ? String(debouncedProvider).trim() 
+        : null
+      
+      if (providerIdStr) {
+        // providerIdStr содержит ID провайдера (строка)
+        logger.debug('Применение фильтра по провайдеру из расширенного поиска', {
+          provider_id: providerIdStr,
+          provider_name: providers.find(p => String(p.id) === providerIdStr)?.name,
+          debouncedProvider: debouncedProvider,
+          debouncedProviderType: typeof debouncedProvider
+        })
+        params.append('provider_id', providerIdStr)
       } else if (selectedProviderTab !== null) {
         // Если фильтр из расширенного поиска не установлен, используем выбранную вкладку
+        logger.debug('Применение фильтра по провайдеру из вкладки', {
+          provider_id: selectedProviderTab
+        })
         params.append('provider_id', selectedProviderTab.toString())
       }
-      
+
+      logger.debug('Параметры запроса транзакций', {
+        url: `${API_URL}/api/v1/transactions?${params}`,
+        params: Object.fromEntries(params)
+      })
+
       const response = await authFetch(`${API_URL}/api/v1/transactions?${params}`)
       
       if (!response.ok) {
@@ -1399,7 +1409,7 @@ const App = () => {
       loadStats()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, debouncedCardNumber, debouncedAzsNumber, debouncedProduct, sortConfig.field, sortConfig.order, selectedProviderTab, authEnabled, isAuthenticated, checkingAuth])
+  }, [page, pageSize, debouncedCardNumber, debouncedAzsNumber, debouncedProduct, debouncedProvider, sortConfig.field, sortConfig.order, selectedProviderTab, authEnabled, isAuthenticated, checkingAuth])
 
 
   // Маппинг заголовков на поля API для сортировки
@@ -1591,6 +1601,12 @@ const App = () => {
               Провайдеры
             </button>
             <button 
+              className={`nav-item ${activeTab === 'provider-analysis' ? 'active' : ''}`}
+              onClick={() => setActiveTab('provider-analysis')}
+            >
+              Анализ Провайдера
+            </button>
+            <button 
               className={`nav-item ${activeTab === 'templates' ? 'active' : ''}`}
               onClick={() => setActiveTab('templates')}
             >
@@ -1700,6 +1716,7 @@ const App = () => {
                 ...(activeTab === 'gas-stations' ? [{ label: 'АЗС' }] : []),
                 ...(activeTab === 'fuel-types' ? [{ label: 'Виды топлива' }] : []),
                 ...(activeTab === 'providers' ? [{ label: 'Провайдеры' }] : []),
+                ...(activeTab === 'provider-analysis' ? [{ label: 'Анализ Провайдера' }] : []),
                 ...(activeTab === 'templates' ? [{ label: 'Шаблоны' }] : []),
                 ...(activeTab === 'organizations' ? [{ label: 'Организации' }] : []),
                 ...(activeTab === 'users' ? [{ label: 'Пользователи' }] : []),
@@ -1746,6 +1763,7 @@ const App = () => {
         {activeTab === 'gas-stations' && <GasStationsList />}
         {activeTab === 'fuel-types' && <FuelTypesList />}
         {activeTab === 'providers' && <ProvidersList />}
+        {activeTab === 'provider-analysis' && <ProviderAnalysisDashboard />}
         {activeTab === 'templates' && <TemplatesList />}
         {activeTab === 'organizations' && <OrganizationsList />}
         {activeTab === 'users' && <UsersList />}
@@ -1925,8 +1943,11 @@ const App = () => {
               {
                 key: 'provider',
                 label: 'Провайдер',
-                placeholder: 'Введите название провайдера',
-                type: 'text'
+                placeholder: 'Выберите провайдера',
+                type: 'select',
+                options: providers
+                  .filter(p => p.is_active)
+                  .map(p => ({ value: p.id.toString(), label: p.name }))
               }
             ]}
           />
@@ -2112,7 +2133,7 @@ const App = () => {
               )}
               <div className="table-footer">
                 Показаны основные колонки. Полные данные — в скачиваемом файле.
-                {total > pageSize && (
+                {total > 0 && (
                   <Pagination
                     currentPage={page + 1} // Компонент использует страницы начиная с 1
                     totalPages={Math.ceil(total / pageSize)}

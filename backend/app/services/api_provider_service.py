@@ -3484,6 +3484,25 @@ class ApiProviderService:
             ", ".join(dict.fromkeys(address_candidates))
         )
         
+        # Парсим адрес из поля Address для РН-Карт, если Region и Settlement не указаны
+        parsed_region = api_transaction.get("region") or api_transaction.get("Region")
+        parsed_settlement = api_transaction.get("posTown") or api_transaction.get("settlement") or api_transaction.get("Settlement")
+        parsed_location = resolved_address
+        
+        # Если адрес есть, но регион и населенный пункт не указаны, парсим из адреса
+        rncard_address = api_transaction.get("Address")
+        if rncard_address and isinstance(rncard_address, str) and rncard_address.strip():
+            if not parsed_region or not parsed_settlement:
+                parsed_data = self._parse_rncard_address(rncard_address)
+                if parsed_data:
+                    # Используем распарсенные данные только если они не были указаны отдельно
+                    if not parsed_region and parsed_data.get("region"):
+                        parsed_region = parsed_data["region"]
+                    if not parsed_settlement and parsed_data.get("settlement"):
+                        parsed_settlement = parsed_data["settlement"]
+                    if parsed_data.get("location"):
+                        parsed_location = parsed_data["location"]
+        
         # Получаем оригинальное название АЗС (поддерживаем разные форматы)
         azs_original_name = str(
             api_transaction.get("azs_name") or  # XML API (уже преобразованное)
@@ -3500,24 +3519,65 @@ class ApiProviderService:
             api_transaction.get("azs_number") or  # XML API (уже преобразованное)
             api_transaction.get("COD_AZS") or  # XML API (оригинальное поле)
             api_transaction.get("AZS") or  # РН-Карт
+            api_transaction.get("PosCode") or  # РН-Карт (код точки продажи)
             api_transaction.get("azsNumber") or
             ""
         )
         
         # Если номер АЗС не найден напрямую, извлекаем из названия
-        if not azs_number and azs_original_name:
-            from app.services.normalization_service import extract_azs_number
-            azs_number = extract_azs_number(azs_original_name) or ""
+        if not azs_number or azs_number.strip() == "":
+            if azs_original_name:
+                from app.services.normalization_service import extract_azs_number
+                azs_number = extract_azs_number(azs_original_name) or ""
+            
+            # Логируем, если azs_number все еще пустой
+            if not azs_number or azs_number.strip() == "":
+                logger.warning("Поле azs_number пустое в транзакции", extra={
+                    "api_transaction_keys": list(api_transaction.keys()),
+                    "card_number": card_number,
+                    "transaction_date": transaction_date,
+                    "azs_original_name": azs_original_name,
+                    "available_azs_fields": {
+                        "azs_number": api_transaction.get("azs_number"),
+                        "COD_AZS": api_transaction.get("COD_AZS"),
+                        "AZS": api_transaction.get("AZS"),
+                        "PosCode": api_transaction.get("PosCode"),
+                        "azsNumber": api_transaction.get("azsNumber")
+                    }
+                })
         
         # Название товара/топлива (поддерживаем разные форматы)
         product = (
             api_transaction.get("product") or  # Стандартный формат или уже преобразованное
             api_transaction.get("Product") or  # РН-Карт
+            api_transaction.get("GName") or  # РН-Карт (название товара из GName)
             api_transaction.get("ResourceName") or  # XML API (оригинальное поле)
             api_transaction.get("serviceName") or
             api_transaction.get("service") or
             ""
         )
+        
+        # Нормализуем product, если он пустой или содержит только пробелы
+        if product:
+            product = str(product).strip()
+        else:
+            product = ""
+        
+        # Логируем, если product пустой (для отладки)
+        if not product:
+            logger.warning("Поле product пустое в транзакции", extra={
+                "api_transaction_keys": list(api_transaction.keys()),
+                "card_number": card_number,
+                "transaction_date": transaction_date,
+                "available_product_fields": {
+                    "product": api_transaction.get("product"),
+                    "Product": api_transaction.get("Product"),
+                    "GName": api_transaction.get("GName"),
+                    "ResourceName": api_transaction.get("ResourceName"),
+                    "serviceName": api_transaction.get("serviceName"),
+                    "service": api_transaction.get("service")
+                }
+            })
         
         # Парсим координаты из поля PosCoord (формат: "широта,долгота")
         latitude = None
@@ -3553,9 +3613,9 @@ class ApiProviderService:
             "azs_number": azs_number,
             "azs_original_name": azs_original_name,  # Сохраняем оригинальное название АЗС
             "supplier": api_transaction.get("supplier"),
-            "region": api_transaction.get("region") or api_transaction.get("Region"),  # РН-Карт
-            "settlement": api_transaction.get("posTown") or api_transaction.get("settlement") or api_transaction.get("Settlement"),  # РН-Карт
-            "location": resolved_address or api_transaction.get("Address"),  # РН-Карт
+            "region": parsed_region,  # Используем распарсенный регион
+            "settlement": parsed_settlement,  # Используем распарсенный населенный пункт
+            "location": parsed_location,  # Используем распарсенный адрес
             "location_code": api_transaction.get("posCode") or api_transaction.get("locationCode") or api_transaction.get("PosCode"),  # РН-Карт
             "product": product,
             "operation_type": operation_type,
@@ -3571,6 +3631,105 @@ class ApiProviderService:
         }
         
         return system_transaction
+    
+    def _parse_rncard_address(self, address_str: str) -> Optional[Dict[str, str]]:
+        """
+        Парсинг адреса из формата РН-Карт для извлечения региона, населенного пункта и адреса
+        
+        Формат: "Россия, Республика Саха (Якутия), Ленский улус, г. Ленск, ул. Победы, 97"
+        
+        Args:
+            address_str: Строка адреса
+            
+        Returns:
+            Словарь с полями region, settlement, location или None
+        """
+        if not address_str or not isinstance(address_str, str):
+            return None
+        
+        address_str = address_str.strip()
+        if not address_str:
+            return None
+        
+        # Разбиваем адрес по запятым
+        parts = [part.strip() for part in address_str.split(",")]
+        
+        if len(parts) < 3:
+            # Если частей меньше 3, возвращаем весь адрес как location
+            return {
+                "region": None,
+                "settlement": None,
+                "location": address_str
+            }
+        
+        result = {
+            "region": None,
+            "settlement": None,
+            "location": None
+        }
+        
+        # Обычный формат: страна, регион, район/улус, населенный пункт, улица, дом
+        # Пропускаем "Россия" (первая часть)
+        # Регион обычно вторая часть (может содержать скобки)
+        # Район/улус - третья часть (может отсутствовать)
+        # Населенный пункт - обычно содержит "г.", "п.", "с.", "д." и т.д.
+        # Улица и дом - последние части
+        
+        region_candidates = []
+        settlement_candidates = []
+        location_parts = []
+        
+        # Пропускаем первую часть (обычно "Россия")
+        start_idx = 1 if len(parts) > 1 and parts[0].lower() in ["россия", "russia"] else 0
+        
+        # Ищем регион (обычно вторая или третья часть, может содержать скобки)
+        for i in range(start_idx, min(start_idx + 3, len(parts))):
+            part = parts[i]
+            # Регион часто содержит слова: "область", "край", "республика", "автономный"
+            if any(keyword in part.lower() for keyword in ["область", "край", "республика", "автономный", "округ"]):
+                region_candidates.append(part)
+                start_idx = i + 1
+                break
+        
+        # Ищем населенный пункт (обычно содержит префиксы: "г.", "п.", "с.", "д.", "пос.")
+        for i in range(start_idx, len(parts)):
+            part = parts[i]
+            # Населенный пункт часто начинается с префикса
+            if any(part.lower().startswith(prefix) for prefix in ["г.", "п.", "с.", "д.", "пос.", "пгт.", "ст.", "х."]):
+                settlement_candidates.append(part)
+                start_idx = i + 1
+                break
+            # Или может быть просто название города без префикса (если это не улица)
+            elif i < len(parts) - 2 and not any(keyword in part.lower() for keyword in ["ул.", "улица", "проспект", "пр.", "переулок", "пер."]):
+                settlement_candidates.append(part)
+                start_idx = i + 1
+                break
+        
+        # Остальные части - это адрес (улица, дом)
+        if start_idx < len(parts):
+            location_parts = parts[start_idx:]
+        
+        # Формируем результат
+        if region_candidates:
+            result["region"] = region_candidates[0]
+        
+        if settlement_candidates:
+            result["settlement"] = settlement_candidates[0]
+        
+        if location_parts:
+            result["location"] = ", ".join(location_parts)
+        elif not result["region"] and not result["settlement"]:
+            # Если ничего не распарсили, возвращаем весь адрес как location
+            result["location"] = address_str
+        
+        logger.debug("Парсинг адреса РН-Карт", extra={
+            "original_address": address_str,
+            "parsed_region": result["region"],
+            "parsed_settlement": result["settlement"],
+            "parsed_location": result["location"]
+        })
+        
+        return result
     
     def _parse_datetime(self, value: Any) -> Optional[datetime]:
         """Парсинг даты и времени из различных форматов"""

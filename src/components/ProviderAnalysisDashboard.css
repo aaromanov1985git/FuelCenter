@@ -1,0 +1,373 @@
+.provider-analysis-dashboard {
+  padding: var(--spacing-section);
+}
+
+.provider-analysis-dashboard h1 {
+  margin-bottom: var(--spacing-element);
+  color: var(--color-text-primary);
+}
+
+.provider-analysis-dashboard .subtitle {
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-section);
+}
+
+/* Фильтры */
+.filters-card {
+  margin-bottom: var(--spacing-section);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-element);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-group label {
+  font-weight: 600;
+  margin-bottom: var(--spacing-element);
+  color: var(--color-text-primary);
+}
+
+.multiselect-container {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-element);
+  background: var(--color-bg-secondary);
+}
+
+.multiselect-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.multiselect-list label {
+  font-weight: normal;
+  margin-bottom: 0;
+  cursor: pointer;
+}
+
+.quick-periods {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-element);
+}
+
+.date-range {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-direction: column;
+}
+
+/* KPI карточки */
+.kpi-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-element);
+  margin-bottom: var(--spacing-section);
+}
+
+.kpi-cards .card {
+  text-align: center;
+}
+
+.kpi-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.kpi-label {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Layout карты и таблицы */
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-section);
+  margin-bottom: var(--spacing-section);
+}
+
+@media (max-width: 1024px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.map-card,
+.transactions-card {
+  min-height: 500px;
+}
+
+.map-container-wrapper {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-top: var(--spacing-element);
+}
+
+.map-container {
+  border-radius: var(--radius-md);
+}
+
+.custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.marker-popup {
+  min-width: 200px;
+}
+
+.marker-popup h4 {
+  margin: 0 0 var(--spacing-xs) 0;
+  color: var(--color-text-primary);
+}
+
+.marker-popup p {
+  margin: var(--spacing-xs) 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.fuel-types-distribution {
+  margin-top: var(--spacing-xs);
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid var(--color-border);
+}
+
+.fuel-type-item {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+.no-coords-list {
+  margin-top: var(--spacing-element);
+  padding: var(--spacing-element);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.no-coords-list h4 {
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.no-coords-list ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.no-coords-list li {
+  margin: 4px 0;
+}
+
+/* Таблица */
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-element);
+}
+
+.table-header h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.table-header th {
+  cursor: pointer;
+  user-select: none;
+}
+
+.table-header th:hover {
+  background: var(--color-bg-hover);
+}
+
+/* Аналитические блоки */
+.analytics-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: var(--spacing-section);
+}
+
+.analytics-section .card h3 {
+  margin: 0 0 var(--spacing-element) 0;
+  color: var(--color-text-primary);
+}
+
+.favorite-azs,
+.main-fuel-type {
+  padding: var(--spacing-element);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-element);
+  color: var(--color-text-primary);
+}
+
+/* Барчарт АЗС */
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-element);
+}
+
+.bar-item {
+  display: grid;
+  grid-template-columns: 200px 1fr 120px;
+  gap: var(--spacing-element);
+  align-items: center;
+}
+
+.bar-label {
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-wrapper {
+  position: relative;
+  height: 30px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  background: linear-gradient(to right, var(--color-primary), var(--color-info));
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: var(--spacing-xs);
+  transition: width 0.3s ease;
+}
+
+.bar-value {
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.bar-count {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  text-align: right;
+}
+
+/* График распределения по топливу */
+.fuel-type-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-element);
+}
+
+.fuel-type-item {
+  display: grid;
+  grid-template-columns: 150px 1fr 200px;
+  gap: var(--spacing-element);
+  align-items: center;
+}
+
+.fuel-type-label {
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.fuel-type-bar-wrapper {
+  position: relative;
+  height: 25px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.fuel-type-bar {
+  height: 100%;
+  background: linear-gradient(to right, var(--color-success), var(--color-warning));
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: var(--spacing-xs);
+  transition: width 0.3s ease;
+}
+
+.fuel-type-value {
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.fuel-type-details {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  text-align: right;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .kpi-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .analytics-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .bar-item,
+  .fuel-type-item {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-xs);
+  }
+  
+  .bar-label,
+  .fuel-type-label {
+    margin-bottom: 4px;
+  }
+  
+  .bar-count,
+  .fuel-type-details {
+    text-align: left;
+    margin-top: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .quick-periods {
+    flex-direction: column;
+  }
+  
+  .quick-periods button {
+    width: 100%;
+  }
+}

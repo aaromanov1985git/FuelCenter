@@ -31,6 +31,8 @@ const AdvancedSearch = ({
   }, [filters])
 
   const handleFilterChange = (key, value) => {
+    // Логируем изменение фильтра для отладки
+    console.log('AdvancedSearch: изменение фильтра', { key, value, type: typeof value })
     onFiltersChange({
       ...filters,
       [key]: value

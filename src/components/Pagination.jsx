@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button, Input, Select } from './ui'
 import './Pagination.css'
 
@@ -48,14 +48,25 @@ const Pagination = ({
     }
   }
 
+  const [pageInputValue, setPageInputValue] = useState(currentPage.toString())
+
+  // Синхронизируем значение инпута с currentPage
+  React.useEffect(() => {
+    setPageInputValue(currentPage.toString())
+  }, [currentPage])
+
   const handlePageInput = (e) => {
     const value = parseInt(e.target.value)
     if (!isNaN(value) && value >= 1 && value <= totalPages && !loading) {
       onPageChange(value)
-    } else if (e.target.value === '') {
-      // Позволяем очистить поле
-      e.target.value = ''
+    } else {
+      // Если значение невалидное, возвращаем к текущей странице
+      setPageInputValue(currentPage.toString())
     }
+  }
+  
+  const handlePageInputChange = (e) => {
+    setPageInputValue(e.target.value)
   }
 
   const handlePageInputKeyPress = (e) => {
@@ -198,7 +209,8 @@ const Pagination = ({
             type="number"
             min="1"
             max={totalPages}
-            defaultValue={currentPage.toString()}
+            value={pageInputValue}
+            onChange={handlePageInputChange}
             onBlur={handlePageInput}
             onKeyPress={handlePageInputKeyPress}
             disabled={loading}

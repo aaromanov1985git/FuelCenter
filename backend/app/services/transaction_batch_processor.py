@@ -480,11 +480,18 @@ class TransactionBatchProcessor:
         gas_station_names = set()
         for trans_data in transactions:
             azs_original_name = trans_data.get("azs_original_name")
-            if azs_original_name and azs_original_name.strip():
-                gas_station_names.add(azs_original_name.strip())
-            # Также добавляем номер АЗС как fallback, если оригинальное название отсутствует
-            elif trans_data.get("azs_number"):
-                gas_station_names.add(trans_data.get("azs_number").strip())
+            azs_number = trans_data.get("azs_number")
+            
+            # Приоритет у оригинального названия
+            if azs_original_name and str(azs_original_name).strip():
+                gas_station_names.add(str(azs_original_name).strip())
+            # Если оригинальное название отсутствует, используем номер АЗС
+            elif azs_number and str(azs_number).strip():
+                gas_station_names.add(str(azs_number).strip())
+            # Если и номер отсутствует, но есть location или settlement, создаем АЗС по адресу
+            elif trans_data.get("location") or trans_data.get("settlement"):
+                location_name = trans_data.get("location") or trans_data.get("settlement") or "Неизвестная АЗС"
+                gas_station_names.add(location_name.strip())
         
         if not gas_station_names:
             return gas_stations_map
@@ -508,19 +515,46 @@ class TransactionBatchProcessor:
                 if (azs_original == gas_station_name or 
                     (not azs_original and azs_num and str(azs_num).strip() == gas_station_name)):
                     azs_number = azs_num
-                    location = trans_data.get("location")
-                    region = trans_data.get("region")
-                    settlement = trans_data.get("settlement")
-                    latitude = trans_data.get("azs_latitude")
-                    longitude = trans_data.get("azs_longitude")
-                    provider_id = trans_data.get("provider_id")
+                    # Берем данные из транзакции, если они есть
+                    if trans_data.get("location"):
+                        location = trans_data.get("location")
+                    if trans_data.get("region"):
+                        region = trans_data.get("region")
+                    if trans_data.get("settlement"):
+                        settlement = trans_data.get("settlement")
+                    if trans_data.get("azs_latitude"):
+                        latitude = trans_data.get("azs_latitude")
+                    if trans_data.get("azs_longitude"):
+                        longitude = trans_data.get("azs_longitude")
+                    if trans_data.get("provider_id"):
+                        provider_id = trans_data.get("provider_id")
                     break
             
             # Если не нашли данные, извлекаем номер из названия
             if not azs_number and gas_station_name:
                 azs_number = app_services.extract_azs_number(gas_station_name)
             
-            # Если provider_id не найден в первой транзакции, ищем в других транзакциях с этой АЗС
+            # Если region, settlement или location не найдены в первой транзакции, ищем в других транзакциях с этой АЗС
+            if not region or not settlement or not location:
+                for trans_data in transactions:
+                    azs_original = trans_data.get("azs_original_name", "").strip()
+                    azs_num = trans_data.get("azs_number")
+                    if (azs_original == gas_station_name or 
+                        (not azs_original and azs_num and str(azs_num).strip() == gas_station_name)):
+                        # Используем данные из транзакции, если они более полные
+                        if not region and trans_data.get("region"):
+                            region = trans_data.get("region")
+                        if not settlement and trans_data.get("settlement"):
+                            settlement = trans_data.get("settlement")
+                        if not location and trans_data.get("location"):
+                            location = trans_data.get("location")
+                        if not provider_id and trans_data.get("provider_id"):
+                            provider_id = trans_data.get("provider_id")
+                        # Если все данные найдены, можно прервать поиск
+                        if region and settlement and location and provider_id:
+                            break
+            
+            # Если provider_id все еще не найден, ищем в других транзакциях с этой АЗС
             if not provider_id:
                 for trans_data in transactions:
                     azs_original = trans_data.get("azs_original_name", "").strip()
@@ -532,6 +566,18 @@ class TransactionBatchProcessor:
                         break
             
             try:
+                # Логируем данные перед созданием/обновлением АЗС
+                logger.debug("Создание/обновление АЗС", extra={
+                    "gas_station_name": gas_station_name,
+                    "azs_number": azs_number,
+                    "region": region,
+                    "settlement": settlement,
+                    "location": location,
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "provider_id": provider_id
+                })
+                
                 gas_station, gas_station_warnings = gas_station_service.get_or_create_gas_station(
                     original_name=gas_station_name,
                     azs_number=azs_number,
@@ -542,6 +588,16 @@ class TransactionBatchProcessor:
                     longitude=longitude,
                     provider_id=provider_id
                 )
+                
+                # Логируем результат
+                logger.info("АЗС создана/обновлена", extra={
+                    "gas_station_id": gas_station.id,
+                    "gas_station_name": gas_station.original_name,
+                    "region": gas_station.region,
+                    "settlement": gas_station.settlement,
+                    "location": gas_station.location,
+                    "azs_number": gas_station.azs_number
+                })
                 gas_stations_map[gas_station_name] = gas_station.id
                 # Также добавляем номер АЗС как ключ для обратной совместимости
                 if azs_number:

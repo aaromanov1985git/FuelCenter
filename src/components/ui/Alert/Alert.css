@@ -33,6 +33,7 @@
 .ui-alert-message {
   color: inherit;
   opacity: 0.9;
+  white-space: pre-line;
 }
 
 .ui-alert-close {

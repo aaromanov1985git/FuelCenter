@@ -427,7 +427,7 @@ const TemplatesList = () => {
 
         <Card.Body>
           {error && (
-            <Alert variant="error" title="Ошибка">
+            <Alert variant="error" title="Операция завершена с предупреждениями">
               {error}
             </Alert>
           )}
@@ -564,16 +564,46 @@ const TemplatesList = () => {
             setFirebirdDateTo('')
             
             // Показываем результат
-            let message = `Успешно загружено ${result.transactions_created} транзакций из Firebird`
-            if (result.transactions_skipped > 0) {
-              message += `. Пропущено дубликатов: ${result.transactions_skipped}`
-            }
-            
             if (result.validation_warnings && result.validation_warnings.length > 0) {
-              const warningsText = result.validation_warnings.join('\n')
-              message += `\n\n⚠️ Предупреждения валидации:\n${warningsText}`
-              setError(message)
+              // Формируем структурированное сообщение с предупреждениями
+              const mainMessage = `Успешно загружено: ${result.transactions_created} транзакций${result.transactions_skipped > 0 ? ` (пропущено дубликатов: ${result.transactions_skipped})` : ''}`
+              
+              // Парсим предупреждения для лучшего форматирования
+              const duplicateWarnings = result.validation_warnings.filter(w => w.includes('дубль') || w.includes('похожая запись'))
+              const otherWarnings = result.validation_warnings.filter(w => !w.includes('дубль') && !w.includes('похожая запись'))
+              
+              let formattedMessage = `${mainMessage}.\n\n`
+              
+              if (duplicateWarnings.length > 0) {
+                formattedMessage += `Предупреждения валидации (возможные дубли АЗС):\n`
+                duplicateWarnings.forEach((warning) => {
+                  // Извлекаем название АЗС и схожесть из предупреждения
+                  // Формат: "Возможный дубль АЗС: найдена похожая запись 'AZS103910' (схожесть: 88.89%). Проверьте вручную."
+                  const match = warning.match(/найдена похожая запись '([^']+)'.*?схожесть:\s*([\d.]+)%/)
+                  if (match) {
+                    const [, azsName, similarity] = match
+                    const similarityNum = parseFloat(similarity)
+                    formattedMessage += `  • Найдена похожая запись '${azsName}' (схожесть: ${similarityNum.toFixed(2)}%). Проверьте вручную.\n`
+                  } else {
+                    // Если не удалось распарсить, показываем как есть
+                    formattedMessage += `  • ${warning}\n`
+                  }
+                })
+              }
+              
+              if (otherWarnings.length > 0) {
+                formattedMessage += `\nДругие предупреждения:\n`
+                otherWarnings.forEach(warning => {
+                  formattedMessage += `  • ${warning}\n`
+                })
+              }
+              
+              setError(formattedMessage.trim())
             } else {
+              let message = `Успешно загружено ${result.transactions_created} транзакций из Firebird`
+              if (result.transactions_skipped > 0) {
+                message += `. Пропущено дубликатов: ${result.transactions_skipped}`
+              }
               // Показываем красивое модальное окно вместо alert()
               setSuccessModal({ isOpen: true, message })
               setError('')
@@ -661,16 +691,46 @@ const TemplatesList = () => {
             setApiCardNumbers('')
             
             // Показываем результат
-            let message = `Успешно загружено ${result.transactions_created} транзакций через API`
-            if (result.transactions_skipped > 0) {
-              message += `. Пропущено дубликатов: ${result.transactions_skipped}`
-            }
-            
             if (result.validation_warnings && result.validation_warnings.length > 0) {
-              const warningsText = result.validation_warnings.join('\n')
-              message += `\n\n⚠️ Предупреждения валидации:\n${warningsText}`
-              setError(message)
+              // Формируем структурированное сообщение с предупреждениями
+              const mainMessage = `Успешно загружено: ${result.transactions_created} транзакций через API${result.transactions_skipped > 0 ? ` (пропущено дубликатов: ${result.transactions_skipped})` : ''}`
+              
+              // Парсим предупреждения для лучшего форматирования
+              const duplicateWarnings = result.validation_warnings.filter(w => w.includes('дубль') || w.includes('похожая запись'))
+              const otherWarnings = result.validation_warnings.filter(w => !w.includes('дубль') && !w.includes('похожая запись'))
+              
+              let formattedMessage = `${mainMessage}.\n\n`
+              
+              if (duplicateWarnings.length > 0) {
+                formattedMessage += `Предупреждения валидации (возможные дубли АЗС):\n`
+                duplicateWarnings.forEach((warning) => {
+                  // Извлекаем название АЗС и схожесть из предупреждения
+                  // Формат: "Возможный дубль АЗС: найдена похожая запись 'AZS103910' (схожесть: 88.89%). Проверьте вручную."
+                  const match = warning.match(/найдена похожая запись '([^']+)'.*?схожесть:\s*([\d.]+)%/)
+                  if (match) {
+                    const [, azsName, similarity] = match
+                    const similarityNum = parseFloat(similarity)
+                    formattedMessage += `  • Найдена похожая запись '${azsName}' (схожесть: ${similarityNum.toFixed(2)}%). Проверьте вручную.\n`
+                  } else {
+                    // Если не удалось распарсить, показываем как есть
+                    formattedMessage += `  • ${warning}\n`
+                  }
+                })
+              }
+              
+              if (otherWarnings.length > 0) {
+                formattedMessage += `\nДругие предупреждения:\n`
+                otherWarnings.forEach(warning => {
+                  formattedMessage += `  • ${warning}\n`
+                })
+              }
+              
+              setError(formattedMessage.trim())
             } else {
+              let message = `Успешно загружено ${result.transactions_created} транзакций через API`
+              if (result.transactions_skipped > 0) {
+                message += `. Пропущено дубликатов: ${result.transactions_skipped}`
+              }
               // Показываем красивое модальное окно вместо alert()
               setSuccessModal({ isOpen: true, message })
               setError('')
