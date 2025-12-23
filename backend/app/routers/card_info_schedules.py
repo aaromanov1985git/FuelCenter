@@ -142,10 +142,10 @@ async def create_card_info_schedule(
     if not template:
         raise HTTPException(status_code=404, detail="Шаблон провайдера не найден")
     
-    if template.connection_type != "web":
+    if template.connection_type not in ["web", "api"]:
         raise HTTPException(
             status_code=400,
-            detail=f"Шаблон должен иметь тип подключения 'web', получен: {template.connection_type}"
+            detail=f"Шаблон должен иметь тип подключения 'web' или 'api', получен: {template.connection_type}"
         )
     
     # Преобразуем filter_options в JSON

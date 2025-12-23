@@ -225,8 +225,11 @@ const ProviderAnalysisDashboard = () => {
   const [cardsSummaryCurrentPage, setCardsSummaryCurrentPage] = useState(1)
   const [cardsSummaryLimit] = useState(10)
   
-  // Сортировка
+  // Сортировка для детализации транзакций
   const [sortConfig, setSortConfig] = useState({ field: 'transaction_date', order: 'desc' })
+  
+  // Сортировка для сводки по картам (по умолчанию по объему, по убыванию)
+  const [cardsSummarySortConfig, setCardsSummarySortConfig] = useState({ field: 'totalVolume', order: 'desc' })
   
   // Выбранный маркер на карте
   const [selectedMarker, setSelectedMarker] = useState(null)
@@ -845,6 +848,61 @@ const ProviderAnalysisDashboard = () => {
     }))
   }
   
+  // Обработчик сортировки для сводки по картам
+  const handleCardsSummarySort = (field) => {
+    setCardsSummarySortConfig(prev => ({
+      field,
+      order: prev.field === field && prev.order === 'asc' ? 'desc' : 'asc'
+    }))
+    // Сбрасываем на первую страницу при изменении сортировки
+    setCardsSummaryCurrentPage(1)
+  }
+  
+  // Компонент для сортируемого заголовка
+  const SortableHeader = ({ field, label, currentSort }) => {
+    const isActive = currentSort.field === field
+    const sortIcon = isActive 
+      ? (currentSort.order === 'asc' ? '↑' : '↓')
+      : '⇅'
+    
+    return (
+      <th 
+        style={{ 
+          padding: '12px', 
+          textAlign: 'left', 
+          borderBottom: '2px solid var(--color-border)',
+          cursor: 'pointer',
+          userSelect: 'none',
+          position: 'relative',
+          backgroundColor: isActive ? 'var(--color-bg-secondary)' : 'transparent',
+          transition: 'background-color 0.2s'
+        }}
+        onClick={() => handleCardsSummarySort(field)}
+        onMouseEnter={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)'
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.backgroundColor = 'transparent'
+          }
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>{label}</span>
+          <span style={{ 
+            fontSize: '14px', 
+            color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+            fontWeight: isActive ? 'bold' : 'normal'
+          }}>
+            {sortIcon}
+          </span>
+        </div>
+      </th>
+    )
+  }
+  
   // Группировка транзакций по картам
   const transactionsByCard = useMemo(() => {
     const transactionsForGrouping = allLoadedTransactions.length > 0 ? allLoadedTransactions : transactions
@@ -871,9 +929,38 @@ const ProviderAnalysisDashboard = () => {
       grouped[cardNumber].transactions.push(t)
     })
     
-    // Преобразуем в массив и сортируем по сумме (убывание)
-    return Object.values(grouped).sort((a, b) => b.totalAmount - a.totalAmount)
-  }, [allLoadedTransactions, transactions])
+    // Преобразуем в массив и сортируем согласно cardsSummarySortConfig
+    const sorted = Object.values(grouped).sort((a, b) => {
+      const { field, order } = cardsSummarySortConfig
+      let comparison = 0
+      
+      switch (field) {
+        case 'cardNumber':
+          comparison = a.cardNumber.localeCompare(b.cardNumber)
+          break
+        case 'count':
+          comparison = a.count - b.count
+          break
+        case 'totalVolume':
+          comparison = a.totalVolume - b.totalVolume
+          break
+        case 'totalAmount':
+          comparison = a.totalAmount - b.totalAmount
+          break
+        case 'averageCheck':
+          const avgA = a.count > 0 ? a.totalAmount / a.count : 0
+          const avgB = b.count > 0 ? b.totalAmount / b.count : 0
+          comparison = avgA - avgB
+          break
+        default:
+          comparison = a.totalVolume - b.totalVolume // По умолчанию по объему
+      }
+      
+      return order === 'asc' ? comparison : -comparison
+    })
+    
+    return sorted
+  }, [allLoadedTransactions, transactions, cardsSummarySortConfig])
   
   // Транзакции для детализации (только выбранная карта)
   const detailTransactions = useMemo(() => {
@@ -1278,11 +1365,31 @@ const ProviderAnalysisDashboard = () => {
                     <table className="ui-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
                         <tr>
-                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Карта</th>
-                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Количество операций</th>
-                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Общий объём (л)</th>
-                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Общая сумма (₽)</th>
-                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Средний чек (₽)</th>
+                          <SortableHeader 
+                            field="cardNumber" 
+                            label="Карта" 
+                            currentSort={cardsSummarySortConfig}
+                          />
+                          <SortableHeader 
+                            field="count" 
+                            label="Количество операций" 
+                            currentSort={cardsSummarySortConfig}
+                          />
+                          <SortableHeader 
+                            field="totalVolume" 
+                            label="Общий объём (л)" 
+                            currentSort={cardsSummarySortConfig}
+                          />
+                          <SortableHeader 
+                            field="totalAmount" 
+                            label="Общая сумма (₽)" 
+                            currentSort={cardsSummarySortConfig}
+                          />
+                          <SortableHeader 
+                            field="averageCheck" 
+                            label="Средний чек (₽)" 
+                            currentSort={cardsSummarySortConfig}
+                          />
                         </tr>
                       </thead>
                       <tbody>

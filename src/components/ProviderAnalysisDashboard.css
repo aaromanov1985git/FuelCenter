@@ -491,3 +491,35 @@
     width: 100%;
   }
 }
+
+/* Сортируемые заголовки таблицы */
+.sortable-header {
+  transition: background-color 0.2s ease;
+}
+
+.sortable-header:hover {
+  background-color: var(--color-bg-hover) !important;
+}
+
+.sortable-header-active {
+  background-color: var(--color-bg-secondary) !important;
+  font-weight: 600;
+}
+
+.sort-icon {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 12px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.sortable-header:hover .sort-icon {
+  opacity: 1;
+}
+
+.sortable-header-active .sort-icon {
+  opacity: 1;
+  color: var(--color-primary);
+  font-weight: bold;
+}

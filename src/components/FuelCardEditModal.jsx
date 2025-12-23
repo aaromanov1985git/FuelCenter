@@ -34,23 +34,23 @@ const FuelCardEditModal = ({
   const [originalOwnerName, setOriginalOwnerName] = useState('')
   const [normalizedOwner, setNormalizedOwner] = useState('')
   const [showCardInfo, setShowCardInfo] = useState(false)
-  const [webTemplates, setWebTemplates] = useState([])
+  const [apiTemplates, setApiTemplates] = useState([])
   const [selectedTemplateId, setSelectedTemplateId] = useState(null)
   const [loadingTemplates, setLoadingTemplates] = useState(false)
 
-  // Загрузка шаблонов провайдеров с типом "web"
+  // Загрузка шаблонов провайдеров с типом "web" или "api" (для получения информации по карте)
   useEffect(() => {
     if (isOpen && selectedProviderId) {
-      loadWebTemplates()
+      loadApiTemplates()
     } else {
-      setWebTemplates([])
+      setApiTemplates([])
       setSelectedTemplateId(null)
     }
   }, [isOpen, selectedProviderId])
 
-  const loadWebTemplates = async () => {
+  const loadApiTemplates = async () => {
     if (!selectedProviderId) {
-      setWebTemplates([])
+      setApiTemplates([])
       return
     }
 
@@ -59,14 +59,14 @@ const FuelCardEditModal = ({
       const response = await authFetch(`${API_URL}/api/v1/providers/${selectedProviderId}/templates`)
       if (response.ok) {
         const result = await response.json()
-        // Фильтруем только шаблоны с типом "web" и активные
-        const webTemplatesList = result.items.filter(
-          t => t.connection_type === 'web' && t.is_active
+        // Фильтруем шаблоны с типом "web" или "api" (поддерживают получение информации по карте) и активные
+        const apiTemplatesList = result.items.filter(
+          t => (t.connection_type === 'web' || t.connection_type === 'api') && t.is_active
         )
-        setWebTemplates(webTemplatesList)
+        setApiTemplates(apiTemplatesList)
         // Автоматически выбираем первый шаблон, если он один
-        if (webTemplatesList.length === 1) {
-          setSelectedTemplateId(webTemplatesList[0].id)
+        if (apiTemplatesList.length === 1) {
+          setSelectedTemplateId(apiTemplatesList[0].id)
         }
       }
     } catch (err) {
@@ -283,20 +283,20 @@ const FuelCardEditModal = ({
           {selectedProviderId && (
             <div className="form-row" style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)' }}>
               <div className="form-group">
-                <label>Шаблон Web API</label>
+                <label>Шаблон API</label>
                 {loadingTemplates ? (
                   <div style={{ padding: '0.5rem 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                     Загрузка...
                   </div>
-                ) : webTemplates.length > 0 ? (
+                ) : apiTemplates.length > 0 ? (
                   <Select
                     value={selectedTemplateId ? selectedTemplateId.toString() : ''}
                     onChange={(value) => setSelectedTemplateId(value ? parseInt(value) : null)}
                     options={[
                       { value: '', label: 'Не выбран' },
-                      ...webTemplates.map(template => ({
+                      ...apiTemplates.map(template => ({
                         value: template.id.toString(),
-                        label: template.name
+                        label: `${template.name} (${template.connection_type})`
                       }))
                     ]}
                     disabled={loading}
@@ -304,7 +304,7 @@ const FuelCardEditModal = ({
                   />
                 ) : (
                   <div style={{ padding: '0.5rem 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                    Нет шаблонов "web"
+                    Нет шаблонов "web" или "api"
                   </div>
                 )}
               </div>

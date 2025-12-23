@@ -361,9 +361,13 @@ async def get_card_info(
     current_user: Optional[User] = Depends(require_auth_if_enabled)
 ):
     """
-    Получение информации по карте через Web API (XML API getinfo)
+    Получение информации по карте через Web API или API провайдера
     
-    Требуется шаблон провайдера с типом подключения "web" и настройками XML API
+    Поддерживает:
+    - Web API (XML API getinfo) - для шаблонов с типом подключения "web"
+    - API провайдеры (например, РН-Карт) - для шаблонов с типом подключения "api"
+    
+    Требуется шаблон провайдера с типом подключения "web" или "api"
     """
     from app.services.api_provider_service import ApiProviderService
     
@@ -381,10 +385,12 @@ async def get_card_info(
     if not template:
         raise HTTPException(status_code=404, detail="Шаблон провайдера не найден")
     
-    if template.connection_type != "web":
+    # Проверяем, поддерживает ли адаптер метод get_card_info
+    # WebAdapter поддерживает для XML API, RnCardAdapter поддерживает через GetCardsByContract
+    if template.connection_type not in ["web", "api"]:
         raise HTTPException(
             status_code=400,
-            detail=f"Шаблон имеет тип подключения '{template.connection_type}', требуется 'web'"
+            detail=f"Шаблон имеет тип подключения '{template.connection_type}', требуется 'web' или 'api'"
         )
     
     try:

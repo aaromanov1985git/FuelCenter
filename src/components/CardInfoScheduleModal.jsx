@@ -108,16 +108,16 @@ const CardInfoScheduleModal = ({
       const response = await authFetch(`${API_URL}/api/v1/templates`)
       if (response.ok) {
         const result = await response.json()
-        // Фильтруем только шаблоны с типом "web" (без учета регистра) и активные
-        const webTemplates = result.items.filter(t => {
+        // Фильтруем шаблоны с типом "web" или "api" (поддерживают получение информации по карте) и активные
+        const apiTemplates = result.items.filter(t => {
           const connectionType = (t.connection_type || '').toLowerCase()
-          return connectionType === 'web' && t.is_active !== false
+          return (connectionType === 'web' || connectionType === 'api') && t.is_active !== false
         })
-        setLocalTemplates(webTemplates)
+        setLocalTemplates(apiTemplates)
         
         // Логируем для отладки
-        if (webTemplates.length === 0) {
-          logger.warn('Не найдено шаблонов с типом "web"', {
+        if (apiTemplates.length === 0) {
+          logger.warn('Не найдено шаблонов с типом "web" или "api"', {
             total_templates: result.items.length,
             templates: result.items.map(t => ({
               id: t.id,
@@ -262,7 +262,7 @@ const CardInfoScheduleModal = ({
             </div>
 
             <div className="form-group">
-              <label>Шаблон провайдера (Web API) *</label>
+              <label>Шаблон провайдера (API) *</label>
               {loadingTemplates ? (
                 <div style={{ padding: '0.5rem', color: 'var(--text-secondary)' }}>Загрузка шаблонов...</div>
               ) : templateOptions.length === 0 ? (
@@ -277,12 +277,12 @@ const CardInfoScheduleModal = ({
                   />
                   <Alert variant="warning" style={{ marginTop: '0.5rem' }}>
                     <div style={{ marginBottom: '0.5rem' }}>
-                      <strong>Нет доступных шаблонов провайдеров с типом подключения "web"</strong>
+                      <strong>Нет доступных шаблонов провайдеров с типом подключения "web" или "api"</strong>
                     </div>
                     <div style={{ fontSize: '0.875rem' }}>
-                      Для создания регламента необходимо сначала создать шаблон провайдера с типом подключения "web".
+                      Для создания регламента необходимо сначала создать шаблон провайдера с типом подключения "web" или "api".
                       <br />
-                      Перейдите в раздел <strong>Шаблоны провайдеров</strong> и создайте новый шаблон, выбрав тип подключения "web".
+                      Перейдите в раздел <strong>Шаблоны провайдеров</strong> и создайте новый шаблон, выбрав тип подключения "web" или "api".
                     </div>
                   </Alert>
                 </>
@@ -291,13 +291,16 @@ const CardInfoScheduleModal = ({
                   <Select
                     value={formData.provider_template_id}
                     onChange={(value) => setFormData({ ...formData, provider_template_id: value })}
-                    options={templateOptions}
+                    options={templateOptions.map(t => ({
+                      value: t.value,
+                      label: `${t.label}${availableTemplates.find(at => at.id === t.value)?.connection_type ? ` (${availableTemplates.find(at => at.id === t.value).connection_type})` : ''}`
+                    }))}
                     placeholder="Выберите шаблон провайдера"
                     fullWidth
                     disabled={loading}
                   />
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
-                    Выберите шаблон провайдера с типом подключения "web"
+                    Выберите шаблон провайдера с типом подключения "web" или "api"
                   </span>
                 </>
               )}

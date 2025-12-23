@@ -68,9 +68,9 @@ class CardInfoScheduleService:
                 "error_message": error_msg
             }
         
-        # Проверяем тип подключения
-        if template.connection_type != "web":
-            error_msg = f"Шаблон провайдера должен иметь тип подключения 'web', получен: {template.connection_type}"
+        # Проверяем тип подключения (должен быть "web" или "api")
+        if template.connection_type not in ["web", "api"]:
+            error_msg = f"Шаблон провайдера должен иметь тип подключения 'web' или 'api', получен: {template.connection_type}"
             logger.error(error_msg, extra={"schedule_id": schedule.id, "template_id": template.id})
             return {
                 "status": "error",
@@ -108,7 +108,7 @@ class CardInfoScheduleService:
             api_service = ApiProviderService(self.db)
             adapter = api_service.create_adapter(template)
         except Exception as e:
-            error_msg = f"Ошибка создания адаптера Web API: {str(e)}"
+            error_msg = f"Ошибка создания адаптера API: {str(e)}"
             logger.error(error_msg, extra={"schedule_id": schedule.id}, exc_info=True)
             return {
                 "status": "error",

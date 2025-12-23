@@ -2776,6 +2776,106 @@ class RnCardAdapter:
         # API возвращает объект с полем OperationList
         return payload.get("OperationList") or payload.get("operationList") or []
     
+    async def get_card_info(
+        self,
+        card_number: str,
+        flags: int = 23
+    ) -> Dict[str, Any]:
+        """
+        Получение информации по карте через API РН-Карт
+        
+        Использует метод GetCardsByContract для получения списка карт,
+        затем находит нужную карту по номеру.
+        
+        Args:
+            card_number: Номер карты
+            flags: Флаги реквизитов (не используется для РН-Карт, оставлен для совместимости)
+        
+        Returns:
+            Словарь с информацией по карте:
+            - person_name: ФИО владельца (из поля Rem, если есть)
+            - state: Статус карты (0 = работает, 1 = заблокирована)
+            - status_name: Название статуса (SName)
+            - status_code: Код статуса (SCode)
+            - card_number: Номер карты
+            - remark: Примечание (Rem)
+        """
+        try:
+            # Получаем список карт
+            cards = await self.list_cards()
+            
+            # Ищем карту по номеру
+            card_info = None
+            for card in cards:
+                card_num = str(card.get("Num", "")).strip()
+                if card_num == str(card_number).strip():
+                    card_info = card
+                    break
+            
+            if not card_info:
+                logger.warning(f"Карта не найдена в списке карт: {card_number}", extra={
+                    "card_number": card_number,
+                    "total_cards": len(cards)
+                })
+                return {}
+            
+            # Преобразуем данные в стандартный формат
+            status_code = card_info.get("SCode", "")
+            status_name = card_info.get("SName", "")
+            remark = card_info.get("Rem", "")
+            
+            # Определяем статус блокировки
+            # "00" = в работе, остальные коды = заблокирована
+            is_blocked = status_code != "00" if status_code else False
+            state = 0 if not is_blocked else 1
+            
+            # Извлекаем ФИО из примечания, если есть
+            # Формат может быть: "ФИО: ..." или просто текст
+            person_name = None
+            if remark:
+                # Пытаемся извлечь ФИО из примечания
+                # Может быть формат: "Иванов Иван Иванович: Toyota: 98/100"
+                parts = remark.split(":")
+                if len(parts) > 0:
+                    first_part = parts[0].strip()
+                    # Если первая часть похожа на ФИО (содержит пробелы и буквы), используем её
+                    if " " in first_part and len(first_part) > 5:
+                        person_name = first_part
+                    else:
+                        person_name = remark
+                else:
+                    person_name = remark
+            
+            result = {
+                "card_number": card_number,
+                "state": state,
+                "state_name": status_name,  # Для совместимости с фронтендом
+                "status_name": status_name,
+                "status_code": status_code,
+                "remark": remark,
+                "is_blocked": is_blocked
+            }
+            
+            if person_name:
+                result["person_name"] = person_name
+            
+            logger.info(f"Получена информация по карте: {card_number}", extra={
+                "card_number": card_number,
+                "status_code": status_code,
+                "status_name": status_name,
+                "has_person_name": bool(person_name),
+                "is_blocked": is_blocked
+            })
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Ошибка при получении информации по карте: {card_number}", extra={
+                "card_number": card_number,
+                "error": str(e)
+            }, exc_info=True)
+            raise
+    
     async def healthcheck(self) -> Dict[str, Any]:
         """
         Проверка доступности API
@@ -2785,8 +2885,12 @@ class RnCardAdapter:
         """
         try:
             # Пробуем получить список карт - это простой метод для проверки
-            await self._get_json("/api/emv/v1/GetCardsByContract")
-            return {"status": "ok", "checked_at": datetime.now(timezone.utc)}
+            cards = await self.list_cards()
+            return {
+                "status": "ok",
+                "checked_at": datetime.now(timezone.utc),
+                "cards_count": len(cards)
+            }
         except Exception as e:
             return {
                 "status": "error",

@@ -92,7 +92,6 @@ const FuelCardsList = () => {
       logger.debug('Карты загружены', { 
         total: result.total, 
         itemsCount: result.items.length, 
-        filteredCount: filteredItems.length,
         currentPage,
         limit
       })
@@ -349,45 +348,43 @@ const FuelCardsList = () => {
 
         <Card.Body>
           {/* Фильтры и поиск */}
-          {cards.length > 0 && (
-        <AdvancedSearch
-          filters={filters}
-          onFiltersChange={setFilters}
-          onClear={() => setFilters({ card_number: '', provider: '', status: '' })}
-          loading={loading}
-          filterConfig={[
-            {
-              key: 'card_number',
-              label: 'Номер карты',
-              placeholder: 'Введите номер карты',
-              type: 'text'
-            },
-            {
-              key: 'provider',
-              label: 'Провайдер',
-              placeholder: 'Выберите провайдера',
-              type: 'select',
-              options: providers
-                .filter(p => p.is_active)
-                .map(provider => ({
-                  value: provider.id.toString(),
-                  label: provider.name
-                }))
-            },
-            {
-              key: 'status',
-              label: 'Статус',
-              placeholder: 'Выберите статус',
-              type: 'select',
-              options: [
-                { value: '', label: 'Все' },
-                { value: 'active', label: 'Активные' },
-                { value: 'blocked', label: 'Заблокированные' }
-              ]
-            }
-          ]}
-        />
-      )}
+          <AdvancedSearch
+            filters={filters}
+            onFiltersChange={setFilters}
+            onClear={() => setFilters({ card_number: '', provider: '', status: '' })}
+            loading={loading}
+            filterConfig={[
+              {
+                key: 'card_number',
+                label: 'Номер карты',
+                placeholder: 'Введите номер карты',
+                type: 'text'
+              },
+              {
+                key: 'provider',
+                label: 'Провайдер',
+                placeholder: 'Выберите провайдера',
+                type: 'select',
+                options: providers
+                  .filter(p => p.is_active)
+                  .map(provider => ({
+                    value: provider.id.toString(),
+                    label: provider.name
+                  }))
+              },
+              {
+                key: 'status',
+                label: 'Статус',
+                placeholder: 'Выберите статус',
+                type: 'select',
+                options: [
+                  { value: '', label: 'Все' },
+                  { value: 'active', label: 'Активные' },
+                  { value: 'blocked', label: 'Заблокированные' }
+                ]
+              }
+            ]}
+          />
 
           {error && (
             <Alert variant="error" style={{ marginBottom: 'var(--spacing-element)' }}>

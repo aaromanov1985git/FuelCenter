@@ -123,9 +123,31 @@ const CardInfoModal = ({
                 <div className="card-info-item">
                   <label>Состояние</label>
                   <div className={cardInfo.state === 0 ? 'status-active' : 'status-blocked'}>
-                    {formatValue(cardInfo.state_name)}
+                    {formatValue(cardInfo.state_name || cardInfo.status_name)}
                   </div>
                 </div>
+                {(cardInfo.status_code || cardInfo.status_name) && (
+                  <>
+                    {cardInfo.status_code && (
+                      <div className="card-info-item">
+                        <label>Код статуса</label>
+                        <div>{formatValue(cardInfo.status_code)}</div>
+                      </div>
+                    )}
+                    {cardInfo.status_name && cardInfo.status_name !== cardInfo.state_name && (
+                      <div className="card-info-item">
+                        <label>Название статуса</label>
+                        <div>{formatValue(cardInfo.status_name)}</div>
+                      </div>
+                    )}
+                  </>
+                )}
+                {cardInfo.remark && (
+                  <div className="card-info-item full-width">
+                    <label>Примечание</label>
+                    <div>{formatValue(cardInfo.remark)}</div>
+                  </div>
+                )}
                 <div className="card-info-item">
                   <label>Баланс</label>
                   <div>{formatValue(cardInfo.balance)}</div>

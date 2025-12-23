@@ -60,16 +60,16 @@ const CardInfoSchedulesList = () => {
       const response = await authFetch(`${API_URL}/api/v1/templates`)
       if (response.ok) {
         const result = await response.json()
-        // Фильтруем только шаблоны с типом "web" (без учета регистра) и активные
-        const webTemplates = result.items.filter(t => {
+        // Фильтруем шаблоны с типом "web" или "api" (поддерживают получение информации по карте) и активные
+        const apiTemplates = result.items.filter(t => {
           const connectionType = (t.connection_type || '').toLowerCase()
-          return connectionType === 'web' && t.is_active !== false
+          return (connectionType === 'web' || connectionType === 'api') && t.is_active !== false
         })
-        setTemplates(webTemplates)
+        setTemplates(apiTemplates)
         
         // Логируем для отладки
-        if (webTemplates.length === 0 && result.items.length > 0) {
-          logger.warn('Не найдено шаблонов с типом "web"', {
+        if (apiTemplates.length === 0 && result.items.length > 0) {
+          logger.warn('Не найдено шаблонов с типом "web" или "api"', {
             total_templates: result.items.length,
             templates: result.items.map(t => ({
               id: t.id,
