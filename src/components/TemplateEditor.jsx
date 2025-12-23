@@ -178,6 +178,9 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         if (parsed.provider_type === 'rncard') {
           return { provider_type: 'rncard', base_url: 'https://lkapi.rn-card.ru', login: '', password: '', contract: '', currency: 'RUB', use_md5_hash: true }
         }
+        if (parsed.provider_type === 'gpn' || parsed.provider_type === 'gazprom-neft' || parsed.provider_type === 'gazpromneft') {
+          return { provider_type: 'gpn', base_url: 'https://api-demo.opti-24.ru', api_key: '', login: '', password: '', currency: 'RUB' }
+        }
         return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB' }
       }
       if (connectionType === 'web') {
@@ -194,6 +197,9 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
           const parsed = typeof settings === 'string' ? (() => { try { return JSON.parse(settings) } catch { return {} } })() : (settings || {})
           if (parsed.provider_type === 'rncard') {
             return { provider_type: 'rncard', base_url: 'https://lkapi.rn-card.ru', login: '', password: '', contract: '', currency: 'RUB', use_md5_hash: true }
+          }
+          if (parsed.provider_type === 'gpn' || parsed.provider_type === 'gazprom-neft' || parsed.provider_type === 'gazpromneft') {
+            return { provider_type: 'gpn', base_url: 'https://api-demo.opti-24.ru', api_key: '', login: '', password: '', currency: 'RUB' }
           }
           return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB' }
         }
@@ -737,7 +743,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
               Настройки подключения к API
             </h4>
             <p className="section-description">
-              Укажите параметры подключения к API провайдера (например, PetrolPlus или РН-Карт).
+              Укажите параметры подключения к API провайдера (например, PetrolPlus, РН-Карт или Газпром-нефть).
             </p>
             
             <div className="form-group">
@@ -765,12 +771,22 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                         currency: connectionSettings.currency || 'RUB',
                         use_md5_hash: connectionSettings.use_md5_hash !== false
                       })
+                    } else if (newProviderType === 'gpn') {
+                      setConnectionSettings({ 
+                        provider_type: 'gpn', 
+                        base_url: 'https://api-demo.opti-24.ru', 
+                        api_key: connectionSettings.api_key || connectionSettings.apiKey || '', 
+                        login: connectionSettings.login || connectionSettings.username || '', 
+                        password: connectionSettings.password || '', 
+                        currency: connectionSettings.currency || 'RUB'
+                      })
                     }
                   }}
                   className="input-full-width"
                 >
                   <option value="petrolplus">PetrolPlus</option>
                   <option value="rncard">РН-Карт</option>
+                  <option value="gpn">Газпром-нефть</option>
                 </select>
                 <span className="field-help">Тип API провайдера</span>
               </label>
@@ -781,9 +797,17 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                 Базовый URL API провайдера: <span className="required-mark">*</span>
                 <input
                   type="text"
-                  value={connectionSettings.base_url || (connectionSettings.provider_type === 'rncard' ? 'https://lkapi.rn-card.ru' : 'https://online.petrolplus.ru/api')}
+                  value={connectionSettings.base_url || (
+                    connectionSettings.provider_type === 'rncard' ? 'https://lkapi.rn-card.ru' : 
+                    connectionSettings.provider_type === 'gpn' ? 'https://api-demo.opti-24.ru' : 
+                    'https://online.petrolplus.ru/api'
+                  )}
                   onChange={(e) => setConnectionSettings({ ...connectionSettings, base_url: e.target.value })}
-                  placeholder={connectionSettings.provider_type === 'rncard' ? 'https://lkapi.rn-card.ru' : 'https://online.petrolplus.ru/api'}
+                  placeholder={
+                    connectionSettings.provider_type === 'rncard' ? 'https://lkapi.rn-card.ru' : 
+                    connectionSettings.provider_type === 'gpn' ? 'https://api-demo.opti-24.ru' : 
+                    'https://online.petrolplus.ru/api'
+                  }
                   className="input-full-width"
                 />
                 <span className="field-help">Базовый URL API провайдера</span>
@@ -866,6 +890,56 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                     <span style={{ marginLeft: '8px' }}>Использовать MD5-хеш пароля (рекомендуется)</span>
                   </label>
                   <span className="field-help">Рекомендуется использовать MD5-хеш для безопасности</span>
+                </div>
+              </>
+            )}
+            
+            {/* Поля для Газпром-нефть */}
+            {connectionSettings.provider_type === 'gpn' && (
+              <>
+                <div className="form-group">
+                  <label>
+                    API ключ: <span className="required-mark">*</span>
+                    <input
+                      type="password"
+                      value={connectionSettings.api_key || connectionSettings.apiKey || ''}
+                      onChange={(e) => setConnectionSettings({ ...connectionSettings, api_key: e.target.value })}
+                      placeholder="GPN.3ce7b860ece5758d1d27c7f8b4796ea79b33927e..."
+                      className="input-full-width"
+                      autoComplete="off"
+                    />
+                    <span className="field-help">API ключ для авторизации в API Газпром-нефть</span>
+                  </label>
+                </div>
+                
+                <div className="form-group">
+                  <label>
+                    Логин: <span className="required-mark">*</span>
+                    <input
+                      type="text"
+                      value={connectionSettings.login || connectionSettings.username || ''}
+                      onChange={(e) => setConnectionSettings({ ...connectionSettings, login: e.target.value })}
+                      placeholder="Логин из Личного кабинета Газпром-нефть"
+                      className="input-full-width"
+                      autoComplete="off"
+                    />
+                    <span className="field-help">Логин из Личного кабинета Газпром-нефть</span>
+                  </label>
+                </div>
+                
+                <div className="form-group">
+                  <label>
+                    Пароль: <span className="required-mark">*</span>
+                    <input
+                      type="password"
+                      value={connectionSettings.password || ''}
+                      onChange={(e) => setConnectionSettings({ ...connectionSettings, password: e.target.value })}
+                      placeholder="Пароль из Личного кабинета Газпром-нефть (исходный, не хеш!)"
+                      className="input-full-width"
+                      autoComplete="off"
+                    />
+                    <span className="field-help">Пароль из Личного кабинета Газпром-нефть (исходный пароль, не хеш!)</span>
+                  </label>
                 </div>
               </>
             )}
