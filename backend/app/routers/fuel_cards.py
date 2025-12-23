@@ -25,6 +25,8 @@ async def get_fuel_cards(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=10000),
     vehicle_id: Optional[int] = Query(None, description="Фильтр по ID ТС"),
+    provider_id: Optional[int] = Query(None, description="Фильтр по ID провайдера"),
+    card_number: Optional[str] = Query(None, description="Фильтр по номеру карты (частичное совпадение)"),
     is_blocked: Optional[bool] = Query(None, description="Фильтр по статусу блокировки (true - только заблокированные, false - только незаблокированные)"),
     db: Session = Depends(get_db)
 ):
@@ -36,13 +38,25 @@ async def get_fuel_cards(
     if vehicle_id:
         query = query.filter(FuelCard.vehicle_id == vehicle_id)
     
+    if provider_id:
+        query = query.filter(FuelCard.provider_id == provider_id)
+    
+    if card_number:
+        query = query.filter(FuelCard.card_number.ilike(f"%{card_number}%"))
+    
     if is_blocked is not None:
         query = query.filter(FuelCard.is_blocked == is_blocked)
     
     total = query.count()
     cards = query.order_by(FuelCard.created_at.desc()).offset(skip).limit(limit).all()
     
-    logger.debug("Список топливных карт загружен", extra={"total": total, "returned": len(cards), "is_blocked_filter": is_blocked})
+    logger.debug("Список топливных карт загружен", extra={
+        "total": total, 
+        "returned": len(cards), 
+        "is_blocked_filter": is_blocked,
+        "provider_id": provider_id,
+        "card_number": card_number
+    })
     
     return FuelCardListResponse(total=total, items=cards)
 

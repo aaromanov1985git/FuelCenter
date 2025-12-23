@@ -29,12 +29,12 @@ const FuelCardsList = () => {
   // Фильтры
   const [filters, setFilters] = useState({
     card_number: '',
-    provider: '',
+    provider: '', // Теперь это ID провайдера
     status: '' // 'all', 'active', 'blocked'
   })
   
   const debouncedCardNumber = useDebounce(filters.card_number, 500)
-  const debouncedProvider = useDebounce(filters.provider, 500)
+  // Для провайдера не нужен debounce, так как это селект
 
   // Загрузка всех карт для статистики
   const loadAllCards = async () => {
@@ -75,28 +75,19 @@ const FuelCardsList = () => {
         params.append('card_number', debouncedCardNumber)
       }
       
+      // Фильтр по провайдеру (ID)
+      if (filters.provider) {
+        params.append('provider_id', filters.provider)
+      }
+      
       const response = await authFetch(`${API_URL}/api/v1/fuel-cards?${params}`)
       if (!response.ok) throw new Error('Ошибка загрузки данных')
       
       const result = await response.json()
       
-      // Фильтруем по провайдеру на клиенте, если нужно
-      let filteredItems = result.items
-      if (debouncedProvider) {
-        filteredItems = result.items.filter(card => {
-          const providerName = getProviderName(card.provider_id).toLowerCase()
-          return providerName.includes(debouncedProvider.toLowerCase())
-        })
-        // При фильтрации по провайдеру на клиенте нужно загрузить все данные для правильного total
-        // Пока используем длину текущей страницы, но это не идеально
-        // В будущем лучше добавить фильтрацию по провайдеру на сервере
-        setTotal(filteredItems.length)
-        setCards(filteredItems)
-      } else {
-        // Устанавливаем total из ответа API
-        setTotal(result.total || 0)
-        setCards(filteredItems)
-      }
+      // Устанавливаем total из ответа API
+      setTotal(result.total || 0)
+      setCards(result.items)
       
       logger.debug('Карты загружены', { 
         total: result.total, 
@@ -177,11 +168,11 @@ const FuelCardsList = () => {
 
   useEffect(() => {
     setCurrentPage(1) // Сбрасываем на первую страницу при изменении фильтров
-  }, [debouncedCardNumber, debouncedProvider, filters.status])
+  }, [debouncedCardNumber, filters.provider, filters.status])
 
   useEffect(() => {
     loadCards()
-  }, [currentPage, debouncedCardNumber, debouncedProvider, filters.status, limit])
+  }, [currentPage, debouncedCardNumber, filters.provider, filters.status, limit])
 
   const handleEdit = (card) => {
     setEditingCard(card)
@@ -374,8 +365,14 @@ const FuelCardsList = () => {
             {
               key: 'provider',
               label: 'Провайдер',
-              placeholder: 'Введите название провайдера',
-              type: 'text'
+              placeholder: 'Выберите провайдера',
+              type: 'select',
+              options: providers
+                .filter(p => p.is_active)
+                .map(provider => ({
+                  value: provider.id.toString(),
+                  label: provider.name
+                }))
             },
             {
               key: 'status',

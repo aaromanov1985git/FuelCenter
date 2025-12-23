@@ -74,6 +74,10 @@
 .checkbox-label {
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
 }
 
 .checkbox-disabled .checkbox-label {

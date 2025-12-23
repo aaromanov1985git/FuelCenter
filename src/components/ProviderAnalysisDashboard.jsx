@@ -10,7 +10,16 @@ import { logger } from '../utils/logger'
 import EmptyState from './EmptyState'
 import Pagination from './Pagination'
 import 'leaflet/dist/leaflet.css'
+import 'leaflet.markercluster/dist/MarkerCluster.css'
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
 import './ProviderAnalysisDashboard.css'
+
+// Импортируем leaflet.markercluster для глобального доступа
+import * as MarkerClusterModule from 'leaflet.markercluster'
+// Добавляем в глобальный объект L
+if (typeof L !== 'undefined' && MarkerClusterModule.default) {
+  L.markerClusterGroup = MarkerClusterModule.default
+}
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
 
@@ -30,6 +39,101 @@ function ChangeView({ center, zoom }) {
       map.setView(center, zoom)
     }
   }, [center, zoom, map])
+  return null
+}
+
+// Компонент для кластеризации маркеров
+function MarkerCluster({ markers, createIcon, onMarkerClick }) {
+  const map = useMap()
+  const clusterGroupRef = useRef(null)
+
+  useEffect(() => {
+    if (!map || !markers || markers.length === 0) return
+
+    // Проверяем доступность L.markerClusterGroup
+    if (typeof L === 'undefined' || !L.markerClusterGroup) {
+      logger.warn('L.markerClusterGroup не доступен, используем обычные маркеры')
+      return
+    }
+
+    // Удаляем старую группу, если она существует
+    if (clusterGroupRef.current) {
+      map.removeLayer(clusterGroupRef.current)
+      clusterGroupRef.current.clearLayers()
+    }
+    
+    // Создаем группу кластеров
+    const clusterGroup = L.markerClusterGroup({
+        chunkedLoading: true,
+        maxClusterRadius: 50, // Радиус кластеризации в пикселях
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+        iconCreateFunction: function(cluster) {
+          const count = cluster.getChildCount()
+          return L.divIcon({
+            html: `<div style="
+              background-color: var(--color-primary);
+              color: white;
+              border-radius: 50%;
+              width: 40px;
+              height: 40px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: bold;
+              font-size: 14px;
+              border: 3px solid white;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            ">${count}</div>`,
+            className: 'marker-cluster',
+            iconSize: L.point(40, 40)
+          })
+        }
+      })
+
+      // Добавляем маркеры в группу
+      markers.forEach(markerData => {
+        const marker = L.marker([markerData.lat, markerData.lon], {
+          icon: createIcon(markerData.count, markerData.maxCount)
+        })
+        
+        // Добавляем popup
+        const popupContent = `
+          <div class="marker-popup">
+            <h4>${markerData.name}</h4>
+            <p><strong>Заправок:</strong> ${markerData.count}</p>
+            <p><strong>Объём:</strong> ${markerData.volume}</p>
+            <p><strong>Сумма:</strong> ${markerData.amount}</p>
+            ${markerData.fuelTypesHtml || ''}
+          </div>
+        `
+        marker.bindPopup(popupContent)
+        
+        // Обработчик клика
+        marker.on('click', () => {
+          if (onMarkerClick) {
+            onMarkerClick(markerData.id)
+          }
+        })
+        
+        clusterGroup.addLayer(marker)
+      })
+
+    // Добавляем группу на карту
+    clusterGroup.addTo(map)
+    clusterGroupRef.current = clusterGroup
+
+    // Очистка при размонтировании
+    return () => {
+      if (clusterGroupRef.current) {
+        map.removeLayer(clusterGroupRef.current)
+        clusterGroupRef.current.clearLayers()
+        clusterGroupRef.current = null
+      }
+    }
+  }, [map, markers, createIcon, onMarkerClick])
+
   return null
 }
 
@@ -89,7 +193,6 @@ const ProviderAnalysisDashboard = () => {
   const [allLoadedTransactions, setAllLoadedTransactions] = useState([]) // Все загруженные транзакции для агрегации
   const [gasStations, setGasStations] = useState([])
   const [fuelCards, setFuelCards] = useState([])
-  const [fuelTypes, setFuelTypes] = useState([])
   const [providers, setProviders] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -114,18 +217,53 @@ const ProviderAnalysisDashboard = () => {
   const [limit] = useState(50)
   const [total, setTotal] = useState(0)
   
+  // Пагинация для детализации транзакций
+  const [detailCurrentPage, setDetailCurrentPage] = useState(1)
+  const [detailLimit] = useState(10)
+  
+  // Пагинация для сводки по картам
+  const [cardsSummaryCurrentPage, setCardsSummaryCurrentPage] = useState(1)
+  const [cardsSummaryLimit] = useState(10)
+  
   // Сортировка
   const [sortConfig, setSortConfig] = useState({ field: 'transaction_date', order: 'desc' })
   
   // Выбранный маркер на карте
   const [selectedMarker, setSelectedMarker] = useState(null)
   
+  // Полноэкранный режим карты
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false)
+  
+  // Выбранная карта для детализации
+  const [selectedCardForDetails, setSelectedCardForDetails] = useState(null)
+  
+  // Типы топлива теперь вычисляются из отфильтрованных транзакций
+  // Используем useMemo для оптимизации (определяем здесь, чтобы использовать в useEffect ниже)
+  const availableFuelTypes = useMemo(() => {
+    if (allLoadedTransactions.length === 0) {
+      return []
+    }
+    // Извлекаем уникальные типы топлива из отфильтрованных транзакций
+    const uniqueTypes = [...new Set(
+      allLoadedTransactions
+        .map(t => t.product)
+        .filter(Boolean) // Убираем null/undefined
+    )].sort() // Сортируем для консистентности
+    
+    logger.debug('Доступные типы топлива из отфильтрованных транзакций', { 
+      count: uniqueTypes.length, 
+      types: uniqueTypes 
+    })
+    
+    return uniqueTypes
+  }, [allLoadedTransactions])
+  
   // Загрузка справочников
   useEffect(() => {
     loadProviders()
     loadFuelCards()
     loadGasStations()
-    loadFuelTypes()
+    // Типы топлива теперь извлекаются из отфильтрованных транзакций
   }, [])
   
   // Перезагрузка АЗС при изменении провайдера (на случай, если нужна фильтрация на сервере)
@@ -181,6 +319,35 @@ const ProviderAnalysisDashboard = () => {
     
     prevFiltersRef.current = { dateFrom, dateTo, selectedProvider, selectedCards, selectedGasStations, selectedFuelTypes }
   }, [dateFrom, dateTo, selectedProvider, selectedCards, selectedGasStations, selectedFuelTypes, currentPage])
+  
+  // Очистка выбранных типов топлива, если они больше не доступны
+  useEffect(() => {
+    if (availableFuelTypes.length > 0 && selectedFuelTypes.length > 0) {
+      const validSelectedTypes = selectedFuelTypes.filter(ft => availableFuelTypes.includes(ft))
+      if (validSelectedTypes.length !== selectedFuelTypes.length) {
+        logger.debug('Очистка недоступных типов топлива из выбранных', {
+          before: selectedFuelTypes,
+          after: validSelectedTypes,
+          available: availableFuelTypes
+        })
+        setSelectedFuelTypes(validSelectedTypes)
+      }
+    }
+  }, [availableFuelTypes])
+  
+  // Сброс выбранной карты при изменении фильтров (кроме сортировки)
+  useEffect(() => {
+    if (selectedCardForDetails) {
+      setSelectedCardForDetails(null)
+    }
+    setDetailCurrentPage(1) // Сбрасываем страницу детализации
+    setCardsSummaryCurrentPage(1) // Сбрасываем страницу сводки по картам
+  }, [dateFrom, dateTo, selectedProvider, selectedCards, selectedGasStations, selectedFuelTypes])
+  
+  // Сброс страницы детализации при изменении выбранной карты
+  useEffect(() => {
+    setDetailCurrentPage(1)
+  }, [selectedCardForDetails])
   
   // Загрузка транзакций при изменении фильтров
   useEffect(() => {
@@ -273,29 +440,6 @@ const ProviderAnalysisDashboard = () => {
       if (!err.isUnauthorized) {
         logger.error('Ошибка загрузки АЗС', { error: err.message })
         showError(`Ошибка загрузки АЗС: ${err.message}`)
-      }
-    }
-  }
-  
-  const loadFuelTypes = async () => {
-    try {
-      const response = await authFetch(`${API_URL}/api/v1/fuel-types?limit=1000`)
-      if (response.ok) {
-        const result = await response.json()
-        // Используем normalized_name, если есть, иначе original_name
-        // Убираем дубликаты и null/undefined значения
-        const types = result.items
-          .map(ft => ft.normalized_name || ft.original_name)
-          .filter(Boolean)
-        const uniqueTypes = Array.from(new Set(types))
-        setFuelTypes(uniqueTypes)
-        logger.debug('Типы топлива загружены из API', { count: uniqueTypes.length })
-      }
-    } catch (err) {
-      if (!err.isUnauthorized) {
-        // Если нет endpoint для типов топлива, извлекаем из транзакций
-        // Это будет сделано после загрузки транзакций
-        logger.debug('Не удалось загрузить типы топлива из API, будут извлечены из транзакций')
       }
     }
   }
@@ -506,14 +650,8 @@ const ProviderAnalysisDashboard = () => {
         firstTransactionId: finalTransactions.length > 0 ? finalTransactions[0].id : null
       })
       
-      // Если типы топлива не загружены, извлекаем из транзакций
-      if (fuelTypes.length === 0) {
-        const uniqueFuelTypes = [...new Set(enrichedTransactions.map(t => t.product).filter(Boolean))]
-        // Убираем дубликаты и сортируем для консистентности
-        const deduplicated = Array.from(new Set(uniqueFuelTypes))
-        setFuelTypes(deduplicated)
-        logger.debug('Типы топлива извлечены из транзакций', { count: deduplicated.length, types: deduplicated })
-      }
+      // Типы топлива теперь вычисляются через useMemo из allLoadedTransactions
+      // Не нужно здесь устанавливать fuelTypes
     } catch (err) {
       if (err.isUnauthorized) {
         return
@@ -707,9 +845,86 @@ const ProviderAnalysisDashboard = () => {
     }))
   }
   
+  // Группировка транзакций по картам
+  const transactionsByCard = useMemo(() => {
+    const transactionsForGrouping = allLoadedTransactions.length > 0 ? allLoadedTransactions : transactions
+    if (!transactionsForGrouping.length) return []
+    
+    const grouped = {}
+    
+    transactionsForGrouping.forEach(t => {
+      const cardNumber = t.card_number || 'Без карты'
+      if (!grouped[cardNumber]) {
+        grouped[cardNumber] = {
+          cardNumber,
+          count: 0,
+          totalVolume: 0,
+          totalAmount: 0,
+          transactions: []
+        }
+      }
+      
+      const transactionAmount = parseFloat(t.amount_with_discount || t.amount || 0)
+      grouped[cardNumber].count++
+      grouped[cardNumber].totalVolume += parseFloat(t.quantity || 0)
+      grouped[cardNumber].totalAmount += transactionAmount
+      grouped[cardNumber].transactions.push(t)
+    })
+    
+    // Преобразуем в массив и сортируем по сумме (убывание)
+    return Object.values(grouped).sort((a, b) => b.totalAmount - a.totalAmount)
+  }, [allLoadedTransactions, transactions])
+  
+  // Транзакции для детализации (только выбранная карта)
+  const detailTransactions = useMemo(() => {
+    if (!selectedCardForDetails) {
+      return []
+    }
+    const transactionsForDetail = allLoadedTransactions.length > 0 ? allLoadedTransactions : transactions
+    let filtered = transactionsForDetail.filter(t => t.card_number === selectedCardForDetails)
+    
+    // Применяем сортировку
+    if (sortConfig.field) {
+      filtered = filtered.sort((a, b) => {
+        let aVal = a[sortConfig.field]
+        let bVal = b[sortConfig.field]
+        
+        // Обработка разных типов данных
+        if (sortConfig.field === 'transaction_date') {
+          aVal = new Date(aVal)
+          bVal = new Date(bVal)
+        } else if (sortConfig.field === 'quantity' || sortConfig.field === 'amount') {
+          aVal = parseFloat(aVal || 0)
+          bVal = parseFloat(bVal || 0)
+        } else {
+          aVal = String(aVal || '').toLowerCase()
+          bVal = String(bVal || '').toLowerCase()
+        }
+        
+        if (aVal === bVal) return 0
+        if (aVal === null || aVal === undefined) return 1
+        if (bVal === null || bVal === undefined) return -1
+        
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sortConfig.order === 'asc' ? aVal - bVal : bVal - aVal
+        }
+        
+        if (sortConfig.order === 'asc') {
+          return aVal < bVal ? -1 : 1
+        } else {
+          return aVal > bVal ? -1 : 1
+        }
+      })
+    }
+    
+    return filtered
+  }, [selectedCardForDetails, allLoadedTransactions, transactions, sortConfig])
+  
   const handleExportCSV = () => {
     const headers = ['Дата и время', 'Карта', 'АЗС', 'Тип топлива', 'Объём (л)', 'Сумма (₽)']
-    const data = allLoadedTransactions.length > 0 ? allLoadedTransactions : transactions
+    const data = selectedCardForDetails 
+      ? detailTransactions 
+      : (allLoadedTransactions.length > 0 ? allLoadedTransactions : transactions)
     const exportData = data.map(t => ({
       'Дата и время': formatDateTime(t.transaction_date),
       'Карта': t.card_number || '—',
@@ -718,16 +933,14 @@ const ProviderAnalysisDashboard = () => {
       'Объём (л)': formatNumber(t.quantity),
       'Сумма (₽)': formatNumber(t.amount_with_discount || t.amount)
     }))
-    exportToCSV(exportData, headers, 'provider_analysis_transactions')
+    exportToCSV(exportData, headers, selectedCardForDetails ? `transactions_card_${selectedCardForDetails}` : 'provider_analysis_transactions')
     success('Данные экспортированы в CSV')
   }
   
   const handleMarkerClick = (gasStationId) => {
     setSelectedMarker(gasStationId)
-    // Применяем фильтр по АЗС
-    if (!selectedGasStations.includes(gasStationId)) {
-      setSelectedGasStations([gasStationId])
-    }
+    // НЕ применяем автоматический фильтр - маркеры остаются видимыми
+    // Пользователь может применить фильтр вручную, если нужно
   }
   
   const handleQuickPeriod = (period) => {
@@ -759,6 +972,7 @@ const ProviderAnalysisDashboard = () => {
                     label: p.name
                   }))
                 ]}
+                fullWidth={true}
               />
             </div>
             
@@ -769,7 +983,7 @@ const ProviderAnalysisDashboard = () => {
                 placeholder="Поиск по карте..."
                 value={cardSearch}
                 onChange={(e) => setCardSearch(e.target.value)}
-                style={{ marginBottom: '8px' }}
+                style={{ marginBottom: 'var(--spacing-xs)' }}
               />
               <div className="multiselect-container">
                 <Checkbox
@@ -784,7 +998,7 @@ const ProviderAnalysisDashboard = () => {
                   label="Все"
                 />
                 <div className="multiselect-list">
-                  {filteredCards.slice(0, 10).map(card => (
+                  {filteredCards.slice(0, 5).map(card => (
                     <Checkbox
                       key={card.id}
                       checked={selectedCards.includes(card.id)}
@@ -809,7 +1023,7 @@ const ProviderAnalysisDashboard = () => {
                 placeholder="Поиск по названию..."
                 value={gasStationSearch}
                 onChange={(e) => setGasStationSearch(e.target.value)}
-                style={{ marginBottom: '8px' }}
+                style={{ marginBottom: 'var(--spacing-xs)' }}
               />
               <div className="multiselect-container">
                 <Checkbox
@@ -825,7 +1039,7 @@ const ProviderAnalysisDashboard = () => {
                 />
                 <div className="multiselect-list">
                   {filteredGasStations.length === 0 ? (
-                    <div style={{ padding: '8px', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+                    <div style={{ padding: '4px', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
                       {gasStations.length === 0 
                         ? 'АЗС не загружены' 
                         : selectedProvider 
@@ -833,7 +1047,7 @@ const ProviderAnalysisDashboard = () => {
                           : 'Нет АЗС, соответствующих фильтрам'}
                     </div>
                   ) : (
-                    filteredGasStations.slice(0, 20).map(gs => (
+                    filteredGasStations.slice(0, 5).map(gs => (
                       <Checkbox
                         key={gs.id}
                         checked={selectedGasStations.includes(gs.id)}
@@ -855,21 +1069,27 @@ const ProviderAnalysisDashboard = () => {
             {/* Тип топлива */}
             <div className="filter-group">
               <label>Тип топлива</label>
-              <div className="multiselect-list">
-                {fuelTypes.map((fuelType, index) => (
-                  <Checkbox
-                    key={`fuel-type-${fuelType}-${index}`}
-                    checked={selectedFuelTypes.includes(fuelType)}
-                    onChange={(checked) => {
-                      if (checked) {
-                        setSelectedFuelTypes(prev => [...prev, fuelType])
-                      } else {
-                        setSelectedFuelTypes(prev => prev.filter(ft => ft !== fuelType))
-                      }
-                    }}
-                    label={fuelType}
-                  />
-                ))}
+              <div className="multiselect-list" style={{ maxHeight: '120px', overflowY: 'auto', padding: 'var(--spacing-xs)' }}>
+                {availableFuelTypes.length === 0 ? (
+                  <div style={{ padding: 'var(--spacing-xs)', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+                    {loading ? 'Загрузка...' : 'Нет типов топлива'}
+                  </div>
+                ) : (
+                  availableFuelTypes.map((fuelType, index) => (
+                    <Checkbox
+                      key={`fuel-type-${fuelType}-${index}`}
+                      checked={selectedFuelTypes.includes(fuelType)}
+                      onChange={(checked) => {
+                        if (checked) {
+                          setSelectedFuelTypes(prev => [...prev, fuelType])
+                        } else {
+                          setSelectedFuelTypes(prev => prev.filter(ft => ft !== fuelType))
+                        }
+                      }}
+                      label={fuelType}
+                    />
+                  ))
+                )}
               </div>
             </div>
             
@@ -963,12 +1183,21 @@ const ProviderAnalysisDashboard = () => {
         </div>
       )}
       
-      {/* Карта и таблица */}
-      <div className="dashboard-layout">
-        {/* Карта */}
-        <Card className="map-card">
+      {/* Карта */}
+      {!isMapFullscreen && (
+        <Card className="map-card" style={{ marginBottom: 'var(--spacing-section)' }}>
           <Card.Body>
-            <h3>Карта заправок</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h3 style={{ margin: 0 }}>Карта заправок</h3>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsMapFullscreen(!isMapFullscreen)}
+                style={{ minWidth: 'auto', padding: '6px 12px' }}
+              >
+                {isMapFullscreen ? '✕ Свернуть' : '⛶ Развернуть'}
+              </Button>
+            </div>
             {gasStationsWithCoords.length > 0 ? (
               <div className="map-container-wrapper">
                 <MapContainer
@@ -982,38 +1211,29 @@ const ProviderAnalysisDashboard = () => {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
                   <ChangeView center={mapCenter} zoom={6} />
-                  {gasStationsWithCoords.map(gs => (
-                    <Marker
-                      key={gs.id}
-                      position={[gs.lat, gs.lon]}
-                      icon={createCustomIcon(gs.count, maxTransactionCount)}
-                      eventHandlers={{
-                        click: () => handleMarkerClick(gs.id)
-                      }}
-                    >
-                      <Popup>
-                        <div className="marker-popup">
-                          <h4>{gs.name}</h4>
-                          <p><strong>Заправок:</strong> {gs.count}</p>
-                          <p><strong>Объём:</strong> {formatLiters(gs.volume)}</p>
-                          <p><strong>Сумма:</strong> {formatCurrency(gs.amount)}</p>
-                          {Object.keys(gs.fuelTypes).length > 0 && (
-                            <div className="fuel-types-distribution">
-                              <strong>Топливо:</strong>
-                              {Object.entries(gs.fuelTypes).map(([type, data], idx) => {
-                                const percentage = gs.volume > 0 ? (data.volume / gs.volume) * 100 : 0
-                                return (
-                                  <div key={`${gs.id}-${type}-${idx}`} className="fuel-type-item">
-                                    {type}: {percentage.toFixed(1)}%
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
+                  <MarkerCluster
+                    markers={gasStationsWithCoords.map(gs => ({
+                      id: gs.id,
+                      lat: gs.lat,
+                      lon: gs.lon,
+                      name: gs.name,
+                      count: gs.count,
+                      volume: formatLiters(gs.volume),
+                      amount: formatCurrency(gs.amount),
+                      maxCount: maxTransactionCount,
+                      fuelTypesHtml: Object.keys(gs.fuelTypes).length > 0 ? `
+                        <div class="fuel-types-distribution">
+                          <strong>Топливо:</strong>
+                          ${Object.entries(gs.fuelTypes).map(([type, data], idx) => {
+                            const percentage = gs.volume > 0 ? (data.volume / gs.volume) * 100 : 0
+                            return `<div class="fuel-type-item">${type}: ${percentage.toFixed(1)}%</div>`
+                          }).join('')}
                         </div>
-                      </Popup>
-                    </Marker>
-                  ))}
+                      ` : ''
+                    }))}
+                    createIcon={createCustomIcon}
+                    onMarkerClick={handleMarkerClick}
+                  />
                 </MapContainer>
               </div>
             ) : (
@@ -1032,113 +1252,264 @@ const ProviderAnalysisDashboard = () => {
             )}
           </Card.Body>
         </Card>
-        
-        {/* Таблица транзакций */}
-        <Card className="transactions-card">
-          <Card.Body>
-            <div className="table-header">
-              <h3>Транзакции</h3>
-              <Button variant="secondary" size="sm" onClick={handleExportCSV}>
-                Экспорт CSV
-              </Button>
-            </div>
-            {loading ? (
-              <Skeleton count={5} />
-            ) : !transactions || transactions.length === 0 ? (
-              total === 0 ? (
+      )}
+      
+      {/* Транзакции в два столбца */}
+      {!isMapFullscreen && (
+        <div className="transactions-layout">
+          {/* Часть 1: Группировка по картам */}
+          <Card className="transactions-card">
+            <Card.Body>
+              <div className="table-header">
+                <h3>Сводка по картам</h3>
+                {selectedCardForDetails && (
+                  <Button variant="secondary" size="sm" onClick={() => setSelectedCardForDetails(null)}>
+                    Сбросить выбор
+                  </Button>
+                )}
+              </div>
+              {loading ? (
+                <Skeleton count={5} />
+              ) : transactionsByCard.length === 0 ? (
                 <EmptyState message="Нет данных для отображения" />
               ) : (
-                <EmptyState message={`Нет транзакций на странице ${currentPage} из ${Math.ceil(total / limit)}. Всего транзакций: ${total}`} />
-              )
-            ) : (
-              <>
-                <div className="table-wrapper" style={{ overflowX: 'auto' }}>
-                  <table className="ui-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>
-                        <th 
-                          onClick={() => handleSort('transaction_date')}
-                          style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}
-                        >
-                          Дата и время
-                          {sortConfig.field === 'transaction_date' && (
-                            <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
-                          )}
-                        </th>
-                        <th 
-                          onClick={() => handleSort('card_number')}
-                          style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}
-                        >
-                          Карта
-                          {sortConfig.field === 'card_number' && (
-                            <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
-                          )}
-                        </th>
-                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>АЗС</th>
-                        <th 
-                          onClick={() => handleSort('product')}
-                          style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}
-                        >
-                          Тип топлива
-                          {sortConfig.field === 'product' && (
-                            <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
-                          )}
-                        </th>
-                        <th 
-                          onClick={() => handleSort('quantity')}
-                          style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}
-                        >
-                          Объём (л)
-                          {sortConfig.field === 'quantity' && (
-                            <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
-                          )}
-                        </th>
-                        <th 
-                          onClick={() => handleSort('amount')}
-                          style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}
-                        >
-                          Сумма (₽)
-                          {sortConfig.field === 'amount' && (
-                            <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
-                          )}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transactions.map(t => (
-                        <tr key={t.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                          <td style={{ padding: '12px' }}>{formatDateTime(t.transaction_date)}</td>
-                          <td style={{ padding: '12px' }}>{t.card_number || '—'}</td>
-                          <td style={{ padding: '12px' }}>{t.gasStationName}</td>
-                          <td style={{ padding: '12px' }}>{t.product || '—'}</td>
-                          <td style={{ padding: '12px' }}>{formatLiters(t.quantity)}</td>
-                          <td style={{ padding: '12px' }}>{formatCurrency(t.amount_with_discount || t.amount)}</td>
+                <>
+                  <div className="table-wrapper" style={{ overflowX: 'auto' }}>
+                    <table className="ui-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Карта</th>
+                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Количество операций</th>
+                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Общий объём (л)</th>
+                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Общая сумма (₽)</th>
+                          <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>Средний чек (₽)</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {transactionsByCard
+                          .slice((cardsSummaryCurrentPage - 1) * cardsSummaryLimit, cardsSummaryCurrentPage * cardsSummaryLimit)
+                          .map((cardData, index) => (
+                          <tr 
+                            key={cardData.cardNumber || index}
+                            onClick={() => setSelectedCardForDetails(cardData.cardNumber === 'Без карты' ? null : cardData.cardNumber)}
+                            style={{ 
+                              borderBottom: '1px solid var(--color-border)',
+                              cursor: 'pointer',
+                              backgroundColor: selectedCardForDetails === cardData.cardNumber ? 'var(--color-primary-light)' : 'transparent',
+                              transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (selectedCardForDetails !== cardData.cardNumber) {
+                                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)'
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (selectedCardForDetails !== cardData.cardNumber) {
+                                e.currentTarget.style.backgroundColor = 'transparent'
+                              }
+                            }}
+                          >
+                            <td style={{ padding: '12px', fontWeight: selectedCardForDetails === cardData.cardNumber ? '600' : 'normal' }}>
+                              {cardData.cardNumber}
+                            </td>
+                            <td style={{ padding: '12px' }}>{cardData.count}</td>
+                            <td style={{ padding: '12px' }}>{formatLiters(cardData.totalVolume)}</td>
+                            <td style={{ padding: '12px' }}>{formatCurrency(cardData.totalAmount)}</td>
+                            <td style={{ padding: '12px' }}>{formatCurrency(cardData.count > 0 ? cardData.totalAmount / cardData.count : 0)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {transactionsByCard.length > 0 && (
+                    <Pagination
+                      currentPage={cardsSummaryCurrentPage}
+                      totalPages={Math.ceil(transactionsByCard.length / cardsSummaryLimit)}
+                      total={transactionsByCard.length}
+                      pageSize={cardsSummaryLimit}
+                      onPageChange={(page) => {
+                        setCardsSummaryCurrentPage(page)
+                        // Прокручиваем к началу таблицы при смене страницы
+                        const tableElement = document.querySelector('.transactions-card')
+                        if (tableElement) {
+                          tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            </Card.Body>
+          </Card>
+          
+          {/* Часть 2: Детализация по выбранной карте */}
+          {selectedCardForDetails && (
+            <Card className="transactions-card">
+              <Card.Body>
+                <div className="table-header">
+                  <h3>Детализация транзакций: {selectedCardForDetails}</h3>
+                  <Button variant="secondary" size="sm" onClick={handleExportCSV}>
+                    Экспорт CSV
+                  </Button>
                 </div>
-                {total > 0 && (
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={Math.ceil(total / limit)}
-                    total={total}
-                    pageSize={limit}
-                    onPageChange={(page) => {
-                      setCurrentPage(page)
-                      // Прокручиваем к началу таблицы при смене страницы
-                      const tableElement = document.querySelector('.transactions-card')
-                      if (tableElement) {
-                        tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                    }}
-                  />
+                {loading ? (
+                  <Skeleton count={5} />
+                ) : detailTransactions.length === 0 ? (
+                  <EmptyState message="Нет транзакций для выбранной карты" />
+                ) : (
+                  <>
+                    <div className="table-wrapper" style={{ overflowX: 'auto' }}>
+                      <table className="ui-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr>
+                            <th 
+                              onClick={() => handleSort('transaction_date')}
+                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}
+                            >
+                              Дата и время
+                              {sortConfig.field === 'transaction_date' && (
+                                <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
+                              )}
+                            </th>
+                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>АЗС</th>
+                            <th 
+                              onClick={() => handleSort('product')}
+                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}
+                            >
+                              Тип топлива
+                              {sortConfig.field === 'product' && (
+                                <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
+                              )}
+                            </th>
+                            <th 
+                              onClick={() => handleSort('quantity')}
+                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}
+                            >
+                              Объём (л)
+                              {sortConfig.field === 'quantity' && (
+                                <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
+                              )}
+                            </th>
+                            <th 
+                              onClick={() => handleSort('amount')}
+                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}
+                            >
+                              Сумма (₽)
+                              {sortConfig.field === 'amount' && (
+                                <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
+                              )}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {detailTransactions
+                            .slice((detailCurrentPage - 1) * detailLimit, detailCurrentPage * detailLimit)
+                            .map(t => (
+                            <tr key={t.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                              <td style={{ padding: '12px' }}>{formatDateTime(t.transaction_date)}</td>
+                              <td style={{ padding: '12px' }}>{t.gasStationName}</td>
+                              <td style={{ padding: '12px' }}>{t.product || '—'}</td>
+                              <td style={{ padding: '12px' }}>{formatLiters(t.quantity)}</td>
+                              <td style={{ padding: '12px' }}>{formatCurrency(t.amount_with_discount || t.amount)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {detailTransactions.length > 0 && (
+                      <Pagination
+                        currentPage={detailCurrentPage}
+                        totalPages={Math.ceil(detailTransactions.length / detailLimit)}
+                        total={detailTransactions.length}
+                        pageSize={detailLimit}
+                        onPageChange={(page) => {
+                          setDetailCurrentPage(page)
+                          // Прокручиваем к началу таблицы при смене страницы
+                          const tableElement = document.querySelector('.transactions-card')
+                          if (tableElement) {
+                            tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                          }
+                        }}
+                      />
+                    )}
+                  </>
                 )}
-              </>
+              </Card.Body>
+            </Card>
+          )}
+        </div>
+      )}
+      
+      {/* Полноэкранная карта */}
+      {isMapFullscreen && (
+        <Card className="map-card map-card-fullscreen">
+          <Card.Body>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h3 style={{ margin: 0 }}>Карта заправок</h3>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsMapFullscreen(false)}
+                style={{ minWidth: 'auto', padding: '6px 12px' }}
+              >
+                ✕ Свернуть
+              </Button>
+            </div>
+            {gasStationsWithCoords.length > 0 ? (
+              <div className="map-container-wrapper map-container-fullscreen">
+                <MapContainer
+                  center={mapCenter}
+                  zoom={6}
+                  style={{ height: 'calc(100vh - 200px)', width: '100%' }}
+                  className="map-container"
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <ChangeView center={mapCenter} zoom={6} />
+                  <MarkerCluster
+                    markers={gasStationsWithCoords.map(gs => ({
+                      id: gs.id,
+                      lat: gs.lat,
+                      lon: gs.lon,
+                      name: gs.name,
+                      count: gs.count,
+                      volume: formatLiters(gs.volume),
+                      amount: formatCurrency(gs.amount),
+                      maxCount: maxTransactionCount,
+                      fuelTypesHtml: Object.keys(gs.fuelTypes).length > 0 ? `
+                        <div class="fuel-types-distribution">
+                          <strong>Топливо:</strong>
+                          ${Object.entries(gs.fuelTypes).map(([type, data], idx) => {
+                            const percentage = gs.volume > 0 ? (data.volume / gs.volume) * 100 : 0
+                            return `<div class="fuel-type-item">${type}: ${percentage.toFixed(1)}%</div>`
+                          }).join('')}
+                        </div>
+                      ` : ''
+                    }))}
+                    createIcon={createCustomIcon}
+                    onMarkerClick={handleMarkerClick}
+                  />
+                </MapContainer>
+              </div>
+            ) : (
+              <EmptyState message="Нет АЗС с координатами для отображения на карте" />
+            )}
+            
+            {gasStationsWithoutCoords.length > 0 && (
+              <div className="no-coords-list">
+                <h4>АЗС без геопозиции ({gasStationsWithoutCoords.length})</h4>
+                <ul>
+                  {gasStationsWithoutCoords.slice(0, 5).map(gs => (
+                    <li key={gs.id}>{gs.name} — {gs.count} заправок</li>
+                  ))}
+                </ul>
+              </div>
             )}
           </Card.Body>
         </Card>
-      </div>
+      )}
       
       {/* Аналитические блоки */}
       <div className="analytics-section">
