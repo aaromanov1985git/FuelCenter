@@ -35,7 +35,9 @@ from app.routers import (
     logs,
     normalization_settings,
     card_info_schedules,
-    fuel_card_analysis
+    fuel_card_analysis,
+    onec_integration,
+    ppr_api
 )
 
 from app.models import Provider, User
@@ -503,6 +505,10 @@ app.include_router(logs.router)
 app.include_router(normalization_settings.router)
 app.include_router(card_info_schedules.router)
 app.include_router(fuel_card_analysis.router)
+app.include_router(onec_integration.router)
+app.include_router(ppr_api.router)
+app.include_router(ppr_api.router_public_api)
+app.include_router(ppr_api.router_public_api_v1)
 
 
 

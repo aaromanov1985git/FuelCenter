@@ -24,6 +24,19 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         skip_paths = ["/health", "/api/v1/config", "/docs", "/openapi.json", "/redoc"]
         should_log = not any(request.url.path.startswith(path) for path in skip_paths)
         
+        # Специальная обработка для PPR API - всегда логируем
+        is_ppr_api = request.url.path.startswith("/api/public-api/v2") or request.url.path.startswith("/api/ppr")
+        if is_ppr_api:
+            import sys
+            print(f"\n{'!'*80}", file=sys.stdout, flush=True)
+            print(f"!!! MIDDLEWARE: PPR API ЗАПРОС ПОЛУЧЕН !!!", file=sys.stdout, flush=True)
+            print(f"Path: {request.url.path}", file=sys.stdout, flush=True)
+            print(f"Method: {request.method}", file=sys.stdout, flush=True)
+            print(f"Client IP: {client_ip}", file=sys.stdout, flush=True)
+            print(f"Full URL: {request.url}", file=sys.stdout, flush=True)
+            print(f"Headers: {dict(request.headers)}", file=sys.stdout, flush=True)
+            print(f"{'!'*80}\n", file=sys.stdout, flush=True)
+        
         # Логируем начало запроса
         if should_log:
             # Специальная обработка для всех POST запросов к /api/v1/templates
