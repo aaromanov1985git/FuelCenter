@@ -11,11 +11,52 @@ export default defineConfig({
   plugins: [react()],
   base: base,
   root: '.',
+  cacheDir: 'node_modules/.vite',
+  clearScreen: false, // Prevent clearing screen which can cause issues on Windows
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1000, // Increase warning limit to 1MB
     rollupOptions: {
-      input: resolve(__dirname, 'index.html')
+      input: resolve(__dirname, 'index.html'),
+      output: {
+        manualChunks: (id) => {
+          // Split node_modules into separate chunks
+          if (id.includes('node_modules')) {
+            // Vendor chunks
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor-react'
+            }
+            if (id.includes('leaflet')) {
+              return 'vendor-leaflet'
+            }
+            if (id.includes('xlsx')) {
+              return 'vendor-xlsx'
+            }
+            // Other vendor libraries
+            return 'vendor'
+          }
+          
+          // Split large components into separate chunks
+          if (id.includes('src/components')) {
+            // Large components that should be in their own chunks
+            if (id.includes('TemplateEditor')) {
+              return 'component-template-editor'
+            }
+            if (id.includes('ProviderAnalysisDashboard')) {
+              return 'component-provider-analysis'
+            }
+            if (id.includes('FuelCardAnalysisList')) {
+              return 'component-fuel-card-analysis'
+            }
+            if (id.includes('Dashboard')) {
+              return 'component-dashboard'
+            }
+            // Group other components
+            return 'components'
+          }
+        }
+      }
     }
   },
   server: {

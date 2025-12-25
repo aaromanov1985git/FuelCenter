@@ -1,0 +1,93 @@
+.notification-settings {
+  padding: 1rem;
+}
+
+.notification-settings h2 {
+  margin: 0 0 2rem 0;
+}
+
+.notification-settings-section {
+  margin-bottom: 2rem;
+}
+
+.notification-settings-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.notification-settings-description {
+  margin: 0.5rem 0;
+  color: var(--text-secondary, #666);
+  font-size: 0.9rem;
+}
+
+.notification-settings-channel {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  background: var(--card-background, #ffffff);
+}
+
+.notification-settings-telegram-fields {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+}
+
+.notification-settings-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.notification-settings-category {
+  padding: 1rem;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  background: var(--card-background, #ffffff);
+}
+
+.notification-settings-category-desc {
+  margin: 0.5rem 0 0 0;
+  color: var(--text-secondary, #666);
+  font-size: 0.875rem;
+}
+
+.notification-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+}
+
+.notification-settings-loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary, #666);
+}
+
+/* Темная тема */
+[data-theme="dark"] .notification-settings-channel,
+[data-theme="dark"] .notification-settings-category {
+  border-color: var(--border-color, #333);
+  background: var(--card-background, #1a1a1a);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .notification-settings {
+    padding: 0.5rem;
+  }
+
+  .notification-settings-actions {
+    flex-direction: column;
+  }
+
+  .notification-settings-actions > * {
+    width: 100%;
+  }
+}
+

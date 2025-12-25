@@ -1124,7 +1124,7 @@ const ProviderAnalysisDashboard = () => {
                   }}
                   label="Все"
                 />
-                <div className="multiselect-list">
+                <div className="multiselect-list" style={{ maxHeight: '200px', overflowY: 'auto', padding: 'var(--spacing-xs)' }}>
                   {filteredGasStations.length === 0 ? (
                     <div style={{ padding: '4px', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
                       {gasStations.length === 0 
@@ -1134,7 +1134,7 @@ const ProviderAnalysisDashboard = () => {
                           : 'Нет АЗС, соответствующих фильтрам'}
                     </div>
                   ) : (
-                    filteredGasStations.slice(0, 5).map(gs => (
+                    filteredGasStations.map(gs => (
                       <Checkbox
                         key={gs.id}
                         checked={selectedGasStations.includes(gs.id)}

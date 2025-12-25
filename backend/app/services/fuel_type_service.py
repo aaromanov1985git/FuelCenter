@@ -236,3 +236,39 @@ class FuelTypeService:
                     result[ft_id] = result.get(ft_id, 0) + count
         
         return result
+    
+    def delete_fuel_type(self, fuel_type_id: int) -> bool:
+        """
+        Удаление вида топлива
+        
+        Args:
+            fuel_type_id: ID вида топлива для удаления
+        
+        Returns:
+            bool: True если удаление успешно, False если вид топлива не найден
+        """
+        fuel_type = self.get_fuel_type(fuel_type_id)
+        if not fuel_type:
+            return False
+        
+        # Проверяем наличие транзакций
+        transactions_count = self.get_transactions_count(fuel_type_id)
+        if transactions_count > 0:
+            logger.warning(
+                f"Попытка удаления вида топлива с транзакциями",
+                extra={
+                    "fuel_type_id": fuel_type_id,
+                    "transactions_count": transactions_count
+                }
+            )
+            # Не блокируем удаление, но логируем предупреждение
+        
+        result = self.fuel_type_repo.delete(fuel_type_id)
+        if result:
+            logger.info("Вид топлива удален", extra={
+                "fuel_type_id": fuel_type_id,
+                "original_name": fuel_type.original_name,
+                "normalized_name": fuel_type.normalized_name
+            })
+        
+        return result

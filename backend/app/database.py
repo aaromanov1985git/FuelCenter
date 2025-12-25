@@ -78,7 +78,7 @@ engine = create_engine(
     pool_pre_ping=True,  # Проверяет соединение перед использованием
     pool_recycle=3600,   # Переиспользует соединения каждый час
     connect_args={
-        "options": "-c search_path=public"  # Явно указываем схему
+        "options": "-c search_path=public -c client_encoding=UTF8"  # Явно указываем схему и кодировку
     }
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

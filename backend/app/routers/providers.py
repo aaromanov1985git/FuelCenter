@@ -2,13 +2,19 @@
 Роутер для работы с провайдерами
 """
 from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import Optional
+from datetime import date
+import io
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill
 from app.database import get_db
 from app.logger import logger
-from app.models import Provider, ProviderTemplate, User
+from app.models import Provider, ProviderTemplate, User, Transaction, GasStation, FuelCard, Vehicle
 from app.auth import require_auth_if_enabled
 from app.services.logging_service import logging_service
+from app.services.transaction_service import TransactionService
 from app.schemas import (
     ProviderResponse, ProviderCreate, ProviderUpdate, ProviderListResponse,
     ProviderTemplateResponse, ProviderTemplateCreate, ProviderTemplateListResponse
@@ -309,3 +315,276 @@ async def create_template(
         logger.error(f"Ошибка при преобразовании шаблона в ответ: {e}", exc_info=True)
         # Если преобразование не удалось, возвращаем объект напрямую (FastAPI попытается сериализовать)
         return db_template
+
+
+@router.get("/{provider_id}/export")
+async def export_provider_data(
+    provider_id: int,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
+):
+    """
+    Экспорт всех данных по провайдеру в Excel файл
+    
+    Экспортирует:
+    - Транзакции
+    - АЗС
+    - Топливные карты
+    - Транспортные средства
+    
+    Все данные экспортируются в один Excel файл с несколькими листами.
+    """
+    # Проверяем существование провайдера
+    provider = db.query(Provider).filter(Provider.id == provider_id).first()
+    if not provider:
+        raise HTTPException(status_code=404, detail="Провайдер не найден")
+    
+    logger.info(
+        "Начало экспорта данных по провайдеру",
+        extra={"provider_id": provider_id, "provider_name": provider.name}
+    )
+    
+    # Создаем Excel файл
+    wb = Workbook()
+    
+    # Удаляем дефолтный лист
+    wb.remove(wb.active)
+    
+    # Стили для заголовков
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF")
+    header_alignment = Alignment(horizontal="center", vertical="center")
+    
+    # 1. Лист "Транзакции"
+    ws_transactions = wb.create_sheet("Транзакции")
+    transaction_service = TransactionService(db)
+    transactions, total_transactions = transaction_service.get_transactions(
+        skip=0,
+        limit=100000,
+        provider_id=provider_id,
+        sort_by="transaction_date",
+        sort_order="desc"
+    )
+    
+    headers_transactions = [
+        "ID", "Дата и время", "№ карты", "Закреплена за", "Номер АЗС",
+        "Товар / услуга", "Тип операции", "Количество", "Валюта",
+        "Цена", "Сумма", "Организация", "Источник"
+    ]
+    
+    for col_num, header in enumerate(headers_transactions, 1):
+        cell = ws_transactions.cell(row=1, column=col_num, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+    
+    for row_num, trans in enumerate(transactions, 2):
+        ws_transactions.cell(row=row_num, column=1, value=trans.get("id"))
+        ws_transactions.cell(row=row_num, column=2, value=trans.get("transaction_date").strftime("%d.%m.%Y %H:%M") if trans.get("transaction_date") else "")
+        ws_transactions.cell(row=row_num, column=3, value=trans.get("card_number") or "")
+        ws_transactions.cell(row=row_num, column=4, value=trans.get("vehicle_display_name") or trans.get("vehicle") or "")
+        ws_transactions.cell(row=row_num, column=5, value=trans.get("azs_number") or "")
+        ws_transactions.cell(row=row_num, column=6, value=trans.get("product") or "")
+        ws_transactions.cell(row=row_num, column=7, value=trans.get("operation_type") or "Покупка")
+        ws_transactions.cell(row=row_num, column=8, value=float(trans.get("quantity", 0)) if trans.get("quantity") else "")
+        ws_transactions.cell(row=row_num, column=9, value=trans.get("currency") or "RUB")
+        ws_transactions.cell(row=row_num, column=10, value=float(trans.get("price", 0)) if trans.get("price") else "")
+        ws_transactions.cell(row=row_num, column=11, value=float(trans.get("amount", 0)) if trans.get("amount") else "")
+        ws_transactions.cell(row=row_num, column=12, value=trans.get("organization") or "")
+        ws_transactions.cell(row=row_num, column=13, value=trans.get("source_file") or "")
+    
+    # Автоматическая ширина колонок для транзакций
+    for col in ws_transactions.columns:
+        max_length = 0
+        col_letter = col[0].column_letter
+        for cell in col:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws_transactions.column_dimensions[col_letter].width = adjusted_width
+    
+    # 2. Лист "АЗС"
+    ws_gas_stations = wb.create_sheet("АЗС")
+    gas_stations = db.query(GasStation).filter(GasStation.provider_id == provider_id).all()
+    
+    headers_gas_stations = [
+        "ID", "Исходное наименование", "Наименование", "Номер АЗС",
+        "Местоположение", "Регион", "Населенный пункт",
+        "Широта", "Долгота", "Статус валидации", "Ошибки валидации"
+    ]
+    
+    for col_num, header in enumerate(headers_gas_stations, 1):
+        cell = ws_gas_stations.cell(row=1, column=col_num, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+    
+    for row_num, gs in enumerate(gas_stations, 2):
+        ws_gas_stations.cell(row=row_num, column=1, value=gs.id)
+        ws_gas_stations.cell(row=row_num, column=2, value=gs.original_name or "")
+        ws_gas_stations.cell(row=row_num, column=3, value=gs.name or "")
+        ws_gas_stations.cell(row=row_num, column=4, value=gs.azs_number or "")
+        ws_gas_stations.cell(row=row_num, column=5, value=gs.location or "")
+        ws_gas_stations.cell(row=row_num, column=6, value=gs.region or "")
+        ws_gas_stations.cell(row=row_num, column=7, value=gs.settlement or "")
+        ws_gas_stations.cell(row=row_num, column=8, value=float(gs.latitude) if gs.latitude else "")
+        ws_gas_stations.cell(row=row_num, column=9, value=float(gs.longitude) if gs.longitude else "")
+        ws_gas_stations.cell(row=row_num, column=10, value=gs.is_validated or "pending")
+        ws_gas_stations.cell(row=row_num, column=11, value=gs.validation_errors or "")
+    
+    # Автоматическая ширина колонок для АЗС
+    for col in ws_gas_stations.columns:
+        max_length = 0
+        col_letter = col[0].column_letter
+        for cell in col:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws_gas_stations.column_dimensions[col_letter].width = adjusted_width
+    
+    # 3. Лист "Топливные карты"
+    ws_fuel_cards = wb.create_sheet("Топливные карты")
+    fuel_cards = db.query(FuelCard).filter(FuelCard.provider_id == provider_id).all()
+    
+    headers_fuel_cards = [
+        "ID", "Номер карты", "Владелец (исходное)", "Владелец (нормализованное)",
+        "Закреплена за ТС", "Дата начала закрепления", "Дата окончания закрепления",
+        "Активное закрепление", "Заблокирована"
+    ]
+    
+    for col_num, header in enumerate(headers_fuel_cards, 1):
+        cell = ws_fuel_cards.cell(row=1, column=col_num, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+    
+    for row_num, card in enumerate(fuel_cards, 2):
+        ws_fuel_cards.cell(row=row_num, column=1, value=card.id)
+        ws_fuel_cards.cell(row=row_num, column=2, value=card.card_number or "")
+        ws_fuel_cards.cell(row=row_num, column=3, value=card.original_owner_name or "")
+        ws_fuel_cards.cell(row=row_num, column=4, value=card.normalized_owner or "")
+        # Получаем название ТС, если есть
+        vehicle_name = ""
+        if card.vehicle_id:
+            vehicle = db.query(Vehicle).filter(Vehicle.id == card.vehicle_id).first()
+            if vehicle:
+                vehicle_name = vehicle.original_name
+        ws_fuel_cards.cell(row=row_num, column=5, value=vehicle_name)
+        ws_fuel_cards.cell(row=row_num, column=6, value=card.assignment_start_date.strftime("%d.%m.%Y") if card.assignment_start_date else "")
+        ws_fuel_cards.cell(row=row_num, column=7, value=card.assignment_end_date.strftime("%d.%m.%Y") if card.assignment_end_date else "")
+        ws_fuel_cards.cell(row=row_num, column=8, value="Да" if card.is_active_assignment else "Нет")
+        ws_fuel_cards.cell(row=row_num, column=9, value="Да" if card.is_blocked else "Нет")
+    
+    # Автоматическая ширина колонок для карт
+    for col in ws_fuel_cards.columns:
+        max_length = 0
+        col_letter = col[0].column_letter
+        for cell in col:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws_fuel_cards.column_dimensions[col_letter].width = adjusted_width
+    
+    # 4. Лист "Транспортные средства"
+    # Получаем уникальные ТС из транзакций провайдера
+    vehicle_ids = db.query(Transaction.vehicle_id).filter(
+        Transaction.provider_id == provider_id,
+        Transaction.vehicle_id.isnot(None)
+    ).distinct().all()
+    vehicle_ids = [v[0] for v in vehicle_ids]
+    
+    ws_vehicles = wb.create_sheet("Транспортные средства")
+    vehicles = db.query(Vehicle).filter(Vehicle.id.in_(vehicle_ids)).all() if vehicle_ids else []
+    
+    headers_vehicles = [
+        "ID", "Исходное наименование", "Гаражный номер", "Государственный номер",
+        "Статус валидации", "Ошибки валидации"
+    ]
+    
+    for col_num, header in enumerate(headers_vehicles, 1):
+        cell = ws_vehicles.cell(row=1, column=col_num, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+    
+    for row_num, vehicle in enumerate(vehicles, 2):
+        ws_vehicles.cell(row=row_num, column=1, value=vehicle.id)
+        ws_vehicles.cell(row=row_num, column=2, value=vehicle.original_name or "")
+        ws_vehicles.cell(row=row_num, column=3, value=vehicle.garage_number or "")
+        ws_vehicles.cell(row=row_num, column=4, value=vehicle.license_plate or "")
+        ws_vehicles.cell(row=row_num, column=5, value=vehicle.is_validated or "pending")
+        ws_vehicles.cell(row=row_num, column=6, value=vehicle.validation_errors or "")
+    
+    # Автоматическая ширина колонок для ТС
+    for col in ws_vehicles.columns:
+        max_length = 0
+        col_letter = col[0].column_letter
+        for cell in col:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws_vehicles.column_dimensions[col_letter].width = adjusted_width
+    
+    # Сохраняем в память
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    logger.info(
+        "Экспорт данных по провайдеру завершен",
+        extra={
+            "provider_id": provider_id,
+            "provider_name": provider.name,
+            "transactions_count": total_transactions,
+            "gas_stations_count": len(gas_stations),
+            "fuel_cards_count": len(fuel_cards),
+            "vehicles_count": len(vehicles)
+        }
+    )
+    
+    # Логируем действие пользователя
+    if current_user:
+        try:
+            logging_service.log_user_action(
+                db=db,
+                user_id=current_user.id,
+                username=current_user.username,
+                action_type="export",
+                action_description=f"Экспортированы данные провайдера: {provider.name}",
+                action_category="provider",
+                entity_type="Provider",
+                entity_id=provider_id,
+                status="success",
+                extra_data={
+                    "transactions_count": total_transactions,
+                    "gas_stations_count": len(gas_stations),
+                    "fuel_cards_count": len(fuel_cards),
+                    "vehicles_count": len(vehicles)
+                }
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    # Определяем имя файла
+    provider_name_safe = "".join(c for c in provider.name if c.isalnum() or c in (' ', '-', '_')).strip()
+    filename = f"provider_{provider_name_safe}_{date.today().strftime('%Y%m%d')}.xlsx"
+    
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )

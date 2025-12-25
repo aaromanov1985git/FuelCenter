@@ -32,10 +32,20 @@ class GasStationService:
         self,
         skip: int = 0,
         limit: int = 100,
-        is_validated: Optional[str] = None
+        is_validated: Optional[str] = None,
+        provider_id: Optional[int] = None,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = 'asc'
     ) -> Tuple[List[GasStation], int]:
         """
-        Получение списка АЗС с фильтрацией
+        Получение списка АЗС с фильтрацией и сортировкой
+        
+        Args:
+            provider_id: Фильтр по провайдеру
+            search: Поиск по названию, номеру АЗС, местоположению
+            sort_by: Поле для сортировки
+            sort_order: Направление сортировки (asc, desc)
         
         Returns:
             tuple: (список АЗС, общее количество)
@@ -43,7 +53,11 @@ class GasStationService:
         return self.gas_station_repo.get_all(
             skip=skip,
             limit=limit,
-            is_validated=is_validated
+            is_validated=is_validated,
+            provider_id=provider_id,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order
         )
     
     def update_gas_station(
@@ -119,6 +133,31 @@ class GasStationService:
         
         return gas_station
     
+    def delete_gas_station(self, gas_station_id: int) -> Tuple[bool, Optional[str]]:
+        """
+        Удаление АЗС по ID с проверкой зависимостей
+        
+        Returns:
+            Tuple[bool, Optional[str]]: (True если удалено, сообщение об ошибке или None)
+        """
+        gas_station = self.gas_station_repo.get_by_id(gas_station_id)
+        if not gas_station:
+            return False, None
+        
+        # Проверяем наличие связанных транзакций
+        transactions_count = self.db.query(Transaction).filter(
+            Transaction.gas_station_id == gas_station_id
+        ).count()
+        
+        if transactions_count > 0:
+            return False, f"Невозможно удалить АЗС: найдено {transactions_count} связанных транзакций"
+        
+        success = self.gas_station_repo.delete(gas_station_id)
+        if success:
+            logger.info("АЗС удалена", extra={"gas_station_id": gas_station_id})
+        
+        return success, None
+    
     def get_stats_summary(self) -> dict:
         """
         Получение статистики по АЗС
@@ -173,32 +212,93 @@ class GasStationService:
         """
         warnings = []
 
-        # Нормализуем название для поиска (убираем лишние пробелы, приводим к нижнему регистру)
-        normalized_name = re.sub(r'\s+', ' ', original_name.strip()).lower()
-
-        # Сначала ищем по точному совпадению исходного названия
+        # УЛУЧШЕННАЯ ЛОГИКА: сначала ищем по original_name, затем по номеру с проверкой
+        # Это важно, чтобы "контроллер КАЗС10 Аи-92" не связывалась с "контроллер КАЗС07 Аи-92"
+        # только потому, что у обеих номер "10" (если извлекается одинаковый номер)
+        
+        gas_station = None
+        
+        # Сначала ищем по точному совпадению original_name (самый надежный способ)
         gas_station = self.db.query(GasStation).filter(GasStation.original_name == original_name).first()
-
+        
         # Если не найдено, ищем по нормализованному названию
         if not gas_station:
+            normalized_name = re.sub(r'\s+', ' ', original_name.strip()).lower()
             all_gas_stations = self.db.query(GasStation).all()
             for gs in all_gas_stations:
                 if re.sub(r'\s+', ' ', gs.original_name.strip()).lower() == normalized_name:
                     gas_station = gs
                     break
-
-        # Если не найдено по названию и есть номер АЗС, ищем по номеру АЗС
-        # Это помогает найти ту же АЗС, даже если original_name был изменен вручную
+        
+        # Только если не нашли по названию, ищем по номеру АЗС
+        # Но при этом проверяем, что названия похожи или номер действительно уникален
         if not gas_station and azs_number and azs_number.strip():
-            gas_station = self.db.query(GasStation).filter(GasStation.azs_number == azs_number.strip()).first()
-            if gas_station:
-                # Если нашли по номеру, но название не совпадает - предупреждаем
+            gas_stations_by_number = self.db.query(GasStation).filter(GasStation.azs_number == azs_number.strip()).all()
+            
+            if len(gas_stations_by_number) == 1:
+                # Если найдена только одна АЗС с таким номером, используем её
+                gas_station = gas_stations_by_number[0]
+                # Проверяем схожесть названий
                 if gas_station.original_name != original_name:
+                    # Вычисляем схожесть названий
+                    normalized_existing = re.sub(r'\s+', ' ', gas_station.original_name.strip()).lower()
+                    normalized_new = re.sub(r'\s+', ' ', original_name.strip()).lower()
+                    
+                    # Если названия сильно различаются, это может быть другая АЗС
+                    if normalized_existing != normalized_new:
+                        # Проверяем, содержат ли оба названия одинаковые ключевые слова (например, "КАЗС10" и "КАЗС07")
+                        # Если содержат разные номера в названии, это разные АЗС
+                        import re as re_module
+                        existing_numbers = set(re_module.findall(r'\d+', gas_station.original_name))
+                        new_numbers = set(re_module.findall(r'\d+', original_name))
+                        common_numbers = existing_numbers & new_numbers
+                        
+                        # Если в названиях есть числа, и они не совпадают, это разные АЗС
+                        if existing_numbers and new_numbers and not common_numbers:
+                            # Не используем найденную АЗС, создадим новую
+                            existing_original_name = gas_station.original_name
+                            gas_station = None
+                            warnings.append(
+                                f"Найдена АЗС с номером '{azs_number}', но название '{original_name}' "
+                                f"существенно отличается от '{existing_original_name}' (разные номера в названии). "
+                                f"Будет создана новая запись."
+                            )
+                        else:
+                            warnings.append(
+                                f"АЗС найдена по номеру '{azs_number}', но название в файле '{original_name}' "
+                                f"отличается от сохраненного '{gas_station.original_name}'. "
+                                f"Будет использована существующая запись."
+                            )
+            elif len(gas_stations_by_number) > 1:
+                # Если найдено несколько АЗС с таким номером, ищем по названию среди них
+                normalized_name = re.sub(r'\s+', ' ', original_name.strip()).lower()
+                for gs in gas_stations_by_number:
+                    if re.sub(r'\s+', ' ', gs.original_name.strip()).lower() == normalized_name:
+                        gas_station = gs
+                        break
+                
+                # Если не нашли по названию среди АЗС с таким номером, берем первую
+                if not gas_station:
+                    gas_station = gas_stations_by_number[0]
                     warnings.append(
-                        f"АЗС найдена по номеру '{azs_number}', но название в файле '{original_name}' "
-                        f"отличается от сохраненного '{gas_station.original_name}'. "
-                        f"Будет использована существующая запись."
+                        f"Найдено несколько АЗС с номером '{azs_number}'. Используется первая найденная."
                     )
+        
+        # Если не найдено по номеру АЗС, ищем по названию
+        if not gas_station:
+            # Нормализуем название для поиска (убираем лишние пробелы, приводим к нижнему регистру)
+            normalized_name = re.sub(r'\s+', ' ', original_name.strip()).lower()
+            
+            # Ищем по точному совпадению исходного названия
+            gas_station = self.db.query(GasStation).filter(GasStation.original_name == original_name).first()
+
+            # Если не найдено, ищем по нормализованному названию
+            if not gas_station:
+                all_gas_stations = self.db.query(GasStation).all()
+                for gs in all_gas_stations:
+                    if re.sub(r'\s+', ' ', gs.original_name.strip()).lower() == normalized_name:
+                        gas_station = gs
+                        break
 
         # Если все еще не найдено, проверяем на похожие записи
         if not gas_station:

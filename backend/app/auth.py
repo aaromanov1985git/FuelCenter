@@ -22,6 +22,8 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # OAuth2 схема для получения токена из заголовка Authorization
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login-json")
+# Опциональная схема для получения токена без ошибки, если токен отсутствует
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login-json", auto_error=False)
 
 # Настройки JWT
 SECRET_KEY = settings.secret_key
@@ -41,15 +43,27 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         True если пароль верный, иначе False
     """
     try:
+        # Bcrypt имеет ограничение в 72 байта для пароля
+        # Обрезаем пароль до 72 байт перед проверкой (как при хешировании)
+        password_bytes = plain_password.encode('utf-8')
+        if len(password_bytes) > 72:
+            password_bytes = password_bytes[:72]
+        
         # Используем прямой вызов bcrypt из-за проблем совместимости с passlib
         import bcrypt
-        result = bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+        result = bcrypt.checkpw(password_bytes, hashed_password.encode('utf-8'))
         logger.debug(f"Проверка пароля через bcrypt: {result}")
         return result
     except Exception as e:
         logger.warning(f"Ошибка при проверке пароля через bcrypt: {e}", exc_info=True)
         # Fallback на passlib если bcrypt не работает
         try:
+            # Также обрезаем для passlib для консистентности
+            password_bytes = plain_password.encode('utf-8')
+            if len(password_bytes) > 72:
+                password_bytes = password_bytes[:72]
+                plain_password = password_bytes.decode('utf-8', errors='ignore')
+            
             result = pwd_context.verify(plain_password, hashed_password)
             logger.debug(f"Проверка пароля через passlib: {result}")
             return result
@@ -68,7 +82,33 @@ def get_password_hash(password: str) -> str:
     Returns:
         Хешированный пароль
     """
-    return pwd_context.hash(password)
+    try:
+        # Используем прямой вызов bcrypt для контроля над обрезкой пароля
+        import bcrypt
+        # Bcrypt имеет ограничение в 72 байта для пароля
+        # Обрезаем пароль до 72 байт перед хешированием
+        password_bytes = password.encode('utf-8')
+        if len(password_bytes) > 72:
+            password_bytes = password_bytes[:72]
+        
+        # Генерируем соль и хешируем пароль
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(password_bytes, salt)
+        return hashed.decode('utf-8')
+    except Exception as e:
+        logger.warning(f"Ошибка при хешировании пароля через bcrypt: {e}", exc_info=True)
+        # Fallback на passlib если bcrypt не работает
+        try:
+            # Также обрезаем для passlib для консистентности
+            password_bytes = password.encode('utf-8')
+            if len(password_bytes) > 72:
+                password_bytes = password_bytes[:72]
+                password = password_bytes.decode('utf-8', errors='ignore')
+            
+            return pwd_context.hash(password)
+        except Exception as e2:
+            logger.error(f"Ошибка при хешировании пароля через passlib: {e2}", exc_info=True)
+            raise ValueError(f"Не удалось захешировать пароль: {str(e2)}") from e2
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -272,7 +312,7 @@ def require_role(required_role: str):
 
 # Создаем две версии функции в зависимости от настроек (должно быть перед использованием)
 if settings.enable_auth:
-    async def _get_token_from_header(token: str = Depends(oauth2_scheme)) -> Optional[str]:
+    async def _get_token_from_header(token: Optional[str] = Depends(oauth2_scheme_optional)) -> Optional[str]:
         return token
 else:
     async def _get_token_from_header() -> Optional[str]:

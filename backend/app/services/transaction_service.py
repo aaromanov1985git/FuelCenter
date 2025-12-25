@@ -85,6 +85,25 @@ class TransactionService:
             gas_stations = self.db.query(GasStation).filter(GasStation.id.in_(gas_station_ids)).all()
             gas_stations_dict = {gs.id: gs for gs in gas_stations}
         
+        # Также загружаем АЗС по номерам для транзакций, у которых нет gas_station_id, но есть azs_number
+        gas_stations_by_azs_number = {}  # Инициализируем пустым словарем
+        azs_numbers = [str(trans.azs_number).strip() for trans in transactions 
+                      if not trans.gas_station_id and trans.azs_number]
+        if azs_numbers:
+            # Убираем дубликаты
+            azs_numbers_unique = list(set(azs_numbers))
+            gas_stations_by_number = self.db.query(GasStation).filter(
+                GasStation.azs_number.in_(azs_numbers_unique)
+            ).all()
+            # Создаем словарь для быстрого поиска по номеру АЗС
+            for gs in gas_stations_by_number:
+                if gs.azs_number:
+                    azs_num_normalized = str(gs.azs_number).strip()
+                    gas_stations_by_azs_number[azs_num_normalized] = gs
+                    # Также добавляем без нормализации для обратной совместимости
+                    if azs_num_normalized != str(gs.azs_number):
+                        gas_stations_by_azs_number[str(gs.azs_number)] = gs
+        
         # Формируем результат с дополнительными полями
         result_items = []
         for trans in transactions:
@@ -127,7 +146,17 @@ class TransactionService:
             # Если есть gas_station_id, получаем наименование из справочника
             if trans.gas_station_id and trans.gas_station_id in gas_stations_dict:
                 gas_station = gas_stations_dict[trans.gas_station_id]
-                trans_dict["gas_station_name"] = gas_station.name
+                # Используем name, если он есть, иначе original_name
+                trans_dict["gas_station_name"] = gas_station.name or gas_station.original_name
+            # Если gas_station_id не установлен, но есть azs_number, пробуем найти АЗС по номеру
+            elif trans.azs_number and gas_stations_by_azs_number:
+                azs_num_normalized = str(trans.azs_number).strip()
+                gas_station = gas_stations_by_azs_number.get(azs_num_normalized) or gas_stations_by_azs_number.get(trans.azs_number)
+                if gas_station:
+                    # Используем name, если он есть, иначе original_name
+                    trans_dict["gas_station_name"] = gas_station.name or gas_station.original_name
+                    # Обновляем gas_station_id для будущих запросов (но не сохраняем в БД здесь)
+                    # Это поможет в следующих запросах, если транзакция будет обновлена
             
             # Если есть vehicle_id, получаем исправленное название из справочника (из кэша)
             if trans.vehicle_id and trans.vehicle_id in vehicles_dict:

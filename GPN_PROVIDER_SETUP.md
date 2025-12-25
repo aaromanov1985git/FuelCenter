@@ -12,7 +12,7 @@
 
 - API ключ (api_key)
 - Логин и пароль из Личного кабинета Газпром-нефть
-- Доступ к API (демо-стенд: https://api-demo.opti-24.ru)
+- Доступ к API (https://api.opti-24.ru)
 
 ## Настройка шаблона провайдера
 
@@ -23,7 +23,7 @@
 ```json
 {
   "provider_type": "gpn",
-  "base_url": "https://api-demo.opti-24.ru",
+  "base_url": "https://api.opti-24.ru",
   "api_key": "GPN.3ce7b860ece5758d1d27c7f8b4796ea79b33927e.630c2bc76676191bd6e94222d9acaaf56bc0a750",
   "login": "demo",
   "password": "auto-generated-pas58-save-it",
@@ -34,7 +34,7 @@
 ### Параметры:
 
 - **provider_type** (обязательный) - Тип провайдера: `"gpn"`, `"gazprom-neft"` или `"gazpromneft"`
-- **base_url** (опциональный) - Базовый URL API (по умолчанию `"https://api-demo.opti-24.ru"`)
+- **base_url** (опциональный) - Базовый URL API (по умолчанию `"https://api.opti-24.ru"`)
 - **api_key** (обязательный) - API ключ для авторизации
 - **login** (обязательный) - Логин из Личного кабинета Газпром-нефть
 - **password** (обязательный) - Пароль из Личного кабинета Газпром-нефть (исходный пароль, не хеш!)
@@ -51,7 +51,7 @@ POST /api/templates
   "connection_type": "api",
   "connection_settings": {
     "provider_type": "gpn",
-    "base_url": "https://api-demo.opti-24.ru",
+    "base_url": "https://api.opti-24.ru",
     "api_key": "GPN.3ce7b860ece5758d1d27c7f8b4796ea79b33927e.630c2bc76676191bd6e94222d9acaaf56bc0a750",
     "login": "demo",
     "password": "auto-generated-pas58-save-it",
@@ -76,7 +76,7 @@ POST /api/templates
 POST /api/templates/test-api-connection?connection_type=api
 {
   "provider_type": "gpn",
-  "base_url": "https://api-demo.opti-24.ru",
+  "base_url": "https://api.opti-24.ru",
   "api_key": "GPN.3ce7b860ece5758d1d27c7f8b4796ea79b33927e.630c2bc76676191bd6e94222d9acaaf56bc0a750",
   "login": "demo",
   "password": "auto-generated-pas58-save-it"
@@ -209,12 +209,12 @@ API возвращает транзакции в следующем формат
 ## Демо-стенд
 
 Для тестирования используется демо-стенд:
-- URL: `https://api-demo.opti-24.ru`
-- Логин: `demo`
-- Пароль: `auto-generated-pas58-save-it`
-- API ключ: `GPN.3ce7b860ece5758d1d27c7f8b4796ea79b33927e.630c2bc76676191bd6e94222d9acaaf56bc0a750`
+- URL: `https://api.opti-24.ru`
+- Логин: ваш логин из Личного кабинета Газпром-нефть
+- Пароль: ваш пароль из Личного кабинета Газпром-нефть
+- API ключ: ваш API ключ из Личного кабинета Газпром-нефть
 
-Документация API: https://api-demo.opti-24.ru/docs
+Документация API: https://api.opti-24.ru/docs
 
 ## Обработка ошибок
 

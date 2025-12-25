@@ -213,6 +213,51 @@ const FuelTypesList = () => {
     setHasTransactions(false)
   }
 
+  const [deletingId, setDeletingId] = useState(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [fuelTypeToDelete, setFuelTypeToDelete] = useState(null)
+
+  const handleDelete = useCallback((fuelType) => {
+    setFuelTypeToDelete(fuelType)
+    setShowDeleteModal(true)
+  }, [])
+
+  const confirmDelete = async () => {
+    if (!fuelTypeToDelete) return
+    
+    setDeletingId(fuelTypeToDelete.id)
+    try {
+      const response = await authFetch(`${API_URL}/api/v1/fuel-types/${fuelTypeToDelete.id}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Ошибка удаления')
+      }
+
+      setShowDeleteModal(false)
+      setFuelTypeToDelete(null)
+      await loadFuelTypes()
+      await loadStats()
+      success('Вид топлива успешно удален')
+    } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
+      const errorMessage = 'Ошибка удаления: ' + err.message
+      showError(errorMessage)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false)
+    setFuelTypeToDelete(null)
+  }
+
   const getStatusBadge = (status) => {
     const statusMap = {
       pending: 'pending',
@@ -322,6 +367,14 @@ const FuelTypesList = () => {
               }}
               title={`Показать транзакции с видом топлива "${fuelType.normalized_name || fuelType.original_name}"`}
               size="small"
+            />
+            <IconButton 
+              icon="delete" 
+              variant="danger" 
+              onClick={() => handleDelete(fuelType)}
+              title="Удалить"
+              size="small"
+              disabled={deletingId === fuelType.id}
             />
           </div>
         )
@@ -546,6 +599,36 @@ const FuelTypesList = () => {
           </div>
         </Modal.Body>
       </Modal>
+
+      {/* Модальное окно подтверждения удаления */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Подтверждение удаления"
+        confirmText="Удалить"
+        cancelText="Отмена"
+        variant="danger"
+        loading={deletingId !== null}
+      >
+        {fuelTypeToDelete && (
+          <div>
+            <p>Вы уверены, что хотите удалить вид топлива?</p>
+            <div style={{ marginTop: 'var(--spacing-block)', padding: 'var(--spacing-block)', backgroundColor: 'var(--color-bg-secondary)', borderRadius: 'var(--border-radius)' }}>
+              <p style={{ margin: 0, fontWeight: 'bold' }}>Исходное наименование:</p>
+              <p style={{ margin: 'var(--spacing-tiny) 0' }}>{fuelTypeToDelete.original_name}</p>
+              <p style={{ margin: 0, fontWeight: 'bold' }}>Нормализованное наименование:</p>
+              <p style={{ margin: 'var(--spacing-tiny) 0' }}>{fuelTypeToDelete.normalized_name || fuelTypeToDelete.original_name}</p>
+              {fuelTypeToDelete.transactions_count > 0 && (
+                <Alert variant="warning" style={{ marginTop: 'var(--spacing-block)' }}>
+                  У данного вида топлива есть связанные транзакции ({fuelTypeToDelete.transactions_count.toLocaleString('ru-RU')}). 
+                  Удаление может повлиять на отчетность.
+                </Alert>
+              )}
+            </div>
+          </div>
+        )}
+      </ConfirmModal>
 
       {/* Модальное окно настроек полей */}
       {showColumnSettings && createPortal(

@@ -60,6 +60,26 @@ class Settings(BaseSettings):
     # Версия API
     api_version: str = "1.0.0"
     
+    # Настройки уведомлений - Email
+    email_enabled: bool = False
+    email_smtp_host: Optional[str] = None
+    email_smtp_port: int = 587
+    email_smtp_user: Optional[str] = None
+    email_smtp_password: Optional[str] = None
+    email_from_address: Optional[str] = None
+    email_from_name: str = "GSM Converter"
+    email_use_tls: bool = True
+    
+    # Настройки уведомлений - Telegram
+    telegram_enabled: bool = False
+    telegram_bot_token: Optional[str] = None
+    
+    # Настройки уведомлений - Push
+    push_enabled: bool = True
+    push_vapid_public_key: Optional[str] = None
+    push_vapid_private_key: Optional[str] = None
+    push_vapid_subject: Optional[str] = None
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

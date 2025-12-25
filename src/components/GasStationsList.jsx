@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import IconButton from './IconButton'
 import StatusBadge from './StatusBadge'
 import { useToast } from './ToastContainer'
+import { useDebounce } from '../hooks/useDebounce'
 import { authFetch } from '../utils/api'
 import { Card, Button, Input, Table, Badge, Skeleton, Alert, Select, Modal, Tooltip } from './ui'
 import MapModal from './MapModal'
@@ -13,7 +14,7 @@ import './ColumnSettingsModal.css'
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
 
 const GasStationsList = () => {
-  const { error: showError, success } = useToast()
+  const { error: showError, success, warning } = useToast()
   const [gasStations, setGasStations] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -35,14 +36,28 @@ const GasStationsList = () => {
   const [providers, setProviders] = useState([])
   const [filter, setFilter] = useState('all') // all, pending, valid, invalid
   const [originalProviderId, setOriginalProviderId] = useState(null)
+  
+  // Фильтры и поиск
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedProviderId, setSelectedProviderId] = useState('')
+  const debouncedSearchQuery = useDebounce(searchQuery, 500)
   const [hasTransactions, setHasTransactions] = useState(false)
   const [showProviderChangeConfirm, setShowProviderChangeConfirm] = useState(false)
   const [pendingProviderId, setPendingProviderId] = useState(null)
+  
+  // Состояния для удаления
+  const [deletingId, setDeletingId] = useState(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [gasStationToDelete, setGasStationToDelete] = useState(null)
   
   // Пагинация
   const [currentPage, setCurrentPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [limit] = useState(50) // Количество записей на странице
+  
+  // Сортировка
+  const [sortBy, setSortBy] = useState(null)
+  const [sortOrder, setSortOrder] = useState('asc')
 
   // Состояния для дашборда
   const [stats, setStats] = useState(null)
@@ -85,6 +100,16 @@ const GasStationsList = () => {
       const params = new URLSearchParams()
       if (filter !== 'all') {
         params.append('is_validated', filter)
+      }
+      if (selectedProviderId) {
+        params.append('provider_id', selectedProviderId)
+      }
+      if (debouncedSearchQuery) {
+        params.append('search', debouncedSearchQuery)
+      }
+      if (sortBy) {
+        params.append('sort_by', sortBy)
+        params.append('sort_order', sortOrder)
       }
       params.append('skip', ((currentPage - 1) * limit).toString())
       params.append('limit', limit.toString())
@@ -133,13 +158,42 @@ const GasStationsList = () => {
   }
 
   useEffect(() => {
-    setCurrentPage(1) // Сбрасываем на первую страницу при смене фильтра
-  }, [filter])
+    setCurrentPage(1) // Сбрасываем на первую страницу при смене фильтров
+  }, [filter, selectedProviderId, debouncedSearchQuery])
 
   useEffect(() => {
     loadGasStations()
     loadStats()
-  }, [filter, currentPage])
+  }, [filter, currentPage, selectedProviderId, debouncedSearchQuery, sortBy, sortOrder])
+  
+  // Обработчик сортировки
+  const handleSort = useCallback((columnKey, newSortOrder) => {
+    // Маппинг ключей колонок на поля API
+    const columnToFieldMap = {
+      'original_name': 'original_name',
+      'name': 'name',
+      'azs_number': 'azs_number',
+      'location': 'location',
+      'region': 'region',
+      'settlement': 'settlement',
+      'status': 'is_validated',
+      'coordinates': null, // Координаты не сортируются на сервере
+      'errors': null, // Ошибки не сортируются на сервере
+      'actions': null, // Действия не сортируются
+      'provider': null // Провайдер не сортируется (связанная таблица)
+    }
+    
+    const fieldName = columnToFieldMap[columnKey]
+    if (fieldName) {
+      setSortBy(fieldName)
+      setSortOrder(newSortOrder)
+      setCurrentPage(1) // Сбрасываем на первую страницу при смене сортировки
+    } else {
+      // Если поле не поддерживает сортировку, сбрасываем сортировку
+      setSortBy(null)
+      setSortOrder('asc')
+    }
+  }, [])
 
   const loadProviders = async () => {
     try {
@@ -204,6 +258,244 @@ const GasStationsList = () => {
     
     setShowEditModal(true)
   }, [])
+
+  const handleDelete = useCallback((gasStation) => {
+    setGasStationToDelete(gasStation)
+    setShowDeleteModal(true)
+  }, [])
+
+  const confirmDelete = async () => {
+    if (!gasStationToDelete) return
+    
+    setDeletingId(gasStationToDelete.id)
+    try {
+      const response = await authFetch(`${API_URL}/api/v1/gas-stations/${gasStationToDelete.id}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Ошибка удаления')
+      }
+
+      setShowDeleteModal(false)
+      setGasStationToDelete(null)
+      await loadGasStations()
+      await loadStats()
+      success('АЗС успешно удалена')
+    } catch (err) {
+      // Не показываем ошибку при 401 - это обрабатывается централизованно
+      if (err.isUnauthorized) {
+        return
+      }
+      const errorMessage = 'Ошибка удаления: ' + err.message
+      showError(errorMessage)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false)
+    setGasStationToDelete(null)
+  }
+
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Проверяем тип файла
+    const validTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      'application/excel'
+    ]
+    if (!validTypes.includes(file.type) && !file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      showError('Пожалуйста, выберите файл Excel (.xlsx или .xls)')
+      return
+    }
+
+    try {
+      setLoading(true)
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await authFetch(`${API_URL}/api/v1/gas-stations/import`, {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Ошибка импорта' }))
+        throw new Error(errorData.detail || 'Ошибка импорта')
+      }
+
+      const result = await response.json()
+      
+      // Показываем результат импорта
+      const message = `Импорт завершен: создано ${result.created}, обновлено ${result.updated}, пропущено ${result.skipped}`
+      if (result.errors && result.errors.length > 0) {
+        warning(`${message}. Ошибок: ${result.errors.length}`)
+        console.warn('Ошибки импорта:', result.errors)
+      } else if (result.warnings && result.warnings.length > 0) {
+        warning(`${message}. Предупреждений: ${result.warnings.length}`)
+        console.warn('Предупреждения импорта:', result.warnings)
+      } else {
+        success(message)
+      }
+
+      // Обновляем список АЗС
+      await loadGasStations()
+      await loadStats()
+      
+      // Очищаем input
+      event.target.value = ''
+    } catch (err) {
+      if (err.isUnauthorized) {
+        return
+      }
+      const errorMessage = 'Ошибка импорта: ' + err.message
+      showError(errorMessage)
+      // Очищаем input даже при ошибке
+      event.target.value = ''
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleExport = async () => {
+    try {
+      setLoading(true)
+      
+      // Формируем параметры экспорта с учетом текущих фильтров
+      const params = new URLSearchParams()
+      if (filter && filter !== 'all') {
+        params.append('is_validated', filter)
+      }
+      if (selectedProviderId) {
+        // Преобразуем в число, если это строка
+        const providerId = typeof selectedProviderId === 'string' 
+          ? parseInt(selectedProviderId, 10) 
+          : selectedProviderId
+        if (!isNaN(providerId)) {
+          params.append('provider_id', providerId.toString())
+        }
+      }
+      if (debouncedSearchQuery && debouncedSearchQuery.trim()) {
+        params.append('search', debouncedSearchQuery.trim())
+      }
+      
+      // Формируем URL с параметрами (только если есть параметры)
+      const paramsString = params.toString()
+      const exportUrl = paramsString 
+        ? `${API_URL}/api/v1/gas-stations/export?${paramsString}`
+        : `${API_URL}/api/v1/gas-stations/export`
+      
+      const response = await authFetch(exportUrl)
+      
+      if (!response.ok) {
+        let errorMessage = 'Ошибка экспорта'
+        try {
+          // Проверяем тип контента перед парсингом JSON
+          const contentType = response.headers.get('content-type')
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json()
+            // FastAPI возвращает детали ошибок в разных форматах
+            if (Array.isArray(errorData.detail)) {
+              // Если detail - массив (валидационные ошибки)
+              errorMessage = errorData.detail.map(err => {
+                if (typeof err === 'object' && err.msg) {
+                  return `${err.loc?.join('.') || 'Параметр'}: ${err.msg}`
+                }
+                return String(err)
+              }).join('; ')
+            } else if (typeof errorData.detail === 'string') {
+              errorMessage = errorData.detail
+            } else if (errorData.message) {
+              errorMessage = errorData.message
+            } else {
+              errorMessage = JSON.stringify(errorData)
+            }
+          } else {
+            // Если не JSON, пытаемся прочитать как текст
+            const text = await response.text()
+            errorMessage = text || `Ошибка ${response.status}: ${response.statusText}`
+          }
+        } catch (e) {
+          // Если не удалось распарсить, используем статус
+          errorMessage = `Ошибка ${response.status}: ${response.statusText || 'Неизвестная ошибка'}`
+        }
+        throw new Error(errorMessage)
+      }
+      
+      // Проверяем, что ответ действительно является файлом
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('spreadsheet')) {
+        // Если это не Excel файл, возможно это ошибка в JSON формате
+        try {
+          const errorData = await response.json()
+          throw new Error(errorData.detail || errorData.message || 'Неверный формат ответа')
+        } catch (e) {
+          if (e instanceof Error && e.message !== 'Unexpected end of JSON input') {
+            throw e
+          }
+          throw new Error('Сервер вернул неверный формат данных')
+        }
+      }
+      
+      // Получаем имя файла из заголовка Content-Disposition
+      const contentDisposition = response.headers.get('Content-Disposition')
+      let filename = `gas_stations_export_${new Date().toISOString().split('T')[0]}.xlsx`
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '')
+        }
+      }
+      
+      // Скачиваем файл
+      const blob = await response.blob()
+      const blobUrl = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(blobUrl)
+      document.body.removeChild(a)
+      
+      success('Экспорт АЗС завершен')
+    } catch (err) {
+      if (err.isUnauthorized) {
+        return
+      }
+      
+      // Правильно извлекаем сообщение об ошибке
+      let errorMessage = 'Ошибка экспорта'
+      
+      try {
+        if (err instanceof Error) {
+          errorMessage = err.message || errorMessage
+        } else if (typeof err === 'string') {
+          errorMessage = err
+        } else if (err && typeof err === 'object') {
+          // Пытаемся извлечь сообщение из различных полей объекта ошибки
+          errorMessage = err.message || err.detail || err.error || err.toString() || JSON.stringify(err)
+        } else {
+          errorMessage = String(err) || errorMessage
+        }
+      } catch (e) {
+        // Если даже извлечение сообщения об ошибке не удалось
+        errorMessage = 'Неизвестная ошибка при экспорте'
+        console.error('Критическая ошибка при обработке ошибки экспорта:', e)
+      }
+      
+      showError(`Ошибка экспорта: ${errorMessage}`)
+      console.error('Ошибка экспорта АЗС:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSave = async (gasStationId) => {
     // Проверяем валидность координат перед отправкой
@@ -360,17 +652,17 @@ const GasStationsList = () => {
   // Подготовка данных для таблицы с учетом настроек
   const tableColumns = useMemo(() => {
     const allColumns = [
-      { key: 'original_name', header: 'Исходное наименование' },
-      { key: 'name', header: 'Наименование' },
-      { key: 'provider', header: 'Провайдер' },
-      { key: 'azs_number', header: 'Номер АЗС' },
-      { key: 'location', header: 'Местоположение' },
-      { key: 'region', header: 'Регион' },
-      { key: 'settlement', header: 'Населенный пункт' },
-      { key: 'coordinates', header: 'Координаты' },
-      { key: 'status', header: 'Статус' },
-      { key: 'errors', header: 'Ошибки' },
-      { key: 'actions', header: 'Действия' }
+      { key: 'original_name', header: 'Исходное наименование', sortable: true },
+      { key: 'name', header: 'Наименование', sortable: true },
+      { key: 'provider', header: 'Провайдер', sortable: false }, // Провайдер не сортируется (связанная таблица)
+      { key: 'azs_number', header: 'Номер АЗС', sortable: true },
+      { key: 'location', header: 'Местоположение', sortable: true },
+      { key: 'region', header: 'Регион', sortable: true },
+      { key: 'settlement', header: 'Населенный пункт', sortable: true },
+      { key: 'coordinates', header: 'Координаты', sortable: false }, // Координаты не сортируются
+      { key: 'status', header: 'Статус', sortable: true },
+      { key: 'errors', header: 'Ошибки', sortable: false }, // Ошибки не сортируются
+      { key: 'actions', header: 'Действия', sortable: false } // Действия не сортируются
     ]
 
     // Фильтруем и сортируем колонки согласно настройкам
@@ -439,17 +731,27 @@ const GasStationsList = () => {
           '-'
         ),
         actions: (
-          <IconButton 
-            icon="edit" 
-            variant="primary" 
-            onClick={() => handleEdit(gasStation)}
-            title="Редактировать"
-            size="small"
-          />
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <IconButton 
+              icon="edit" 
+              variant="primary" 
+              onClick={() => handleEdit(gasStation)}
+              title="Редактировать"
+              size="small"
+            />
+            <IconButton 
+              icon="trash" 
+              variant="error" 
+              onClick={() => handleDelete(gasStation)}
+              title="Удалить"
+              size="small"
+              disabled={deletingId === gasStation.id}
+            />
+          </div>
         )
       }
     })
-  }, [gasStations, getProviderName, handleEdit])
+  }, [gasStations, getProviderName, handleEdit, handleDelete, deletingId])
 
   return (
     <>
@@ -510,7 +812,32 @@ const GasStationsList = () => {
         <Card.Header>
           <Card.Title>Справочник автозаправочных станций</Card.Title>
             <Card.Actions>
-              <div style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                  onChange={handleImport}
+                  style={{ display: 'none' }}
+                  id="gas-stations-import-input"
+                />
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => document.getElementById('gas-stations-import-input')?.click()}
+                  title="Импорт АЗС из Excel"
+                  disabled={loading}
+                >
+                  📥 Импорт
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleExport}
+                  title="Экспорт АЗС в Excel"
+                  disabled={loading}
+                >
+                  📤 Экспорт
+                </Button>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -554,6 +881,34 @@ const GasStationsList = () => {
           </Card.Header>
 
           <Card.Body>
+            {/* Фильтры и поиск */}
+            <div style={{ display: 'flex', gap: 'var(--spacing-small)', marginBottom: 'var(--spacing-block)', flexWrap: 'wrap' }}>
+              <Input
+                type="text"
+                placeholder="Поиск по названию, номеру АЗС, местоположению..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ flex: '1', minWidth: '250px' }}
+                icon="🔍"
+                iconPosition="left"
+              />
+              <Select
+                value={selectedProviderId}
+                onChange={(value) => setSelectedProviderId(value || '')}
+                options={[
+                  { value: '', label: 'Все провайдеры' },
+                  ...providers
+                    .filter(p => p.is_active !== false)
+                    .map(provider => ({
+                      value: provider.id.toString(),
+                      label: provider.name
+                    }))
+                ]}
+                placeholder="Выберите провайдера"
+                style={{ minWidth: '200px' }}
+              />
+            </div>
+
             {error && (
               <Alert variant="error" className="alert-with-margin">
                 {error}
@@ -563,23 +918,28 @@ const GasStationsList = () => {
             {loading && gasStations.length === 0 ? (
               <Skeleton rows={10} columns={8} />
             ) : (
-            <Table
-              columns={tableColumns}
-              data={tableData}
-              emptyMessage="Нет данных для отображения"
-              compact
-            >
-                {total > limit && (
+              <>
+                <Table
+                  columns={tableColumns}
+                  data={tableData}
+                  emptyMessage="Нет данных для отображения"
+                  compact
+                  sortable={true}
+                  onSort={handleSort}
+                  defaultSortColumn={sortBy}
+                  defaultSortOrder={sortOrder}
+                />
+
+                {total > 0 && (
                   <Table.Pagination
                     currentPage={currentPage}
                     totalPages={Math.ceil(total / limit)}
-                    totalItems={total}
-                    itemsPerPage={limit}
+                    total={total}
+                    pageSize={limit}
                     onPageChange={setCurrentPage}
-                    disabled={loading}
                   />
                 )}
-              </Table>
+              </>
             )}
           </Card.Body>
         </Card>
@@ -927,6 +1287,18 @@ const GasStationsList = () => {
         confirmText="Да, изменить"
         cancelText="Отмена"
         variant="warning"
+      />
+
+      {/* Модальное окно подтверждения удаления */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        title="Удаление АЗС"
+        message={gasStationToDelete ? `Вы уверены, что хотите удалить АЗС "${gasStationToDelete.name || gasStationToDelete.original_name}"?` : ''}
+        confirmText="Да, удалить"
+        cancelText="Отмена"
+        variant="error"
       />
     </>
   )

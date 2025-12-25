@@ -35,7 +35,7 @@ class UploadEventService:
         message: Optional[str] = None,
     ) -> UploadEvent:
         """
-        Создает запись о событии загрузки
+        Создает запись о событии загрузки и уведомление для пользователя
         """
         try:
             event = UploadEvent(
@@ -65,6 +65,55 @@ class UploadEventService:
                 "status": status,
                 "template_id": template_id
             })
+            
+            # Создаем уведомление для пользователя, если указан user_id
+            if user_id:
+                try:
+                    from app.services.notification_service import NotificationService
+                    notification_service = NotificationService(self.db)
+                    
+                    # Определяем тип и категорию уведомления
+                    if status == "failed":
+                        notification_type = "error"
+                        category = "errors"
+                        title = f"Ошибка загрузки: {file_name or 'файл'}"
+                    elif status == "partial":
+                        notification_type = "warning"
+                        category = "upload_events"
+                        title = f"Частичная загрузка: {file_name or 'файл'}"
+                    else:  # success
+                        notification_type = "success"
+                        category = "upload_events"
+                        title = f"Загрузка завершена: {file_name or 'файл'}"
+                    
+                    # Формируем сообщение
+                    notification_message = f"Файл: {file_name or 'неизвестно'}\n"
+                    notification_message += f"Транзакций: создано {transactions_created}, пропущено {transactions_skipped}"
+                    if transactions_failed > 0:
+                        notification_message += f", ошибок {transactions_failed}"
+                    if message:
+                        notification_message += f"\n{message}"
+                    
+                    # Отправляем уведомление (только in-app, с force=True для обязательной доставки)
+                    notification_service.send_notification(
+                        user_id=user_id,
+                        title=title,
+                        message=notification_message,
+                        category=category,
+                        notification_type=notification_type,
+                        channels=["in_app"],  # Только in-app уведомления
+                        entity_type="UploadEvent",
+                        entity_id=event.id,
+                        force=True  # Обязательное уведомление, игнорирует настройки пользователя
+                    )
+                    logger.debug(f"Уведомление создано для события загрузки {event.id}", extra={
+                        "event_id": event.id,
+                        "user_id": user_id,
+                        "category": category
+                    })
+                except Exception as notif_error:
+                    # Не прерываем основной процесс, если уведомление не удалось создать
+                    logger.warning(f"Не удалось создать уведомление для события загрузки {event.id}: {notif_error}", exc_info=True)
             
             return event
         except Exception as exc:

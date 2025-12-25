@@ -126,6 +126,64 @@ async def update_fuel_type(
     return fuel_type
 
 
+@router.delete("/{fuel_type_id}")
+async def delete_fuel_type(
+    fuel_type_id: int,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(require_auth_if_enabled)
+):
+    """
+    Удаление вида топлива по ID
+    """
+    fuel_type_service = FuelTypeService(db)
+    fuel_type = fuel_type_service.get_fuel_type(fuel_type_id)
+    
+    if not fuel_type:
+        raise HTTPException(status_code=404, detail="Вид топлива не найден")
+    
+    # Проверяем наличие транзакций
+    transactions_count = fuel_type_service.get_transactions_count(fuel_type_id)
+    
+    # Удаляем вид топлива
+    deleted = fuel_type_service.delete_fuel_type(fuel_type_id)
+    
+    if not deleted:
+        raise HTTPException(status_code=500, detail="Ошибка при удалении вида топлива")
+    
+    db.commit()
+    
+    logger.info("Вид топлива удален", extra={"fuel_type_id": fuel_type_id})
+    
+    # Логируем действие пользователя
+    if current_user:
+        try:
+            logging_service.log_user_action(
+                db=db,
+                user_id=current_user.id,
+                username=current_user.username,
+                action_type="delete",
+                action_description=f"Удален вид топлива: {fuel_type.original_name}",
+                action_category="fuel_type",
+                entity_type="FuelType",
+                entity_id=fuel_type_id,
+                status="success",
+                extra_data={
+                    "original_name": fuel_type.original_name,
+                    "normalized_name": fuel_type.normalized_name,
+                    "transactions_count": transactions_count
+                }
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    return {
+        "message": "Вид топлива успешно удален",
+        "fuel_type_id": fuel_type_id,
+        "original_name": fuel_type.original_name,
+        "transactions_count": transactions_count
+    }
+
+
 @router.delete("/clear")
 async def clear_all_fuel_types(
     confirm: Optional[str] = Query(None, description="Подтверждение удаления всех видов топлива"),

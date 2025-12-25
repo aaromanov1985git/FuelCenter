@@ -3,6 +3,7 @@
 """
 from sqlalchemy.orm import Session
 from typing import Optional, List, Tuple
+from sqlalchemy import or_
 from app.models import GasStation
 
 
@@ -37,15 +38,23 @@ class GasStationRepository:
         skip: int = 0,
         limit: int = 100,
         is_validated: Optional[str] = None,
+        provider_id: Optional[int] = None,
+        search: Optional[str] = None,
         organization_id: Optional[int] = None,
-        organization_ids: Optional[List[int]] = None
+        organization_ids: Optional[List[int]] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = 'asc'
     ) -> tuple[List[GasStation], int]:
         """
-        Получение списка АЗС с фильтрацией
+        Получение списка АЗС с фильтрацией и сортировкой
         
         Args:
+            provider_id: Фильтр по провайдеру
+            search: Поиск по названию, номеру АЗС, местоположению, региону, населенному пункту
             organization_id: Фильтр по одной организации
             organization_ids: Фильтр по списку организаций (приоритет над organization_id)
+            sort_by: Поле для сортировки (original_name, name, azs_number, location, region, settlement, is_validated, created_at)
+            sort_order: Направление сортировки (asc, desc)
         
         Returns:
             tuple: (список АЗС, общее количество)
@@ -54,6 +63,24 @@ class GasStationRepository:
         
         if is_validated:
             query = query.filter(GasStation.is_validated == is_validated)
+        
+        # Фильтрация по провайдеру
+        if provider_id is not None:
+            query = query.filter(GasStation.provider_id == provider_id)
+        
+        # Поиск
+        if search and search.strip():
+            search_term = f"%{search.strip()}%"
+            query = query.filter(
+                or_(
+                    GasStation.original_name.ilike(search_term),
+                    GasStation.name.ilike(search_term),
+                    GasStation.azs_number.ilike(search_term),
+                    GasStation.location.ilike(search_term),
+                    GasStation.region.ilike(search_term),
+                    GasStation.settlement.ilike(search_term)
+                )
+            )
         
         # Фильтрация по организациям
         if organization_ids is not None:
@@ -65,8 +92,30 @@ class GasStationRepository:
                 (GasStation.organization_id == organization_id) | (GasStation.organization_id.is_(None))
             )
         
+        # Сортировка
+        valid_sort_fields = {
+            'original_name': GasStation.original_name,
+            'name': GasStation.name,
+            'azs_number': GasStation.azs_number,
+            'location': GasStation.location,
+            'region': GasStation.region,
+            'settlement': GasStation.settlement,
+            'is_validated': GasStation.is_validated,
+            'created_at': GasStation.created_at
+        }
+        
+        if sort_by and sort_by in valid_sort_fields:
+            sort_column = valid_sort_fields[sort_by]
+            if sort_order and sort_order.lower() == 'desc':
+                query = query.order_by(sort_column.desc())
+            else:
+                query = query.order_by(sort_column.asc())
+        else:
+            # Сортировка по умолчанию
+            query = query.order_by(GasStation.created_at.desc())
+        
         total = query.count()
-        gas_stations = query.order_by(GasStation.created_at.desc()).offset(skip).limit(limit).all()
+        gas_stations = query.offset(skip).limit(limit).all()
         
         return gas_stations, total
     
@@ -153,4 +202,19 @@ class GasStationRepository:
             return []
         
         return self.db.query(GasStation).filter(GasStation.id.in_(gas_station_ids)).all()
+    
+    def delete(self, gas_station_id: int) -> bool:
+        """
+        Удаление АЗС по ID
+        
+        Returns:
+            bool: True если удалено, False если не найдено
+        """
+        gas_station = self.get_by_id(gas_station_id)
+        if not gas_station:
+            return False
+        
+        self.db.delete(gas_station)
+        self.db.commit()
+        return True
 

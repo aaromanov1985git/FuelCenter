@@ -8,7 +8,9 @@
     "dev:3000": "cross-env PORT=3000 vite",
     "dev:3001": "cross-env PORT=3001 vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "clean": "rm -rf node_modules/.vite dist",
+    "clean:win": "if exist node_modules\\.vite rmdir /s /q node_modules\\.vite && if exist dist rmdir /s /q dist"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

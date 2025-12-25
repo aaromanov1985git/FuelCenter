@@ -240,6 +240,49 @@ const ProvidersList = () => {
     setDeleteConfirm({ isOpen: true, providerId })
   }
 
+  const handleExport = async (providerId) => {
+    try {
+      setLoading(true)
+      const response = await authFetch(`${API_URL}/api/v1/providers/${providerId}/export`)
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Ошибка экспорта' }))
+        throw new Error(errorData.detail || 'Ошибка экспорта')
+      }
+      
+      // Получаем имя файла из заголовка Content-Disposition
+      const contentDisposition = response.headers.get('Content-Disposition')
+      let filename = `provider_export_${providerId}_${new Date().toISOString().split('T')[0]}.xlsx`
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '')
+        }
+      }
+      
+      // Скачиваем файл
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      success('Экспорт данных провайдера завершен')
+    } catch (err) {
+      if (err.isUnauthorized) {
+        return
+      }
+      const errorMessage = 'Ошибка экспорта: ' + err.message
+      showError(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleShowTemplates = async (providerId) => {
     if (selectedProviderId === providerId) {
       // Скрываем шаблоны, если они уже открыты
@@ -580,6 +623,13 @@ const ProvidersList = () => {
                             variant="primary" 
                             onClick={() => handleShowTemplates(provider.id)}
                             title={selectedProviderId === provider.id ? 'Скрыть шаблоны' : 'Шаблоны'}
+                            size="small"
+                          />
+                          <IconButton 
+                            icon="download" 
+                            variant="secondary" 
+                            onClick={() => handleExport(provider.id)}
+                            title="Экспорт всех данных"
                             size="small"
                           />
                           <IconButton 

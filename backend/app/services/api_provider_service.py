@@ -2955,7 +2955,7 @@ class GPNAdapter:
     """
     Адаптер для работы с API провайдера Газпром-нефть (GPN Opti-24)
     
-    Документация: https://api-demo.opti-24.ru/docs
+    Документация: https://api.opti-24.ru/docs
     """
     
     def __init__(
@@ -2970,7 +2970,7 @@ class GPNAdapter:
         Инициализация адаптера Газпром-нефть
         
         Args:
-            base_url: Базовый URL API (например, "https://api-demo.opti-24.ru")
+            base_url: Базовый URL API (например, "https://api.opti-24.ru")
             api_key: API ключ
             login: Логин для авторизации
             password: Пароль (исходный, не хеш!)
@@ -2983,6 +2983,7 @@ class GPNAdapter:
         self.currency = currency
         self.session_id: Optional[str] = None
         self.contract_id: Optional[str] = None
+        self.contracts: List[Dict[str, Any]] = []  # Список всех договоров
         self.client = httpx.AsyncClient(timeout=30.0)
     
     async def __aenter__(self):
@@ -2995,7 +2996,7 @@ class GPNAdapter:
     
     async def auth_user(self) -> bool:
         """
-        Авторизация. Сохраняет session_id и первый contract_id.
+        Авторизация. Сохраняет session_id, все договоры и первый contract_id.
         
         Returns:
             True если авторизация успешна, False в противном случае
@@ -3037,17 +3038,22 @@ class GPNAdapter:
                 self.session_id = json_resp.get("data", {}).get("session_id")
                 contracts = json_resp.get("data", {}).get("contracts", [])
                 if contracts and len(contracts) > 0:
+                    # Сохраняем все договоры
+                    self.contracts = contracts
+                    # Используем первый договор по умолчанию
                     self.contract_id = contracts[0].get("id")
+                    logger.info(f"✅ Авторизация успешна. Найдено договоров: {len(contracts)}. Используется договор: {self.contract_id}", extra={
+                        "contract_id": self.contract_id,
+                        "contracts_count": len(contracts),
+                        "contracts": [c.get("id") for c in contracts],
+                        "has_session_id": bool(self.session_id)
+                    })
                 else:
                     logger.warning("В ответе авторизации нет договоров", extra={
                         "response": json_resp
                     })
                     return False
                 
-                logger.info(f"✅ Авторизация успешна. Договор: {self.contract_id}", extra={
-                    "contract_id": self.contract_id,
-                    "has_session_id": bool(self.session_id)
-                })
                 return True
             else:
                 error_msg = json_resp.get("status", {}).get("message", "Неизвестная ошибка")
@@ -3070,7 +3076,7 @@ class GPNAdapter:
     
     async def get_card_by_number(self, card_number: str) -> Optional[Dict[str, Any]]:
         """
-        Получить данные карты по её номеру (через v2 API).
+        Получить данные карты по её номеру. Ищет карту по всем договорам.
         
         Args:
             card_number: Номер карты
@@ -3078,108 +3084,181 @@ class GPNAdapter:
         Returns:
             Словарь с данными карты или None
         """
-        if not self.session_id or not self.contract_id:
+        if not self.session_id:
             logger.warning("⚠️ Сначала выполните авторизацию.")
             return None
         
-        url = f"{self.base_url}/vip/v2/cards"
-        params = {
-            "contract_id": self.contract_id,
-            "number": card_number
-        }
+        # Определяем список договоров для поиска
+        contracts_to_search = []
+        if self.contracts:
+            contracts_to_search = self.contracts
+        elif self.contract_id:
+            contracts_to_search = [{"id": self.contract_id}]
+        else:
+            logger.warning("⚠️ Нет доступных договоров для поиска карты.")
+            return None
+        
+        # Используем правильный endpoint согласно документации
+        url = f"{self.base_url}/vip/v1/cards"
+        
         headers = {
             "api_key": self.api_key,
             "session_id": self.session_id
         }
         
-        try:
-            resp = await self.client.get(url, params=params, headers=headers)
-            resp.raise_for_status()
-            json_resp = resp.json()
+        # Ищем карту по каждому договору
+        for contract in contracts_to_search:
+            contract_id_value = contract.get("id")
+            if not contract_id_value:
+                continue
             
-            if json_resp.get("status", {}).get("code") == 200:
-                data = json_resp.get("data", {})
-                total_count = data.get("total_count", 0)
-                if total_count > 0:
-                    result = data.get("result", [])
-                    if result and len(result) > 0:
-                        return result[0]
+            params = {
+                "contract_id": contract_id_value,
+                "number": card_number,
+                "cache": "false"
+            }
             
-            logger.warning(f"❌ Карта {card_number} не найдена.", extra={
-                "card_number": card_number,
-                "response": json_resp
-            })
-            return None
-        except httpx.HTTPStatusError as e:
-            error_text = e.response.text[:1000] if hasattr(e.response, 'text') else str(e)
-            logger.error(f"💥 Ошибка HTTP при получении карты: {e.response.status_code}", extra={
-                "card_number": card_number,
-                "status_code": e.response.status_code,
-                "error_text": error_text
-            })
-            return None
-        except Exception as e:
-            logger.error(f"💥 Ошибка при получении карты: {e}", extra={
-                "card_number": card_number,
-                "error": str(e)
-            }, exc_info=True)
-            return None
+            try:
+                resp = await self.client.get(url, params=params, headers=headers)
+                resp.raise_for_status()
+                json_resp = resp.json()
+                
+                if json_resp.get("status", {}).get("code") == 200:
+                    data = json_resp.get("data", {})
+                    total_count = data.get("total_count", 0)
+                    if total_count > 0:
+                        result = data.get("result", [])
+                        if result and len(result) > 0:
+                            logger.info(f"Карта {card_number} найдена в договоре {contract_id_value}", extra={
+                                "card_number": card_number,
+                                "contract_id": contract_id_value
+                            })
+                            return result[0]
+            except httpx.HTTPStatusError as e:
+                error_text = e.response.text[:1000] if hasattr(e.response, 'text') else str(e)
+                logger.debug(f"Ошибка HTTP при поиске карты в договоре {contract_id_value}: {e.response.status_code}", extra={
+                    "card_number": card_number,
+                    "contract_id": contract_id_value,
+                    "status_code": e.response.status_code,
+                    "error_text": error_text
+                })
+                # Продолжаем поиск в других договорах
+            except Exception as e:
+                logger.debug(f"Ошибка при поиске карты в договоре {contract_id_value}: {e}", extra={
+                    "card_number": card_number,
+                    "contract_id": contract_id_value,
+                    "error": str(e)
+                })
+                # Продолжаем поиск в других договорах
+        
+        logger.warning(f"❌ Карта {card_number} не найдена ни в одном договоре.", extra={
+            "card_number": card_number,
+            "contracts_searched": len(contracts_to_search)
+        })
+        return None
     
-    async def list_cards(self) -> List[Dict[str, Any]]:
+    async def list_cards(self, contract_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        Получение списка топливных карт по договору
+        Получение списка топливных карт по договору(ам)
+        
+        Args:
+            contract_id: ID договора (если None, загружаются карты по всем договорам)
         
         Returns:
             Список карт
         """
-        if not self.session_id or not self.contract_id:
+        if not self.session_id:
             logger.warning("⚠️ Сначала выполните авторизацию.")
             return []
         
-        url = f"{self.base_url}/vip/v2/cards"
-        params = {
-            "contract_id": self.contract_id
-        }
+        all_cards = []
+        
+        # Определяем список договоров для обработки
+        contracts_to_process = []
+        if contract_id:
+            # Если указан конкретный договор, используем его
+            contracts_to_process = [{"id": contract_id}]
+        elif self.contracts:
+            # Если договоры не указаны, используем все договоры из авторизации
+            contracts_to_process = self.contracts
+        elif self.contract_id:
+            # Если есть только один договор, используем его
+            contracts_to_process = [{"id": self.contract_id}]
+        else:
+            logger.warning("⚠️ Нет доступных договоров для получения списка карт.")
+            return []
+        
+        # Используем правильный endpoint согласно документации
+        url = f"{self.base_url}/vip/v1/cards"
+        
         headers = {
             "api_key": self.api_key,
             "session_id": self.session_id
         }
         
-        try:
-            resp = await self.client.get(url, params=params, headers=headers)
-            resp.raise_for_status()
-            json_resp = resp.json()
+        # Загружаем карты по каждому договору
+        for contract in contracts_to_process:
+            contract_id_value = contract.get("id")
+            if not contract_id_value:
+                continue
             
-            if json_resp.get("status", {}).get("code") == 200:
-                data = json_resp.get("data", {})
-                return data.get("result", [])
-            else:
-                logger.warning(f"Ошибка при получении списка карт: {json_resp.get('status')}")
-                return []
-        except Exception as e:
-            logger.error(f"Ошибка при получении списка карт: {e}", extra={
-                "error": str(e)
-            }, exc_info=True)
-            return []
+            params = {
+                "contract_id": contract_id_value,
+                "cache": "false"  # Данные берутся по прямому запросу из процессинга
+            }
+            
+            try:
+                resp = await self.client.get(url, params=params, headers=headers)
+                resp.raise_for_status()
+                json_resp = resp.json()
+                
+                if json_resp.get("status", {}).get("code") == 200:
+                    data = json_resp.get("data", {})
+                    cards = data.get("result", [])
+                    all_cards.extend(cards)
+                    logger.debug(f"Получено карт по договору {contract_id_value}: {len(cards)}", extra={
+                        "contract_id": contract_id_value,
+                        "cards_count": len(cards)
+                    })
+                else:
+                    logger.warning(f"Ошибка при получении списка карт по договору {contract_id_value}: {json_resp.get('status')}", extra={
+                        "contract_id": contract_id_value,
+                        "status": json_resp.get("status")
+                    })
+            except Exception as e:
+                logger.error(f"Ошибка при получении списка карт по договору {contract_id_value}: {e}", extra={
+                    "contract_id": contract_id_value,
+                    "error": str(e)
+                }, exc_info=True)
+                # Продолжаем обработку других договоров даже при ошибке
+        
+        logger.info(f"Всего получено карт: {len(all_cards)} по {len(contracts_to_process)} договору(ам)", extra={
+            "total_cards": len(all_cards),
+            "contracts_processed": len(contracts_to_process)
+        })
+        
+        return all_cards
     
     async def fetch_card_transactions(
         self,
         card_number: str,
         date_from: date,
-        date_to: date
+        date_to: date,
+        contract_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
-        Получить транзакции за период (макс. 1 месяц).
+        Получить транзакции за период (макс. 1 месяц) по всем договорам или конкретному договору.
         
         Args:
             card_number: Номер карты (не используется напрямую, но может быть полезен для фильтрации)
             date_from: Начальная дата периода
             date_to: Конечная дата периода
+            contract_id: ID договора (если None, загружаются транзакции по всем договорам)
             
         Returns:
             Список транзакций
         """
-        if not self.session_id or not self.contract_id:
+        if not self.session_id:
             logger.warning("⚠️ Сначала выполните авторизацию.")
             return []
         
@@ -3187,56 +3266,122 @@ class GPNAdapter:
         if (date_to - date_from).days > 31:
             raise ValueError("Период не может превышать 1 месяц (31 день)")
         
+        all_transactions = []
+        
+        # Определяем список договоров для обработки
+        contracts_to_process = []
+        if contract_id:
+            # Если указан конкретный договор, используем его
+            contracts_to_process = [{"id": contract_id}]
+        elif self.contracts:
+            # Если договоры не указаны, используем все договоры из авторизации
+            contracts_to_process = self.contracts
+        elif self.contract_id:
+            # Если есть только один договор, используем его
+            contracts_to_process = [{"id": self.contract_id}]
+        else:
+            logger.warning("⚠️ Нет доступных договоров для получения транзакций.")
+            return []
+        
         url = f"{self.base_url}/vip/v2/transactions"
         params = {
             "date_from": date_from.strftime("%Y-%m-%d"),
             "date_to": date_to.strftime("%Y-%m-%d")
         }
+        
         headers = {
             "api_key": self.api_key,
-            "session_id": self.session_id,
-            "contract_id": self.contract_id
+            "session_id": self.session_id
         }
         
-        try:
-            resp = await self.client.get(url, params=params, headers=headers)
-            resp.raise_for_status()
-            json_resp = resp.json()
+        # Загружаем транзакции по каждому договору
+        for contract in contracts_to_process:
+            contract_id_value = contract.get("id")
+            if not contract_id_value:
+                continue
             
-            if json_resp.get("status", {}).get("code") == 200:
-                data = json_resp.get("data", {})
-                transactions = data.get("result", [])
+            # Добавляем contract_id в заголовки для каждого запроса
+            headers_with_contract = {**headers, "contract_id": contract_id_value}
+            
+            try:
+                resp = await self.client.get(url, params=params, headers=headers_with_contract)
+                resp.raise_for_status()
+                json_resp = resp.json()
                 
-                # Фильтруем по номеру карты, если указан
-                if card_number:
-                    transactions = [
-                        tx for tx in transactions
-                        if str(tx.get("card_number", "")).strip() == str(card_number).strip()
-                    ]
-                
-                return transactions
-            else:
-                error_msg = json_resp.get("status", {}).get("message", "Неизвестная ошибка")
-                logger.warning(f"❌ Ошибка транзакций: {error_msg}", extra={
-                    "status": json_resp.get("status")
+                if json_resp.get("status", {}).get("code") == 200:
+                    data = json_resp.get("data", {})
+                    transactions = data.get("result", [])
+                    
+                    # Логируем структуру первой транзакции для отладки
+                    if transactions:
+                        first_tx = transactions[0]
+                        logger.debug("Структура транзакции GPN API", extra={
+                            "contract_id": contract_id_value,
+                            "transaction_keys": list(first_tx.keys()) if isinstance(first_tx, dict) else [],
+                            "sample_transaction": {k: str(v)[:200] for k, v in list(first_tx.items())[:30]} if isinstance(first_tx, dict) else str(first_tx)[:500],
+                            "product_fields": {
+                                "product": first_tx.get("product") if isinstance(first_tx, dict) else None,
+                                "product_category_name": first_tx.get("product_category_name") if isinstance(first_tx, dict) else None,
+                                "productCategoryName": first_tx.get("productCategoryName") if isinstance(first_tx, dict) else None,
+                                "product_category_id": first_tx.get("product_category_id") if isinstance(first_tx, dict) else None
+                            } if isinstance(first_tx, dict) else {},
+                            "azs_fields": {
+                                "azs_id": first_tx.get("azs_id") if isinstance(first_tx, dict) else None,
+                                "azsId": first_tx.get("azsId") if isinstance(first_tx, dict) else None,
+                                "azs_name": first_tx.get("azs_name") if isinstance(first_tx, dict) else None,
+                                "azsName": first_tx.get("azsName") if isinstance(first_tx, dict) else None,
+                                "azs_address": first_tx.get("azs_address") if isinstance(first_tx, dict) else None,
+                                "azsAddress": first_tx.get("azsAddress") if isinstance(first_tx, dict) else None
+                            } if isinstance(first_tx, dict) else {}
+                        })
+                    
+                    # Фильтруем по номеру карты, если указан
+                    if card_number:
+                        transactions = [
+                            tx for tx in transactions
+                            if str(tx.get("card_number", "")).strip() == str(card_number).strip()
+                        ]
+                    
+                    all_transactions.extend(transactions)
+                    logger.debug(f"Получено транзакций по договору {contract_id_value}: {len(transactions)}", extra={
+                        "contract_id": contract_id_value,
+                        "transactions_count": len(transactions),
+                        "date_from": str(date_from),
+                        "date_to": str(date_to)
+                    })
+                else:
+                    error_msg = json_resp.get("status", {}).get("message", "Неизвестная ошибка")
+                    logger.warning(f"❌ Ошибка транзакций по договору {contract_id_value}: {error_msg}", extra={
+                        "contract_id": contract_id_value,
+                        "status": json_resp.get("status")
+                    })
+            except httpx.HTTPStatusError as e:
+                error_text = e.response.text[:1000] if hasattr(e.response, 'text') else str(e)
+                logger.error(f"💥 Ошибка HTTP при получении транзакций по договору {contract_id_value}: {e.response.status_code}", extra={
+                    "contract_id": contract_id_value,
+                    "status_code": e.response.status_code,
+                    "error_text": error_text,
+                    "date_from": str(date_from),
+                    "date_to": str(date_to)
                 })
-                return []
-        except httpx.HTTPStatusError as e:
-            error_text = e.response.text[:1000] if hasattr(e.response, 'text') else str(e)
-            logger.error(f"💥 Ошибка HTTP при получении транзакций: {e.response.status_code}", extra={
-                "status_code": e.response.status_code,
-                "error_text": error_text,
-                "date_from": str(date_from),
-                "date_to": str(date_to)
-            })
-            return []
-        except Exception as e:
-            logger.error(f"💥 Ошибка при получении транзакций: {e}", extra={
-                "error": str(e),
-                "date_from": str(date_from),
-                "date_to": str(date_to)
-            }, exc_info=True)
-            return []
+                # Продолжаем обработку других договоров даже при ошибке
+            except Exception as e:
+                logger.error(f"💥 Ошибка при получении транзакций по договору {contract_id_value}: {e}", extra={
+                    "contract_id": contract_id_value,
+                    "error": str(e),
+                    "date_from": str(date_from),
+                    "date_to": str(date_to)
+                }, exc_info=True)
+                # Продолжаем обработку других договоров даже при ошибке
+        
+        logger.info(f"Всего получено транзакций: {len(all_transactions)} по {len(contracts_to_process)} договору(ам)", extra={
+            "total_transactions": len(all_transactions),
+            "contracts_processed": len(contracts_to_process),
+            "date_from": str(date_from),
+            "date_to": str(date_to)
+        })
+        
+        return all_transactions
     
     async def get_card_info(
         self,
@@ -3315,7 +3460,9 @@ class GPNAdapter:
             return {
                 "status": "ok",
                 "checked_at": datetime.now(timezone.utc),
-                "cards_count": len(cards)
+                "cards_count": len(cards),
+                "contracts_count": len(self.contracts) if self.contracts else (1 if self.contract_id else 0),
+                "contracts": [c.get("id") for c in self.contracts] if self.contracts else ([self.contract_id] if self.contract_id else [])
             }
         except Exception as e:
             return {
@@ -3562,9 +3709,9 @@ class ApiProviderService:
             if password:
                 password = str(password).strip()
             
-            # Если base_url не указан, используем стандартный URL демо-стенда
+            # Если base_url не указан, используем стандартный URL API
             if not base_url or base_url.strip() == "":
-                base_url = "https://api-demo.opti-24.ru"
+                base_url = "https://api.opti-24.ru"
             
             logger.info(f"Создание адаптера Газпром-нефть", extra={
                 "login": login,
@@ -3822,8 +3969,12 @@ class ApiProviderService:
                 # Он возвращает все транзакции за указанный период
                 is_xml_api_with_cert = isinstance(adapter, WebAdapter) and adapter.use_xml_api and adapter.xml_api_certificate
                 
+                # Для РН-Карт и Газпром-нефть можно загружать все транзакции по договору без получения списка карт
+                is_rncard_adapter = isinstance(adapter, RnCardAdapter)
+                is_gpn_adapter = isinstance(adapter, GPNAdapter)
+                
                 # Если карты не указаны, пытаемся получить список всех карт
-                # Для XML API с сертификатом это не обязательно - можно загрузить все транзакции
+                # Для XML API с сертификатом, РН-Карт и Газпром-нефть это не обязательно - можно загрузить все транзакции
                 if not card_numbers:
                     if is_xml_api_with_cert:
                         # Для XML API с сертификатом можно работать без карт
@@ -3831,6 +3982,13 @@ class ApiProviderService:
                             "template_id": template.id
                         })
                         card_numbers = []  # Пустой список - метод getsaleext вернет все транзакции
+                    elif is_rncard_adapter or is_gpn_adapter:
+                        # Для РН-Карт и Газпром-нефть можно загружать все транзакции по договору без получения списка карт
+                        logger.info(f"Для {'РН-Карт' if is_rncard_adapter else 'Газпром-нефть'} карты не указаны. Будет загружены все транзакции по договору за указанный период.", extra={
+                            "template_id": template.id,
+                            "adapter_type": "rncard" if is_rncard_adapter else "gpn"
+                        })
+                        card_numbers = []  # Пустой список - метод fetch_card_transactions вернет все транзакции
                     else:
                         # Для других типов API пытаемся получить список карт
                         cards_data = await adapter.list_cards()
@@ -3854,12 +4012,6 @@ class ApiProviderService:
                                 "template_id": template.id
                             })
                             raise ValueError("Не удалось получить список карт. Укажите номера карт в параметре card_numbers.")
-                
-                # Для XML API с сертификатом можно загрузить транзакции для всех карт одним запросом
-                # Для РН-Карт также загружаем все транзакции по договору одним запросом
-                # Для Газпром-нефть также загружаем все транзакции по договору одним запросом
-                is_rncard_adapter = isinstance(adapter, RnCardAdapter)
-                is_gpn_adapter = isinstance(adapter, GPNAdapter)
                 
                 if is_xml_api_with_cert:
                     # Загружаем транзакции для всех карт одним запросом
@@ -4023,8 +4175,52 @@ class ApiProviderService:
         Returns:
             Транзакция в формате системы или None
         """
-        # Парсим маппинг полей
+        # Логируем все поля транзакции для отладки (только для GPN)
         import json
+        try:
+            if isinstance(template.connection_settings, str):
+                settings = json.loads(template.connection_settings)
+            else:
+                settings = template.connection_settings
+            provider_type = settings.get("provider_type", "").lower() if settings else ""
+            is_gpn = provider_type in ["gpn", "gazprom-neft", "gazpromneft"]
+            
+            if is_gpn:
+                logger.debug("Обработка транзакции GPN", extra={
+                    "card_number": card_number,
+                    "api_transaction_keys": list(api_transaction.keys()),
+                    "api_transaction_sample": {k: str(v)[:100] for k, v in list(api_transaction.items())[:20]},
+                    "volume_fields": {
+                        "volume": api_transaction.get("volume"),
+                        "Volume": api_transaction.get("Volume"),
+                        "value": api_transaction.get("value"),
+                        "Value": api_transaction.get("Value"),
+                        "quantity": api_transaction.get("quantity"),
+                        "Quantity": api_transaction.get("Quantity")
+                    },
+                    "product_fields": {
+                        "product_name": api_transaction.get("product_name"),  # GPN API v2
+                        "product": api_transaction.get("product"),  # GPN API v1
+                        "product_category_name": api_transaction.get("product_category_name"),
+                        "productCategoryName": api_transaction.get("productCategoryName"),
+                        "product_category_id": api_transaction.get("product_category_id")
+                    },
+                    "azs_fields": {
+                        "poi_id": api_transaction.get("poi_id"),  # GPN API v2 - ID точки обслуживания
+                        "service_center": api_transaction.get("service_center"),  # GPN API v1
+                        "azs_id": api_transaction.get("azs_id"),
+                        "azsId": api_transaction.get("azsId"),
+                        "azs_number": api_transaction.get("azs_number"),
+                        "azs_name": api_transaction.get("azs_name"),
+                        "azsName": api_transaction.get("azsName"),
+                        "azs_address": api_transaction.get("azs_address"),
+                        "azsAddress": api_transaction.get("azsAddress")
+                    }
+                })
+        except Exception:
+            pass
+        
+        # Парсим маппинг полей
         try:
             if isinstance(template.field_mapping, str):
                 field_mapping = json.loads(template.field_mapping)
@@ -4066,15 +4262,68 @@ class ApiProviderService:
         amount = abs(amount)
         
         # Количество/объем (поддерживаем разные форматы)
-        quantity = self._parse_decimal(
-            api_transaction.get("volume") or  # GPN, XML API (уже преобразованное)
-            api_transaction.get("Volume") or  # XML API (оригинальное поле)
-            api_transaction.get("Value") or  # РН-Карт (объем)
+        # Для GPN API v2 используется поле qty (не volume!)
+        volume_value = (
+            api_transaction.get("qty") or  # GPN API v2 - количество
+            api_transaction.get("volume") or
+            api_transaction.get("Volume") or
+            api_transaction.get("value") or
+            api_transaction.get("Value") or
             api_transaction.get("quantity") or
-            api_transaction.get("amount")
-        ) or Decimal("0")
+            api_transaction.get("Quantity") or
+            api_transaction.get("amount") or  # GPN API v1 - amount в transaction_items
+            api_transaction.get("Amount")
+        )
         
-        # Для объема также используем абсолютное значение
+        quantity = self._parse_decimal(volume_value)
+        
+        # Если количество не найдено, пытаемся вычислить из суммы и цены
+        if quantity is None or quantity == Decimal("0"):
+            # Пытаемся получить цену
+            price_value = (
+                api_transaction.get("price") or
+                api_transaction.get("Price") or
+                api_transaction.get("price_per_liter") or
+                api_transaction.get("pricePerLiter")
+            )
+            price = self._parse_decimal(price_value)
+            
+            # Если есть сумма и цена, вычисляем количество
+            if amount and amount > 0 and price and price > 0:
+                quantity = amount / price
+                logger.debug("Количество вычислено из суммы и цены", extra={
+                    "card_number": card_number,
+                    "amount": amount,
+                    "price": price,
+                    "calculated_quantity": quantity
+                })
+            else:
+                quantity = Decimal("0")
+        
+        # Если количество все еще равно 0, логируем для отладки
+        if quantity == Decimal("0"):
+            logger.warning("Количество равно 0 в транзакции", extra={
+                "card_number": card_number,
+                "transaction_date": transaction_date,
+                "volume_value": volume_value,
+                "volume_value_type": type(volume_value).__name__ if volume_value is not None else None,
+                "api_transaction_keys": list(api_transaction.keys()),
+                "available_volume_fields": {
+                    "qty": api_transaction.get("qty"),  # GPN API v2
+                    "volume": api_transaction.get("volume"),
+                    "Volume": api_transaction.get("Volume"),
+                    "value": api_transaction.get("value"),
+                    "Value": api_transaction.get("Value"),
+                    "quantity": api_transaction.get("quantity"),
+                    "Quantity": api_transaction.get("Quantity"),
+                    "amount": api_transaction.get("amount"),  # GPN API v1
+                    "Amount": api_transaction.get("Amount")
+                },
+                "amount": amount,
+                "price": api_transaction.get("price") or api_transaction.get("Price")
+            })
+        
+        # Для объема используем абсолютное значение (qty может быть отрицательным для возвратов)
         quantity = abs(quantity)
         
         # Определяем тип операции на основе знака суммы/объема в исходных данных
@@ -4122,21 +4371,26 @@ class ApiProviderService:
                         parsed_location = parsed_data["location"]
         
         # Получаем оригинальное название АЗС (поддерживаем разные форматы)
+        # Для GPN API v2 нет прямого поля названия АЗС, только poi_id
         azs_original_name = str(
             api_transaction.get("azs_name") or  # XML API (уже преобразованное)
-            api_transaction.get("azsName") or api_transaction.get("azs_name") or  # GPN
+            api_transaction.get("azsName") or api_transaction.get("azs_name") or  # GPN (если есть)
             api_transaction.get("AZS_NAME") or  # XML API (оригинальное поле)
             api_transaction.get("AZSName") or  # РН-Карт
             api_transaction.get("posName") or
             api_transaction.get("posBrand") or
             api_transaction.get("azsNumber") or
+            api_transaction.get("service_center") or  # GPN API v1 - ID точки обслуживания
             ""
         )
         
         # Номер АЗС (поддерживаем разные форматы)
+        # Для GPN API v2 используется poi_id (ID точки обслуживания)
         azs_number = str(
+            api_transaction.get("poi_id") or  # GPN API v2 - ID точки обслуживания
+            api_transaction.get("service_center") or  # GPN API v1 - ID точки обслуживания
             api_transaction.get("azs_number") or  # XML API (уже преобразованное)
-            api_transaction.get("azs_id") or api_transaction.get("azsId") or  # GPN
+            api_transaction.get("azs_id") or api_transaction.get("azsId") or  # GPN (если есть)
             api_transaction.get("COD_AZS") or  # XML API (оригинальное поле)
             api_transaction.get("AZS") or  # РН-Карт
             api_transaction.get("PosCode") or  # РН-Карт (код точки продажи)
@@ -4150,15 +4404,31 @@ class ApiProviderService:
                 from app.services.normalization_service import extract_azs_number
                 azs_number = extract_azs_number(azs_original_name) or ""
             
-            # Логируем, если azs_number все еще пустой
+            # Логируем, если azs_number все еще пустой (особенно для GPN)
             if not azs_number or azs_number.strip() == "":
+                # Определяем, является ли это GPN транзакцией
+                try:
+                    if isinstance(template.connection_settings, str):
+                        settings = json.loads(template.connection_settings)
+                    else:
+                        settings = template.connection_settings
+                    provider_type = settings.get("provider_type", "").lower() if settings else ""
+                    is_gpn = provider_type in ["gpn", "gazprom-neft", "gazpromneft"]
+                except:
+                    is_gpn = False
+                
                 logger.warning("Поле azs_number пустое в транзакции", extra={
                     "api_transaction_keys": list(api_transaction.keys()),
                     "card_number": card_number,
                     "transaction_date": transaction_date,
                     "azs_original_name": azs_original_name,
+                    "is_gpn": is_gpn,
                     "available_azs_fields": {
+                        "poi_id": api_transaction.get("poi_id"),  # GPN API v2
+                        "service_center": api_transaction.get("service_center"),  # GPN API v1
                         "azs_number": api_transaction.get("azs_number"),
+                        "azs_id": api_transaction.get("azs_id"),
+                        "azsId": api_transaction.get("azsId"),
                         "COD_AZS": api_transaction.get("COD_AZS"),
                         "AZS": api_transaction.get("AZS"),
                         "PosCode": api_transaction.get("PosCode"),
@@ -4167,9 +4437,11 @@ class ApiProviderService:
                 })
         
         # Название товара/топлива (поддерживаем разные форматы)
+        # Для GPN API v2 используется product_name (не product_category_name!)
         product = (
-            api_transaction.get("product") or  # Стандартный формат или уже преобразованное
-            api_transaction.get("product_category_name") or api_transaction.get("productCategoryName") or  # GPN
+            api_transaction.get("product_name") or  # GPN API v2 - наименование товара
+            api_transaction.get("product") or  # Стандартный формат или уже преобразованное, GPN API v1
+            api_transaction.get("product_category_name") or api_transaction.get("productCategoryName") or  # GPN (если есть)
             api_transaction.get("Product") or  # РН-Карт
             api_transaction.get("GName") or  # РН-Карт (название товара из GName)
             api_transaction.get("ResourceName") or  # XML API (оригинальное поле)
@@ -4177,6 +4449,33 @@ class ApiProviderService:
             api_transaction.get("service") or
             ""
         )
+        
+        # Если product пустой для GPN, логируем для отладки
+        try:
+            if isinstance(template.connection_settings, str):
+                settings = json.loads(template.connection_settings)
+            else:
+                settings = template.connection_settings
+            provider_type = settings.get("provider_type", "").lower() if settings else ""
+            is_gpn = provider_type in ["gpn", "gazprom-neft", "gazpromneft"]
+        except:
+            is_gpn = False
+        
+        if not product or (is_gpn and not product.strip()):
+            logger.warning("Поле product пустое в транзакции GPN", extra={
+                "card_number": card_number,
+                "transaction_date": transaction_date,
+                "api_transaction_keys": list(api_transaction.keys()),
+                "available_product_fields": {
+                    "product": api_transaction.get("product"),
+                    "product_category_name": api_transaction.get("product_category_name"),
+                    "productCategoryName": api_transaction.get("productCategoryName"),
+                    "product_category_id": api_transaction.get("product_category_id"),
+                    "Product": api_transaction.get("Product"),
+                    "GName": api_transaction.get("GName"),
+                    "ResourceName": api_transaction.get("ResourceName")
+                }
+            })
         
         # Нормализуем product, если он пустой или содержит только пробелы
         if product:

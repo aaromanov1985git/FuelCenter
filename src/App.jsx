@@ -1,18 +1,27 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import * as XLSX from 'xlsx'
-import VehiclesList from './components/VehiclesList'
-import GasStationsList from './components/GasStationsList'
-import FuelTypesList from './components/FuelTypesList'
-import FuelCardsList from './components/FuelCardsList'
-import FuelCardAnalysisList from './components/FuelCardAnalysisList'
-import ProviderAnalysisDashboard from './components/ProviderAnalysisDashboard'
-import RefuelsUpload from './components/RefuelsUpload'
-import LocationsUpload from './components/LocationsUpload'
-import ProvidersList from './components/ProvidersList'
-import TemplatesList from './components/TemplatesList'
-import CardInfoSchedulesList from './components/CardInfoSchedulesList'
-import Dashboard from './components/Dashboard'
+// Lazy load large page components for code-splitting
+const VehiclesList = lazy(() => import('./components/VehiclesList'))
+const GasStationsList = lazy(() => import('./components/GasStationsList'))
+const FuelTypesList = lazy(() => import('./components/FuelTypesList'))
+const FuelCardsList = lazy(() => import('./components/FuelCardsList'))
+const FuelCardAnalysisList = lazy(() => import('./components/FuelCardAnalysisList'))
+const ProviderAnalysisDashboard = lazy(() => import('./components/ProviderAnalysisDashboard'))
+const RefuelsUpload = lazy(() => import('./components/RefuelsUpload'))
+const LocationsUpload = lazy(() => import('./components/LocationsUpload'))
+const ProvidersList = lazy(() => import('./components/ProvidersList'))
+const TemplatesList = lazy(() => import('./components/TemplatesList'))
+const Dashboard = lazy(() => import('./components/Dashboard'))
+const UsersList = lazy(() => import('./components/UsersList'))
+const OrganizationsList = lazy(() => import('./components/OrganizationsList'))
+const UploadEventsList = lazy(() => import('./components/UploadEventsList'))
+const UserActionLogsList = lazy(() => import('./components/UserActionLogsList'))
+const Login = lazy(() => import('./components/Login'))
+const Register = lazy(() => import('./components/Register'))
+const Settings = lazy(() => import('./components/Settings'))
+const NotificationsList = lazy(() => import('./components/NotificationsList'))
+// Keep smaller components as static imports (they're used frequently)
 import ConfirmModal from './components/ConfirmModal'
 import ClearProviderModal from './components/ClearProviderModal'
 import TemplateSelectModal from './components/TemplateSelectModal'
@@ -20,6 +29,7 @@ import ClearMenu from './components/ClearMenu'
 import FileUploadProgress from './components/FileUploadProgress'
 import ThemeToggle from './components/ThemeToggle'
 import IconButton from './components/IconButton'
+import NotificationBadge from './components/NotificationBadge'
 import Pagination from './components/Pagination'
 import Highlight from './components/Highlight'
 import Breadcrumbs from './components/Breadcrumbs'
@@ -30,14 +40,7 @@ import ScrollToTop from './components/ScrollToTop'
 import EmptyState from './components/EmptyState'
 import ContextMenu from './components/ContextMenu'
 import FilePreviewModal from './components/FilePreviewModal'
-import UsersList from './components/UsersList'
-import OrganizationsList from './components/OrganizationsList'
 import ExportMenu from './components/ExportMenu'
-import UploadEventsList from './components/UploadEventsList'
-import UserActionLogsList from './components/UserActionLogsList'
-import Login from './components/Login'
-import Register from './components/Register'
-import Settings from './components/Settings'
 import { useToast } from './components/ToastContainer'
 import { useAuth } from './contexts/AuthContext'
 import { useCopyToClipboard } from './hooks/useCopyToClipboard'
@@ -84,7 +87,7 @@ const App = () => {
   })
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showClearProviderModal, setShowClearProviderModal] = useState(false)
-  const [activeTab, setActiveTab] = useState('dashboard') // dashboard, transactions, vehicles, cards, fuel-card-analysis, gas-stations, fuel-types, providers, templates, upload-events, organizations, users, settings
+  const [activeTab, setActiveTab] = useState('dashboard') // dashboard, transactions, vehicles, cards, fuel-card-analysis, gas-stations, fuel-types, providers, templates, upload-events, organizations, users, settings, notifications
   const [showRefuelsUpload, setShowRefuelsUpload] = useState(false)
   const [showLocationsUpload, setShowLocationsUpload] = useState(false)
   const [providers, setProviders] = useState([])
@@ -337,10 +340,19 @@ const App = () => {
       success(`Файл ${fileName} успешно экспортирован`)
       logger.info('Excel файл успешно экспортирован', { filename: fileName })
     } catch (err) {
-      const errorMessage = 'Ошибка экспорта: ' + err.message
+      // Безопасное извлечение сообщения об ошибке
+      let errorText = 'Неизвестная ошибка'
+      if (err instanceof Error) {
+        errorText = err.message || 'Ошибка экспорта'
+      } else if (typeof err === 'string') {
+        errorText = err
+      } else if (err && typeof err === 'object') {
+        errorText = err.detail || err.message || err.error || JSON.stringify(err)
+      }
+      const errorMessage = 'Ошибка экспорта: ' + errorText
       showError(errorMessage)
       setError(errorMessage) // Оставляем для обратной совместимости
-      logger.error('Ошибка экспорта в Excel', { error: err.message, stack: err.stack })
+      logger.error('Ошибка экспорта в Excel', { error: errorText, originalError: err })
       setTimeout(() => setError(''), 10000)
     } finally {
       setLoading(false)
@@ -512,10 +524,19 @@ const App = () => {
       if (err.isUnauthorized) {
         return
       }
-      const errorMessage = 'Ошибка загрузки данных: ' + err.message
+      // Безопасное извлечение сообщения об ошибке
+      let errorText = 'Неизвестная ошибка'
+      if (err instanceof Error) {
+        errorText = err.message || 'Ошибка загрузки данных'
+      } else if (typeof err === 'string') {
+        errorText = err
+      } else if (err && typeof err === 'object') {
+        errorText = err.detail || err.message || err.error || JSON.stringify(err)
+      }
+      const errorMessage = 'Ошибка загрузки данных: ' + errorText
       setError(errorMessage) // Оставляем для обратной совместимости
       showError(errorMessage)
-      logger.error('Ошибка загрузки транзакций', { error: err.message, stack: err.stack })
+      logger.error('Ошибка загрузки транзакций', { error: errorText, originalError: err })
     } finally {
       setLoading(false)
     }
@@ -843,8 +864,18 @@ const App = () => {
       xhr.send(formData)
 
     } catch (err) {
-      setError('Ошибка загрузки файла: ' + err.message)
-      showError('Ошибка загрузки файла: ' + err.message)
+      // Безопасное извлечение сообщения об ошибке
+      let errorText = 'Неизвестная ошибка'
+      if (err instanceof Error) {
+        errorText = err.message || 'Ошибка загрузки файла'
+      } else if (typeof err === 'string') {
+        errorText = err
+      } else if (err && typeof err === 'object') {
+        errorText = err.detail || err.message || err.error || JSON.stringify(err)
+      }
+      const errorMessage = 'Ошибка загрузки файла: ' + errorText
+      setError(errorMessage)
+      showError(errorMessage)
       setUploadStatus(null)
       setUploadProgress(0)
       setLoading(false)
@@ -1134,14 +1165,24 @@ const App = () => {
       xhr.send(formData)
 
     } catch (err) {
-      setError('Ошибка загрузки файла: ' + err.message)
-      logger.error('Ошибка загрузки файла', { filename: file.name, error: err.message, stack: err.stack })
+      // Безопасное извлечение сообщения об ошибке
+      let errorText = 'Неизвестная ошибка'
+      if (err instanceof Error) {
+        errorText = err.message || 'Ошибка загрузки файла'
+      } else if (typeof err === 'string') {
+        errorText = err
+      } else if (err && typeof err === 'object') {
+        errorText = err.detail || err.message || err.error || JSON.stringify(err)
+      }
+      const errorMessage = 'Ошибка загрузки файла: ' + errorText
+      setError(errorMessage)
+      logger.error('Ошибка загрузки файла', { filename: file.name, error: errorText, originalError: err })
       setUploadStatus(null)
       setUploadProgress(0)
       setLoading(false)
       
       // Показываем ошибку дольше для важных сообщений
-      if (err.message.includes('таймаут') || err.message.includes('timeout')) {
+      if (errorText.includes('таймаут') || errorText.includes('timeout')) {
         setTimeout(() => setError(''), 30000) // 30 секунд для таймаутов
       }
     }
@@ -1204,8 +1245,17 @@ const App = () => {
         }
       } catch (err) {
         setLoading(false)
-        showError('Ошибка загрузки файла: ' + err.message)
-        logger.error('Ошибка загрузки файла', { error: err.message })
+        // Безопасное извлечение сообщения об ошибке
+        let errorText = 'Неизвестная ошибка'
+        if (err instanceof Error) {
+          errorText = err.message || 'Ошибка загрузки файла'
+        } else if (typeof err === 'string') {
+          errorText = err
+        } else if (err && typeof err === 'object') {
+          errorText = err.detail || err.message || err.error || JSON.stringify(err)
+        }
+        showError('Ошибка загрузки файла: ' + errorText)
+        logger.error('Ошибка загрузки файла', { error: errorText, originalError: err })
       }
     }
   }
@@ -1500,9 +1550,11 @@ const App = () => {
   if (authEnabled && !isAuthenticated) {
     return (
       <div className="app">
-        <Login onSuccess={() => {
-          // После успешного входа компонент перерендерится с новым состоянием auth
-        }} />
+        <Suspense fallback={<div className="app-loading"><div className="loading-spinner">Загрузка...</div></div>}>
+          <Login onSuccess={() => {
+            // После успешного входа компонент перерендерится с новым состоянием auth
+          }} />
+        </Suspense>
       </div>
     )
   }
@@ -1643,6 +1695,14 @@ const App = () => {
               События загрузок
             </button>
             <button
+              className={`nav-item ${activeTab === 'notifications' ? 'active' : ''}`}
+              onClick={() => setActiveTab('notifications')}
+              style={{ position: 'relative' }}
+            >
+              Уведомления
+              <NotificationBadge />
+            </button>
+            <button
               className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
               onClick={() => setActiveTab('settings')}
             >
@@ -1722,6 +1782,7 @@ const App = () => {
                 ...(activeTab === 'users' ? [{ label: 'Пользователи' }] : []),
                 ...(activeTab === 'my-actions' ? [{ label: 'Мои действия' }] : []),
                 ...(activeTab === 'upload-events' ? [{ label: 'События загрузок' }] : []),
+                ...(activeTab === 'notifications' ? [{ label: 'Уведомления' }] : []),
                 ...(activeTab === 'settings' ? [{ label: 'Настройки' }] : [])
               ]}
             />
@@ -1735,42 +1796,101 @@ const App = () => {
             )}
 
         {/* Контент вкладок */}
-        {activeTab === 'vehicles' && <VehiclesList />}
-        {activeTab === 'cards' && <FuelCardsList />}
-        {activeTab === 'fuel-card-analysis' && (
-          <>
-            <FuelCardAnalysisList />
-            <Card style={{ marginTop: 'var(--spacing-section)' }}>
-              <Card.Body>
-                <div style={{ display: 'flex', gap: 'var(--spacing-element)', flexWrap: 'wrap' }}>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowRefuelsUpload(true)}
-                  >
-                    Загрузить заправки
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowLocationsUpload(true)}
-                  >
-                    Загрузить местоположения
-                  </Button>
-                </div>
-              </Card.Body>
-            </Card>
-          </>
+        {activeTab === 'vehicles' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <VehiclesList />
+          </Suspense>
         )}
-        {activeTab === 'gas-stations' && <GasStationsList />}
-        {activeTab === 'fuel-types' && <FuelTypesList />}
-        {activeTab === 'providers' && <ProvidersList />}
-        {activeTab === 'provider-analysis' && <ProviderAnalysisDashboard />}
-        {activeTab === 'templates' && <TemplatesList />}
-        {activeTab === 'organizations' && <OrganizationsList />}
-        {activeTab === 'users' && <UsersList />}
-        {activeTab === 'my-actions' && <UserActionLogsList showMyActionsOnly={true} />}
-        {activeTab === 'dashboard' && <Dashboard />}
-        {activeTab === 'upload-events' && <UploadEventsList />}
-        {activeTab === 'settings' && <Settings />}
+        {activeTab === 'cards' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <FuelCardsList />
+          </Suspense>
+        )}
+        {activeTab === 'fuel-card-analysis' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <>
+              <FuelCardAnalysisList />
+              <Card style={{ marginTop: 'var(--spacing-section)' }}>
+                <Card.Body>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-element)', flexWrap: 'wrap' }}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setShowRefuelsUpload(true)}
+                    >
+                      Загрузить заправки
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setShowLocationsUpload(true)}
+                    >
+                      Загрузить местоположения
+                    </Button>
+                  </div>
+                </Card.Body>
+              </Card>
+            </>
+          </Suspense>
+        )}
+        {activeTab === 'gas-stations' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <GasStationsList />
+          </Suspense>
+        )}
+        {activeTab === 'fuel-types' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <FuelTypesList />
+          </Suspense>
+        )}
+        {activeTab === 'providers' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <ProvidersList />
+          </Suspense>
+        )}
+        {activeTab === 'provider-analysis' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <ProviderAnalysisDashboard />
+          </Suspense>
+        )}
+        {activeTab === 'templates' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <TemplatesList />
+          </Suspense>
+        )}
+        {activeTab === 'organizations' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <OrganizationsList />
+          </Suspense>
+        )}
+        {activeTab === 'users' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <UsersList />
+          </Suspense>
+        )}
+        {activeTab === 'my-actions' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <UserActionLogsList showMyActionsOnly={true} />
+          </Suspense>
+        )}
+        {activeTab === 'dashboard' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <Dashboard />
+          </Suspense>
+        )}
+        {activeTab === 'upload-events' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <UploadEventsList />
+          </Suspense>
+        )}
+        {activeTab === 'notifications' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <NotificationsList />
+          </Suspense>
+        )}
+        {activeTab === 'settings' && (
+          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+            <Settings />
+          </Suspense>
+        )}
         
         {activeTab === 'transactions' && (
           <>
@@ -2366,13 +2486,15 @@ const App = () => {
             >
               ×
             </button>
-            <Register
-              onSuccess={() => {
-                setShowRegister(false)
-                success('Пользователь успешно зарегистрирован')
-              }}
-              onCancel={() => setShowRegister(false)}
-            />
+            <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+              <Register
+                onSuccess={() => {
+                  setShowRegister(false)
+                  success('Пользователь успешно зарегистрирован')
+                }}
+                onCancel={() => setShowRegister(false)}
+              />
+            </Suspense>
           </div>
         </div>
       )}
@@ -2381,14 +2503,22 @@ const App = () => {
       <ScrollToTop />
 
       {/* Модальные окна для загрузки данных анализа */}
-      <RefuelsUpload
-        isOpen={showRefuelsUpload}
-        onClose={() => setShowRefuelsUpload(false)}
-      />
-      <LocationsUpload
-        isOpen={showLocationsUpload}
-        onClose={() => setShowLocationsUpload(false)}
-      />
+      {showRefuelsUpload && (
+        <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+          <RefuelsUpload
+            isOpen={showRefuelsUpload}
+            onClose={() => setShowRefuelsUpload(false)}
+          />
+        </Suspense>
+      )}
+      {showLocationsUpload && (
+        <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
+          <LocationsUpload
+            isOpen={showLocationsUpload}
+            onClose={() => setShowLocationsUpload(false)}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

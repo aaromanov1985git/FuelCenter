@@ -794,3 +794,84 @@ class FuelCardAnalysisResult(Base):
         Index('idx_fuel_card_analysis_anomaly', 'is_anomaly', 'anomaly_type'),
         Index('idx_fuel_card_analysis_date', 'analysis_date'),
     )
+
+
+class NotificationSettings(Base):
+    """
+    Настройки уведомлений пользователя
+    """
+    __tablename__ = "notification_settings"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    
+    # Связь с пользователем
+    user_id = Column(Integer, ForeignKey("users.id", ondelete='CASCADE'), nullable=False, unique=True, index=True, comment="ID пользователя")
+    
+    # Настройки каналов уведомлений
+    email_enabled = Column(Boolean, default=True, comment="Включены ли уведомления по email")
+    telegram_enabled = Column(Boolean, default=False, comment="Включены ли уведомления в Telegram")
+    push_enabled = Column(Boolean, default=True, comment="Включены ли push-уведомления")
+    in_app_enabled = Column(Boolean, default=True, comment="Включены ли уведомления в системе")
+    
+    # Настройки Telegram
+    telegram_chat_id = Column(String(100), index=True, comment="ID чата Telegram для уведомлений")
+    telegram_username = Column(String(100), comment="Имя пользователя Telegram")
+    
+    # Настройки Push
+    push_subscription = Column(Text, comment="JSON с данными подписки на push-уведомления")
+    
+    # Категории уведомлений (JSON)
+    # Пример: {"upload_events": true, "errors": true, "system": false, "transactions": true}
+    categories = Column(Text, comment="JSON с настройками категорий уведомлений")
+    
+    # Метаданные
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления")
+    
+    # Связи
+    user = relationship("User", backref="notification_settings")
+    
+    __table_args__ = (
+        Index('idx_notification_settings_user', 'user_id', unique=True),
+    )
+
+
+class Notification(Base):
+    """
+    Уведомления пользователей
+    """
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    
+    # Связь с пользователем
+    user_id = Column(Integer, ForeignKey("users.id", ondelete='CASCADE'), nullable=False, index=True, comment="ID пользователя")
+    
+    # Основные поля уведомления
+    title = Column(String(200), nullable=False, comment="Заголовок уведомления")
+    message = Column(Text, nullable=False, comment="Текст уведомления")
+    category = Column(String(100), index=True, comment="Категория уведомления: upload_events, errors, system, transactions, etc.")
+    type = Column(String(50), default="info", index=True, comment="Тип уведомления: info, success, warning, error")
+    
+    # Статус доставки по каналам (JSON)
+    # Пример: {"email": "sent", "telegram": "sent", "push": "failed", "in_app": "delivered"}
+    delivery_status = Column(Text, comment="JSON со статусом доставки по каналам")
+    
+    # Метаданные
+    is_read = Column(Boolean, default=False, index=True, comment="Прочитано ли уведомление")
+    read_at = Column(DateTime, comment="Дата и время прочтения")
+    created_at = Column(DateTime, server_default=func.now(), index=True, comment="Дата создания")
+    
+    # Связанные сущности (опционально)
+    entity_type = Column(String(100), index=True, comment="Тип связанной сущности: Transaction, UploadEvent, etc.")
+    entity_id = Column(Integer, index=True, comment="ID связанной сущности")
+    
+    # Связи
+    user = relationship("User", backref="notifications")
+    
+    __table_args__ = (
+        Index('idx_notifications_user_created', 'user_id', 'created_at'),
+        Index('idx_notifications_user_read', 'user_id', 'is_read'),
+        Index('idx_notifications_category', 'category'),
+        Index('idx_notifications_type', 'type'),
+    )

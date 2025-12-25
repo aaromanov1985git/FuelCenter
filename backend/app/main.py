@@ -37,7 +37,8 @@ from app.routers import (
     card_info_schedules,
     fuel_card_analysis,
     onec_integration,
-    ppr_api
+    ppr_api,
+    notifications
 )
 
 from app.models import Provider, User
@@ -509,6 +510,7 @@ app.include_router(onec_integration.router)
 app.include_router(ppr_api.router)
 app.include_router(ppr_api.router_public_api)
 app.include_router(ppr_api.router_public_api_v1)
+app.include_router(notifications.router)
 
 
 

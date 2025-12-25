@@ -168,48 +168,78 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         })()
       : ''
   )
+  const [fuelTypes, setFuelTypes] = useState([])
+  const [loadingFuelTypes, setLoadingFuelTypes] = useState(false)
+  const [fuelMappingEntries, setFuelMappingEntries] = useState(() => {
+    // Инициализируем из существующего маппинга
+    const parsed = parseFuelMapping(template?.fuel_type_mapping)
+    if (parsed && typeof parsed === 'object') {
+      return Object.entries(parsed).map(([key, value]) => ({ key, value }))
+    }
+    return []
+  })
+  const [useVisualEditor, setUseVisualEditor] = useState(false) // Переключатель между визуальным редактором и текстовым
   
   // Парсим connection_settings если это строка JSON
   const parseConnectionSettings = (settings, connectionType) => {
+    let parsed = null
+    
     if (!settings) {
       if (connectionType === 'api') {
-        // Определяем тип провайдера из существующих настроек или используем PetrolPlus по умолчанию
-        const parsed = typeof settings === 'string' ? (() => { try { return JSON.parse(settings) } catch { return {} } })() : (settings || {})
-        if (parsed.provider_type === 'rncard') {
-          return { provider_type: 'rncard', base_url: 'https://lkapi.rn-card.ru', login: '', password: '', contract: '', currency: 'RUB', use_md5_hash: true }
-        }
-        if (parsed.provider_type === 'gpn' || parsed.provider_type === 'gazprom-neft' || parsed.provider_type === 'gazpromneft') {
-          return { provider_type: 'gpn', base_url: 'https://api-demo.opti-24.ru', api_key: '', login: '', password: '', currency: 'RUB' }
-        }
-        return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB' }
+        return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB', api_key: '' }
       }
       if (connectionType === 'web') {
-        return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: '', key: '', signature: '', salt: '', cod_azs: 1000001 }
+        return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: '', key: '', signature: '', salt: '', cod_azs: 1000001, api_key: '' }
       }
-      return { host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8' }
+      // Для типа 'file' возвращаем объект с пустым api_key для PPR API
+      if (connectionType === 'file') {
+        return { api_key: '' }
+      }
+      return { host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8', api_key: '' }
     }
+    
     if (typeof settings === 'string') {
       try {
-        return JSON.parse(settings)
+        parsed = JSON.parse(settings)
       } catch {
         if (connectionType === 'api') {
           // Определяем тип провайдера из существующих настроек или используем PetrolPlus по умолчанию
           const parsed = typeof settings === 'string' ? (() => { try { return JSON.parse(settings) } catch { return {} } })() : (settings || {})
           if (parsed.provider_type === 'rncard') {
-            return { provider_type: 'rncard', base_url: 'https://lkapi.rn-card.ru', login: '', password: '', contract: '', currency: 'RUB', use_md5_hash: true }
+            return { provider_type: 'rncard', base_url: 'https://lkapi.rn-card.ru', login: '', password: '', contract: '', currency: 'RUB', use_md5_hash: true, api_key: '' }
           }
           if (parsed.provider_type === 'gpn' || parsed.provider_type === 'gazprom-neft' || parsed.provider_type === 'gazpromneft') {
-            return { provider_type: 'gpn', base_url: 'https://api-demo.opti-24.ru', api_key: '', login: '', password: '', currency: 'RUB' }
+            return { provider_type: 'gpn', base_url: 'https://api.opti-24.ru', api_key: '', login: '', password: '', currency: 'RUB' }
           }
-          return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB' }
+          return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB', api_key: '' }
         }
         if (connectionType === 'web') {
-          return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: '', key: '', signature: '', salt: '', cod_azs: 1000001 }
+          return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: '', key: '', signature: '', salt: '', cod_azs: 1000001, api_key: '' }
         }
-        return { host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8' }
+        return { host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8', api_key: '' }
+      }
+    } else {
+      parsed = settings
+    }
+    
+    // Убеждаемся, что api_key присутствует в настройках (для PPR API)
+    if (parsed && typeof parsed === 'object') {
+      // Для типа 'file' извлекаем только PPR API ключ
+      if (connectionType === 'file') {
+        return { api_key: parsed.api_key || parsed.apiKey || parsed.КлючАвторизации || '' }
+      }
+      
+      // Для других типов сохраняем api_key, если он есть в любом из вариантов названий
+      if (!parsed.api_key && (parsed.apiKey || parsed.КлючАвторизации || parsed.authorization_key || parsed.key)) {
+        parsed.api_key = parsed.apiKey || parsed.КлючАвторизации || parsed.authorization_key || parsed.key
+      }
+      // Если api_key отсутствует, добавляем пустое поле
+      if (!parsed.api_key && !parsed.apiKey && !parsed.КлючАвторизации) {
+        parsed.api_key = ''
       }
     }
-    return settings
+    
+    return parsed || settings
   }
   
   const [connectionSettings, setConnectionSettings] = useState(
@@ -230,6 +260,61 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   const [apiFields, setApiFields] = useState([]) // Поля из API ответа
   const [loadingApiFields, setLoadingApiFields] = useState(false) // Загрузка полей из API
 
+  // Генерация случайного API ключа
+  const generateApiKey = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    const length = 32
+    let result = ''
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return result
+  }
+
+  // Копирование API ключа в буфер обмена
+  const copyApiKeyToClipboard = async () => {
+    const apiKey = connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации || ''
+    if (!apiKey) {
+      setError('Нет ключа для копирования')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(apiKey)
+      // Показываем временное сообщение об успехе
+      const successMsg = document.createElement('div')
+      successMsg.textContent = 'Ключ скопирован в буфер обмена'
+      successMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #10b981; color: white; padding: 12px 20px; border-radius: 4px; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'
+      document.body.appendChild(successMsg)
+      setTimeout(() => {
+        document.body.removeChild(successMsg)
+      }, 2000)
+    } catch (err) {
+      setError('Не удалось скопировать ключ: ' + err.message)
+    }
+  }
+
+  // Загрузка списка видов топлива
+  useEffect(() => {
+    const loadFuelTypes = async () => {
+      setLoadingFuelTypes(true)
+      try {
+        const response = await authFetch(`${API_URL}/api/v1/fuel-types?limit=1000`)
+        if (response.ok) {
+          const result = await response.json()
+          setFuelTypes(result.items || [])
+        }
+      } catch (err) {
+        // Не показываем ошибку при 401 - это обрабатывается централизованно
+        if (!err.isUnauthorized) {
+          console.error('Ошибка загрузки видов топлива:', err)
+        }
+      } finally {
+        setLoadingFuelTypes(false)
+      }
+    }
+    loadFuelTypes()
+  }, [])
+
   // При загрузке существующего шаблона, если есть field_mapping, пытаемся восстановить колонки
   useEffect(() => {
     if (template && template.field_mapping && Object.keys(parseFieldMapping(template.field_mapping)).length > 0) {
@@ -242,6 +327,59 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       }
     }
   }, [template])
+
+  // Синхронизация визуального редактора с текстовым полем
+  useEffect(() => {
+    if (useVisualEditor) {
+      // Обновляем визуальный редактор при изменении текста
+      try {
+        const parsed = fuelMappingText ? JSON.parse(fuelMappingText) : {}
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          setFuelMappingEntries(Object.entries(parsed).map(([key, value]) => ({ key, value })))
+        } else {
+          setFuelMappingEntries([])
+        }
+      } catch {
+        // Игнорируем ошибки парсинга
+      }
+    }
+  }, [fuelMappingText, useVisualEditor])
+
+  // Обновление текстового поля при изменении визуального редактора
+  const updateFuelMappingFromEntries = (entries) => {
+    const mapping = {}
+    entries.forEach(({ key, value }) => {
+      if (key && value) {
+        mapping[key] = value
+      }
+    })
+    setFuelMappingText(JSON.stringify(mapping, null, 2))
+  }
+
+  const addFuelMappingEntry = () => {
+    const newEntries = [...fuelMappingEntries, { key: '', value: '' }]
+    setFuelMappingEntries(newEntries)
+    updateFuelMappingFromEntries(newEntries)
+  }
+
+  const removeFuelMappingEntry = (index) => {
+    const newEntries = fuelMappingEntries.filter((_, i) => i !== index)
+    setFuelMappingEntries(newEntries)
+    updateFuelMappingFromEntries(newEntries)
+  }
+
+  const updateFuelMappingEntry = (index, field, value) => {
+    const newEntries = [...fuelMappingEntries]
+    newEntries[index] = { ...newEntries[index], [field]: value }
+    setFuelMappingEntries(newEntries)
+    updateFuelMappingFromEntries(newEntries)
+  }
+
+  const clearFuelMapping = () => {
+    setFuelMappingText('')
+    setFuelMappingEntries([])
+    setError('')
+  }
 
   // Стандартные поля системы
   const systemFields = [
@@ -602,7 +740,19 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
     if (formData.connection_type === 'firebird' || formData.connection_type === 'api' || formData.connection_type === 'web') {
       saveData.connection_settings = connectionSettings
     } else {
-      saveData.connection_settings = null
+      // Для типа 'file' сохраняем только PPR API ключ, если он указан
+      // Остальные настройки подключения не нужны для типа 'file'
+      const pprApiKey = connectionSettings?.api_key || connectionSettings?.apiKey || connectionSettings?.КлючАвторизации || ''
+      if (pprApiKey && pprApiKey.trim()) {
+        // Сохраняем только PPR API ключ для типа 'file'
+        saveData.connection_settings = {
+          api_key: pprApiKey.trim()
+        }
+      } else {
+        // Если ключ пустой, сохраняем null (или пустой объект, если нужно сохранить структуру)
+        // Но лучше сохранить пустой объект, чтобы структура была сохранена
+        saveData.connection_settings = null
+      }
       // Очищаем поля Firebird для других типов подключения
       saveData.source_table = null
       saveData.source_query = null
@@ -705,10 +855,13 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                   setFormData({ ...formData, connection_type: newConnectionType })
                   setConnectionTestResult(null)
                   // Обновляем настройки подключения в зависимости от типа
+                  // Сохраняем api_key при смене типа подключения
+                  const currentApiKey = connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации || ''
+                  
                   if (newConnectionType === 'api') {
-                    setConnectionSettings({ provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB' })
+                    setConnectionSettings({ provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB', api_key: currentApiKey })
                   } else if (newConnectionType === 'firebird') {
-                    setConnectionSettings({ host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8' })
+                    setConnectionSettings({ host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8', api_key: currentApiKey })
                   } else if (newConnectionType === 'web') {
                     setConnectionSettings({ 
                       base_url: '', 
@@ -720,8 +873,12 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                       key: '',
                       signature: '',
                       salt: '',
-                      cod_azs: 1000001
+                      cod_azs: 1000001,
+                      api_key: currentApiKey
                     })
+                  } else {
+                    // Для типа 'file' также сохраняем api_key
+                    setConnectionSettings({ api_key: currentApiKey })
                   }
                 }}
                 className="input-full-width"
@@ -774,7 +931,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                     } else if (newProviderType === 'gpn') {
                       setConnectionSettings({ 
                         provider_type: 'gpn', 
-                        base_url: 'https://api-demo.opti-24.ru', 
+                        base_url: 'https://api.opti-24.ru', 
                         api_key: connectionSettings.api_key || connectionSettings.apiKey || '', 
                         login: connectionSettings.login || connectionSettings.username || '', 
                         password: connectionSettings.password || '', 
@@ -799,13 +956,13 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                   type="text"
                   value={connectionSettings.base_url || (
                     connectionSettings.provider_type === 'rncard' ? 'https://lkapi.rn-card.ru' : 
-                    connectionSettings.provider_type === 'gpn' ? 'https://api-demo.opti-24.ru' : 
+                    connectionSettings.provider_type === 'gpn' ? 'https://api.opti-24.ru' : 
                     'https://online.petrolplus.ru/api'
                   )}
                   onChange={(e) => setConnectionSettings({ ...connectionSettings, base_url: e.target.value })}
                   placeholder={
                     connectionSettings.provider_type === 'rncard' ? 'https://lkapi.rn-card.ru' : 
-                    connectionSettings.provider_type === 'gpn' ? 'https://api-demo.opti-24.ru' : 
+                    connectionSettings.provider_type === 'gpn' ? 'https://api.opti-24.ru' : 
                     'https://online.petrolplus.ru/api'
                   }
                   className="input-full-width"
@@ -1798,6 +1955,136 @@ ORDER BY rg."Date" DESC`}
         </div>
         )}
 
+        {/* ШАГ 6.5: Настройки PPR API ключа */}
+        <div className="form-section">
+          <h4 className="section-title">
+            <span className="step-number">6.5</span>
+            Настройки PPR API ключа
+          </h4>
+          <p className="section-description">
+            API ключ для доступа к эмулированному PPR API. Этот ключ используется для аутентификации при запросах к PPR API и определяет, какие транзакции будут доступны (только транзакции данного провайдера).
+          </p>
+          
+          <div className="form-group">
+            <label>
+              API ключ для PPR API:
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                <input
+                  type="text"
+                  value={connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации || ''}
+                  onChange={(e) => setConnectionSettings({ 
+                    ...connectionSettings, 
+                    api_key: e.target.value,
+                    apiKey: e.target.value,
+                    КлючАвторизации: e.target.value
+                  })}
+                  placeholder="Введите API ключ для PPR API"
+                  style={{ flex: 1 }}
+                  className="input-full-width"
+                  autoComplete="off"
+                  id="ppr-api-key-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newKey = generateApiKey()
+                    setConnectionSettings({ 
+                      ...connectionSettings, 
+                      api_key: newKey,
+                      apiKey: newKey,
+                      КлючАвторизации: newKey
+                    })
+                    // Фокусируемся на поле ввода после генерации
+                    setTimeout(() => {
+                      const input = document.getElementById('ppr-api-key-input')
+                      if (input) {
+                        input.focus()
+                        input.select()
+                      }
+                    }, 100)
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#6366f1',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    whiteSpace: 'nowrap',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#4f46e5'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#6366f1'}
+                  title="Сгенерировать новый случайный ключ"
+                >
+                  Создать ключ
+                </button>
+                <button
+                  type="button"
+                  onClick={copyApiKeyToClipboard}
+                  disabled={!connectionSettings.api_key && !connectionSettings.apiKey && !connectionSettings.КлючАвторизации}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации ? '#10b981' : '#9ca3af',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации ? 'pointer' : 'not-allowed',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    whiteSpace: 'nowrap',
+                    transition: 'background-color 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  onMouseOver={(e) => {
+                    if (connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации) {
+                      e.target.style.backgroundColor = '#059669'
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации) {
+                      e.target.style.backgroundColor = '#10b981'
+                    }
+                  }}
+                  title="Скопировать ключ в буфер обмена"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '16px', height: '16px' }} viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                    <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                  </svg>
+                  Копировать
+                </button>
+              </div>
+              <span className="field-help">
+                Уникальный ключ для доступа к PPR API. При запросе с этим ключом будут возвращены только транзакции данного провайдера.
+                <br />
+                <strong>Важно:</strong> Каждый провайдер должен иметь свой уникальный ключ.
+              </span>
+            </label>
+          </div>
+          
+          <div className="info-box" style={{ marginTop: '15px', padding: '12px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'start', gap: '10px' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '20px', height: '20px', marginTop: '2px', flexShrink: 0, color: '#0284c7' }} viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <div style={{ fontSize: '14px', lineHeight: '1.5', flex: 1, minWidth: 0 }}>
+                <strong>Как это работает:</strong>
+                <ul style={{ margin: '8px 0 0 20px', padding: 0, wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                  <li style={{ marginBottom: '4px' }}>API ключ хранится в настройках шаблона провайдера</li>
+                  <li style={{ marginBottom: '4px' }}>При запросе к PPR API с этим ключом система определяет провайдера</li>
+                  <li style={{ marginBottom: '4px' }}>Возвращаются только транзакции этого провайдера</li>
+                  <li style={{ marginBottom: '4px' }}>Если ключ не указан, PPR API будет недоступен для этого провайдера</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* ШАГ 7: Сопоставление полей */}
         {((formData.connection_type === 'file' && fileColumns.length > 0) || formData.connection_type === 'firebird' || formData.connection_type === 'api' || formData.connection_type === 'web') && (
           <div className="form-section mapping-section">
@@ -1960,18 +2247,152 @@ ORDER BY rg."Date" DESC`}
 
             <div className="form-group fuel-mapping-group">
               <label>
-                Маппинг видов топлива (опционально)
-                <textarea
-                  value={fuelMappingText}
-                  onChange={(e) => {
-                    setFuelMappingText(e.target.value)
-                    setError('')
-                  }}
-                  placeholder={`{\n  "Дизельное топливо": "ДТ",\n  "Бензин": "АИ-92",\n  "Бензин АИ-95": "АИ-95"\n}`}
-                  className="input-full-width"
-                  rows={6}
-                  style={{ fontFamily: 'monospace' }}
-                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-small)' }}>
+                  <span>Маппинг видов топлива (опционально)</span>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-small)' }}>
+                    <button
+                      type="button"
+                      onClick={() => setUseVisualEditor(!useVisualEditor)}
+                      style={{
+                        padding: 'var(--spacing-tiny) var(--spacing-small)',
+                        fontSize: 'var(--font-size-sm)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 'var(--border-radius)',
+                        backgroundColor: useVisualEditor ? 'var(--color-primary)' : 'var(--color-bg)',
+                        color: useVisualEditor ? 'white' : 'var(--color-text)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {useVisualEditor ? '📝 Текстовый редактор' : '🎨 Визуальный редактор'}
+                    </button>
+                    {fuelMappingText && (
+                      <button
+                        type="button"
+                        onClick={clearFuelMapping}
+                        style={{
+                          padding: 'var(--spacing-tiny) var(--spacing-small)',
+                          fontSize: 'var(--font-size-sm)',
+                          border: '1px solid var(--color-danger)',
+                          borderRadius: 'var(--border-radius)',
+                          backgroundColor: 'var(--color-bg)',
+                          color: 'var(--color-danger)',
+                          cursor: 'pointer'
+                        }}
+                        title="Очистить маппинг"
+                      >
+                        🗑️ Очистить
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                {useVisualEditor ? (
+                  <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--border-radius)', padding: 'var(--spacing-block)' }}>
+                    {fuelMappingEntries.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: 'var(--spacing-block)', color: 'var(--color-text-secondary)' }}>
+                        Нет записей маппинга. Нажмите "Добавить" для создания новой записи.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-small)' }}>
+                        {fuelMappingEntries.map((entry, index) => (
+                          <div key={index} style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
+                            <input
+                              type="text"
+                              value={entry.key}
+                              onChange={(e) => updateFuelMappingEntry(index, 'key', e.target.value)}
+                              placeholder="Исходное название (из БД)"
+                              style={{
+                                flex: 1,
+                                padding: 'var(--spacing-tiny) var(--spacing-small)',
+                                border: '1px solid var(--color-border)',
+                                borderRadius: 'var(--border-radius)',
+                                fontSize: 'var(--font-size-sm)'
+                              }}
+                            />
+                            <span style={{ color: 'var(--color-text-secondary)' }}>→</span>
+                            <div style={{ flex: 1, display: 'flex', gap: 'var(--spacing-tiny)' }}>
+                              <select
+                                value={entry.value}
+                                onChange={(e) => updateFuelMappingEntry(index, 'value', e.target.value)}
+                                style={{
+                                  flex: 1,
+                                  padding: 'var(--spacing-tiny) var(--spacing-small)',
+                                  border: '1px solid var(--color-border)',
+                                  borderRadius: 'var(--border-radius)',
+                                  fontSize: 'var(--font-size-sm)'
+                                }}
+                              >
+                                <option value="">Выберите или введите</option>
+                                {fuelTypes.map((ft) => (
+                                  <option key={ft.id} value={ft.normalized_name || ft.original_name}>
+                                    {ft.normalized_name || ft.original_name}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                type="text"
+                                value={entry.value}
+                                onChange={(e) => updateFuelMappingEntry(index, 'value', e.target.value)}
+                                placeholder="Введите вручную"
+                                style={{
+                                  flex: 1,
+                                  padding: 'var(--spacing-tiny) var(--spacing-small)',
+                                  border: '1px solid var(--color-border)',
+                                  borderRadius: 'var(--border-radius)',
+                                  fontSize: 'var(--font-size-sm)'
+                                }}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeFuelMappingEntry(index)}
+                              style={{
+                                padding: 'var(--spacing-tiny)',
+                                border: '1px solid var(--color-danger)',
+                                borderRadius: 'var(--border-radius)',
+                                backgroundColor: 'var(--color-bg)',
+                                color: 'var(--color-danger)',
+                                cursor: 'pointer',
+                                minWidth: '32px'
+                              }}
+                              title="Удалить запись"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={addFuelMappingEntry}
+                      style={{
+                        marginTop: 'var(--spacing-block)',
+                        padding: 'var(--spacing-small) var(--spacing-block)',
+                        border: '1px solid var(--color-primary)',
+                        borderRadius: 'var(--border-radius)',
+                        backgroundColor: 'var(--color-bg)',
+                        color: 'var(--color-primary)',
+                        cursor: 'pointer',
+                        width: '100%'
+                      }}
+                    >
+                      + Добавить запись
+                    </button>
+                  </div>
+                ) : (
+                  <textarea
+                    value={fuelMappingText}
+                    onChange={(e) => {
+                      setFuelMappingText(e.target.value)
+                      setError('')
+                    }}
+                    placeholder={`{\n  "Дизельное топливо": "ДТ",\n  "Бензин": "АИ-92",\n  "Бензин АИ-95": "АИ-95"\n}`}
+                    className="input-full-width"
+                    rows={6}
+                    style={{ fontFamily: 'monospace' }}
+                  />
+                )}
                 <span className="field-help">
                   <strong>Важно:</strong> Ключ — исходное название топлива из базы данных (например, "Дизельное топливо"), 
                   значение — нормализованное название для системы (например, "ДТ"). 

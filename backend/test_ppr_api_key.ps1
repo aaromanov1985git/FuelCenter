@@ -1,73 +1,60 @@
-# Тестовый скрипт для проверки PPR API v1
-# Проверяет работу эндпоинта /public-api/v1/transaction-list
+﻿# auth-prod.ps1 — Авторизация на боевом сервере
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-$ErrorActionPreference = "Stop"
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$ApiUrl = "https://api.opti-24.ru"
+$ApiKey = "GPN.84d349025d85da2c82b4df9bc67e0e19a18583b0.6c6a5295b9d2ec46037d48ccc1bf3488cb26830c"
 
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "PPR API v1 Test" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host ""
+# === ЗАМЕНИТЕ ЭТИ ЗНАЧЕНИЯ НА ВАШИ РЕАЛЬНЫЕ УЧЁТНЫЕ ДАННЫЕ ===
+$Login = "SSSafronov@starwayp.com"          # ← ОБЯЗАТЕЛЬНО замените!
+$PasswordPlain = "ZAQ!2wsx"  # ← ОБЯЗАТЕЛЬНО замените!
 
-# Параметры запроса
-$uri = "https://malignantly-meteoric-stallion.cloudpub.ru/public-api/v1/transaction-list"
+# Вычисляем SHA-512 хеш пароля (требование API)
+$sha512 = [System.Security.Cryptography.SHA512]::Create()
+$bytes = [System.Text.Encoding]::UTF8.GetBytes($PasswordPlain)
+$hashBytes = $sha512.ComputeHash($bytes)
+$PasswordHash = [System.BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
 
-$body = @{
-    token    = "yzsdzCsjyJpHOHwSwnynQzsGVDEZeXcR"
-    dateFrom = "2025-12-01"  # ИСПРАВЛЕНО: было "2025-12-0"
-    dateTo   = "2025-12-03"
-    format   = "JSON"
-} | ConvertTo-Json
+# Текущая дата и время (можно фиксированное, но лучше актуальное)
+$dateTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
-Write-Host "URL: $uri" -ForegroundColor Yellow
-Write-Host "Body: $body" -ForegroundColor Yellow
-Write-Host ""
+# Подготавливаем тело запроса
+$body = "login=$([System.Web.HttpUtility]::UrlEncode($Login))&password=$([System.Web.HttpUtility]::UrlEncode($PasswordHash))"
 
-# Выполнение POST-запроса
-try {
-    Write-Host "Отправка POST-запроса..." -ForegroundColor Yellow
-    
-    $response = Invoke-RestMethod -Uri $uri -Method Post -Body $body -ContentType "application/json; charset=utf-8"
-    
-    # Вывод результата
-    Write-Host "Запрос выполнен успешно!" -ForegroundColor Green
-    Write-Host ""
-    
-    if ($response.'array-list') {
-        $count = ($response.'array-list').Count
-        Write-Host "Найдено транзакций: $count" -ForegroundColor Green
-        Write-Host ""
-        
-        # Выводим первые 3 транзакции для проверки
-        $response.'array-list' | Select-Object -First 3 | ForEach-Object {
-            Write-Host "--- Транзакция ---" -ForegroundColor Cyan
-            Write-Host "idTrans: $($_.idTrans)"
-            Write-Host "date: $($_.date)"
-            Write-Host "cardNum: $($_.cardNum)"
-            Write-Host "amount: $($_.amount) (количество)"
-            Write-Host "sum: $($_.sum) (сумма)"
-            Write-Host "price: $($_.price) (цена за литр)"
-            Write-Host "serviceName: $($_.serviceName)"
-            Write-Host "TypeID: $($_.TypeID)"
-            Write-Host ""
-        }
-    } else {
-        Write-Host "В ответе отсутствует поле 'array-list'" -ForegroundColor Red
-        Write-Host "Ответ: $($response | ConvertTo-Json -Depth 10)" -ForegroundColor Yellow
-    }
+$headers = @{
+    "api_key"      = $ApiKey
+    "date_time"    = $dateTime
+    "Content-Type" = "application/x-www-form-urlencoded"
+    "User-Agent"   = "PowerShell/5.1 (GPN Production Client)"
 }
-catch {
-    Write-Host "Ошибка при выполнении запроса:" -ForegroundColor Red
-    Write-Host $_.Exception.Message -ForegroundColor Red
-    
+
+try {
+    Write-Host "🔐 Отправка запроса авторизации на $ApiUrl..."
+    $response = Invoke-RestMethod -Uri "$ApiUrl/vip/v1/authUser" -Method Post -Headers $headers -Body $body
+
+    if ($response.status.code -eq 200) {
+        $sessionId = $response.data.session_id
+        $contractId = $response.data.contracts[0].id
+
+        Write-Host "✅ Авторизация успешна!"
+        Write-Host "Session ID: $($sessionId.Substring(0,30))..."
+        Write-Host "Contract ID: $contractId"
+
+        # Сохраняем для последующих скриптов
+        $sessionId | Out-File -FilePath ".\session_id.txt" -Encoding utf8
+        $contractId | Out-File -FilePath ".\contract_id.txt" -Encoding utf8
+        Write-Host "Данные сохранены в session_id.txt и contract_id.txt"
+    } else {
+        Write-Error "❌ Ошибка авторизации: $($response.status.code)"
+        Write-Error ($response.status.errors | ConvertTo-Json -Compress)
+    }
+} catch {
+    Write-Error "💥 Исключение при авторизации:"
+    Write-Error $_.Exception.Message
     if ($_.Exception.Response) {
         $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
-        $responseBody = $reader.ReadToEnd()
-        Write-Host "Response body: $responseBody" -ForegroundColor Yellow
+        $reader.BaseStream.Position = 0
+        $reader.DiscardBufferedData()
+        $errorBody = $reader.ReadToEnd()
+        Write-Error "Тело ошибки: $errorBody"
     }
 }
-
-Write-Host ""
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Test completed" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan

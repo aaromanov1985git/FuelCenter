@@ -1293,3 +1293,122 @@ class BulkUploadResponse(BaseModel):
     """
     created: int = Field(..., description="Количество созданных записей")
     errors: List[Dict[str, Any]] = Field(default_factory=list, description="Ошибки при загрузке")
+
+
+# ==================== Схемы для уведомлений ====================
+
+class NotificationCategories(BaseModel):
+    """
+    Настройки категорий уведомлений
+    """
+    upload_events: Optional[bool] = Field(True, description="Уведомления о загрузках")
+    errors: Optional[bool] = Field(True, description="Уведомления об ошибках")
+    system: Optional[bool] = Field(False, description="Системные уведомления")
+    transactions: Optional[bool] = Field(False, description="Уведомления о транзакциях")
+
+
+class NotificationSettingsBase(BaseModel):
+    """
+    Базовая схема настроек уведомлений
+    """
+    email_enabled: Optional[bool] = Field(True, description="Включены ли уведомления по email")
+    telegram_enabled: Optional[bool] = Field(False, description="Включены ли уведомления в Telegram")
+    push_enabled: Optional[bool] = Field(True, description="Включены ли push-уведомления")
+    in_app_enabled: Optional[bool] = Field(True, description="Включены ли уведомления в системе")
+    telegram_chat_id: Optional[str] = Field(None, max_length=100, description="ID чата Telegram")
+    telegram_username: Optional[str] = Field(None, max_length=100, description="Имя пользователя Telegram")
+    push_subscription: Optional[Dict[str, Any]] = Field(None, description="Данные подписки на push-уведомления")
+    categories: Optional[Dict[str, bool]] = Field(None, description="Настройки категорий уведомлений (как словарь)")
+
+
+class NotificationSettingsCreate(NotificationSettingsBase):
+    """
+    Схема для создания настроек уведомлений
+    """
+    pass
+
+
+class NotificationSettingsUpdate(NotificationSettingsBase):
+    """
+    Схема для обновления настроек уведомлений
+    """
+    pass
+
+
+class NotificationSettingsResponse(NotificationSettingsBase):
+    """
+    Схема ответа с настройками уведомлений
+    """
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class NotificationBase(BaseModel):
+    """
+    Базовая схема уведомления
+    """
+    title: str = Field(..., max_length=200, description="Заголовок уведомления")
+    message: str = Field(..., description="Текст уведомления")
+    category: Optional[str] = Field("system", max_length=100, description="Категория уведомления")
+    type: Optional[str] = Field("info", max_length=50, description="Тип уведомления: info, success, warning, error")
+    entity_type: Optional[str] = Field(None, max_length=100, description="Тип связанной сущности")
+    entity_id: Optional[int] = Field(None, description="ID связанной сущности")
+
+
+class NotificationCreate(NotificationBase):
+    """
+    Схема для создания уведомления
+    """
+    user_id: Optional[int] = Field(None, description="ID пользователя (если не указан, отправляется текущему пользователю)")
+    channels: Optional[List[str]] = Field(None, description="Каналы для отправки: email, telegram, push, in_app (если не указано, используются настройки пользователя)")
+    force: bool = Field(False, description="Если True, игнорирует настройки пользователя и отправляет через все указанные каналы")
+
+
+class NotificationResponse(NotificationBase):
+    """
+    Схема ответа с уведомлением
+    """
+    id: int
+    user_id: int
+    is_read: bool
+    read_at: Optional[datetime] = None
+    delivery_status: Optional[Dict[str, str]] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NotificationListResponse(BaseModel):
+    """
+    Схема ответа со списком уведомлений
+    """
+    total: int
+    items: List[NotificationResponse]
+    unread_count: int = Field(0, description="Количество непрочитанных уведомлений")
+
+
+class NotificationMarkReadRequest(BaseModel):
+    """
+    Схема запроса на отметку уведомлений как прочитанных
+    """
+    notification_ids: Optional[List[int]] = Field(None, description="Список ID уведомлений (если не указан, помечаются все как прочитанные)")
+
+
+class NotificationMarkReadResponse(BaseModel):
+    """
+    Схема ответа на отметку уведомлений как прочитанных
+    """
+    marked_count: int = Field(..., description="Количество помеченных уведомлений")
+
+
+class PushSubscriptionRequest(BaseModel):
+    """
+    Схема запроса на регистрацию подписки на push-уведомления
+    """
+    subscription: Dict[str, Any] = Field(..., description="Данные подписки на push-уведомления")

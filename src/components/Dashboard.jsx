@@ -225,7 +225,16 @@ const Dashboard = () => {
       
       success(`Таблица ${filename} успешно экспортирована`)
     } catch (err) {
-      showError('Ошибка экспорта: ' + err.message)
+      // Безопасное извлечение сообщения об ошибке
+      let errorText = 'Неизвестная ошибка'
+      if (err instanceof Error) {
+        errorText = err.message || 'Ошибка экспорта'
+      } else if (typeof err === 'string') {
+        errorText = err
+      } else if (err && typeof err === 'object') {
+        errorText = err.detail || err.message || err.error || JSON.stringify(err)
+      }
+      showError('Ошибка экспорта: ' + errorText)
     }
   }
 

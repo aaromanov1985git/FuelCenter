@@ -24,6 +24,9 @@ class TransactionBatchProcessor:
     # Размер батча для обработки
     BATCH_SIZE = 500
     
+    # Значения валют, которые не являются видами топлива и должны быть отфильтрованы
+    INVALID_CURRENCY_VALUES = {"рубли", "rub", "rubles", "ruble", "₽", "р.", "руб", "рублей"}
+    
     def __init__(self, db: Session):
         self.db = db
     
@@ -43,11 +46,24 @@ class TransactionBatchProcessor:
         if not transactions:
             return 0, 0, []
         
-        # Преобразуем номер карты в строку для всех транзакций заранее
+        # Нормализуем данные для всех транзакций заранее
         for trans_data in transactions:
+            # Нормализуем номер карты
             card_number = trans_data.get("card_number")
             if card_number is not None:
                 trans_data["card_number"] = str(card_number).strip() if card_number else None
+            
+            # Нормализуем номер АЗС
+            azs_number = trans_data.get("azs_number")
+            if azs_number is not None:
+                azs_number_normalized = str(azs_number).strip() if azs_number else None
+                trans_data["azs_number"] = azs_number_normalized
+            
+            # Нормализуем продукт (убираем пробелы в начале/конце)
+            product = trans_data.get("product")
+            if product is not None:
+                product_normalized = str(product).strip() if product else None
+                trans_data["product"] = product_normalized
         
         created_count = 0
         skipped_count = 0
@@ -145,14 +161,25 @@ class TransactionBatchProcessor:
             trans_data["vehicle_id"] = vehicle_id
             
             # Получаем gas_station_id из карты
+            # Приоритет у номера АЗС, а не у original_name
+            # Это важно, чтобы транзакции с одним номером АЗС, но разными original_name связывались с одной АЗС
             gas_station_id = None
-            azs_original_name = trans_data.get("azs_original_name")
-            if azs_original_name:
-                # Используем оригинальное название как ключ
-                gas_station_id = gas_stations_map.get(azs_original_name)
-            elif trans_data.get("azs_number"):
-                # Fallback: используем номер АЗС как ключ, если оригинальное название отсутствует
-                gas_station_id = gas_stations_map.get(trans_data.get("azs_number"))
+            azs_number = trans_data.get("azs_number")
+            # azs_number уже нормализован в начале create_transactions
+            
+            # Сначала ищем по номеру АЗС (приоритет)
+            if azs_number:
+                gas_station_id = gas_stations_map.get(azs_number)
+            
+            # Fallback: если не нашли по номеру, ищем по original_name
+            if not gas_station_id:
+                azs_original_name = trans_data.get("azs_original_name")
+                if azs_original_name:
+                    # Нормализуем оригинальное название (убираем пробелы в начале/конце)
+                    azs_original_name_normalized = str(azs_original_name).strip() if azs_original_name else None
+                    if azs_original_name_normalized:
+                        # Используем оригинальное название как ключ
+                        gas_station_id = gas_stations_map.get(azs_original_name_normalized)
             
             trans_data["gas_station_id"] = gas_station_id
             
@@ -189,6 +216,15 @@ class TransactionBatchProcessor:
             if not filtered_trans_data.get("quantity"):
                 warnings.append("Пропущена транзакция: отсутствует количество")
                 continue
+            
+            # Фильтруем транзакции, где product является валютой (не валидный вид топлива)
+            product = filtered_trans_data.get("product")
+            if product:
+                product_lower = str(product).strip().lower()
+                if product_lower in self.INVALID_CURRENCY_VALUES:
+                    warnings.append(f"Пропущена транзакция: product='{product}' является валютой, а не видом топлива")
+                    skipped_count += 1
+                    continue
             
             try:
                 db_transaction = Transaction(**filtered_trans_data)
@@ -233,9 +269,16 @@ class TransactionBatchProcessor:
             if not date or not quantity:
                 continue
             
-            # Преобразуем номер карты в строку, если он передан как число
+            # Нормализуем данные для проверки дубликатов
+            # (данные уже должны быть нормализованы в create_transactions, но на всякий случай)
             if card_number:
                 card_number = str(card_number).strip() if card_number else None
+            
+            if azs_number:
+                azs_number = str(azs_number).strip() if azs_number else None
+            
+            if product:
+                product = str(product).strip() if product else None
             
             # Формируем условие для этой транзакции
             condition = and_(
@@ -281,16 +324,28 @@ class TransactionBatchProcessor:
         azs_number = trans_data.get("azs_number")
         product = trans_data.get("product")
         
-        # Преобразуем номер карты в строку, если он передан как число
+        # Нормализуем данные для проверки дубликатов
+        # (данные уже должны быть нормализованы в create_transactions, но на всякий случай)
         if card_number:
             card_number = str(card_number).strip() if card_number else None
         
+        if azs_number:
+            azs_number = str(azs_number).strip() if azs_number else None
+        
+        if product:
+            product = str(product).strip() if product else None
+        
         for existing in existing_transactions:
+            # Нормализуем значения из БД для сравнения
+            existing_card = str(existing.card_number).strip() if existing.card_number else None
+            existing_azs = str(existing.azs_number).strip() if existing.azs_number else None
+            existing_product = str(existing.product).strip() if existing.product else None
+            
             if (existing.transaction_date == date and
                 existing.quantity == quantity and
-                (existing.card_number == card_number if card_number else existing.card_number is None) and
-                (existing.azs_number == azs_number if azs_number else existing.azs_number is None) and
-                (existing.product == product if product else existing.product is None)):
+                (existing_card == card_number if card_number else existing_card is None) and
+                (existing_azs == azs_number if azs_number else existing_azs is None) and
+                (existing_product == product if product else existing_product is None)):
                 return True
         
         return False
@@ -476,151 +531,300 @@ class TransactionBatchProcessor:
         gas_stations_map = {}
         gas_station_service = GasStationService(self.db)
         
-        # Собираем все уникальные названия АЗС
-        gas_station_names = set()
+        # Собираем все уникальные номера АЗС (приоритет номеру АЗС, а не original_name)
+        # Это важно, чтобы для одного номера АЗС не создавались разные записи
+        azs_numbers_set = set()
+        azs_number_to_original_names = {}  # Словарь: номер АЗС -> список original_name
+        
         for trans_data in transactions:
-            azs_original_name = trans_data.get("azs_original_name")
             azs_number = trans_data.get("azs_number")
+            azs_original_name = trans_data.get("azs_original_name")
             
-            # Приоритет у оригинального названия
-            if azs_original_name and str(azs_original_name).strip():
-                gas_station_names.add(str(azs_original_name).strip())
-            # Если оригинальное название отсутствует, используем номер АЗС
-            elif azs_number and str(azs_number).strip():
-                gas_station_names.add(str(azs_number).strip())
+            # Приоритет у номера АЗС
+            if azs_number and str(azs_number).strip():
+                azs_num_normalized = str(azs_number).strip()
+                azs_numbers_set.add(azs_num_normalized)
+                # Сохраняем связь номера с original_name
+                if azs_num_normalized not in azs_number_to_original_names:
+                    azs_number_to_original_names[azs_num_normalized] = []
+                if azs_original_name and str(azs_original_name).strip():
+                    original_name_normalized = str(azs_original_name).strip()
+                    if original_name_normalized not in azs_number_to_original_names[azs_num_normalized]:
+                        azs_number_to_original_names[azs_num_normalized].append(original_name_normalized)
+            # Если номера нет, но есть original_name, используем его
+            elif azs_original_name and str(azs_original_name).strip():
+                original_name_normalized = str(azs_original_name).strip()
+                azs_numbers_set.add(original_name_normalized)
+                # Пытаемся извлечь номер из original_name для группировки
+                # Это важно для случаев типа "контроллер КАЗС10 АИ-92", где номер "10" извлекается из названия
+                extracted_num = app_services.extract_azs_number(original_name_normalized)
+                if extracted_num and extracted_num.strip() and extracted_num != original_name_normalized:
+                    # Если номер извлечен и отличается от original_name, добавляем его в группировку
+                    extracted_num_normalized = extracted_num.strip()
+                    if extracted_num_normalized not in azs_number_to_original_names:
+                        azs_number_to_original_names[extracted_num_normalized] = []
+                    if original_name_normalized not in azs_number_to_original_names[extracted_num_normalized]:
+                        azs_number_to_original_names[extracted_num_normalized].append(original_name_normalized)
+                    # НЕ добавляем извлеченный номер в azs_numbers_set
+                    # Это позволит обработать original_name отдельно, а не группировать по номеру
+                    # Вместо этого обработаем original_name напрямую
             # Если и номер отсутствует, но есть location или settlement, создаем АЗС по адресу
             elif trans_data.get("location") or trans_data.get("settlement"):
                 location_name = trans_data.get("location") or trans_data.get("settlement") or "Неизвестная АЗС"
-                gas_station_names.add(location_name.strip())
+                azs_numbers_set.add(location_name.strip())
         
-        if not gas_station_names:
+        if not azs_numbers_set:
             return gas_stations_map
         
             # Обрабатываем каждую АЗС
-        for gas_station_name in gas_station_names:
-            # Находим первую транзакцию с этой АЗС для получения данных
-            azs_number = None
-            location = None
-            region = None
-            settlement = None
-            latitude = None
-            longitude = None
-            provider_id = None
-            
-            for trans_data in transactions:
-                azs_original = trans_data.get("azs_original_name", "").strip()
-                azs_num = trans_data.get("azs_number")
+        # Сначала обрабатываем все original_name (не по номеру), чтобы они обрабатывались независимо
+        processed_keys = set()
+        for azs_key in azs_numbers_set:
+            # Пропускаем номера АЗС - они будут обработаны отдельно через original_name
+            if azs_key in azs_number_to_original_names:
+                # Это номер АЗС - обрабатываем каждый original_name из списка отдельно
+                azs_number = azs_key
+                original_names = azs_number_to_original_names[azs_key]
                 
-                # Проверяем совпадение по оригинальному названию или номеру
-                if (azs_original == gas_station_name or 
-                    (not azs_original and azs_num and str(azs_num).strip() == gas_station_name)):
-                    azs_number = azs_num
-                    # Берем данные из транзакции, если они есть
-                    if trans_data.get("location"):
-                        location = trans_data.get("location")
-                    if trans_data.get("region"):
-                        region = trans_data.get("region")
-                    if trans_data.get("settlement"):
-                        settlement = trans_data.get("settlement")
-                    if trans_data.get("azs_latitude"):
-                        latitude = trans_data.get("azs_latitude")
-                    if trans_data.get("azs_longitude"):
-                        longitude = trans_data.get("azs_longitude")
-                    if trans_data.get("provider_id"):
-                        provider_id = trans_data.get("provider_id")
-                    break
+                for original_name_item in original_names:
+                    if original_name_item in processed_keys:
+                        continue  # Уже обработано
+                    
+                    processed_keys.add(original_name_item)
+                    gas_station_name = original_name_item
+                    # Обрабатываем этот original_name с номером АЗС
+                    self._process_single_gas_station(
+                        gas_stations_map, gas_station_service, warnings,
+                        azs_key=original_name_item,
+                        azs_number=azs_number,
+                        gas_station_name=gas_station_name,
+                        azs_number_to_original_names=azs_number_to_original_names,
+                        transactions=transactions
+                    )
+                continue  # Пропускаем обработку самого номера
             
-            # Если не нашли данные, извлекаем номер из названия
-            if not azs_number and gas_station_name:
-                azs_number = app_services.extract_azs_number(gas_station_name)
-            
-            # Если region, settlement или location не найдены в первой транзакции, ищем в других транзакциях с этой АЗС
-            if not region or not settlement or not location:
-                for trans_data in transactions:
-                    azs_original = trans_data.get("azs_original_name", "").strip()
-                    azs_num = trans_data.get("azs_number")
-                    if (azs_original == gas_station_name or 
-                        (not azs_original and azs_num and str(azs_num).strip() == gas_station_name)):
-                        # Используем данные из транзакции, если они более полные
-                        if not region and trans_data.get("region"):
-                            region = trans_data.get("region")
-                        if not settlement and trans_data.get("settlement"):
-                            settlement = trans_data.get("settlement")
-                        if not location and trans_data.get("location"):
-                            location = trans_data.get("location")
-                        if not provider_id and trans_data.get("provider_id"):
-                            provider_id = trans_data.get("provider_id")
-                        # Если все данные найдены, можно прервать поиск
-                        if region and settlement and location and provider_id:
-                            break
-            
-            # Если provider_id все еще не найден, ищем в других транзакциях с этой АЗС
-            if not provider_id:
-                for trans_data in transactions:
-                    azs_original = trans_data.get("azs_original_name", "").strip()
-                    azs_num = trans_data.get("azs_number")
-                    if ((azs_original == gas_station_name or 
-                         (not azs_original and azs_num and str(azs_num).strip() == gas_station_name)) and
-                        trans_data.get("provider_id")):
-                        provider_id = trans_data.get("provider_id")
-                        break
-            
-            try:
-                # Логируем данные перед созданием/обновлением АЗС
-                logger.debug("Создание/обновление АЗС", extra={
-                    "gas_station_name": gas_station_name,
-                    "azs_number": azs_number,
-                    "region": region,
-                    "settlement": settlement,
-                    "location": location,
-                    "latitude": latitude,
-                    "longitude": longitude,
-                    "provider_id": provider_id
-                })
-                
-                gas_station, gas_station_warnings = gas_station_service.get_or_create_gas_station(
-                    original_name=gas_station_name,
-                    azs_number=azs_number,
-                    location=location,
-                    region=region,
-                    settlement=settlement,
-                    latitude=latitude,
-                    longitude=longitude,
-                    provider_id=provider_id
-                )
-                
-                # Логируем результат
-                logger.info("АЗС создана/обновлена", extra={
-                    "gas_station_id": gas_station.id,
-                    "gas_station_name": gas_station.original_name,
-                    "region": gas_station.region,
-                    "settlement": gas_station.settlement,
-                    "location": gas_station.location,
-                    "azs_number": gas_station.azs_number
-                })
-                gas_stations_map[gas_station_name] = gas_station.id
-                # Также добавляем номер АЗС как ключ для обратной совместимости
-                if azs_number:
-                    gas_stations_map[str(azs_number).strip()] = gas_station.id
-                # Собираем предупреждения
-                warnings.extend(gas_station_warnings)
-            except Exception as e:
-                error_msg = str(e)
-                warnings.append(f"Ошибка при обработке АЗС '{gas_station_name}': {error_msg}")
-                logger.error(
-                    "Ошибка при создании/получении АЗС",
-                    extra={
-                        "gas_station_name": gas_station_name,
-                        "azs_number": azs_number,
-                        "error": error_msg,
-                        "error_type": type(e).__name__
-                    },
-                    exc_info=True
-                )
-                # Продолжаем обработку других АЗС
+            # Это original_name или location (когда номера нет)
+            if azs_key in processed_keys:
                 continue
+            processed_keys.add(azs_key)
+            
+            gas_station_name = azs_key
+            # Пытаемся извлечь номер из названия
+            extracted_number = app_services.extract_azs_number(azs_key)
+            # Если извлеченный номер отличается от исходной строки, используем его
+            # (иначе это означает, что номера нет, и extracted_number равен azs_key)
+            if extracted_number and extracted_number.strip() and extracted_number != azs_key:
+                azs_number = extracted_number.strip()
+            else:
+                azs_number = None
+            
+            # Обрабатываем этот original_name
+            self._process_single_gas_station(
+                gas_stations_map, gas_station_service, warnings,
+                azs_key=azs_key,
+                azs_number=azs_number,
+                gas_station_name=gas_station_name,
+                azs_number_to_original_names=azs_number_to_original_names,
+                transactions=transactions
+            )
         
         return gas_stations_map
+    
+    def _process_single_gas_station(
+        self,
+        gas_stations_map: Dict[str, int],
+        gas_station_service,
+        warnings: List[str],
+        azs_key: str,
+        azs_number: Optional[str],
+        gas_station_name: str,
+        azs_number_to_original_names: Dict[str, List[str]],
+        transactions: List[Dict]
+    ) -> None:
+        """
+        Обработка одной АЗС
+        """
+        # Находим первую транзакцию с этой АЗС для получения данных
+        location = None
+        region = None
+        settlement = None
+        latitude = None
+        longitude = None
+        provider_id = None
+        
+        for trans_data in transactions:
+            trans_azs_num = trans_data.get("azs_number")
+            trans_azs_original = trans_data.get("azs_original_name", "").strip()
+            
+            # Проверяем совпадение по original_name (приоритет)
+            matches = False
+            if gas_station_name and trans_azs_original == gas_station_name:
+                matches = True
+            # Также проверяем по номеру АЗС
+            elif azs_number and trans_azs_num and str(trans_azs_num).strip() == azs_number:
+                matches = True
+            # Также проверяем по azs_key
+            elif trans_azs_original == azs_key:
+                matches = True
+            
+            if matches:
+                # Берем данные из транзакции, если они есть
+                if trans_data.get("location"):
+                    location = trans_data.get("location")
+                if trans_data.get("region"):
+                    region = trans_data.get("region")
+                if trans_data.get("settlement"):
+                    settlement = trans_data.get("settlement")
+                if trans_data.get("azs_latitude"):
+                    latitude = trans_data.get("azs_latitude")
+                if trans_data.get("azs_longitude"):
+                    longitude = trans_data.get("azs_longitude")
+                if trans_data.get("provider_id"):
+                    provider_id = trans_data.get("provider_id")
+                # Если номер АЗС не был установлен, но есть в транзакции, устанавливаем его
+                if not azs_number and trans_azs_num:
+                    azs_number = str(trans_azs_num).strip()
+                break
+        
+        # Если region, settlement или location не найдены в первой транзакции, ищем в других транзакциях с этой АЗС
+        if not region or not settlement or not location:
+            for trans_data in transactions:
+                trans_azs_num = trans_data.get("azs_number")
+                trans_azs_original = trans_data.get("azs_original_name", "").strip()
+                
+                # Проверяем совпадение по original_name (приоритет)
+                matches = False
+                if gas_station_name and trans_azs_original == gas_station_name:
+                    matches = True
+                elif azs_number and trans_azs_num and str(trans_azs_num).strip() == azs_number:
+                    matches = True
+                elif trans_azs_original == azs_key:
+                    matches = True
+                
+                if matches:
+                    # Используем данные из транзакции, если они более полные
+                    if not region and trans_data.get("region"):
+                        region = trans_data.get("region")
+                    if not settlement and trans_data.get("settlement"):
+                        settlement = trans_data.get("settlement")
+                    if not location and trans_data.get("location"):
+                        location = trans_data.get("location")
+                    if not provider_id and trans_data.get("provider_id"):
+                        provider_id = trans_data.get("provider_id")
+                    # Если все данные найдены, можно прервать поиск
+                    if region and settlement and location and provider_id:
+                        break
+        
+        # Если provider_id все еще не найден, ищем в других транзакциях с этой АЗС
+        if not provider_id:
+            for trans_data in transactions:
+                trans_azs_num = trans_data.get("azs_number")
+                trans_azs_original = trans_data.get("azs_original_name", "").strip()
+                
+                # Проверяем совпадение по original_name (приоритет)
+                matches = False
+                if gas_station_name and trans_azs_original == gas_station_name:
+                    matches = True
+                elif azs_number and trans_azs_num and str(trans_azs_num).strip() == azs_number:
+                    matches = True
+                elif trans_azs_original == azs_key:
+                    matches = True
+                
+                if matches and trans_data.get("provider_id"):
+                    provider_id = trans_data.get("provider_id")
+                    break
+        
+        # Убеждаемся, что gas_station_name установлен (не должен быть None)
+        if not gas_station_name:
+            gas_station_name = azs_key or "Неизвестная АЗС"
+        
+        try:
+            # Логируем данные перед созданием/обновлением АЗС
+            logger.debug("Создание/обновление АЗС", extra={
+                "gas_station_name": gas_station_name,
+                "azs_number": azs_number,
+                "azs_key": azs_key,
+                "region": region,
+                "settlement": settlement,
+                "location": location,
+                "latitude": latitude,
+                "longitude": longitude,
+                "provider_id": provider_id
+            })
+            
+            gas_station, gas_station_warnings = gas_station_service.get_or_create_gas_station(
+                original_name=gas_station_name,
+                azs_number=azs_number if azs_number and azs_number.strip() else None,
+                location=location,
+                region=region,
+                settlement=settlement,
+                latitude=latitude,
+                longitude=longitude,
+                provider_id=provider_id
+            )
+            
+            # Логируем результат
+            logger.info("АЗС создана/обновлена", extra={
+                "gas_station_id": gas_station.id,
+                "gas_station_name": gas_station.original_name,
+                "region": gas_station.region,
+                "settlement": gas_station.settlement,
+                "location": gas_station.location,
+                "azs_number": gas_station.azs_number
+            })
+            # Добавляем в карту по original_name (для обратной совместимости)
+            gas_stations_map[gas_station_name] = gas_station.id
+            # Также добавляем все original_name из списка, если они есть
+            # Это важно, чтобы транзакции с разными original_name, но одним номером АЗС связывались правильно
+            if azs_number and azs_number in azs_number_to_original_names:
+                for orig_name in azs_number_to_original_names[azs_number]:
+                    gas_stations_map[orig_name] = gas_station.id
+                    logger.debug("Добавлен original_name в gas_stations_map", extra={
+                        "original_name": orig_name,
+                        "gas_station_id": gas_station.id,
+                        "azs_number": azs_number
+                    })
+            # Также добавляем по azs_key, если это original_name (когда номера нет или номер извлечен из названия)
+            # Это важно для случаев, когда из "контроллер КАЗС10 АИ-92" извлекается "10"
+            if azs_key not in gas_stations_map:
+                gas_stations_map[azs_key] = gas_station.id
+                logger.debug("Добавлен azs_key в gas_stations_map", extra={
+                    "azs_key": azs_key,
+                    "gas_station_id": gas_station.id,
+                    "azs_number": azs_number
+                })
+            # Также добавляем original_name из самой АЗС (если она была найдена, а не создана)
+            if gas_station.original_name and gas_station.original_name not in gas_stations_map:
+                gas_stations_map[gas_station.original_name] = gas_station.id
+            
+            # Также добавляем номер АЗС как ключ (приоритет номеру АЗС)
+            # Используем номер из самой АЗС, если он есть, иначе из транзакции
+            azs_num_to_add = gas_station.azs_number or azs_number
+            if azs_num_to_add:
+                # Нормализуем номер АЗС (убираем пробелы, приводим к строке)
+                azs_num_normalized = str(azs_num_to_add).strip()
+                if azs_num_normalized:
+                    gas_stations_map[azs_num_normalized] = gas_station.id
+                    # Также добавляем без нормализации для обратной совместимости
+                    if azs_num_normalized != str(azs_num_to_add):
+                        gas_stations_map[str(azs_num_to_add)] = gas_station.id
+            # Собираем предупреждения
+            warnings.extend(gas_station_warnings)
+        except Exception as e:
+            error_msg = str(e)
+            warnings.append(f"Ошибка при обработке АЗС '{gas_station_name}': {error_msg}")
+            logger.error(
+                "Ошибка при создании/получении АЗС",
+                extra={
+                    "gas_station_name": gas_station_name,
+                    "azs_number": azs_number,
+                    "error": error_msg,
+                    "error_type": type(e).__name__
+                },
+                exc_info=True
+            )
+            # Продолжаем обработку других АЗС
+            return
     
     def _process_fuel_types_batch(
         self,
@@ -633,12 +837,16 @@ class TransactionBatchProcessor:
         """
         fuel_type_service = FuelTypeService(self.db)
         
-        # Собираем все уникальные значения product
+        # Собираем все уникальные значения product (исключая валюты)
         fuel_types = set()
         for trans_data in transactions:
             product = trans_data.get("product")
             if product and str(product).strip():
-                fuel_types.add(str(product).strip())
+                product_normalized = str(product).strip()
+                product_lower = product_normalized.lower()
+                # Пропускаем валюты (не валидные виды топлива)
+                if product_lower not in self.INVALID_CURRENCY_VALUES:
+                    fuel_types.add(product_normalized)
         
         if not fuel_types:
             return
@@ -703,12 +911,23 @@ class TransactionBatchProcessor:
                 if 'provider_id' not in trans_data or trans_data['provider_id'] is None:
                     trans_data['provider_id'] = provider_id
         
-        # Преобразуем номер карты в строку, если он передан как число
+        # Нормализуем данные для всех транзакций
+        # (create_transactions тоже нормализует, но нормализуем здесь для согласованности)
         for trans_data in transactions:
+            # Нормализуем номер карты
             card_number = trans_data.get("card_number")
             if card_number is not None:
-                # Преобразуем в строку и удаляем пробелы
                 trans_data["card_number"] = str(card_number).strip() if card_number else None
+            
+            # Нормализуем номер АЗС
+            azs_number = trans_data.get("azs_number")
+            if azs_number is not None:
+                trans_data["azs_number"] = str(azs_number).strip() if azs_number else None
+            
+            # Нормализуем продукт
+            product = trans_data.get("product")
+            if product is not None:
+                trans_data["product"] = str(product).strip() if product else None
         
         created_count, skipped_count, warnings = self.create_transactions(transactions)
         

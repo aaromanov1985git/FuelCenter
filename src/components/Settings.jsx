@@ -8,6 +8,7 @@ import UploadPeriodLock from './UploadPeriodLock'
 import ComponentsDemo from './ComponentsDemo'
 import NormalizationSettings from './NormalizationSettings'
 import CardInfoSchedulesList from './CardInfoSchedulesList'
+import NotificationSettings from './NotificationSettings'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
@@ -21,7 +22,7 @@ const Settings = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, title: '', message: '' })
   const [showClearProviderModal, setShowClearProviderModal] = useState(false)
   const [providers, setProviders] = useState([])
-  const [activeSection, setActiveSection] = useState('cleanup') // 'cleanup', 'admin', 'appearance', 'normalization', 'card-info-schedules'
+  const [activeSection, setActiveSection] = useState('cleanup') // 'cleanup', 'admin', 'appearance', 'normalization', 'card-info-schedules', 'notifications'
   const [adminView, setAdminView] = useState(null) // 'system-logs', 'user-action-logs', 'period-lock'
   const [appearanceView, setAppearanceView] = useState(null) // 'ui-components'
   const [fontSize, setFontSize] = useState(() => {
@@ -379,6 +380,12 @@ const Settings = () => {
         >
           Регламенты получения информации по картам
         </button>
+        <button
+          className={`settings-tab ${activeSection === 'notifications' ? 'active' : ''}`}
+          onClick={() => setActiveSection('notifications')}
+        >
+          Уведомления
+        </button>
       </div>
 
       {activeSection === 'cleanup' && (
@@ -489,6 +496,12 @@ const Settings = () => {
       {activeSection === 'card-info-schedules' && (
         <div className="settings-section">
           <CardInfoSchedulesList />
+        </div>
+      )}
+
+      {activeSection === 'notifications' && (
+        <div className="settings-section">
+          <NotificationSettings />
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import './Table.css';
 
 const Table = ({
@@ -22,9 +22,23 @@ const Table = ({
   const [sortColumn, setSortColumn] = useState(defaultSortColumn);
   const [sortOrder, setSortOrder] = useState(defaultSortOrder);
   const [selectedRows, setSelectedRows] = useState(new Set());
+  
+  // Синхронизируем состояние сортировки с пропсами (для серверной сортировки)
+  useEffect(() => {
+    if (onSort) {
+      setSortColumn(defaultSortColumn);
+      setSortOrder(defaultSortOrder || 'asc');
+    }
+  }, [defaultSortColumn, defaultSortOrder, onSort]);
 
   // Сортировка данных
+  // Если передан onSort, значит используется серверная сортировка - не применяем клиентскую
   const sortedData = useMemo(() => {
+    if (onSort) {
+      // Серверная сортировка - используем данные как есть
+      return data;
+    }
+    
     if (!sortColumn || !sortable) return data;
 
     const sorted = [...data].sort((a, b) => {
@@ -52,7 +66,7 @@ const Table = ({
     });
 
     return sorted;
-  }, [data, sortColumn, sortOrder, sortable]);
+  }, [data, sortColumn, sortOrder, sortable, onSort]);
 
   // Обработка клика по заголовку для сортировки
   const handleHeaderClick = (column) => {
