@@ -96,7 +96,7 @@ npm run dev
 1. Установить клиентскую библиотеку Firebird (fbclient)
 2. Установить Python библиотеку fdb (уже включена в requirements.txt)
 
-**Подробные инструкции по установке клиентской библиотеки Firebird:** см. `backend/FIREBIRD_SETUP.md`
+**Подробные инструкции по установке клиентской библиотеки Firebird:** см. [`docs/setup/firebird.md`](docs/setup/firebird.md)
 
 ### Быстрая установка (Windows)
 
@@ -104,11 +104,11 @@ npm run dev
 2. Добавьте папку с `fbclient.dll` в переменную окружения PATH
 3. Перезапустите backend приложение
 
-При возникновении ошибки "The location of Firebird Client Library could not be determined" следуйте инструкциям в `backend/FIREBIRD_SETUP.md`.
+При возникновении ошибки "The location of Firebird Client Library could not be determined" следуйте инструкциям в [`docs/setup/firebird.md`](docs/setup/firebird.md).
 
 ## Миграции Базы Данных
 
-Проект использует Alembic для управления миграциями БД. Подробная документация в `backend/MIGRATIONS.md`.
+Проект использует Alembic для управления миграциями БД. Подробная документация в [`docs/setup/migrations.md`](docs/setup/migrations.md).
 
 ### Быстрый старт с миграциями
 
@@ -143,6 +143,18 @@ alembic upgrade head
 - **Кол-во (л.)** → **Кол-во**
 - **Вид топлива** → **Товар / услуга** (нормализация: "Бензин АИ-92" → "АИ-92")
 
+## Документация
+
+Вся документация проекта организована в директории [`docs/`](docs/):
+
+- **[Установка и настройка](docs/setup/)** - инструкции по установке и первоначальной настройке
+- **[API и интеграции](docs/api/)** - документация по API и интеграциям с внешними системами
+- **[Конфигурация](docs/configuration/)** - настройка безопасности, HTTPS, провайдеров
+- **[Деплой и операции](docs/deployment/)** - инструкции по развертыванию и мониторингу
+- **[Разработка](docs/development/)** - архитектура, стандарты кодирования
+
+Полный индекс документации: [`docs/README.md`](docs/README.md)
+
 ## Структура проекта
 
 ```
@@ -155,8 +167,16 @@ GSM/
 │   │   ├── models.py     # Модели SQLAlchemy
 │   │   ├── schemas.py    # Pydantic схемы
 │   │   └── services.py   # Бизнес-логика
+│   ├── docs/             # Backend-специфичная документация
 │   ├── Dockerfile
 │   └── requirements.txt
+├── docs/                 # Документация проекта
+│   ├── setup/            # Установка и настройка
+│   ├── api/              # API документация
+│   ├── configuration/    # Конфигурация
+│   ├── deployment/       # Деплой
+│   ├── development/      # Разработка
+│   └── archive/          # Устаревшая документация
 ├── src/                  # React frontend
 │   ├── App.jsx
 │   ├── App.css
@@ -165,6 +185,8 @@ GSM/
 ├── docker-compose.yml    # Docker Compose конфигурация
 ├── package.json
 ├── vite.config.js
+├── TODO.md               # Глобальная система задач
+├── TECHDEBT.md           # Технический долг
 └── README.md
 ```
 

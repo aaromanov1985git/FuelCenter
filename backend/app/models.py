@@ -875,3 +875,29 @@ class Notification(Base):
         Index('idx_notifications_category', 'category'),
         Index('idx_notifications_type', 'type'),
     )
+
+
+class SystemSettings(Base):
+    """
+    Глобальные системные настройки (SMTP, Telegram Bot и др.)
+    Хранятся в виде ключ-значение
+    """
+    __tablename__ = "system_settings"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    
+    # Ключ настройки (уникальный)
+    key = Column(String(100), nullable=False, unique=True, index=True, comment="Ключ настройки")
+    
+    # Значение настройки (зашифрованное для паролей)
+    value = Column(Text, comment="Значение настройки")
+    
+    # Флаг, является ли значение зашифрованным (для паролей)
+    is_encrypted = Column(Boolean, default=False, comment="Зашифровано ли значение")
+    
+    # Описание настройки
+    description = Column(String(500), comment="Описание настройки")
+    
+    # Метаданные
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления")

@@ -189,3 +189,29 @@ def decrypt_connection_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
     
     return decrypted_settings
 
+
+# Общие функции для шифрования любых значений
+def encrypt_value(value: str) -> str:
+    """
+    Шифрование произвольного значения
+    
+    Args:
+        value: Значение для шифрования
+        
+    Returns:
+        str: Зашифрованное значение (base64 строка с префиксом "encrypted:")
+    """
+    return encrypt_password(value)
+
+
+def decrypt_value(encrypted_value: str) -> str:
+    """
+    Расшифровка произвольного значения
+    
+    Args:
+        encrypted_value: Зашифрованное значение
+        
+    Returns:
+        str: Расшифрованное значение
+    """
+    return decrypt_password(encrypted_value)

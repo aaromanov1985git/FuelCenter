@@ -1,0 +1,109 @@
+.email-server-settings {
+  padding: 1rem;
+}
+
+.email-server-settings h3 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.email-settings-description {
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.email-settings-loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.email-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.email-settings-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.email-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .email-settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.email-settings-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.email-settings-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.email-settings-select {
+  width: 100%;
+  max-width: 300px;
+}
+
+.email-settings-test {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.email-settings-test h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.email-settings-test-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+@media (max-width: 600px) {
+  .email-settings-test-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.email-settings-actions {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 1rem;
+}
+
+/* Ссылка в Alert */
+.email-server-settings .alert a {
+  color: inherit;
+  text-decoration: underline;
+  margin-left: 0.5rem;
+}
+
+.email-server-settings .alert a:hover {
+  text-decoration: none;
+}
+

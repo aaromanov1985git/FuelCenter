@@ -2,12 +2,16 @@ import React, { useState, useEffect } from 'react'
 import { Card, Button, Input, Checkbox, Alert } from './ui'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
+import { useAuth } from '../contexts/AuthContext'
+import EmailServerSettings from './EmailServerSettings'
 import './NotificationSettings.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
 
 const NotificationSettings = () => {
   const { success, error: showError } = useToast()
+  const { user } = useAuth()
+  const isAdmin = user && (user.role === 'admin' || user.is_superuser)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [settings, setSettings] = useState({
@@ -175,6 +179,7 @@ const NotificationSettings = () => {
   }
 
   return (
+    <>
     <Card>
       <div className="notification-settings">
         <h2>Настройки уведомлений</h2>
@@ -315,6 +320,14 @@ const NotificationSettings = () => {
         </div>
       </div>
     </Card>
+
+    {/* Настройки почтового сервера (только для администраторов) */}
+    {isAdmin && (
+      <div style={{ marginTop: '1.5rem' }}>
+        <EmailServerSettings />
+      </div>
+    )}
+    </>
   )
 }
 
