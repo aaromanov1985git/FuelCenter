@@ -34,7 +34,11 @@ from app.utils import (
 from app.middleware.rate_limit import limiter
 from app.auth import require_auth_if_enabled, require_admin
 from app.services.logging_service import logging_service
-from app.services.cache_service import CacheService
+from app.services.cache_service import (
+    CacheService,
+    invalidate_transactions_cache,
+    invalidate_dashboard_cache
+)
 import hashlib
 import json
 
@@ -357,6 +361,12 @@ async def upload_file(
             except Exception as e:
                 logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
         
+        # Инвалидируем кэш при успешной загрузке
+        if created_count > 0:
+            invalidate_transactions_cache()
+            invalidate_dashboard_cache()
+            logger.debug("Кэш транзакций и дашборда инвалидирован после загрузки файла")
+        
         response_data = FileUploadResponse(
             message=message,
             transactions_created=created_count,
@@ -448,9 +458,12 @@ async def load_from_api(
     from datetime import date as date_type
     import sys
     
-    msg = f"\n{'='*80}\nPOST /api/v1/transactions/load-from-api ВЫЗВАН (РУЧНАЯ ЗАГРУЗКА)\nTemplate ID: {template_id}\nDate from: {date_from}\nDate to: {date_to}\nCard numbers: {card_numbers}\n{'='*80}\n"
-    print(msg, file=sys.stderr, flush=True)
-    print(msg, file=sys.stdout, flush=True)
+    logger.info("POST /api/v1/transactions/load-from-api ВЫЗВАН (РУЧНАЯ ЗАГРУЗКА)", extra={
+        "template_id": template_id,
+        "date_from": date_from,
+        "date_to": date_to,
+        "card_numbers": card_numbers
+    })
     
     template = db.query(ProviderTemplate).filter(ProviderTemplate.id == template_id).first()
     
@@ -556,7 +569,7 @@ async def load_from_api(
             if template.fuel_type_mapping:
                 fuel_type_mapping = parse_template_json(template.fuel_type_mapping)
                 import sys
-                print(f"✓ Маппинг топлива загружен для шаблона {template.id} (ручная загрузка API): {list(fuel_type_mapping.keys()) if isinstance(fuel_type_mapping, dict) else 'не словарь'}", file=sys.stderr, flush=True)
+                logger.debug(f"✓ Маппинг топлива загружен для шаблона {template.id} (ручная загрузка API): {list(fuel_type_mapping.keys()) if isinstance(fuel_type_mapping, dict) else 'не словарь'}")
                 logger.info("Маппинг видов топлива (API, ручная загрузка) загружен", extra={
                     "template_id": template.id,
                     "template_name": template.name,
@@ -568,7 +581,7 @@ async def load_from_api(
             else:
                 fuel_type_mapping = None
                 import sys
-                print(f"✗ Маппинг топлива НЕ НАЙДЕН для шаблона {template.id} (ручная загрузка API)", file=sys.stderr, flush=True)
+                logger.warning(f"✗ Маппинг топлива НЕ НАЙДЕН для шаблона {template.id} (ручная загрузка API)")
         except Exception as fuel_map_err:
             import sys
             print(f"✗ ОШИБКА при загрузке маппинга топлива для шаблона {template.id}: {fuel_map_err}", file=sys.stderr, flush=True)
@@ -610,7 +623,7 @@ async def load_from_api(
                             mapped_count += 1
                             import sys
                             if mapped_count <= 5:  # Логируем только первые 5 для избежания спама
-                                print(f"  → Маппинг применен (ручная загрузка API): '{raw_fuel}' → '{mapped}'", file=sys.stderr, flush=True)
+                                logger.debug(f"  → Маппинг применен (ручная загрузка API): '{raw_fuel}' → '{mapped}'")
                             logger.info("Маппинг топлива применен (API, ручная загрузка)", extra={
                                 "template_id": template.id,
                                 "template_name": template.name,
@@ -622,7 +635,7 @@ async def load_from_api(
             
             if mapped_count > 0:
                 import sys
-                print(f"✓ Применен маппинг топлива к {mapped_count} транзакциям (ручная загрузка API)", file=sys.stderr, flush=True)
+                logger.info(f"✓ Применен маппинг топлива к {mapped_count} транзакциям (ручная загрузка API)")
         
         # Создаем транзакции в БД с батчевой обработкой
         batch_processor = TransactionBatchProcessor(db)
@@ -659,6 +672,12 @@ async def load_from_api(
             duration_ms=duration_ms,
             message=message
         )
+        
+        # Инвалидируем кэш при успешной загрузке
+        if created_count > 0:
+            invalidate_transactions_cache()
+            invalidate_dashboard_cache()
+            logger.debug("Кэш транзакций и дашборда инвалидирован после загрузки из API")
         
         return FileUploadResponse(
             message=message,
@@ -1155,6 +1174,12 @@ async def load_from_firebird(
             "template_id": template_id
         })
         
+        # Инвалидируем кэш при успешной загрузке
+        if created_count > 0:
+            invalidate_transactions_cache()
+            invalidate_dashboard_cache()
+            logger.debug("Кэш транзакций и дашборда инвалидирован после загрузки из Firebird")
+        
         return FileUploadResponse(
             message=message,
             transactions_created=created_count,
@@ -1383,6 +1408,11 @@ async def clear_all_transactions(
             except Exception as e:
                 logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
         
+        # Инвалидируем кэш после очистки
+        invalidate_transactions_cache()
+        invalidate_dashboard_cache()
+        logger.debug("Кэш транзакций и дашборда инвалидирован после очистки всех транзакций")
+        
         return {
             "message": f"База данных успешно очищена",
             "deleted_count": total_count
@@ -1536,6 +1566,11 @@ async def clear_transactions_by_provider(
             except Exception as e:
                 logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
         
+        # Инвалидируем кэш после очистки
+        invalidate_transactions_cache()
+        invalidate_dashboard_cache()
+        logger.debug("Кэш транзакций и дашборда инвалидирован после очистки транзакций провайдера")
+        
         return {
             "message": result['message'],
             "deleted_count": result['deleted_count']
@@ -1661,6 +1696,11 @@ async def delete_transaction(
             )
         except Exception as e:
             logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    # Инвалидируем кэш транзакций и дашборда
+    invalidate_transactions_cache()
+    invalidate_dashboard_cache()
+    logger.debug("Кэш транзакций и дашборда инвалидирован после удаления транзакции")
     
     return {"message": "Транзакция успешно удалена"}
 

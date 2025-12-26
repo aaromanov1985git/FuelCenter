@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, Button, Input, Checkbox, Alert, Select } from './ui'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
+import { logger } from '../utils/logger'
 import './EmailServerSettings.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
@@ -75,7 +76,7 @@ const EmailServerSettings = () => {
       }
     } catch (err) {
       if (err.isUnauthorized) return
-      console.error('Ошибка загрузки настроек email:', err)
+      logger.error('Ошибка загрузки настроек email:', err)
       showError(err.message)
     } finally {
       setLoading(false)

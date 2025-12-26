@@ -126,7 +126,7 @@ const VehiclesList = () => {
         license_plate: editForm.license_plate || null,
         organization_id: editForm.organization_id || null
       }
-      console.log('Сохранение ТС:', { vehicleId, payload })
+      logger.debug('Сохранение ТС:', { vehicleId, payload })
       const response = await authFetch(`${API_URL}/api/v1/vehicles/${vehicleId}`, {
         method: 'PUT',
         headers: {
@@ -137,12 +137,12 @@ const VehiclesList = () => {
 
       if (!response.ok) {
         const errorData = await response.json()
-        console.error('Ошибка сохранения ТС:', errorData)
+        logger.error('Ошибка сохранения ТС:', errorData)
         throw new Error(errorData.detail || 'Ошибка сохранения')
       }
 
       const result = await response.json()
-      console.log('ТС успешно сохранено:', result)
+      logger.debug('ТС успешно сохранено:', result)
       setEditingId(null)
       await loadVehicles()
       setError('')

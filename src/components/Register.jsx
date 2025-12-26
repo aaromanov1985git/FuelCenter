@@ -18,7 +18,9 @@ const Register = ({ onSuccess, onCancel }) => {
     username: {
       required: true,
       minLength: 3,
-      message: 'Имя пользователя должно быть не менее 3 символов'
+      maxLength: 50,
+      pattern: /^[a-zA-Zа-яА-Я0-9_]+$/,
+      message: 'Имя пользователя должно быть от 3 до 50 символов и содержать только буквы, цифры и подчеркивание'
     },
     email: {
       required: true,
@@ -28,10 +30,27 @@ const Register = ({ onSuccess, onCancel }) => {
     password: {
       required: true,
       minLength: 8,
-      message: 'Пароль должен быть не менее 8 символов'
+      validate: (value) => {
+        if (!value) return 'Пароль обязателен'
+        if (value.length < 8) return 'Пароль должен содержать не менее 8 символов'
+        const hasNumber = /\d/.test(value)
+        const hasLetter = /[a-zA-Zа-яА-Я]/.test(value)
+        if (!hasNumber || !hasLetter) {
+          return 'Пароль должен содержать хотя бы одну букву и одну цифру'
+        }
+        return null
+      },
+      message: 'Пароль должен быть не менее 8 символов и содержать буквы и цифры'
     },
     confirmPassword: {
       required: true,
+      validate: (value, allValues) => {
+        if (!value) return 'Подтверждение пароля обязательно'
+        if (value !== allValues.password) {
+          return 'Пароли не совпадают'
+        }
+        return null
+      },
       message: 'Пароли не совпадают'
     },
     role: {
@@ -63,13 +82,13 @@ const Register = ({ onSuccess, onCancel }) => {
       return
     }
 
-    // Проверяем совпадение паролей
-    if (values.password !== values.confirmPassword) {
-      showError('Пароли не совпадают')
-      return
-    }
-
+    // Валидация формы (включает все проверки, включая совпадение паролей)
     if (!validateForm()) {
+      // Показываем первую ошибку валидации
+      const firstError = Object.values(errors).find(err => err)
+      if (firstError) {
+        showError(firstError)
+      }
       return
     }
 

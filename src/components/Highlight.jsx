@@ -1,4 +1,5 @@
 import React from 'react'
+import { logger } from '../utils/logger'
 import './Highlight.css'
 
 /**
@@ -73,7 +74,7 @@ const Highlight = ({
     )
   } catch (error) {
     // Если ошибка в регулярном выражении, просто возвращаем текст
-    console.warn('Ошибка в Highlight:', error)
+    logger.warn('Ошибка в Highlight:', error)
     return <span className={className}>{textStr}</span>
   }
 }

@@ -17,11 +17,13 @@ from app.schemas import (
 from app.services.organization_service import OrganizationService
 from app.logger import logger
 from app.services.logging_service import logging_service
+from app.services.cache_service import cached
 
 router = APIRouter(prefix="/api/v1/organizations", tags=["organizations"])
 
 
 @router.get("", response_model=OrganizationListResponse)
+@cached(ttl=300, prefix="organizations")
 async def get_organizations(
     skip: int = Query(0, ge=0, description="Количество пропущенных записей"),
     limit: int = Query(100, ge=1, le=1000, description="Максимальное количество записей"),

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import IconButton from './IconButton'
 import { Button } from './ui'
+import { logger } from '../utils/logger'
 import { exportToCSV, exportToJSON, exportToTXT, exportToPDF } from '../utils/exportUtils'
 import './ExportMenu.css'
 
@@ -33,14 +34,14 @@ const ExportMenu = ({ data, headers, onExportExcel, filename = 'transactions' })
     try {
       const exportFn = getExportFunction(format)
       if (!exportFn) {
-        console.error(`Экспорт в формат ${format} не поддерживается`)
+        logger.error(`Экспорт в формат ${format} не поддерживается`)
         return
       }
       
       await exportFn()
       setIsOpen(false)
     } catch (error) {
-      console.error(`Ошибка экспорта в ${format}:`, error)
+      logger.error(`Ошибка экспорта в ${format}:`, error)
       throw error
     }
   }

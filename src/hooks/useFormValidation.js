@@ -32,9 +32,11 @@ export const useFormValidation = (initialValues = {}, validationRules = {}) => {
   const [touched, setTouched] = useState({})
 
   // Валидация одного поля
-  const validateField = useCallback((name, value) => {
+  const validateField = useCallback((name, value, allValues = null) => {
     const rule = validationRules[name]
     if (!rule) return null
+    // Используем переданные allValues или текущие values
+    const valuesForValidation = allValues || values
 
     // Проверка обязательного поля
     if (rule.required) {
@@ -70,7 +72,8 @@ export const useFormValidation = (initialValues = {}, validationRules = {}) => {
 
     // Проверка через кастомную функцию
     if (rule.validate && typeof rule.validate === 'function') {
-      const customError = rule.validate(value)
+      // Передаем все значения формы для валидации зависимых полей (например, confirmPassword)
+      const customError = rule.validate(value, valuesForValidation)
       if (customError) {
         return customError
       }
@@ -86,7 +89,7 @@ export const useFormValidation = (initialValues = {}, validationRules = {}) => {
     }
 
     return null
-  }, [validationRules])
+  }, [validationRules, values])
 
   // Валидация всех полей
   const validate = useCallback(() => {

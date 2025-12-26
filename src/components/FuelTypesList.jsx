@@ -4,6 +4,7 @@ import IconButton from './IconButton'
 import StatusBadge from './StatusBadge'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
+import { logger } from '../utils/logger'
 import { Card, Button, Input, Table, Badge, Skeleton, Alert, Select, Modal, Tooltip } from './ui'
 import ConfirmModal from './ConfirmModal'
 import './FuelTypesList.css'
@@ -44,7 +45,7 @@ const FuelTypesList = () => {
       try {
         return JSON.parse(saved)
       } catch (e) {
-        console.error('Ошибка загрузки настроек колонок:', e)
+        logger.error('Ошибка загрузки настроек колонок:', e)
       }
     }
     // Значения по умолчанию - все колонки видимы
@@ -137,7 +138,7 @@ const FuelTypesList = () => {
       }
       return false
     } catch (err) {
-      console.error('Ошибка проверки транзакций:', err)
+      logger.error('Ошибка проверки транзакций:', err)
       return false
     }
   }

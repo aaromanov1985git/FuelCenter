@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { logger } from '../utils/logger'
 
 /**
  * Хук для автосохранения значений формы в localStorage
@@ -52,7 +53,7 @@ export const useAutoSave = (values, key, delay = 500, enabled = true) => {
         previousValuesRef.current = currentValues
         console.debug('Автосохранение выполнено:', key)
       } catch (error) {
-        console.warn('Ошибка автосохранения:', error)
+        logger.warn('Ошибка автосохранения:', error)
       }
     }, delay)
 
@@ -71,7 +72,7 @@ export const useAutoSave = (values, key, delay = 500, enabled = true) => {
       previousValuesRef.current = JSON.stringify(values)
       console.debug('Автосохранение очищено:', key)
     } catch (error) {
-      console.warn('Ошибка очистки автосохранения:', error)
+      logger.warn('Ошибка очистки автосохранения:', error)
     }
   }
 
@@ -92,7 +93,7 @@ export const useAutoSave = (values, key, delay = 500, enabled = true) => {
         return JSON.parse(saved)
       }
     } catch (error) {
-      console.warn('Ошибка загрузки автосохранения:', error)
+      logger.warn('Ошибка загрузки автосохранения:', error)
     }
     return null
   }

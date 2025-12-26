@@ -184,7 +184,7 @@ class PPRCardListResponse(BaseModel):
         return result
 
 
-@router.post("/login", response_model=PPRLoginResponse)
+@router.post("/login", response_model=PPRLoginResponse, summary="Авторизация в API ППР")
 async def ppr_login(
     login_data: PPRLoginRequest,
     db: Session = Depends(get_db)
@@ -192,8 +192,26 @@ async def ppr_login(
     """
     Авторизация в API ППР и получение токена
     
-    Принимает логин и пароль, возвращает JWT токен для использования в последующих запросах
-    Совместимо с API ППР для интеграции с 1С
+    **Описание:**
+    Принимает логин и пароль, возвращает JWT токен для использования в последующих запросах.
+    Совместимо с оригинальным API ППР для интеграции с 1С.
+    
+    **Пример запроса:**
+    ```json
+    {
+        "username": "admin",
+        "password": "password123"
+    }
+    ```
+    
+    **Пример ответа:**
+    ```json
+    {
+        "success": true,
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "message": "Авторизация успешна"
+    }
+    ```
     """
     try:
         # Аутентифицируем пользователя

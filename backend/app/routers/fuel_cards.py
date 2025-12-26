@@ -16,11 +16,13 @@ from app.schemas import (
 from app.services import assign_card_to_vehicle
 from app.auth import require_auth_if_enabled, require_admin
 from app.services.logging_service import logging_service
+from app.services.cache_service import invalidate_fuel_cards_cache, invalidate_dashboard_cache, cached
 
 router = APIRouter(prefix="/api/v1/fuel-cards", tags=["fuel-cards"])
 
 
 @router.get("", response_model=FuelCardListResponse)
+@cached(ttl=300, prefix="fuel_cards")
 async def get_fuel_cards(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=10000),
@@ -133,6 +135,11 @@ async def update_fuel_card(
         except Exception as e:
             logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
     
+    # Инвалидируем кэш топливных карт и дашборда
+    invalidate_fuel_cards_cache()
+    invalidate_dashboard_cache()
+    logger.debug("Кэш топливных карт и дашборда инвалидирован после обновления карты")
+    
     return card
 
 
@@ -197,6 +204,11 @@ async def assign_card(
             )
         except Exception as e:
             logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    # Инвалидируем кэш топливных карт и дашборда
+    invalidate_fuel_cards_cache()
+    invalidate_dashboard_cache()
+    logger.debug("Кэш топливных карт и дашборда инвалидирован после назначения карты")
     
     return CardAssignmentResponse(
         success=True,
@@ -283,6 +295,11 @@ async def merge_fuel_cards(
             except Exception as e:
                 logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
         
+        # Инвалидируем кэш топливных карт и дашборда
+        invalidate_fuel_cards_cache()
+        invalidate_dashboard_cache()
+        logger.debug("Кэш топливных карт и дашборда инвалидирован после слияния карт")
+        
         return MergeResponse(
             success=True,
             message=f"Карта '{source_card.card_number}' успешно объединена с '{target_card.card_number}'",
@@ -343,6 +360,11 @@ async def clear_all_fuel_cards(
                 logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
         
         logger.info(f"Очищены все топливные карты", extra={"deleted_count": total_count})
+        
+        # Инвалидируем кэш топливных карт и дашборда
+        invalidate_fuel_cards_cache()
+        invalidate_dashboard_cache()
+        logger.debug("Кэш топливных карт и дашборда инвалидирован после очистки всех карт")
         
         return {
             "message": f"Все топливные карты успешно удалены",

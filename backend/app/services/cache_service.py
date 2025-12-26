@@ -9,6 +9,8 @@ import hashlib
 import os
 import redis
 from datetime import timedelta
+import asyncio
+import inspect
 
 from app.logger import logger
 
@@ -217,33 +219,69 @@ def cached(
             return db.query(User).get(user_id)
     """
     def decorator(func: Callable):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            cache = CacheService.get_instance()
+        # Проверяем, является ли функция async
+        is_async = inspect.iscoroutinefunction(func)
+        
+        if is_async:
+            @wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                cache = CacheService.get_instance()
+                
+                if not cache.is_available:
+                    return await func(*args, **kwargs)
+                
+                # Строим ключ кэша
+                if key_builder:
+                    cache_key = key_builder(*args, **kwargs)
+                else:
+                    # Хешируем аргументы для создания ключа
+                    key_data = f"{func.__module__}.{func.__name__}:{args}:{sorted(kwargs.items())}"
+                    cache_key = hashlib.md5(key_data.encode()).hexdigest()
+                
+                # Пробуем получить из кэша
+                cached_value = cache.get(cache_key, prefix=prefix)
+                if cached_value is not None:
+                    logger.debug(f"Cache hit: {prefix}:{cache_key}")
+                    return cached_value
+                
+                # Выполняем функцию и кэшируем результат
+                result = await func(*args, **kwargs)
+                cache.set(cache_key, result, ttl=ttl, prefix=prefix)
+                logger.debug(f"Cache miss, stored: {prefix}:{cache_key}")
+                
+                return result
             
-            if not cache.is_available:
-                return func(*args, **kwargs)
+            wrapper = async_wrapper
+        else:
+            @wraps(func)
+            def sync_wrapper(*args, **kwargs):
+                cache = CacheService.get_instance()
+                
+                if not cache.is_available:
+                    return func(*args, **kwargs)
+                
+                # Строим ключ кэша
+                if key_builder:
+                    cache_key = key_builder(*args, **kwargs)
+                else:
+                    # Хешируем аргументы для создания ключа
+                    key_data = f"{func.__module__}.{func.__name__}:{args}:{sorted(kwargs.items())}"
+                    cache_key = hashlib.md5(key_data.encode()).hexdigest()
+                
+                # Пробуем получить из кэша
+                cached_value = cache.get(cache_key, prefix=prefix)
+                if cached_value is not None:
+                    logger.debug(f"Cache hit: {prefix}:{cache_key}")
+                    return cached_value
+                
+                # Выполняем функцию и кэшируем результат
+                result = func(*args, **kwargs)
+                cache.set(cache_key, result, ttl=ttl, prefix=prefix)
+                logger.debug(f"Cache miss, stored: {prefix}:{cache_key}")
+                
+                return result
             
-            # Строим ключ кэша
-            if key_builder:
-                cache_key = key_builder(*args, **kwargs)
-            else:
-                # Хешируем аргументы для создания ключа
-                key_data = f"{func.__module__}.{func.__name__}:{args}:{sorted(kwargs.items())}"
-                cache_key = hashlib.md5(key_data.encode()).hexdigest()
-            
-            # Пробуем получить из кэша
-            cached_value = cache.get(cache_key, prefix=prefix)
-            if cached_value is not None:
-                logger.debug(f"Cache hit: {prefix}:{cache_key}")
-                return cached_value
-            
-            # Выполняем функцию и кэшируем результат
-            result = func(*args, **kwargs)
-            cache.set(cache_key, result, ttl=ttl, prefix=prefix)
-            logger.debug(f"Cache miss, stored: {prefix}:{cache_key}")
-            
-            return result
+            wrapper = sync_wrapper
         
         # Добавляем метод для инвалидации кэша
         def invalidate(*args, **kwargs):
@@ -286,4 +324,16 @@ def invalidate_transactions_cache():
     """Инвалидация кэша транзакций"""
     cache = CacheService.get_instance()
     cache.delete_pattern("transactions:*")
+
+
+def invalidate_vehicles_cache():
+    """Инвалидация кэша транспортных средств"""
+    cache = CacheService.get_instance()
+    cache.delete_pattern("vehicles:*")
+
+
+def invalidate_fuel_cards_cache():
+    """Инвалидация кэша топливных карт"""
+    cache = CacheService.get_instance()
+    cache.delete_pattern("fuel_cards:*")
 

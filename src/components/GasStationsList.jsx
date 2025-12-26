@@ -5,6 +5,7 @@ import StatusBadge from './StatusBadge'
 import { useToast } from './ToastContainer'
 import { useDebounce } from '../hooks/useDebounce'
 import { authFetch } from '../utils/api'
+import { logger } from '../utils/logger'
 import { Card, Button, Input, Table, Badge, Skeleton, Alert, Select, Modal, Tooltip } from './ui'
 import MapModal from './MapModal'
 import ConfirmModal from './ConfirmModal'
@@ -72,7 +73,7 @@ const GasStationsList = () => {
       try {
         return JSON.parse(saved)
       } catch (e) {
-        console.error('Ошибка загрузки настроек колонок:', e)
+        logger.error('Ошибка загрузки настроек колонок:', e)
       }
     }
     // Значения по умолчанию - все колонки видимы
@@ -230,7 +231,7 @@ const GasStationsList = () => {
       }
       return false
     } catch (err) {
-      console.error('Ошибка проверки транзакций:', err)
+      logger.error('Ошибка проверки транзакций:', err)
       return false
     }
   }
@@ -336,10 +337,10 @@ const GasStationsList = () => {
       const message = `Импорт завершен: создано ${result.created}, обновлено ${result.updated}, пропущено ${result.skipped}`
       if (result.errors && result.errors.length > 0) {
         warning(`${message}. Ошибок: ${result.errors.length}`)
-        console.warn('Ошибки импорта:', result.errors)
+        logger.warn('Ошибки импорта:', result.errors)
       } else if (result.warnings && result.warnings.length > 0) {
         warning(`${message}. Предупреждений: ${result.warnings.length}`)
-        console.warn('Предупреждения импорта:', result.warnings)
+        logger.warn('Предупреждения импорта:', result.warnings)
       } else {
         success(message)
       }
@@ -487,11 +488,11 @@ const GasStationsList = () => {
       } catch (e) {
         // Если даже извлечение сообщения об ошибке не удалось
         errorMessage = 'Неизвестная ошибка при экспорте'
-        console.error('Критическая ошибка при обработке ошибки экспорта:', e)
+        logger.error('Критическая ошибка при обработке ошибки экспорта:', e)
       }
       
       showError(`Ошибка экспорта: ${errorMessage}`)
-      console.error('Ошибка экспорта АЗС:', err)
+      logger.error('Ошибка экспорта АЗС:', err)
     } finally {
       setLoading(false)
     }

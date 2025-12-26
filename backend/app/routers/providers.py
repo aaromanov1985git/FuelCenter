@@ -21,7 +21,7 @@ from app.schemas import (
 )
 from app.services.provider_service import ProviderService
 from app.utils import serialize_template_json
-from app.services.cache_service import CacheService
+from app.services.cache_service import CacheService, invalidate_dashboard_cache
 import hashlib
 import json
 
@@ -127,6 +127,11 @@ async def create_provider(
             except Exception as e:
                 logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
         
+        # Инвалидируем кэш провайдеров и дашборда
+        cache.delete_pattern("providers:*")
+        invalidate_dashboard_cache()
+        logger.debug("Кэш провайдеров и дашборда инвалидирован после создания провайдера")
+        
         return db_provider
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -171,6 +176,11 @@ async def update_provider(
             except Exception as e:
                 logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
         
+        # Инвалидируем кэш провайдеров и дашборда
+        cache.delete_pattern("providers:*")
+        invalidate_dashboard_cache()
+        logger.debug("Кэш провайдеров и дашборда инвалидирован после обновления провайдера")
+        
         return db_provider
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -210,6 +220,11 @@ async def delete_provider(
             )
         except Exception as e:
             logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    # Инвалидируем кэш провайдеров и дашборда
+    cache.delete_pattern("providers:*")
+    invalidate_dashboard_cache()
+    logger.debug("Кэш провайдеров и дашборда инвалидирован после удаления провайдера")
     
     return {"message": "Провайдер успешно удален"}
 

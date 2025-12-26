@@ -18,6 +18,22 @@ from typing import List, Dict, Any
 
 router = APIRouter(prefix="/api/v1/onec", tags=["1C Integration"])
 
+# Описание для Swagger
+ONEC_INTEGRATION_DESCRIPTION = """
+Интеграция с 1С ERP.
+
+**Назначение:**
+Предоставляет API для получения данных в формате, ожидаемом модулем уатЗагрузкаПЦ системы 1С.
+
+**Формат данных:**
+- Транзакции в формате 1С (русские названия полей)
+- Поддержка фильтрации по датам
+- Поддержка пагинации
+
+**Аутентификация:**
+Требуется JWT токен в заголовке `Authorization: Bearer <token>`
+"""
+
 
 class OneCTransactionItem(BaseModel):
     """Схема элемента транзакции для 1С"""

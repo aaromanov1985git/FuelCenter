@@ -17,6 +17,7 @@ from app.schemas import GasStationResponse, GasStationUpdate, GasStationListResp
 from app.services.gas_station_service import GasStationService
 from app.auth import require_auth_if_enabled, require_admin
 from app.services.logging_service import logging_service
+from app.services.cache_service import cached
 from app.utils import validate_excel_file, create_temp_file, cleanup_temp_file
 from app.middleware.rate_limit import limiter
 from app.config import get_settings
@@ -27,6 +28,7 @@ settings = get_settings()
 
 
 @router.get("", response_model=GasStationListResponse)
+@cached(ttl=300, prefix="gas_stations")
 async def get_gas_stations(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),

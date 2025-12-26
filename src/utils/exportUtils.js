@@ -1,6 +1,7 @@
 /**
  * Утилиты для экспорта данных в различные форматы
  */
+import { logger } from './logger'
 
 /**
  * Экспорт данных в CSV формат
@@ -206,7 +207,7 @@ export const copyToClipboard = async (data, headers, format = 'csv') => {
     await navigator.clipboard.writeText(text)
     return true
   } catch (err) {
-    console.error('Ошибка копирования в буфер обмена:', err)
+    logger.error('Ошибка копирования в буфер обмена:', err)
     return false
   }
 }

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { Button, Input, Select, Badge } from './ui'
+import { logger } from '../utils/logger'
 import './AdvancedSearch.css'
 
 /**
@@ -32,7 +33,7 @@ const AdvancedSearch = ({
 
   const handleFilterChange = (key, value) => {
     // Логируем изменение фильтра для отладки
-    console.log('AdvancedSearch: изменение фильтра', { key, value, type: typeof value })
+    logger.debug('AdvancedSearch: изменение фильтра', { key, value, type: typeof value })
     onFiltersChange({
       ...filters,
       [key]: value

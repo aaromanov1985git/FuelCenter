@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import IconButton from './IconButton'
 import { authFetch } from '../utils/api'
+import { logger } from '../utils/logger'
 import './TemplateEditor.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
@@ -306,7 +307,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       } catch (err) {
         // Не показываем ошибку при 401 - это обрабатывается централизованно
         if (!err.isUnauthorized) {
-          console.error('Ошибка загрузки видов топлива:', err)
+          logger.error('Ошибка загрузки видов топлива:', err)
         }
       } finally {
         setLoadingFuelTypes(false)
@@ -538,25 +539,25 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
 
     setLoadingColumns(true)
     setError('')
-    console.log('Загрузка колонок для таблицы:', tableName, 'template?.id:', template?.id)
+    logger.debug('Загрузка колонок для таблицы:', { tableName, templateId: template?.id })
 
     try {
       // Если шаблон сохранен, используем endpoint с template_id
       if (template?.id) {
         const params = new URLSearchParams({ table_name: tableName })
         const url = `${API_URL}/api/v1/templates/${template.id}/firebird-table-columns?${params}`
-        console.log('Запрос колонок (с шаблоном):', url)
+        logger.debug('Запрос колонок (с шаблоном):', { url })
         
         const response = await authFetch(url)
         
         if (!response.ok) {
           const errorData = await response.json()
-          console.error('Ошибка ответа:', errorData)
+          logger.error('Ошибка ответа:', errorData)
           throw new Error(errorData.detail || 'Ошибка загрузки колонок')
         }
         
         const result = await response.json()
-        console.log('Колонки загружены (с шаблоном):', result)
+        logger.debug('Колонки загружены (с шаблоном):', result)
         setSelectedTableColumns(result.columns || [])
       } else {
         // Для нового шаблона используем прямой endpoint с настройками подключения
@@ -565,7 +566,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
           connection_settings: connectionSettings,
           table_name: tableName
         }
-        console.log('Запрос колонок (без шаблона):', url, requestBody)
+        logger.debug('Запрос колонок (без шаблона):', { url, requestBody })
         
         const response = await fetch(url, {
           method: 'POST',
@@ -577,12 +578,12 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         
         if (!response.ok) {
           const errorData = await response.json()
-          console.error('Ошибка ответа:', errorData)
+          logger.error('Ошибка ответа:', errorData)
           throw new Error(errorData.detail || 'Ошибка загрузки колонок')
         }
         
         const result = await response.json()
-        console.log('Колонки загружены (без шаблона):', result)
+        logger.debug('Колонки загружены (без шаблона):', result)
         setSelectedTableColumns(result.columns || [])
       }
     } catch (err) {
@@ -590,7 +591,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       if (err.isUnauthorized) {
         return
       }
-      console.error('Ошибка загрузки колонок:', err)
+      logger.error('Ошибка загрузки колонок:', err)
       setError('Ошибка загрузки колонок таблицы: ' + err.message)
       setSelectedTableColumns([])
     } finally {
@@ -606,7 +607,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
 
     setLoadingColumns(true)
     setError('')
-    console.log('Загрузка колонок из SQL запроса')
+    logger.debug('Загрузка колонок из SQL запроса')
 
     try {
       const url = `${API_URL}/api/v1/templates/firebird-query-columns`
@@ -614,7 +615,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         connection_settings: connectionSettings,
         query: query.trim()
       }
-      console.log('Запрос колонок из SQL запроса:', url, requestBody)
+      logger.debug('Запрос колонок из SQL запроса:', { url, requestBody })
       
       const response = await fetch(url, {
         method: 'POST',
@@ -631,14 +632,14 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       }
       
       const result = await response.json()
-      console.log('Колонки из SQL запроса загружены:', result)
+      logger.debug('Колонки из SQL запроса загружены:', result)
       setSelectedTableColumns(result.columns || [])
     } catch (err) {
       // Не показываем ошибку при 401 - это обрабатывается централизованно
       if (err.isUnauthorized) {
         return
       }
-      console.error('Ошибка загрузки колонок из SQL запроса:', err)
+      logger.error('Ошибка загрузки колонок из SQL запроса:', err)
       setError('Ошибка загрузки колонок из SQL запроса: ' + err.message)
       setSelectedTableColumns([])
     } finally {
@@ -1219,7 +1220,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                         setError('')
                         // Показываем сообщение об успехе
                         if (result.count > 0) {
-                          console.log(`Загружено полей из API: ${result.count}`)
+                          logger.debug(`Загружено полей из API: ${result.count}`)
                         }
                       } else {
                         const errorMsg = result.error || 'Не удалось получить поля из API. Убедитесь, что подключение работает и есть данные. Возможные причины: нет доступных карт, нет транзакций за последние 90 дней, или API возвращает пустые данные.'
@@ -1521,7 +1522,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                     
                     if (result.fields && result.fields.length > 0) {
                       setError('')
-                      console.log(`Загружено полей из веб-сервиса: ${result.count || result.fields.length}`)
+                      logger.debug(`Загружено полей из веб-сервиса: ${result.count || result.fields.length}`)
                     } else {
                       const errorMsg = result.error || 'Не удалось получить поля из веб-сервиса. Используйте стандартные названия полей.'
                       setError(errorMsg)

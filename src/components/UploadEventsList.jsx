@@ -5,6 +5,7 @@ import { useToast } from './ToastContainer'
 import { useDebounce } from '../hooks/useDebounce'
 import StatusBadge from './StatusBadge'
 import EmptyState from './EmptyState'
+import { logger } from '../utils/logger'
 import './UploadEventsList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
@@ -95,17 +96,17 @@ const UploadEventsList = () => {
       if (filters.date_to) params.append('date_to', filters.date_to)
 
       const url = `${API_URL}/api/v1/upload-events?${params.toString()}`
-      console.log('Загрузка событий:', url)
+      logger.debug('Загрузка событий:', { url })
       
       const response = await authFetch(url)
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}))
-        console.error('Ошибка загрузки событий:', response.status, detail)
+        logger.error('Ошибка загрузки событий:', { status: response.status, detail })
         throw new Error(detail.detail || 'Ошибка загрузки истории')
       }
 
       const data = await response.json()
-      console.log('Данные событий получены:', { 
+      logger.debug('Данные событий получены:', { 
         total: data.total, 
         itemsCount: data.items?.length || 0,
         stats: data.stats 
@@ -127,7 +128,7 @@ const UploadEventsList = () => {
       if (err.isUnauthorized) {
         return
       }
-      console.error('Ошибка загрузки событий:', err)
+      logger.error('Ошибка загрузки событий:', err)
       showError(err.message || 'Ошибка загрузки событий загрузки')
       // При ошибке устанавливаем пустые значения
       setEvents([])

@@ -289,7 +289,6 @@ const CardInfoSchedulesList = () => {
             <Table
               columns={columns}
               data={tableData}
-              keyField="id"
             />
           )}
         </Card.Body>

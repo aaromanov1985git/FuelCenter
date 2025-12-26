@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import * as XLSX from 'xlsx'
+import { logger } from './utils/logger'
 // Lazy load large page components for code-splitting
 const VehiclesList = lazy(() => import('./components/VehiclesList'))
 const GasStationsList = lazy(() => import('./components/GasStationsList'))
@@ -47,7 +48,6 @@ import { useCopyToClipboard } from './hooks/useCopyToClipboard'
 import { SkeletonTable } from './components/Skeleton'
 import { useDebounce } from './hooks/useDebounce'
 import { useTouchGestures } from './hooks/useTouchGestures'
-import { logger } from './utils/logger'
 import { authFetch, getApiUrl } from './utils/api'
 import { Card, Button } from './components/ui'
 import './App.css'
@@ -214,7 +214,7 @@ const App = () => {
         } else {
           // Если не удалось получить настройки, предполагаем, что аутентификация отключена
           logger.warn('Не удалось получить настройки аутентификации', { status: response.status })
-          console.log('[Auth Check] Ошибка получения настроек, устанавливаем authEnabled = false')
+          logger.debug('[Auth Check] Ошибка получения настроек, устанавливаем authEnabled = false')
           setAuthEnabled(false)
         }
       } catch (error) {

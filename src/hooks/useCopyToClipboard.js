@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { logger } from '../utils/logger'
 
 /**
  * Хук для копирования текста в буфер обмена
@@ -29,7 +30,7 @@ export const useCopyToClipboard = () => {
       return true
     } catch (err) {
       setError(err.message)
-      console.error('Ошибка копирования в буфер обмена:', err)
+      logger.error('Ошибка копирования в буфер обмена:', err)
       return false
     }
   }

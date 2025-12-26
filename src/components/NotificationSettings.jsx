@@ -3,6 +3,7 @@ import { Card, Button, Input, Checkbox, Alert } from './ui'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
+import { logger } from '../utils/logger'
 import EmailServerSettings from './EmailServerSettings'
 import './NotificationSettings.css'
 
@@ -40,18 +41,18 @@ const NotificationSettings = () => {
       if (!response.ok) {
         if (response.status === 404) {
           // Настройки не найдены, используем дефолтные
-          console.log('Настройки не найдены, используем дефолтные значения')
+          logger.debug('Настройки не найдены, используем дефолтные значения')
           setLoading(false)
           return
         }
         if (response.status === 422) {
           // Ошибка валидации - возможно, настройки еще не созданы, используем дефолтные
           const errorData = await response.json().catch(() => ({}))
-          console.warn('Ошибка валидации при загрузке настроек, используем дефолтные значения')
-          console.warn('Детали ошибки валидации:', JSON.stringify(errorData, null, 2))
+          logger.warn('Ошибка валидации при загрузке настроек, используем дефолтные значения')
+          logger.warn('Детали ошибки валидации:', JSON.stringify(errorData, null, 2))
           if (errorData.detail && Array.isArray(errorData.detail)) {
             errorData.detail.forEach((err, idx) => {
-              console.warn(`Ошибка валидации ${idx + 1}:`, err)
+              logger.warn(`Ошибка валидации ${idx + 1}:`, err)
             })
           }
           setLoading(false)
@@ -59,7 +60,7 @@ const NotificationSettings = () => {
         }
         const errorData = await response.json().catch(() => ({}))
         const errorMessage = errorData.detail || 'Не удалось загрузить настройки'
-        console.error('Ошибка загрузки настроек:', errorMessage, errorData)
+        logger.error('Ошибка загрузки настроек:', errorMessage, errorData)
         throw new Error(errorMessage)
       }
 
@@ -72,7 +73,7 @@ const NotificationSettings = () => {
           try {
             categories = JSON.parse(categories)
           } catch (e) {
-            console.warn('Не удалось распарсить categories:', e)
+            logger.warn('Не удалось распарсить categories:', e)
             categories = null
           }
         } else if (typeof categories === 'object' && categories !== null && !Array.isArray(categories)) {
@@ -102,7 +103,7 @@ const NotificationSettings = () => {
         setLoading(false)
         return
       }
-      console.error('Ошибка загрузки настроек уведомлений:', err)
+      logger.error('Ошибка загрузки настроек уведомлений:', err)
       showError(err.message)
     } finally {
       setLoading(false)

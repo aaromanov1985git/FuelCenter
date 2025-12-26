@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Modal, Input, Select, Button, Checkbox, Alert } from './ui'
 import FormField from './FormField'
 import { authFetch } from '../utils/api'
+import { logger } from '../utils/logger'
 import CardInfoModal from './CardInfoModal'
 import './FuelCardEditModal.css'
 
@@ -169,7 +170,7 @@ const FuelCardEditModal = ({
         }
       }
     } catch (err) {
-      console.error('Ошибка при нормализации:', err)
+      logger.error('Ошибка при нормализации:', err)
     }
   }
 

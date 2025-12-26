@@ -10,8 +10,10 @@ import base64
 import json
 import xml.etree.ElementTree as ET
 from sqlalchemy.orm import Session
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from app.logger import logger
 from app.models import Provider, ProviderTemplate
+from app.utils.circuit_breaker import get_circuit_breaker
 
 
 class PetrolPlusAdapter:
@@ -32,6 +34,13 @@ class PetrolPlusAdapter:
         self.api_token = api_token
         self.currency = currency
         self.client = httpx.AsyncClient(timeout=30.0)
+        # Circuit Breaker для защиты от каскадных сбоев
+        self.circuit_breaker = get_circuit_breaker(
+            "petrolplus_api",
+            failure_threshold=5,
+            recovery_timeout=60,
+            expected_exception=(httpx.RequestError, httpx.HTTPStatusError)
+        )
     
     async def __aenter__(self):
         return self
@@ -46,13 +55,19 @@ class PetrolPlusAdapter:
             "Accept": "application/json",
         }
     
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)),
+        reraise=True
+    )
     async def _get_json(
         self,
         path: str,
         params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Выполнение GET запроса к API
+        Выполнение GET запроса к API с автоматическими повторами при ошибках
         
         Args:
             path: Путь API endpoint
@@ -62,7 +77,7 @@ class PetrolPlusAdapter:
             Ответ API в виде словаря
             
         Raises:
-            httpx.HTTPError: при ошибке HTTP запроса
+            httpx.HTTPError: при ошибке HTTP запроса после всех попыток
         """
         headers = self._auth_headers()
         query = {"format": "json"}
@@ -76,14 +91,22 @@ class PetrolPlusAdapter:
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
-            logger.error(f"Ошибка HTTP при запросе к API: {e.response.status_code}", extra={
+            # Не повторяем при 4xx ошибках (кроме 429 - Too Many Requests)
+            if 400 <= e.response.status_code < 500 and e.response.status_code != 429:
+                logger.error(f"Ошибка HTTP при запросе к API: {e.response.status_code}", extra={
+                    "url": url,
+                    "status_code": e.response.status_code,
+                    "response_text": e.response.text[:500]
+                })
+                raise
+            # Повторяем при 5xx и 429
+            logger.warning(f"Временная ошибка HTTP при запросе к API: {e.response.status_code}, повтор...", extra={
                 "url": url,
-                "status_code": e.response.status_code,
-                "response_text": e.response.text[:500]
+                "status_code": e.response.status_code
             })
             raise
         except httpx.RequestError as e:
-            logger.error(f"Ошибка запроса к API: {str(e)}", extra={"url": url})
+            logger.warning(f"Ошибка запроса к API: {str(e)}, повтор...", extra={"url": url})
             raise
     
     async def list_cards(self) -> List[Dict[str, Any]]:
@@ -331,6 +354,13 @@ class WebAdapter:
             follow_redirects=True,
             headers=default_headers,
             cookies=None  # httpx автоматически сохраняет cookies между запросами
+        )
+        # Circuit Breaker для защиты от каскадных сбоев
+        self.circuit_breaker = get_circuit_breaker(
+            "web_adapter_api",
+            failure_threshold=5,
+            recovery_timeout=60,
+            expected_exception=(httpx.RequestError, httpx.HTTPStatusError)
         )
         self.access_token: Optional[str] = None
     
@@ -1637,13 +1667,19 @@ class WebAdapter:
             "Content-Type": "application/json",
         }
     
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)),
+        reraise=True
+    )
     async def _get_json(
         self,
         path: str,
         params: Optional[Dict[str, Any]] = None
     ) -> Any:
         """
-        Выполнение GET запроса к API
+        Выполнение GET запроса к API с автоматическими повторами при ошибках
         
         Args:
             path: Путь API endpoint
@@ -1653,7 +1689,7 @@ class WebAdapter:
             Ответ API в виде словаря или списка
             
         Raises:
-            httpx.HTTPError: при ошибке HTTP запроса
+            httpx.HTTPError: при ошибке HTTP запроса после всех попыток
         """
         headers = self._auth_headers()
         # Добавляем заголовки Origin и Referer для имитации браузера
@@ -1668,14 +1704,22 @@ class WebAdapter:
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
-            logger.error(f"Ошибка HTTP при запросе к API: {e.response.status_code}", extra={
+            # Не повторяем при 4xx ошибках (кроме 429 - Too Many Requests)
+            if 400 <= e.response.status_code < 500 and e.response.status_code != 429:
+                logger.error(f"Ошибка HTTP при запросе к API: {e.response.status_code}", extra={
+                    "url": url,
+                    "status_code": e.response.status_code,
+                    "response_text": e.response.text[:500]
+                })
+                raise
+            # Повторяем при 5xx и 429
+            logger.warning(f"Временная ошибка HTTP при запросе к API: {e.response.status_code}, повтор...", extra={
                 "url": url,
-                "status_code": e.response.status_code,
-                "response_text": e.response.text[:500]
+                "status_code": e.response.status_code
             })
             raise
         except httpx.RequestError as e:
-            logger.error(f"Ошибка запроса к API: {str(e)}", extra={"url": url})
+            logger.warning(f"Ошибка запроса к API: {str(e)}, повтор...", extra={"url": url})
             raise
     
     async def list_cards(self) -> List[str]:
@@ -2458,6 +2502,13 @@ class RnCardAdapter:
         # Создаем клиент с настройками по умолчанию
         # httpx автоматически добавляет необходимые заголовки (Host, Connection и т.д.)
         self.client = httpx.AsyncClient(timeout=30.0)
+        # Circuit Breaker для защиты от каскадных сбоев
+        self.circuit_breaker = get_circuit_breaker(
+            "rncard_api",
+            failure_threshold=5,
+            recovery_timeout=60,
+            expected_exception=(httpx.RequestError, httpx.HTTPStatusError)
+        )
     
     async def __aenter__(self):
         return self
@@ -2555,13 +2606,19 @@ class RnCardAdapter:
         
         return headers
     
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)),
+        reraise=True
+    )
     async def _get_json(
         self,
         path: str,
         params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Выполнение GET запроса к API
+        Выполнение GET запроса к API с автоматическими повторами при ошибках
         
         Args:
             path: Путь API endpoint
@@ -2571,7 +2628,7 @@ class RnCardAdapter:
             Ответ API в виде словаря
             
         Raises:
-            httpx.HTTPError: при ошибке HTTP запроса
+            httpx.HTTPError: при ошибке HTTP запроса после всех попыток
         """
         headers = self._auth_headers()
         
@@ -2985,6 +3042,13 @@ class GPNAdapter:
         self.contract_id: Optional[str] = None
         self.contracts: List[Dict[str, Any]] = []  # Список всех договоров
         self.client = httpx.AsyncClient(timeout=30.0)
+        # Circuit Breaker для защиты от каскадных сбоев
+        self.circuit_breaker = get_circuit_breaker(
+            "gpn_api",
+            failure_threshold=5,
+            recovery_timeout=60,
+            expected_exception=(httpx.RequestError, httpx.HTTPStatusError)
+        )
     
     async def __aenter__(self):
         # Авторизуемся при входе в контекст

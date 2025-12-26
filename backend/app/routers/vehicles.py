@@ -11,11 +11,13 @@ from app.schemas import VehicleResponse, VehicleUpdate, VehicleListResponse, Mer
 from app.services.vehicle_service import VehicleService
 from app.auth import optional_auth_with_token, get_user_organization_ids, require_auth_if_enabled, require_admin
 from app.services.logging_service import logging_service
+from app.services.cache_service import invalidate_vehicles_cache, invalidate_dashboard_cache, cached
 
 router = APIRouter(prefix="/api/v1/vehicles", tags=["vehicles"])
 
 
 @router.get("", response_model=VehicleListResponse)
+@cached(ttl=300, prefix="vehicles")
 async def get_vehicles(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
@@ -106,6 +108,11 @@ async def update_vehicle(
         except Exception as e:
             logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
     
+    # Инвалидируем кэш транспортных средств и дашборда
+    invalidate_vehicles_cache()
+    invalidate_dashboard_cache()
+    logger.debug("Кэш транспортных средств и дашборда инвалидирован после обновления ТС")
+    
     return vehicle
 
 
@@ -172,6 +179,11 @@ async def merge_vehicles(
             except Exception as e:
                 logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
         
+        # Инвалидируем кэш транспортных средств и дашборда
+        invalidate_vehicles_cache()
+        invalidate_dashboard_cache()
+        logger.debug("Кэш транспортных средств и дашборда инвалидирован после слияния ТС")
+        
         return MergeResponse(
             success=True,
             message=f"ТС '{source_vehicle.original_name}' успешно объединено с '{target_vehicle.original_name}'"
@@ -231,6 +243,11 @@ async def clear_all_vehicles(
                 logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
         
         logger.info(f"Очищены все транспортные средства", extra={"deleted_count": total_count})
+        
+        # Инвалидируем кэш транспортных средств и дашборда
+        invalidate_vehicles_cache()
+        invalidate_dashboard_cache()
+        logger.debug("Кэш транспортных средств и дашборда инвалидирован после очистки всех ТС")
         
         return {
             "message": f"Все транспортные средства успешно удалены",

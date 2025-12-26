@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, Button, Alert, Skeleton, Select } from './ui'
+import { logger } from '../utils/logger'
 import './FilePreviewModal.css'
 import './FormField.css'
 
@@ -98,7 +99,7 @@ const FilePreviewModal = ({ isOpen, file, onConfirm, onCancel, onCheckTemplate, 
         }
       } catch (err) {
         if (!isMounted) return
-        console.error('Ошибка проверки шаблона:', err)
+        logger.error('Ошибка проверки шаблона:', err)
         setPreviewError('Ошибка проверки шаблона файла')
       } finally {
         if (isMounted) {

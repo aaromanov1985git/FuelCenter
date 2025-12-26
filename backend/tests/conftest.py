@@ -2,16 +2,38 @@
 Pytest fixtures для тестов GSM Converter Backend
 """
 import pytest
+import os
 from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
+# Отключаем rate limiting для тестов (ДО импорта приложения)
+os.environ["ENABLE_RATE_LIMIT"] = "false"
+
 from app.database import Base, get_db
-from app.main import app
 from app.models import User
 from app.auth import get_password_hash
+
+# Очищаем кэш settings и перезагружаем
+from app.config import get_settings
+get_settings.cache_clear()
+
+from app.main import app
+
+# Мокируем limiter.limit для отключения rate limiting в тестах
+from unittest.mock import patch
+
+def noop_decorator(*args, **kwargs):
+    """Декоратор, который ничего не делает"""
+    def decorator(func):
+        return func
+    return decorator
+
+# Патчим limiter.limit глобально для всех тестов (остается активным)
+_rate_limit_patcher = patch('app.middleware.rate_limit.limiter.limit', side_effect=noop_decorator)
+_rate_limit_patcher.start()
 
 
 # Тестовая база данных в памяти

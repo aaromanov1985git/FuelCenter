@@ -36,7 +36,7 @@ export const useNotifications = (autoRefresh = true, refreshInterval = 30000) =>
     } catch (err) {
       if (!err.isUnauthorized) {
         setError(err.message)
-        console.error('Ошибка загрузки счетчика уведомлений:', err)
+        logger.error('Ошибка загрузки счетчика уведомлений:', err)
       }
       setUnreadCount(0)
     } finally {

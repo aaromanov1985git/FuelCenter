@@ -11,11 +11,13 @@ from app.schemas import FuelTypeResponse, FuelTypeUpdate, FuelTypeListResponse
 from app.services.fuel_type_service import FuelTypeService
 from app.auth import require_auth_if_enabled, require_admin
 from app.services.logging_service import logging_service
+from app.services.cache_service import cached
 
 router = APIRouter(prefix="/api/v1/fuel-types", tags=["fuel-types"])
 
 
 @router.get("", response_model=FuelTypeListResponse)
+@cached(ttl=300, prefix="fuel_types")
 async def get_fuel_types(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),

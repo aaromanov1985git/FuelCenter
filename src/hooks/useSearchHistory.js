@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { logger } from '../utils/logger'
 
 /**
  * Хук для управления историей поисковых запросов
@@ -47,7 +48,7 @@ export const useSearchHistory = (storageKey = 'search-history', maxItems = 10) =
         }
       }
     } catch (error) {
-      console.warn('Ошибка загрузки истории поиска:', error)
+      logger.warn('Ошибка загрузки истории поиска:', error)
       setHistory([])
     }
   }, [storageKey])
@@ -72,7 +73,7 @@ export const useSearchHistory = (storageKey = 'search-history', maxItems = 10) =
       localStorage.setItem(storageKey, JSON.stringify(uniqueHistory))
       setHistory(uniqueHistory)
     } catch (error) {
-      console.warn('Ошибка сохранения истории поиска:', error)
+      logger.warn('Ошибка сохранения истории поиска:', error)
     }
   }
 

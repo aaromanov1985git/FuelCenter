@@ -422,28 +422,62 @@ Authorization: Bearer <token>
 
 * `/metrics` - Prometheus метрики
 * `/health` - Health checks
+* `/health/live` - Liveness probe
+* `/health/ready` - Readiness probe
+* `/health/startup` - Startup probe
 * `/docs` - Swagger UI (эта страница)
 * `/redoc` - ReDoc документация
+
+### Кэширование
+
+API использует Redis для кэширования данных:
+* Справочники (vehicles, fuel_cards, gas_stations, fuel_types, organizations) - TTL 5 минут
+* Транзакции - TTL 2 минуты
+* Статистика дашборда - TTL 1 минута
+* Провайдеры - TTL 5 минут
+
+Кэш автоматически инвалидируется при изменениях данных.
+
+### Надежность
+
+* **Retry механизм**: Автоматические повторы при временных ошибках (3 попытки)
+* **Circuit Breaker**: Защита от каскадных сбоев при недоступности внешних API
+* **Rate Limiting**: Защита от перегрузки (Redis-based)
+
+### Коды ответов
+
+* `200` - Успешный запрос
+* `201` - Ресурс создан
+* `400` - Ошибка валидации
+* `401` - Не авторизован
+* `403` - Доступ запрещен
+* `404` - Ресурс не найден
+* `422` - Ошибка валидации данных
+* `429` - Превышен лимит запросов
+* `500` - Внутренняя ошибка сервера
     """,
     version=settings.api_version,
     lifespan=lifespan,
     openapi_tags=[
-        {"name": "Auth", "description": "Аутентификация и авторизация"},
-        {"name": "Users", "description": "Управление пользователями"},
-        {"name": "Transactions", "description": "Операции с транзакциями ГСМ"},
-        {"name": "Vehicles", "description": "Управление транспортными средствами"},
-        {"name": "Fuel Cards", "description": "Управление топливными картами"},
-        {"name": "Gas Stations", "description": "Справочник АЗС"},
-        {"name": "Fuel Types", "description": "Типы топлива"},
-        {"name": "Providers", "description": "Поставщики топлива"},
-        {"name": "Templates", "description": "Шаблоны импорта данных"},
-        {"name": "Dashboard", "description": "Статистика и аналитика"},
-        {"name": "Notifications", "description": "Уведомления"},
-        {"name": "Organizations", "description": "Организации"},
-        {"name": "Logs", "description": "Системные логи"},
-        {"name": "Backup", "description": "Резервное копирование"},
-        {"name": "Health", "description": "Мониторинг состояния"},
-        {"name": "System", "description": "Системные настройки"},
+        {"name": "Auth", "description": "Аутентификация и авторизация. JWT токены, httpOnly cookies."},
+        {"name": "Users", "description": "Управление пользователями. CRUD операции, роли, права доступа."},
+        {"name": "Transactions", "description": "Операции с транзакциями ГСМ. Загрузка, просмотр, фильтрация, экспорт."},
+        {"name": "Vehicles", "description": "Управление транспортными средствами. Справочник ТС с валидацией."},
+        {"name": "Fuel Cards", "description": "Управление топливными картами. Назначение, блокировка, слияние."},
+        {"name": "Gas Stations", "description": "Справочник АЗС. Валидация, импорт, экспорт."},
+        {"name": "Fuel Types", "description": "Типы топлива. Нормализация, статистика по транзакциям."},
+        {"name": "Providers", "description": "Поставщики топлива. Интеграция с внешними API провайдеров."},
+        {"name": "Templates", "description": "Шаблоны импорта данных. Настройка маппинга полей для Excel/Firebird/API."},
+        {"name": "Dashboard", "description": "Статистика и аналитика. Сводные данные, графики, отчеты."},
+        {"name": "Notifications", "description": "Уведомления. Push, Email, Telegram. Настройки пользователя."},
+        {"name": "Organizations", "description": "Организации. Мультитенантность, назначение пользователей."},
+        {"name": "Logs", "description": "Системные логи. Просмотр логов системы и действий пользователей."},
+        {"name": "Backup", "description": "Резервное копирование. Создание и управление бэкапами БД."},
+        {"name": "Health", "description": "Мониторинг состояния. Health checks для Kubernetes/Docker."},
+        {"name": "System", "description": "Системные настройки. Email, Telegram, общие параметры."},
+        {"name": "PPR API", "description": "Эмуляция API ППР для интеграции с 1С. Совместимость с оригинальным API."},
+        {"name": "1C Integration", "description": "Интеграция с 1С ERP. Формат данных для модуля уатЗагрузкаПЦ."},
+        {"name": "fuel-card-analysis", "description": "Анализ топливных карт. Выявление аномалий, статистика."},
     ],
     docs_url="/docs",
     redoc_url="/redoc",
