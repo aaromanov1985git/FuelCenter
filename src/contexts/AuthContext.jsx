@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { logger } from '../utils/logger'
-import { authFetch, setLogoutHandler } from '../utils/api'
+import { authFetch, setLogoutHandler, resetLogoutFlag } from '../utils/api'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
 
@@ -15,51 +15,57 @@ export const useAuth = () => {
 }
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => {
-    return localStorage.getItem('auth_token') || null
-  })
+  // Больше не храним токен в state/localStorage - используем httpOnly cookies
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   // Загрузка информации о пользователе при инициализации
+  // Используем cookie + localStorage fallback
   useEffect(() => {
     const loadUser = async () => {
-      if (token) {
-        try {
-          const response = await fetch(`${API_URL}/api/v1/auth/me`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
-          
-          if (response.ok) {
-            const userData = await response.json()
-            setUser(userData)
-          } else {
-            // Токен невалидный, удаляем его
-            localStorage.removeItem('auth_token')
-            setToken(null)
-            setUser(null)
+      const savedToken = localStorage.getItem('auth_token')
+      
+      try {
+        const response = await fetch(`${API_URL}/api/v1/auth/me`, {
+          credentials: 'include', // Пробуем cookie
+          headers: {
+            'Content-Type': 'application/json',
+            // Добавляем токен из localStorage как fallback
+            ...(savedToken ? { 'Authorization': `Bearer ${savedToken}` } : {})
           }
-        } catch (error) {
-          logger.error('Ошибка при загрузке пользователя', { error: error.message })
+        })
+        
+        if (response.ok) {
+          const userData = await response.json()
+          resetLogoutFlag()
+          setUser(userData)
+          setIsAuthenticated(true)
+        } else {
+          // Токен невалидный - очищаем localStorage
           localStorage.removeItem('auth_token')
-          setToken(null)
           setUser(null)
+          setIsAuthenticated(false)
         }
+      } catch (error) {
+        logger.error('Ошибка при загрузке пользователя', { error: error.message })
+        localStorage.removeItem('auth_token')
+        setUser(null)
+        setIsAuthenticated(false)
       }
       setLoading(false)
     }
 
     loadUser()
-  }, [token])
+  }, [])
 
   const login = useCallback(async (username, password) => {
     try {
-      // Для логина не используем authFetch, так как токена еще нет
-      const loginUrl = API_URL ? `${API_URL}/api/v1/auth/login-json` : '/api/v1/auth/login-json'
+      // Используем secure login endpoint, который устанавливает httpOnly cookie
+      const loginUrl = API_URL ? `${API_URL}/api/v1/auth/login-secure` : '/api/v1/auth/login-secure'
       const response = await fetch(loginUrl, {
         method: 'POST',
+        credentials: 'include', // Важно: включаем cookies
         headers: {
           'Content-Type': 'application/json'
         },
@@ -71,23 +77,35 @@ export const AuthProvider = ({ children }) => {
         throw new Error(errorData.detail || 'Ошибка входа')
       }
 
-      const data = await response.json()
-      const newToken = data.access_token
+      // Secure endpoint устанавливает cookie И возвращает токен в body
+      const loginData = await response.json()
+      
+      // Сохраняем токен в localStorage как fallback (для случаев когда cookie не работает)
+      if (loginData.access_token && loginData.access_token !== 'httponly_cookie') {
+        localStorage.setItem('auth_token', loginData.access_token)
+      }
 
-      localStorage.setItem('auth_token', newToken)
-      setToken(newToken)
-
-      // Загружаем информацию о пользователе
+      // Загружаем данные пользователя
       const meUrl = API_URL ? `${API_URL}/api/v1/auth/me` : '/api/v1/auth/me'
-      const userResponse = await authFetch(meUrl, {
-        headers: {
-          'Authorization': `Bearer ${newToken}`
+      const userResponse = await fetch(meUrl, {
+        credentials: 'include',
+        headers: { 
+          'Content-Type': 'application/json',
+          // Добавляем токен в header как fallback
+          ...(loginData.access_token && loginData.access_token !== 'httponly_cookie' 
+            ? { 'Authorization': `Bearer ${loginData.access_token}` } 
+            : {})
         }
       })
 
       if (userResponse.ok) {
         const userData = await userResponse.json()
+        // Сбрасываем флаг logout перед установкой isAuthenticated
+        resetLogoutFlag()
         setUser(userData)
+        setIsAuthenticated(true)
+      } else {
+        throw new Error('Не удалось загрузить данные пользователя')
       }
 
       logger.info('Успешный вход', { username })
@@ -100,15 +118,15 @@ export const AuthProvider = ({ children }) => {
 
   const register = useCallback(async (username, email, password, role = 'user') => {
     try {
-      if (!token) {
+      if (!isAuthenticated) {
         throw new Error('Требуется авторизация для регистрации')
       }
 
       const response = await fetch(`${API_URL}/api/v1/auth/register`, {
         method: 'POST',
+        credentials: 'include', // Важно: включаем cookies
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ username, email, password, role })
       })
@@ -118,42 +136,40 @@ export const AuthProvider = ({ children }) => {
         throw new Error(errorData.detail || 'Ошибка регистрации')
       }
 
-      const userData = await response.json()
-      logger.info('Пользователь зарегистрирован', { username: userData.username })
-      return { success: true, user: userData }
+      const newUserData = await response.json()
+      logger.info('Пользователь зарегистрирован', { username: newUserData.username })
+      return { success: true, user: newUserData }
     } catch (error) {
       logger.error('Ошибка регистрации', { error: error.message })
       return { success: false, error: error.message }
     }
-  }, [token])
+  }, [isAuthenticated])
 
   const logout = useCallback(async () => {
-    // Вызываем API endpoint для логирования выхода
-    if (token) {
-      try {
-        const logoutUrl = API_URL ? `${API_URL}/api/v1/auth/logout` : '/api/v1/auth/logout'
-        await fetch(logoutUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }).catch(err => {
-          // Игнорируем ошибки при вызове logout API, чтобы не блокировать выход
-          logger.warn('Ошибка при вызове logout API', { error: err.message })
-        })
-      } catch (error) {
-        // Игнорируем ошибки, чтобы не блокировать выход
-        logger.warn('Ошибка при вызове logout API', { error: error.message })
-      }
+    // Вызываем API endpoint для logout - сервер очистит cookie
+    try {
+      const logoutUrl = API_URL ? `${API_URL}/api/v1/auth/logout` : '/api/v1/auth/logout'
+      await fetch(logoutUrl, {
+        method: 'POST',
+        credentials: 'include', // Важно: включаем cookies
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).catch(err => {
+        // Игнорируем ошибки при вызове logout API
+        logger.warn('Ошибка при вызове logout API', { error: err.message })
+      })
+    } catch (error) {
+      // Игнорируем ошибки, чтобы не блокировать выход
+      logger.warn('Ошибка при вызове logout API', { error: error.message })
     }
     
-    // Очищаем локальное состояние независимо от результата API запроса
+    // Очищаем локальное состояние и localStorage
     localStorage.removeItem('auth_token')
-    setToken(null)
     setUser(null)
+    setIsAuthenticated(false)
     logger.info('Выход из системы')
-  }, [token])
+  }, [])
 
   // Устанавливаем глобальный обработчик для автоматического выхода при 401 ошибке
   useEffect(() => {
@@ -169,13 +185,14 @@ export const AuthProvider = ({ children }) => {
   }, [logout])
 
   const value = {
-    token,
     user,
     loading,
     login,
     register,
     logout,
-    isAuthenticated: !!token && !!user
+    isAuthenticated,
+    // Для обратной совместимости - deprecated, будет удалено
+    token: isAuthenticated ? 'cookie-based-auth' : null
   }
 
   return (
@@ -184,4 +201,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   )
 }
-

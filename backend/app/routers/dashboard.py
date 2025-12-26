@@ -9,8 +9,10 @@ from datetime import datetime, timedelta
 from app.database import get_db
 from app.logger import logger
 from app.models import Transaction, Provider, Vehicle, ProviderTemplate
+from app.services.cache_service import CacheService
 
 router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"])
+cache = CacheService.get_instance()
 
 
 @router.get("/stats")
@@ -21,6 +23,13 @@ async def get_dashboard_stats(
     """
     Получение детализированной статистики для дашборда
     """
+    # Пробуем получить из кэша (TTL 60 секунд для статистики)
+    cache_key = f"dashboard:stats:{period}"
+    cached_result = cache.get(cache_key, prefix="")
+    if cached_result is not None:
+        logger.debug("Cache hit для статистики дашборда", extra={"period": period})
+        return cached_result
+    
     # Определяем период
     now = datetime.now()
     if period == "day":
@@ -217,7 +226,7 @@ async def get_dashboard_stats(
     
     logger.debug("Статистика дашборда загружена", extra={"period": period})
     
-    return {
+    result = {
         "period": period,
         "period_data": period_data,
         "leaders_by_quantity": leaders,
@@ -226,6 +235,12 @@ async def get_dashboard_stats(
         "providers": providers_data,
         "period_providers": period_providers_data
     }
+    
+    # Кэшируем результат (60 секунд)
+    cache.set(cache_key, result, ttl=60, prefix="")
+    logger.debug("Cache miss, сохранено в кэш", extra={"period": period})
+    
+    return result
 
 
 @router.get("/errors-warnings")

@@ -538,3 +538,111 @@ async def delete_notification(
     
     return None
 
+
+@router.post("/webhook/alertmanager", status_code=status.HTTP_200_OK)
+async def alertmanager_webhook(
+    request: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Webhook endpoint для получения алертов от Prometheus AlertManager
+    
+    Формат запроса от AlertManager:
+    {
+        "version": "4",
+        "groupKey": "...",
+        "status": "firing|resolved",
+        "receiver": "...",
+        "groupLabels": {...},
+        "commonLabels": {...},
+        "commonAnnotations": {...},
+        "externalURL": "...",
+        "alerts": [
+            {
+                "status": "firing|resolved",
+                "labels": {...},
+                "annotations": {...},
+                "startsAt": "2023-...",
+                "endsAt": "2023-...",
+                "generatorURL": "..."
+            }
+        ]
+    }
+    """
+    try:
+        alerts = request.get("alerts", [])
+        status = request.get("status", "unknown")
+        receiver = request.get("receiver", "default")
+        
+        logger.info(
+            f"Получен webhook от AlertManager",
+            extra={
+                "status": status,
+                "receiver": receiver,
+                "alerts_count": len(alerts),
+                "group_key": request.get("groupKey")
+            }
+        )
+        
+        # Создаем уведомления для всех админов
+        from app.models import User
+        from app.services.notification_service import NotificationService
+        
+        admin_users = db.query(User).filter(
+            User.role == "admin",
+            User.is_active == True
+        ).all()
+        
+        service = NotificationService(db)
+        
+        for alert in alerts:
+            alert_status = alert.get("status", "unknown")
+            labels = alert.get("labels", {})
+            annotations = alert.get("annotations", {})
+            alertname = labels.get("alertname", "Unknown Alert")
+            severity = labels.get("severity", "warning")
+            
+            title = annotations.get("summary", alertname)
+            message = annotations.get("description", f"Alert: {alertname}")
+            
+            # Добавляем детали из labels
+            if labels:
+                message += f"\n\nДетали:\n"
+                for key, value in labels.items():
+                    if key not in ["alertname", "severity"]:
+                        message += f"- {key}: {value}\n"
+            
+            # Отправляем уведомление всем админам
+            for admin in admin_users:
+                try:
+                    service.send_notification(
+                        user_id=admin.id,
+                        title=f"[{severity.upper()}] {title}",
+                        message=message,
+                        category="system",
+                        notification_type="error" if severity == "critical" else "warning",
+                        channels=["in_app"],
+                        entity_type="alert",
+                        entity_id=alertname
+                    )
+                    logger.debug(
+                        f"Уведомление отправлено админу {admin.username}",
+                        extra={"alertname": alertname, "severity": severity}
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Ошибка при отправке уведомления админу {admin.username}",
+                        extra={"error": str(e), "alertname": alertname},
+                        exc_info=True
+                    )
+        
+        return {"status": "ok", "processed": len(alerts)}
+        
+    except Exception as e:
+        logger.error(
+            "Ошибка при обработке webhook от AlertManager",
+            extra={"error": str(e), "request_data": request},
+            exc_info=True
+        )
+        # Возвращаем 200 OK, чтобы AlertManager не повторял запрос
+        return {"status": "error", "message": str(e)}

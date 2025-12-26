@@ -1,0 +1,72 @@
+# Promtail configuration for GSM Converter
+# Собирает логи из Docker контейнеров и отправляет в Loki
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    tenant_id: gsm
+
+scrape_configs:
+  # Сбор логов из Docker контейнеров
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      # Используем имя контейнера как label
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+      
+      # Добавляем имя сервиса из docker-compose
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: 'service'
+      
+      # Добавляем имя проекта
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_project']
+        target_label: 'project'
+      
+      # Фильтруем только контейнеры GSM
+      - source_labels: ['__meta_docker_container_name']
+        regex: 'gsm_.*'
+        action: keep
+
+    pipeline_stages:
+      # Парсим JSON логи от FastAPI
+      - json:
+          expressions:
+            level: level
+            timestamp: timestamp
+            message: message
+            module: module
+            function: function
+      
+      # Устанавливаем уровень лога как label
+      - labels:
+          level:
+          module:
+      
+      # Устанавливаем timestamp из лога
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+      
+      # Устанавливаем содержимое лога
+      - output:
+          source: message
+
+  # Альтернативная конфигурация для логов из файлов
+  # - job_name: system
+  #   static_configs:
+  #     - targets:
+  #         - localhost
+  #       labels:
+  #         job: varlogs
+  #         __path__: /var/log/*log
+

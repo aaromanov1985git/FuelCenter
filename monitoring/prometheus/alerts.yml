@@ -1,0 +1,96 @@
+# Alerting rules for GSM Converter
+groups:
+  - name: gsm_alerts
+    rules:
+      # Высокая частота ошибок
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status_code=~"5.."}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Высокая частота ошибок 5xx"
+          description: "Более 10% запросов возвращают ошибки 5xx за последние 5 минут"
+
+      # Приложение недоступно
+      - alert: ApplicationDown
+        expr: up{job="gsm-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GSM Backend недоступен"
+          description: "Backend не отвечает на запросы более 1 минуты"
+
+      # Высокое время отклика
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокое время отклика"
+          description: "95 перцентиль времени отклика превышает 2 секунды"
+
+      # Много неудачных попыток аутентификации
+      - alert: HighAuthFailureRate
+        expr: rate(gsm_auth_failures_total[5m]) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Много неудачных попыток входа"
+          description: "Более 30 неудачных попыток входа за 1 минуту. Возможна брутфорс атака."
+
+      # Rate limit превышения
+      - alert: HighRateLimitExceeded
+        expr: rate(gsm_rate_limit_exceeded_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Частые превышения rate limit"
+          description: "Много запросов блокируются rate limiter. Возможна DDoS атака."
+
+      # Бэкап не выполнялся давно
+      - alert: BackupNotRunning
+        expr: (time() - gsm_backup_last_success_timestamp) > 86400 * 2
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Бэкап не выполнялся более 2 дней"
+          description: "Последний успешный бэкап был более 2 дней назад"
+
+      # Высокое использование памяти
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / 1024 / 1024 > 500
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Высокое использование памяти"
+          description: "Приложение использует более 500MB памяти"
+
+  - name: infrastructure_alerts
+    rules:
+      # Redis недоступен
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis недоступен"
+          description: "Redis не отвечает на запросы"
+
+      # PostgreSQL недоступен (если есть exporter)
+      # - alert: PostgreSQLDown
+      #   expr: pg_up == 0
+      #   for: 1m
+      #   labels:
+      #     severity: critical
+      #   annotations:
+      #     summary: "PostgreSQL недоступен"
+      #     description: "База данных не отвечает на запросы"
+

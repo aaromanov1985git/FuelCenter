@@ -21,8 +21,12 @@ from app.schemas import (
 )
 from app.services.provider_service import ProviderService
 from app.utils import serialize_template_json
+from app.services.cache_service import CacheService
+import hashlib
+import json
 
 router = APIRouter(prefix="/api/v1/providers", tags=["providers"])
+cache = CacheService.get_instance()
 
 
 @router.get("", response_model=ProviderListResponse)
@@ -36,6 +40,22 @@ async def get_providers(
     """
     Получение списка провайдеров
     """
+    # Создаем ключ кэша
+    cache_key_data = {
+        "skip": skip,
+        "limit": limit,
+        "is_active": is_active,
+        "organization_id": organization_id
+    }
+    cache_key = hashlib.md5(json.dumps(cache_key_data, sort_keys=True).encode()).hexdigest()
+    cache_key_full = f"providers:list:{cache_key}"
+    
+    # Пробуем получить из кэша (TTL 5 минут для справочников)
+    cached_result = cache.get(cache_key_full, prefix="")
+    if cached_result is not None:
+        logger.debug("Cache hit для списка провайдеров", extra={"cache_key": cache_key})
+        return ProviderListResponse(**cached_result)
+    
     provider_service = ProviderService(db)
     providers, total = provider_service.get_providers(
         skip=skip,
@@ -46,7 +66,18 @@ async def get_providers(
     
     logger.debug("Список провайдеров загружен", extra={"total": total, "returned": len(providers)})
     
-    return ProviderListResponse(total=total, items=providers)
+    result = ProviderListResponse(total=total, items=providers)
+    
+    # Кэшируем результат (5 минут)
+    cache.set(
+        cache_key_full,
+        {"total": result.total, "items": [item.model_dump() for item in result.items]},
+        ttl=300,
+        prefix=""
+    )
+    logger.debug("Cache miss, сохранено в кэш", extra={"cache_key": cache_key})
+    
+    return result
 
 
 @router.get("/{provider_id}", response_model=ProviderResponse)

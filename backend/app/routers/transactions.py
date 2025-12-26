@@ -34,8 +34,12 @@ from app.utils import (
 from app.middleware.rate_limit import limiter
 from app.auth import require_auth_if_enabled, require_admin
 from app.services.logging_service import logging_service
+from app.services.cache_service import CacheService
+import hashlib
+import json
 
 settings = get_settings()
+cache = CacheService.get_instance()
 
 router = APIRouter(prefix="/api/v1/transactions", tags=["transactions"])
 
@@ -1259,6 +1263,28 @@ async def get_transactions(
         }
     )
     
+    # Создаем ключ кэша на основе всех параметров
+    cache_key_data = {
+        "skip": skip,
+        "limit": limit,
+        "card_number": card_number,
+        "azs_number": azs_number,
+        "product": product,
+        "provider_id": provider_id,
+        "date_from": parsed_date_from.isoformat() if parsed_date_from else None,
+        "date_to": parsed_date_to.isoformat() if parsed_date_to else None,
+        "sort_by": sort_by,
+        "sort_order": sort_order
+    }
+    cache_key = hashlib.md5(json.dumps(cache_key_data, sort_keys=True).encode()).hexdigest()
+    cache_key_full = f"transactions:list:{cache_key}"
+    
+    # Пробуем получить из кэша (TTL 2 минуты для списков)
+    cached_result = cache.get(cache_key_full, prefix="")
+    if cached_result is not None:
+        logger.debug("Cache hit для списка транзакций", extra={"cache_key": cache_key})
+        return TransactionListResponse(**cached_result)
+    
     # Используем сервисный слой
     try:
         transaction_service = TransactionService(db)
@@ -1285,10 +1311,21 @@ async def get_transactions(
             }
         )
         
-        return TransactionListResponse(
+        result = TransactionListResponse(
             total=total,
             items=result_items
         )
+        
+        # Кэшируем результат (2 минуты)
+        cache.set(
+            cache_key_full,
+            {"total": result.total, "items": [item.model_dump() for item in result.items]},
+            ttl=120,
+            prefix=""
+        )
+        logger.debug("Cache miss, сохранено в кэш", extra={"cache_key": cache_key})
+        
+        return result
     except Exception as e:
         logger.error(
             "Ошибка при получении списка транзакций",

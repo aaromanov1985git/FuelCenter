@@ -1,0 +1,119 @@
+version: '3.8'
+
+# Стек мониторинга для GSM Converter
+# Запуск: docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+
+services:
+  # Prometheus - сбор метрик
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: gsm_prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    ports:
+      - "9090:9090"
+    networks:
+      - gsm_network
+    restart: unless-stopped
+
+  # Grafana - визуализация
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: gsm_grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3001}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    ports:
+      - "3001:3000"
+    networks:
+      - gsm_network
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+
+  # AlertManager - оповещения
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: gsm_alertmanager
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "9093:9093"
+    networks:
+      - gsm_network
+    restart: unless-stopped
+
+  # Loki - сбор логов
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: gsm_loki
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    networks:
+      - gsm_network
+    restart: unless-stopped
+
+  # Promtail - агент для сбора логов из контейнеров
+  promtail:
+    image: grafana/promtail:2.9.2
+    container_name: gsm_promtail
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - gsm_network
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  # Redis Exporter - метрики Redis
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: gsm_redis_exporter
+    environment:
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=
+    ports:
+      - "9121:9121"
+    networks:
+      - gsm_network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+networks:
+  gsm_network:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+  loki_data:
+

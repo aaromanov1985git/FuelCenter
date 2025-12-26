@@ -1,0 +1,15 @@
+# Grafana Dashboard Provisioning for GSM Converter
+apiVersion: 1
+
+providers:
+  - name: 'GSM Converter Dashboards'
+    orgId: 1
+    folder: 'GSM Converter'
+    folderUid: 'gsm'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+

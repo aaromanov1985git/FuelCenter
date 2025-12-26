@@ -1,5 +1,6 @@
 /**
  * Утилита для создания авторизованных запросов к API
+ * Использует httpOnly cookies для безопасной аутентификации
  */
 
 // В режиме разработки используем относительные пути для прокси Vite
@@ -10,6 +11,8 @@ const API_URL = import.meta.env.VITE_API_URL || ''
 
 // Глобальный обработчик для 401 ошибок (будет установлен из AuthContext)
 let globalLogoutHandler = null
+// Защита от множественных вызовов logout
+let isLoggingOut = false
 
 /**
  * Установить глобальный обработчик для выхода при 401 ошибке
@@ -17,17 +20,26 @@ let globalLogoutHandler = null
  */
 export const setLogoutHandler = (handler) => {
   globalLogoutHandler = handler
+  isLoggingOut = false // Сбрасываем флаг при установке нового handler
 }
 
 /**
- * Получить токен из localStorage
+ * Сбросить флаг logout (вызывается после успешного login)
+ */
+export const resetLogoutFlag = () => {
+  isLoggingOut = false
+}
+
+/**
+ * Получить токен из localStorage (fallback)
  */
 const getToken = () => {
   return localStorage.getItem('auth_token')
 }
 
 /**
- * Создать заголовки для запроса с авторизацией
+ * Создать заголовки для запроса
+ * Токен передаётся через httpOnly cookie, с fallback на localStorage
  * @param {Object} additionalHeaders - Дополнительные заголовки
  * @returns {Object} Объект с заголовками
  */
@@ -38,6 +50,7 @@ export const getAuthHeaders = (additionalHeaders = {}) => {
     ...additionalHeaders
   }
   
+  // Добавляем токен в header как fallback для случаев когда cookie не работает
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }
@@ -47,6 +60,7 @@ export const getAuthHeaders = (additionalHeaders = {}) => {
 
 /**
  * Выполнить авторизованный fetch запрос
+ * Токен передаётся автоматически через httpOnly cookie
  * @param {string} url - URL для запроса (может быть полным или относительным)
  * @param {Object} options - Опции для fetch
  * @returns {Promise<Response>} Promise с ответом
@@ -58,6 +72,7 @@ export const authFetch = async (url, options = {}) => {
     'Content-Type': options.headers?.['Content-Type'] || 'application/json'
   }
   
+  // Добавляем токен в header как fallback
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }
@@ -97,17 +112,24 @@ export const authFetch = async (url, options = {}) => {
   try {
     const response = await fetch(normalizedUrl, {
       ...options,
-      headers
+      headers,
+      credentials: 'include' // Важно: всегда включаем cookies для httpOnly аутентификации
     })
     
     // Централизованная обработка ошибок 401 (Unauthorized)
     if (response.status === 401) {
-      // Удаляем токен из localStorage
+      // Очищаем токен из localStorage
       localStorage.removeItem('auth_token')
       
-      // Вызываем глобальный обработчик logout, если он установлен
-      if (globalLogoutHandler) {
-        globalLogoutHandler()
+      // Вызываем глобальный обработчик logout только один раз
+      if (globalLogoutHandler && !isLoggingOut) {
+        isLoggingOut = true
+        // Используем setTimeout чтобы не блокировать текущий запрос
+        setTimeout(() => {
+          if (globalLogoutHandler) {
+            globalLogoutHandler()
+          }
+        }, 0)
       }
       
       // Бросаем специальную ошибку, чтобы компоненты могли её обработать
@@ -140,4 +162,3 @@ export const getApiUrl = (endpoint) => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint
   return `${API_URL}/${cleanEndpoint}`
 }
-

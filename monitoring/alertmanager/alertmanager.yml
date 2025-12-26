@@ -1,0 +1,81 @@
+# AlertManager configuration for GSM Converter
+global:
+  # Время ожидания перед повторной отправкой оповещения
+  resolve_timeout: 5m
+  
+  # SMTP настройки (раскомментируйте для email оповещений)
+  # smtp_smarthost: 'smtp.example.com:587'
+  # smtp_from: 'alertmanager@example.com'
+  # smtp_auth_username: 'alertmanager@example.com'
+  # smtp_auth_password: 'password'
+  
+  # Telegram (раскомментируйте для Telegram оповещений)
+  # telegram_api_url: 'https://api.telegram.org'
+
+# Шаблоны для оповещений
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Маршрутизация оповещений
+route:
+  # Группировка по alertname и severity
+  group_by: ['alertname', 'severity']
+  
+  # Время ожидания перед отправкой первого оповещения группы
+  group_wait: 30s
+  
+  # Время ожидания перед отправкой следующего оповещения группы
+  group_interval: 5m
+  
+  # Интервал повторной отправки нерешённых оповещений
+  repeat_interval: 4h
+  
+  # Получатель по умолчанию
+  receiver: 'default-receiver'
+  
+  # Дочерние маршруты
+  routes:
+    # Критические оповещения - сразу
+    - match:
+        severity: critical
+      receiver: 'critical-receiver'
+      group_wait: 10s
+      repeat_interval: 1h
+    
+    # Предупреждения
+    - match:
+        severity: warning
+      receiver: 'warning-receiver'
+      repeat_interval: 4h
+
+# Получатели оповещений
+receivers:
+  - name: 'default-receiver'
+    # Webhook для интеграции с внешними системами
+    webhook_configs:
+      - url: 'http://host.docker.internal:8000/api/v1/notifications/webhook/alertmanager'
+        send_resolved: true
+
+  - name: 'critical-receiver'
+    webhook_configs:
+      - url: 'http://host.docker.internal:8000/api/v1/notifications/webhook/alertmanager'
+        send_resolved: true
+    # Email для критических (раскомментируйте)
+    # email_configs:
+    #   - to: 'admin@example.com'
+    #     send_resolved: true
+
+  - name: 'warning-receiver'
+    webhook_configs:
+      - url: 'http://host.docker.internal:8000/api/v1/notifications/webhook/alertmanager'
+        send_resolved: true
+
+# Политики подавления
+inhibit_rules:
+  # Подавляем warning если есть critical для того же alertname
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname']
+

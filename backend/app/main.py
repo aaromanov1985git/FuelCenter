@@ -41,7 +41,8 @@ from app.routers import (
     ppr_api,
     notifications,
     system_settings,
-    backup
+    backup,
+    health
 )
 
 from app.models import Provider, User
@@ -387,9 +388,74 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="GSM Converter API",
-    description="API для конвертации и хранения транзакций ГСМ",
+    description="""
+## 🚗 Система управления транзакциями ГСМ
+
+API для конвертации, хранения и анализа транзакций горюче-смазочных материалов.
+
+### Основные возможности
+
+* **Транзакции** - CRUD операции с транзакциями ГСМ
+* **Топливные карты** - Управление топливными картами
+* **Провайдеры** - Интеграция с поставщиками топлива
+* **Шаблоны** - Настраиваемые шаблоны импорта данных
+* **Отчёты** - Аналитика и статистика
+* **Уведомления** - Push, Email, Telegram оповещения
+
+### Аутентификация
+
+API использует JWT токены. Получите токен через `/api/v1/auth/login` или `/api/v1/auth/login-secure`.
+
+Для запросов используйте заголовок:
+```
+Authorization: Bearer <token>
+```
+
+Или httpOnly cookie (при использовании `/login-secure`).
+
+### Rate Limiting
+
+* Стандартные endpoints: **500 запросов/минуту**
+* Auth endpoints: **50 запросов/минуту**
+
+### Мониторинг
+
+* `/metrics` - Prometheus метрики
+* `/health` - Health checks
+* `/docs` - Swagger UI (эта страница)
+* `/redoc` - ReDoc документация
+    """,
     version=settings.api_version,
-    lifespan=lifespan
+    lifespan=lifespan,
+    openapi_tags=[
+        {"name": "Auth", "description": "Аутентификация и авторизация"},
+        {"name": "Users", "description": "Управление пользователями"},
+        {"name": "Transactions", "description": "Операции с транзакциями ГСМ"},
+        {"name": "Vehicles", "description": "Управление транспортными средствами"},
+        {"name": "Fuel Cards", "description": "Управление топливными картами"},
+        {"name": "Gas Stations", "description": "Справочник АЗС"},
+        {"name": "Fuel Types", "description": "Типы топлива"},
+        {"name": "Providers", "description": "Поставщики топлива"},
+        {"name": "Templates", "description": "Шаблоны импорта данных"},
+        {"name": "Dashboard", "description": "Статистика и аналитика"},
+        {"name": "Notifications", "description": "Уведомления"},
+        {"name": "Organizations", "description": "Организации"},
+        {"name": "Logs", "description": "Системные логи"},
+        {"name": "Backup", "description": "Резервное копирование"},
+        {"name": "Health", "description": "Мониторинг состояния"},
+        {"name": "System", "description": "Системные настройки"},
+    ],
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    contact={
+        "name": "GSM Converter Support",
+        "email": "support@example.com",
+    },
+    license_info={
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT",
+    }
 )
 
 
@@ -519,6 +585,7 @@ app.include_router(ppr_api.router_public_api_v1)
 app.include_router(notifications.router)
 app.include_router(system_settings.router)
 app.include_router(backup.router)
+app.include_router(health.router)
 
 
 

@@ -73,7 +73,21 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        // Настройки для корректной передачи cookies через proxy
+        configure: (proxy, _options) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            // Перезаписываем domain в Set-Cookie для работы с localhost
+            const cookies = proxyRes.headers['set-cookie']
+            if (cookies) {
+              proxyRes.headers['set-cookie'] = cookies.map(cookie => {
+                return cookie
+                  .replace(/Domain=[^;]+;?\s*/gi, '')
+                  .replace(/Secure;?\s*/gi, '')
+              })
+            }
+          })
+        }
       }
     }
   }
