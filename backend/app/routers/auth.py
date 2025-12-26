@@ -25,6 +25,11 @@ from app.auth import (
 )
 from app.logger import logger
 from app.middleware.rate_limit import limiter
+from app.middleware.cookie_auth import (
+    set_access_token_cookie,
+    delete_auth_cookies,
+    ACCESS_TOKEN_COOKIE_NAME
+)
 from app.config import get_settings
 from app.services.logging_service import logging_service
 
@@ -313,14 +318,126 @@ async def login_json(
     }
 
 
+@router.post("/login-secure", response_model=Token)
+@limiter.limit(settings.rate_limit_strict)
+async def login_secure(
+    request: Request,
+    response: Response,
+    login_data: LoginRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Безопасный вход в систему с httpOnly cookies
+    
+    Токен устанавливается в httpOnly cookie, защищенную от XSS атак.
+    Рекомендуется для веб-браузеров.
+    
+    Args:
+        login_data: Данные для входа (username, password)
+        db: Сессия базы данных
+        response: FastAPI Response для установки cookie
+        
+    Returns:
+        Информация о токене (без самого токена, так как он в cookie)
+        
+    Raises:
+        HTTPException: Если неверные учетные данные
+    """
+    logger.info(f"Получен запрос на безопасный вход: username={login_data.username}")
+    
+    try:
+        user = authenticate_user(db, login_data.username, login_data.password)
+    except Exception as e:
+        logger.error(f"Ошибка при аутентификации пользователя {login_data.username}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Внутренняя ошибка сервера"
+        )
+    
+    if not user:
+        logger.warning(
+            f"Неудачная попытка входа: {login_data.username}",
+            extra={"username": login_data.username}
+        )
+        # Логируем неудачную попытку входа
+        try:
+            client_ip = request.client.host if request.client else None
+            user_agent = request.headers.get("user-agent")
+            logging_service.log_user_action(
+                db=db,
+                user_id=None,
+                username=login_data.username,
+                action_type="login",
+                action_description=f"Неудачная попытка входа (secure): {login_data.username}",
+                action_category="auth",
+                ip_address=client_ip,
+                user_agent=user_agent,
+                request_method=request.method,
+                request_path=request.url.path,
+                status="failed",
+                error_message="Неверное имя пользователя или пароль"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+        
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверное имя пользователя или пароль",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username, "user_id": user.id, "role": user.role},
+        expires_delta=access_token_expires
+    )
+    
+    # Устанавливаем токен в httpOnly cookie
+    set_access_token_cookie(response, access_token, ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+    logger.info(
+        f"Успешный безопасный вход пользователя: {user.username}",
+        extra={"user_id": user.id, "role": user.role}
+    )
+    
+    # Логируем успешный вход
+    try:
+        client_ip = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        logging_service.log_user_action(
+            db=db,
+            user_id=user.id,
+            username=user.username,
+            action_type="login",
+            action_description=f"Успешный вход пользователя (secure): {user.username}",
+            action_category="auth",
+            ip_address=client_ip,
+            user_agent=user_agent,
+            request_method=request.method,
+            request_path=request.url.path,
+            status="success"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    # Возвращаем токен и в cookie (для браузеров) и в body (для fallback/мобильных)
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    }
+
+
 @router.post("/logout")
 async def logout(
     request: Request,
+    response: Response,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """
     Выход пользователя из системы
+    Удаляет auth cookies если они были установлены
     """
     try:
         client_ip = request.client.host if request.client else None
@@ -342,6 +459,9 @@ async def logout(
         )
     except Exception as e:
         logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    # Удаляем auth cookies
+    delete_auth_cookies(response)
     
     return {"message": "Выход выполнен успешно"}
 

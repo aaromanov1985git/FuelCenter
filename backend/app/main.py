@@ -13,6 +13,7 @@ from app.database import get_db, engine, Base
 from app.logger import logger
 from app.middleware import LoggingMiddleware
 from app.middleware.rate_limit import setup_rate_limiting
+from app.middleware.prometheus_metrics import setup_prometheus
 from app.config import get_settings
 
 settings = get_settings()
@@ -39,7 +40,8 @@ from app.routers import (
     onec_integration,
     ppr_api,
     notifications,
-    system_settings
+    system_settings,
+    backup
 )
 
 from app.models import Provider, User
@@ -481,6 +483,9 @@ app.add_middleware(LoggingMiddleware)
 # Настройка Rate Limiting
 setup_rate_limiting(app)
 
+# Настройка Prometheus метрик
+setup_prometheus(app)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in allowed_origins],
@@ -513,6 +518,7 @@ app.include_router(ppr_api.router_public_api)
 app.include_router(ppr_api.router_public_api_v1)
 app.include_router(notifications.router)
 app.include_router(system_settings.router)
+app.include_router(backup.router)
 
 
 

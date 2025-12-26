@@ -1,6 +1,8 @@
 """
 Rate Limiting middleware для защиты от DDoS и злоупотреблений
+Поддерживает Redis для распределенных систем
 """
+import os
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -11,12 +13,35 @@ from app.logger import logger
 
 settings = get_settings()
 
+
+def get_storage_uri() -> str:
+    """
+    Получить URI хранилища для rate limiting
+    Приоритет: Redis > Memory
+    """
+    redis_host = os.getenv("REDIS_HOST", "redis")
+    redis_port = os.getenv("REDIS_PORT", "6379")
+    redis_db = os.getenv("REDIS_RATE_LIMIT_DB", "0")
+    
+    # Проверяем, доступен ли Redis
+    try:
+        import redis
+        r = redis.Redis(host=redis_host, port=int(redis_port), db=int(redis_db))
+        r.ping()
+        uri = f"redis://{redis_host}:{redis_port}/{redis_db}"
+        logger.info(f"Rate Limiting использует Redis: {redis_host}:{redis_port}")
+        return uri
+    except Exception as e:
+        logger.warning(f"Redis недоступен, используется in-memory хранилище: {e}")
+        return "memory://"
+
+
 # Инициализация Limiter
 # Используем IP адрес клиента для идентификации
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=[settings.rate_limit_default] if settings.enable_rate_limit else [],
-    storage_uri="memory://",  # Хранилище в памяти (можно заменить на Redis для распределенной системы)
+    storage_uri=get_storage_uri(),
     headers_enabled=True  # Добавляем заголовки с информацией о лимитах
 )
 

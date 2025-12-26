@@ -130,6 +130,9 @@ class SchedulerService:
             # Загружаем регламенты получения информации по картам
             self._load_card_info_schedules(db)
             
+            # Добавляем задачу автоматического бэкапа БД
+            self._add_backup_schedule()
+            
         except Exception as e:
             logger.error("Ошибка при загрузке расписаний", extra={"error": str(e)}, exc_info=True)
         finally:
@@ -622,6 +625,92 @@ class SchedulerService:
                 logger.error("Ошибка при закрытии сессии БД", extra={
                     "error": str(close_error)
                 })
+    
+    def _add_backup_schedule(self):
+        """
+        Добавить задачу автоматического бэкапа БД
+        """
+        import os
+        
+        backup_enabled = os.getenv("BACKUP_SCHEDULE_ENABLED", "true").lower() == "true"
+        if not backup_enabled:
+            logger.info("Автоматический бэкап отключен (BACKUP_SCHEDULE_ENABLED=false)")
+            return
+        
+        backup_hour = int(os.getenv("BACKUP_CRON_HOUR", "3"))
+        backup_minute = int(os.getenv("BACKUP_CRON_MINUTE", "0"))
+        
+        job_id = "database_backup"
+        
+        # Удаляем старую задачу, если существует
+        if self._scheduler.get_job(job_id):
+            self._scheduler.remove_job(job_id)
+        
+        def run_backup_sync():
+            """Синхронная функция выполнения бэкапа"""
+            try:
+                import sys
+                sys.path.insert(0, '/app')
+                from scripts.backup_db import DatabaseBackup
+                
+                backup_service = DatabaseBackup(
+                    db_host=os.getenv("POSTGRES_HOST", "db"),
+                    db_port=int(os.getenv("POSTGRES_PORT", "5432")),
+                    db_name=os.getenv("POSTGRES_DB", "gsm_db"),
+                    db_user=os.getenv("POSTGRES_USER", "gsm_user"),
+                    db_password=os.getenv("POSTGRES_PASSWORD", "gsm_password"),
+                    backup_dir=os.getenv("BACKUP_DIR", "/app/backups"),
+                    retention_days=int(os.getenv("BACKUP_RETENTION_DAYS", "7")),
+                    compress=True
+                )
+                
+                backup_path = backup_service.create_backup()
+                if backup_path:
+                    logger.info(f"Автоматический бэкап создан: {backup_path.name}", extra={
+                        "event_type": "backup",
+                        "event_category": "scheduled"
+                    })
+                    backup_service.cleanup_old_backups()
+                else:
+                    logger.error("Ошибка создания автоматического бэкапа", extra={
+                        "event_type": "backup",
+                        "event_category": "scheduled"
+                    })
+            except Exception as e:
+                logger.error(f"Критическая ошибка при автоматическом бэкапе: {e}", extra={
+                    "event_type": "backup",
+                    "event_category": "scheduled"
+                }, exc_info=True)
+        
+        import asyncio
+        async def run_backup_async():
+            try:
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, run_backup_sync)
+            except Exception as e:
+                logger.error(f"Ошибка в асинхронной обертке бэкапа: {e}", exc_info=True)
+        
+        trigger = CronTrigger(hour=backup_hour, minute=backup_minute)
+        
+        self._scheduler.add_job(
+            func=run_backup_async,
+            trigger=trigger,
+            id=job_id,
+            replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=600  # 10 минут на выполнение
+        )
+        
+        job = self._scheduler.get_job(job_id)
+        next_run = job.next_run_time.isoformat() if job and job.next_run_time else None
+        
+        logger.info("Добавлена задача автоматического бэкапа БД", extra={
+            "job_id": job_id,
+            "schedule": f"{backup_hour:02d}:{backup_minute:02d} ежедневно",
+            "next_run_time": next_run,
+            "event_type": "scheduler",
+            "event_category": "startup"
+        })
     
     def get_scheduled_jobs(self) -> Dict:
         """

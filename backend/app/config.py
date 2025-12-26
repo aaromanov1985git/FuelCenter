@@ -2,10 +2,16 @@
 Конфигурация приложения с использованием pydantic-settings
 """
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from typing import List, Optional
 from functools import lru_cache
 import os
+import secrets
+
+
+# Небезопасные значения по умолчанию (используются только для development)
+_INSECURE_DEFAULT_SECRET = "your-secret-key-here-change-in-production"
+_INSECURE_DEFAULT_PASSWORD = "admin123"
 
 
 class Settings(BaseSettings):
@@ -31,7 +37,9 @@ class Settings(BaseSettings):
     max_upload_size: int = 52428800  # 50MB в байтах
     
     # Секретный ключ для JWT
-    secret_key: str = "your-secret-key-here-change-in-production"
+    # КРИТИЧНО: В production ОБЯЗАТЕЛЬНО установите через переменную окружения SECRET_KEY
+    # Пример генерации: python -c "import secrets; print(secrets.token_urlsafe(64))"
+    secret_key: str = _INSECURE_DEFAULT_SECRET
     
     # Ключ для шифрования чувствительных данных (пароли Firebird, API ключи)
     # Если не указан, используется secret_key
@@ -42,11 +50,60 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 30
     
     # Настройки администратора по умолчанию (для первого запуска)
-    # ВАЖНО: Измените эти значения в production через переменные окружения!
+    # КРИТИЧНО: В production ОБЯЗАТЕЛЬНО установите через переменные окружения!
     # ADMIN_USERNAME, ADMIN_PASSWORD, ADMIN_EMAIL
     admin_username: str = "admin"
-    admin_password: str = "admin123"  # ВАЖНО: Измените в production!
+    admin_password: str = _INSECURE_DEFAULT_PASSWORD
     admin_email: str = "admin@example.com"
+    
+    @model_validator(mode='after')
+    def validate_production_security(self) -> 'Settings':
+        """
+        Валидация критических настроек безопасности для production
+        Блокирует запуск с небезопасными значениями в production
+        """
+        if self.environment.lower() == "production":
+            errors = []
+            
+            # Проверяем SECRET_KEY
+            if self.secret_key == _INSECURE_DEFAULT_SECRET:
+                errors.append(
+                    "SECRET_KEY: Используется небезопасное значение по умолчанию. "
+                    "Установите переменную окружения SECRET_KEY с безопасным ключом. "
+                    "Сгенерируйте: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+                )
+            elif len(self.secret_key) < 32:
+                errors.append(
+                    f"SECRET_KEY: Ключ слишком короткий ({len(self.secret_key)} символов). "
+                    "Минимальная длина: 32 символа"
+                )
+            
+            # Проверяем ADMIN_PASSWORD
+            if self.admin_password == _INSECURE_DEFAULT_PASSWORD:
+                errors.append(
+                    "ADMIN_PASSWORD: Используется небезопасный пароль по умолчанию 'admin123'. "
+                    "Установите переменную окружения ADMIN_PASSWORD с надёжным паролем"
+                )
+            elif len(self.admin_password) < 8:
+                errors.append(
+                    f"ADMIN_PASSWORD: Пароль слишком короткий ({len(self.admin_password)} символов). "
+                    "Минимальная длина: 8 символов"
+                )
+            
+            # Проверяем ENCRYPTION_KEY если используется
+            if self.encryption_key and len(self.encryption_key) < 32:
+                errors.append(
+                    f"ENCRYPTION_KEY: Ключ шифрования слишком короткий. "
+                    "Минимальная длина: 32 символа"
+                )
+            
+            if errors:
+                error_msg = "\n\n🔴 КРИТИЧЕСКИЕ ОШИБКИ БЕЗОПАСНОСТИ (production):\n\n" + \
+                           "\n\n".join(f"  {i+1}. {e}" for i, e in enumerate(errors)) + \
+                           "\n\n⚠️  Приложение не может быть запущено в production с небезопасными настройками.\n"
+                raise ValueError(error_msg)
+        
+        return self
     
     # Включить/выключить аутентификацию (по умолчанию включена для безопасности)
     # Для отключения установите ENABLE_AUTH=false в переменных окружения
@@ -96,9 +153,65 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
 
 
+def generate_secure_secret(length: int = 64) -> str:
+    """
+    Генерация криптографически безопасного секретного ключа
+    
+    Использование:
+        python -c "from app.config import generate_secure_secret; print(generate_secure_secret())"
+    
+    Args:
+        length: Длина ключа в символах (по умолчанию 64)
+    
+    Returns:
+        Безопасный URL-safe ключ
+    """
+    return secrets.token_urlsafe(length)
+
+
+def generate_secure_password(length: int = 16) -> str:
+    """
+    Генерация безопасного пароля
+    
+    Args:
+        length: Длина пароля (по умолчанию 16)
+    
+    Returns:
+        Безопасный пароль
+    """
+    import string
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
+
+
 @lru_cache()
 def get_settings() -> Settings:
     """
     Получение настроек приложения (singleton через lru_cache)
     """
-    return Settings()
+    settings = Settings()
+    
+    # Предупреждение в development режиме о небезопасных настройках
+    if settings.environment.lower() != "production":
+        import sys
+        warnings = []
+        
+        if settings.secret_key == _INSECURE_DEFAULT_SECRET:
+            warnings.append("SECRET_KEY использует небезопасное значение по умолчанию")
+        
+        if settings.admin_password == _INSECURE_DEFAULT_PASSWORD:
+            warnings.append("ADMIN_PASSWORD использует небезопасный пароль 'admin123'")
+        
+        if warnings:
+            print("\n" + "=" * 60, file=sys.stderr)
+            print("⚠️  ПРЕДУПРЕЖДЕНИЕ БЕЗОПАСНОСТИ (development)", file=sys.stderr)
+            print("=" * 60, file=sys.stderr)
+            for w in warnings:
+                print(f"  • {w}", file=sys.stderr)
+            print("\nДля production установите переменные окружения:", file=sys.stderr)
+            print(f"  SECRET_KEY={generate_secure_secret()}", file=sys.stderr)
+            print(f"  ADMIN_PASSWORD={generate_secure_password()}", file=sys.stderr)
+            print("  ENVIRONMENT=production", file=sys.stderr)
+            print("=" * 60 + "\n", file=sys.stderr)
+    
+    return settings

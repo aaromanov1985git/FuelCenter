@@ -220,15 +220,52 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
         raise
 
 
+def _decode_and_validate_token(token: str) -> dict:
+    """
+    Внутренняя функция для декодирования и валидации JWT токена
+    
+    Args:
+        token: JWT токен
+        
+    Returns:
+        Payload токена
+        
+    Raises:
+        HTTPException: Если токен невалидный
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Не удалось подтвердить учетные данные",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        
+        if username is None:
+            raise credentials_exception
+        
+        return payload
+    except JWTError:
+        raise credentials_exception
+
+
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    request: Request,
+    token: Optional[str] = Depends(oauth2_scheme_optional),
     db: Session = Depends(get_db)
 ) -> User:
     """
     Получение текущего пользователя из JWT токена
     
+    Поддерживает токен из:
+    1. httpOnly cookie (приоритет, безопаснее)
+    2. Authorization header (для API клиентов)
+    
     Args:
-        token: JWT токен
+        request: FastAPI Request объект
+        token: JWT токен из Authorization header (опционально)
         db: Сессия базы данных
         
     Returns:
@@ -243,13 +280,21 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
+    # Приоритет 1: Проверяем cookie
+    from app.middleware.cookie_auth import get_token_from_cookie
+    cookie_token = get_token_from_cookie(request)
+    
+    # Приоритет 2: Fallback на Authorization header
+    final_token = cookie_token or token
+    
+    if not final_token:
+        raise credentials_exception
+    
+    # Декодируем токен
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = _decode_and_validate_token(final_token)
         username: str = payload.get("sub")
-        
-        if username is None:
-            raise credentials_exception
-    except JWTError:
+    except HTTPException:
         raise credentials_exception
     
     user = get_user_by_username(db, username=username)
