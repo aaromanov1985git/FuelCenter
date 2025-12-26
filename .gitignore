@@ -53,3 +53,8 @@ alembic.ini.local
 logs/
 /nul
 nul
+
+# Test coverage
+coverage/
+.nyc_output/
+*.lcov

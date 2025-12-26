@@ -337,3 +337,15 @@ def invalidate_fuel_cards_cache():
     cache = CacheService.get_instance()
     cache.delete_pattern("fuel_cards:*")
 
+
+def invalidate_providers_cache():
+    """Инвалидация кэша провайдеров"""
+    cache = CacheService.get_instance()
+    cache.delete_pattern("providers:*")
+
+
+def invalidate_templates_cache():
+    """Инвалидация кэша шаблонов"""
+    cache = CacheService.get_instance()
+    cache.delete_pattern("templates:*")
+

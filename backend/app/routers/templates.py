@@ -25,8 +25,12 @@ from app.utils import (
 )
 from app.services.api_provider_service import ApiProviderService
 from app.services.auto_load_service import AutoLoadService
+from app.services.cache_service import CacheService
+import hashlib
+import json
 
 router = APIRouter(prefix="/api/v1/templates", tags=["templates"])
+cache = CacheService.get_instance()
 
 
 @router.get("", response_model=ProviderTemplateListResponse)
@@ -40,6 +44,22 @@ async def get_templates(
     """
     Получение списка всех шаблонов провайдеров
     """
+    # Создаем ключ кэша
+    cache_key_data = {
+        "skip": skip,
+        "limit": limit,
+        "is_active": is_active,
+        "connection_type": connection_type
+    }
+    cache_key = hashlib.md5(json.dumps(cache_key_data, sort_keys=True).encode()).hexdigest()
+    cache_key_full = f"templates:list:{cache_key}"
+    
+    # Пробуем получить из кэша (TTL 5 минут для справочников)
+    cached_result = cache.get(cache_key_full, prefix="")
+    if cached_result is not None:
+        logger.debug("Cache hit для списка шаблонов", extra={"cache_key": cache_key})
+        return ProviderTemplateListResponse(**cached_result)
+    
     query = db.query(ProviderTemplate)
     
     if is_active is not None:
@@ -61,7 +81,18 @@ async def get_templates(
         }
     })
     
-    return ProviderTemplateListResponse(total=total, items=templates)
+    result = ProviderTemplateListResponse(total=total, items=templates)
+    
+    # Кэшируем результат (5 минут)
+    cache.set(
+        cache_key_full,
+        {"total": result.total, "items": [item.model_dump() for item in result.items]},
+        ttl=300,
+        prefix=""
+    )
+    logger.debug("Cache miss, сохранено в кэш", extra={"cache_key": cache_key})
+    
+    return result
 
 
 @router.get("/{template_id}", response_model=ProviderTemplateResponse)
@@ -141,6 +172,10 @@ async def update_template(
             )
         except Exception as e:
             logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    # Инвалидируем кэш шаблонов
+    invalidate_templates_cache()
+    logger.debug("Кэш шаблонов инвалидирован после обновления")
     
     # Перезагружаем расписания, если изменились настройки автозагрузки
     if (template.auto_load_enabled is not None or 
@@ -567,13 +602,6 @@ async def test_api_connection_direct(
         connection_settings: Настройки подключения
         connection_type: Тип подключения ("api" или "web")
     """
-    # Явное логирование в консоль для отладки
-    print(f"\n{'='*80}")
-    print(f"=== ТЕСТ ПОДКЛЮЧЕНИЯ К {connection_type.upper()} ===")
-    print(f"Тип подключения: {connection_type}")
-    print(f"Настройки: {connection_settings}")
-    print(f"{'='*80}\n")
-    
     logger.info(f"=== НАЧАЛО ТЕСТА ПОДКЛЮЧЕНИЯ К {connection_type.upper()} ===", extra={
         "connection_type": connection_type,
         "connection_settings": {k: v if k != 'password' else '***' for k, v in connection_settings.items()}
@@ -582,14 +610,14 @@ async def test_api_connection_direct(
     api_service = ApiProviderService(db)
     
     if not connection_settings:
-        print("ОШИБКА: Не указаны настройки подключения")
+        logger.error("Не указаны настройки подключения")
         raise HTTPException(
             status_code=400,
             detail="Не указаны настройки подключения"
         )
     
     if connection_type not in ["api", "web"]:
-        print(f"ОШИБКА: Неподдерживаемый тип подключения: {connection_type}")
+        logger.error(f"Неподдерживаемый тип подключения: {connection_type}")
         raise HTTPException(
             status_code=400,
             detail=f"Неподдерживаемый тип подключения: {connection_type}. Поддерживаются: api, web"
@@ -605,13 +633,11 @@ async def test_api_connection_direct(
             provider_id=1  # Временное значение, не используется
         )
         
-        print(f"Создан временный шаблон, запускаем test_connection...")
         logger.info("Запуск test_connection", extra={"connection_type": connection_type})
         
         import asyncio
         result = await api_service.test_connection(temp_template)
         
-        print(f"Результат теста: success={result.get('success')}, message={result.get('message')}")
         logger.info(f"Тест подключения к {connection_type.upper()} выполнен (без шаблона)", extra={
             "success": result["success"],
             "connection_type": connection_type,
@@ -790,7 +816,9 @@ async def get_api_fields(
 
 
 @router.post("/auto-load")
+@limiter.limit(settings.rate_limit_strict)
 async def run_auto_load(
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """
@@ -811,11 +839,6 @@ async def run_auto_load(
         - results: список результатов по каждому шаблону
     """
     import sys
-    # Выводим в оба потока для гарантии видимости
-    msg1 = "=" * 80 + "\nPOST /api/v1/templates/auto-load ВЫЗВАН\n" + "=" * 80
-    print(msg1, file=sys.stderr, flush=True)
-    print(msg1, file=sys.stdout, flush=True)
-    
     logger.info("=" * 80)
     logger.info("Запуск автоматической загрузки шаблонов (ручной запуск)", extra={
         "event_type": "auto_load",
@@ -824,31 +847,16 @@ async def run_auto_load(
     logger.info("=" * 80)
     
     try:
-        msg2 = "Создание AutoLoadService..."
-        print(msg2, file=sys.stderr, flush=True)
-        print(msg2, file=sys.stdout, flush=True)
-        logger.info(msg2, extra={"event_type": "auto_load", "event_category": "service_creation"})
+        logger.info("Создание AutoLoadService...", extra={"event_type": "auto_load", "event_category": "service_creation"})
         
         auto_load_service = AutoLoadService(db)
         
-        msg3 = "AutoLoadService создан, запуск load_all_enabled_templates..."
-        print(msg3, file=sys.stderr, flush=True)
-        print(msg3, file=sys.stdout, flush=True)
-        logger.info(msg3, extra={"event_type": "auto_load", "event_category": "service_creation"})
+        logger.info("AutoLoadService создан, запуск load_all_enabled_templates...", extra={"event_type": "auto_load", "event_category": "service_creation"})
         
         try:
             result = auto_load_service.load_all_enabled_templates()
-            msg4 = f"load_all_enabled_templates завершен: {result}"
-            print(msg4, file=sys.stderr, flush=True)
-            print(msg4, file=sys.stdout, flush=True)
-            logger.info(msg4, extra={"event_type": "auto_load", "event_category": "completion"})
+            logger.info(f"load_all_enabled_templates завершен: {result}", extra={"event_type": "auto_load", "event_category": "completion"})
         except Exception as load_err:
-            import traceback
-            error_trace = traceback.format_exc()
-            print(f"ОШИБКА в load_all_enabled_templates: {load_err}", file=sys.stderr, flush=True)
-            print(f"Трассировка: {error_trace}", file=sys.stderr, flush=True)
-            print(f"ОШИБКА в load_all_enabled_templates: {load_err}", file=sys.stdout, flush=True)
-            print(f"Трассировка: {error_trace}", file=sys.stdout, flush=True)
             logger.error(f"Ошибка в load_all_enabled_templates: {load_err}", extra={
                 "error": str(load_err),
                 "error_type": type(load_err).__name__,

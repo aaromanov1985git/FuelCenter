@@ -703,19 +703,26 @@ class ProviderTemplateResponse(ProviderTemplateBase):
                     # Расшифровываем пароль для использования (но не возвращаем в API)
                     from app.utils.encryption import decrypt_connection_settings
                     parsed_settings = decrypt_connection_settings(parsed_settings)
-                    # Скрываем пароль в ответе (не возвращаем в API)
-                    if isinstance(parsed_settings, dict) and 'password' in parsed_settings:
-                        parsed_settings = {k: v for k, v in parsed_settings.items() if k != 'password'}
+                    # Скрываем чувствительные данные в ответе (не возвращаем в API)
+                    if isinstance(parsed_settings, dict):
+                        sensitive_fields = ['password', 'api_token', 'api_key', 'api_secret', 
+                                          'xml_api_key', 'xml_api_signature', 'xml_api_salt', 
+                                          'certificate', 'secret', 'token']
+                        parsed_settings = {k: v for k, v in parsed_settings.items() 
+                                         if k not in sensitive_fields}
                     data['connection_settings'] = parsed_settings
                 except (json.JSONDecodeError, TypeError):
                     data['connection_settings'] = None
             elif isinstance(connection_settings_value, dict):
-                # Расшифровываем пароль для использования (но не возвращаем в API)
+                # Расшифровываем чувствительные данные для использования (но не возвращаем в API)
                 from app.utils.encryption import decrypt_connection_settings
                 parsed_settings = decrypt_connection_settings(connection_settings_value.copy())
-                # Скрываем пароль в ответе (не возвращаем в API)
-                if 'password' in parsed_settings:
-                    parsed_settings = {k: v for k, v in parsed_settings.items() if k != 'password'}
+                # Скрываем чувствительные данные в ответе (не возвращаем в API)
+                sensitive_fields = ['password', 'api_token', 'api_key', 'api_secret', 
+                                  'xml_api_key', 'xml_api_signature', 'xml_api_salt', 
+                                  'certificate', 'secret', 'token']
+                parsed_settings = {k: v for k, v in parsed_settings.items() 
+                                 if k not in sensitive_fields}
                 data['connection_settings'] = parsed_settings
             
             # Преобразуем fuel_type_mapping из JSON строки в словарь

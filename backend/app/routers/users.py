@@ -18,8 +18,12 @@ from app.logger import logger
 from app.models import User
 from app.schemas import UserCreate, UserListResponse, UserResponse, UserUpdate
 from app.services.logging_service import logging_service
+from app.services.cache_service import CacheService
+import hashlib
+import json
 
 router = APIRouter(prefix="/api/v1/users", tags=["Пользователи"])
+cache = CacheService.get_instance()
 
 
 @router.get("", response_model=UserListResponse)
@@ -33,6 +37,21 @@ async def list_users(
     """
     Получение списка пользователей (только для администраторов)
     """
+    # Создаем ключ кэша
+    cache_key_data = {
+        "skip": skip,
+        "limit": limit,
+        "search": search
+    }
+    cache_key = hashlib.md5(json.dumps(cache_key_data, sort_keys=True).encode()).hexdigest()
+    cache_key_full = f"users:list:{cache_key}"
+    
+    # Пробуем получить из кэша (TTL 5 минут для справочников)
+    cached_result = cache.get(cache_key_full, prefix="")
+    if cached_result is not None:
+        logger.debug("Cache hit для списка пользователей", extra={"cache_key": cache_key})
+        return UserListResponse(**cached_result)
+    
     query = db.query(User)
 
     if search:
@@ -67,7 +86,18 @@ async def list_users(
         }
         user_responses.append(UserResponse(**user_dict))
 
-    return {"total": total, "items": user_responses}
+    result = {"total": total, "items": user_responses}
+    
+    # Кэшируем результат (5 минут)
+    cache.set(
+        cache_key_full,
+        {"total": result["total"], "items": [item.model_dump() for item in result["items"]]},
+        ttl=300,
+        prefix=""
+    )
+    logger.debug("Cache miss, сохранено в кэш", extra={"cache_key": cache_key})
+    
+    return result
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -104,6 +134,10 @@ async def create_user(
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    
+    # Инвалидируем кэш пользователей
+    cache.delete_pattern("users:*")
+    logger.debug("Кэш пользователей инвалидирован после создания")
 
     logger.info(
         "Создан новый пользователь",
@@ -166,6 +200,10 @@ async def update_user(
 
     db.commit()
     db.refresh(user)
+    
+    # Инвалидируем кэш пользователей
+    cache.delete_pattern("users:*")
+    logger.debug("Кэш пользователей инвалидирован после обновления")
 
     logger.info(
         "Обновлен пользователь",
@@ -227,6 +265,10 @@ async def delete_user(
     
     db.delete(user)
     db.commit()
+    
+    # Инвалидируем кэш пользователей
+    cache.delete_pattern("users:*")
+    logger.debug("Кэш пользователей инвалидирован после удаления")
 
     logger.info(
         "Пользователь удален",

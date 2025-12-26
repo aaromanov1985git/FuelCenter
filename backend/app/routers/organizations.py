@@ -17,7 +17,9 @@ from app.schemas import (
 from app.services.organization_service import OrganizationService
 from app.logger import logger
 from app.services.logging_service import logging_service
-from app.services.cache_service import cached
+from app.services.cache_service import cached, CacheService
+
+cache = CacheService.get_instance()
 
 router = APIRouter(prefix="/api/v1/organizations", tags=["organizations"])
 

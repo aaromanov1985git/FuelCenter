@@ -139,13 +139,17 @@ class PPRAPIService:
         """
         # Логируем параметры запроса для диагностики
         import sys
-        print(f"\n{'='*80}", file=sys.stdout, flush=True)
-        print(f"!!! PPR API Service: get_transactions !!!", file=sys.stdout, flush=True)
-        print(f"Provider ID: {provider_id}", file=sys.stdout, flush=True)
-        print(f"Date from: {date_from} (type: {type(date_from)})", file=sys.stdout, flush=True)
-        print(f"Date to: {date_to} (type: {type(date_to)})", file=sys.stdout, flush=True)
-        print(f"Skip: {skip}, Limit: {limit}", file=sys.stdout, flush=True)
-        print(f"{'='*80}\n", file=sys.stdout, flush=True)
+        logger.info("PPR API Service: get_transactions", extra={
+            "provider_id": provider_id,
+            "date_from": str(date_from) if date_from else None,
+            "date_from_type": type(date_from).__name__ if date_from else None,
+            "date_to": str(date_to) if date_to else None,
+            "date_to_type": type(date_to).__name__ if date_to else None,
+            "skip": skip,
+            "limit": limit,
+            "event_type": "ppr_api",
+            "event_category": "get_transactions"
+        })
         
         logger.info(
             "PPR API Service: get_transactions",
@@ -169,13 +173,15 @@ class PPRAPIService:
             sort_order="asc"
         )
         
-        print(f"\n{'='*80}", file=sys.stdout, flush=True)
-        print(f"!!! PPR API Service: Результат запроса !!!", file=sys.stdout, flush=True)
-        print(f"Найдено транзакций: {len(transactions)}", file=sys.stdout, flush=True)
-        print(f"Всего (total): {total}", file=sys.stdout, flush=True)
-        if transactions:
-            print(f"Первая транзакция: ID={transactions[0].id}, Date={transactions[0].transaction_date}, Provider={transactions[0].provider_id}", file=sys.stdout, flush=True)
-        print(f"{'='*80}\n", file=sys.stdout, flush=True)
+        logger.info("PPR API Service: Результат запроса", extra={
+            "transactions_count": len(transactions),
+            "total": total,
+            "first_transaction_id": transactions[0].id if transactions else None,
+            "first_transaction_date": str(transactions[0].transaction_date) if transactions else None,
+            "first_transaction_provider_id": transactions[0].provider_id if transactions else None,
+            "event_type": "ppr_api",
+            "event_category": "get_transactions_result"
+        })
         
         # Преобразуем в формат ППР
         результат = []

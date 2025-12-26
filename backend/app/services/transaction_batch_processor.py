@@ -201,7 +201,7 @@ class TransactionBatchProcessor:
             if created_count < 5 and filtered_trans_data.get("product"):
                 import sys
                 product_value = filtered_trans_data.get("product")
-                print(f"  [DEBUG TransactionBatchProcessor] Сохраняем product в БД: '{product_value}'", file=sys.stderr, flush=True)
+                logger.debug("Сохраняем product в БД", extra={"product_value": product_value})
                 logger.info("Сохраняем product в БД", extra={
                     "product": product_value,
                     "transaction_date": str(filtered_trans_data.get("transaction_date")),

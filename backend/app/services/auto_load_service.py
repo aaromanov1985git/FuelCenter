@@ -35,10 +35,10 @@ class AutoLoadService:
             - failed_templates: количество шаблонов с ошибками
             - results: список результатов по каждому шаблону
         """
-        import sys
-        msg = "=" * 80 + "\nAutoLoadService.load_all_enabled_templates ВЫЗВАН\n" + "=" * 80
-        print(msg, file=sys.stderr, flush=True)
-        print(msg, file=sys.stdout, flush=True)
+        logger.info("AutoLoadService.load_all_enabled_templates ВЫЗВАН", extra={
+            "event_type": "auto_load",
+            "event_category": "scheduler"
+        })
         
         # Получаем все активные шаблоны с включенной автозагрузкой
         templates = self.db.query(ProviderTemplate).filter(
@@ -46,10 +46,11 @@ class AutoLoadService:
             ProviderTemplate.auto_load_enabled == True
         ).all()
 
-        msg2 = f"Найдено шаблонов с автозагрузкой: {len(templates)}"
-        print(msg2, file=sys.stderr, flush=True)
-        print(msg2, file=sys.stdout, flush=True)
-        logger.info("=" * 80)
+        logger.info(f"Найдено шаблонов с автозагрузкой: {len(templates)}", extra={
+            "templates_count": len(templates),
+            "event_type": "auto_load",
+            "event_category": "scheduler"
+        })
         logger.info("Начало автоматической загрузки шаблонов", extra={
             "templates_count": len(templates),
             "event_type": "auto_load",
@@ -114,12 +115,14 @@ class AutoLoadService:
         Returns:
             Словарь с результатом загрузки
         """
-        import sys
-        print(f"\n{'='*80}", file=sys.stderr)
-        print(f"AutoLoadService.load_template: шаблон {template.id} ({template.name})", file=sys.stderr)
-        print(f"Тип подключения: {template.connection_type}", file=sys.stderr)
-        print(f"Маппинг топлива: {template.fuel_type_mapping}", file=sys.stderr)
-        print(f"{'='*80}\n", file=sys.stderr)
+        logger.info("AutoLoadService.load_template: начало загрузки", extra={
+            "template_id": template.id,
+            "template_name": template.name,
+            "connection_type": template.connection_type,
+            "has_fuel_mapping": bool(template.fuel_type_mapping),
+            "event_type": "auto_load",
+            "event_category": "scheduler"
+        })
         
         start_time = datetime.now()
         event_service = UploadEventService(self.db)
@@ -306,8 +309,13 @@ class AutoLoadService:
         try:
             if template.fuel_type_mapping:
                 fuel_type_mapping = parse_template_json(template.fuel_type_mapping)
-                import sys
-                print(f"✓ Маппинг топлива загружен для шаблона {template.id}: {list(fuel_type_mapping.keys()) if isinstance(fuel_type_mapping, dict) else 'не словарь'}", file=sys.stderr)
+                logger.info(f"Маппинг топлива загружен для шаблона {template.id}", extra={
+                    "template_id": template.id,
+                    "mapping_keys": list(fuel_type_mapping.keys()) if isinstance(fuel_type_mapping, dict) else None,
+                    "is_dict": isinstance(fuel_type_mapping, dict),
+                    "event_type": "auto_load",
+                    "event_category": "fuel_mapping"
+                })
                 logger.info("Маппинг видов топлива (Firebird) загружен", extra={
                     "template_id": template.id,
                     "template_name": template.name,
@@ -318,8 +326,11 @@ class AutoLoadService:
                 })
             else:
                 fuel_type_mapping = None
-                import sys
-                print(f"✗ Маппинг топлива НЕ НАЙДЕН для шаблона {template.id} (fuel_type_mapping пустой)", file=sys.stderr)
+                logger.warning(f"Маппинг топлива НЕ НАЙДЕН для шаблона {template.id} (fuel_type_mapping пустой)", extra={
+                    "template_id": template.id,
+                    "event_type": "auto_load",
+                    "event_category": "fuel_mapping"
+                })
                 logger.info("Маппинг видов топлива не указан для шаблона", extra={
                     "template_id": template.id,
                     "template_name": template.name,
@@ -327,8 +338,12 @@ class AutoLoadService:
                     "event_category": "fuel_mapping"
                 })
         except Exception as fuel_map_err:
-            import sys
-            print(f"✗ ОШИБКА при загрузке маппинга топлива для шаблона {template.id}: {fuel_map_err}", file=sys.stderr)
+            logger.error(f"ОШИБКА при загрузке маппинга топлива для шаблона {template.id}", extra={
+                "template_id": template.id,
+                "error": str(fuel_map_err),
+                "event_type": "auto_load",
+                "event_category": "fuel_mapping"
+            }, exc_info=True)
             logger.warning("Не удалось разобрать маппинг видов топлива", extra={
                 "template_id": template.id,
                 "template_name": template.name,
@@ -459,8 +474,11 @@ class AutoLoadService:
                     mapped = _match_fuel(raw_fuel, fuel_type_mapping)
                     if mapped:
                         normalized_fuel = mapped
-                        import sys
-                        print(f"  → Маппинг применен: '{raw_fuel}' → '{normalized_fuel}'", file=sys.stderr)
+                        logger.debug("Маппинг применен", extra={
+                            "raw_fuel": raw_fuel,
+                            "normalized_fuel": normalized_fuel,
+                            "template_id": template.id
+                        })
                         logger.info("Маппинг топлива применен (Firebird)", extra={
                             "template_id": template.id,
                             "template_name": template.name,
@@ -470,8 +488,10 @@ class AutoLoadService:
                             "event_category": "fuel_mapping"
                         })
                     else:
-                        import sys
-                        print(f"  → Маппинг НЕ НАЙДЕН для '{raw_fuel}', используем нормализацию", file=sys.stderr)
+                        logger.debug("Маппинг НЕ НАЙДЕН, используем нормализацию", extra={
+                            "raw_fuel": raw_fuel,
+                            "template_id": template.id
+                        })
                 # Если маппинг не сработал, используем стандартную нормализацию
                 if normalized_fuel == raw_fuel:
                     normalized_fuel = app_services.normalize_fuel(raw_fuel)

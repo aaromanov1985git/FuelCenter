@@ -144,48 +144,92 @@ def decrypt_password(encrypted_password: str) -> str:
 
 def encrypt_connection_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Шифрование пароля в настройках подключения
+    Шифрование чувствительных данных в настройках подключения
+    
+    Шифрует следующие поля:
+    - password: пароли для Firebird, веб-сервисов
+    - api_token: токены API провайдеров
+    - api_key: ключи API провайдеров
+    - api_secret: секреты API провайдеров
+    - xml_api_key: ключи XML API
+    - xml_api_signature: подписи XML API
+    - xml_api_salt: соли для XML API
+    - certificate: сертификаты для XML API
     
     Args:
-        settings: Настройки подключения (содержит поле "password")
+        settings: Настройки подключения
         
     Returns:
-        Dict: Настройки подключения с зашифрованным паролем
+        Dict: Настройки подключения с зашифрованными чувствительными данными
     """
     if not settings or not isinstance(settings, dict):
         return settings
     
     encrypted_settings = settings.copy()
     
-    # Шифруем пароль, если он есть
-    if "password" in encrypted_settings and encrypted_settings["password"]:
-        password = encrypted_settings["password"]
-        # Проверяем, не зашифрован ли уже пароль
-        if not password.startswith("encrypted:"):
-            encrypted_settings["password"] = encrypt_password(password)
+    # Список чувствительных полей для шифрования
+    sensitive_fields = [
+        "password",
+        "api_token",
+        "api_key",
+        "api_secret",
+        "xml_api_key",
+        "xml_api_signature",
+        "xml_api_salt",
+        "certificate",
+        "secret",
+        "token"
+    ]
+    
+    # Шифруем все чувствительные поля
+    for field in sensitive_fields:
+        if field in encrypted_settings and encrypted_settings[field]:
+            value = encrypted_settings[field]
+            # Проверяем, не зашифровано ли уже значение
+            if isinstance(value, str) and not value.startswith("encrypted:"):
+                encrypted_settings[field] = encrypt_password(value)
     
     return encrypted_settings
 
 
 def decrypt_connection_settings(settings: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Расшифровка пароля в настройках подключения
+    Расшифровка чувствительных данных в настройках подключения
+    
+    Расшифровывает все зашифрованные чувствительные поля:
+    - password, api_token, api_key, api_secret, xml_api_key, xml_api_signature, xml_api_salt, certificate, secret, token
     
     Args:
-        settings: Настройки подключения (содержит поле "password" в зашифрованном виде)
+        settings: Настройки подключения (содержит зашифрованные чувствительные данные)
         
     Returns:
-        Dict: Настройки подключения с расшифрованным паролем
+        Dict: Настройки подключения с расшифрованными чувствительными данными
     """
     if not settings or not isinstance(settings, dict):
         return settings
     
     decrypted_settings = settings.copy()
     
-    # Расшифровываем пароль, если он есть
-    if "password" in decrypted_settings and decrypted_settings["password"]:
-        encrypted_password = decrypted_settings["password"]
-        decrypted_settings["password"] = decrypt_password(encrypted_password)
+    # Список чувствительных полей для расшифровки
+    sensitive_fields = [
+        "password",
+        "api_token",
+        "api_key",
+        "api_secret",
+        "xml_api_key",
+        "xml_api_signature",
+        "xml_api_salt",
+        "certificate",
+        "secret",
+        "token"
+    ]
+    
+    # Расшифровываем все чувствительные поля
+    for field in sensitive_fields:
+        if field in decrypted_settings and decrypted_settings[field]:
+            encrypted_value = decrypted_settings[field]
+            if isinstance(encrypted_value, str):
+                decrypted_settings[field] = decrypt_password(encrypted_value)
     
     return decrypted_settings
 

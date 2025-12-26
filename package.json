@@ -10,7 +10,13 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf node_modules/.vite dist",
-    "clean:win": "if exist node_modules\\.vite rmdir /s /q node_modules\\.vite && if exist dist rmdir /s /q dist"
+    "clean:win": "if exist node_modules\\.vite rmdir /s /q node_modules\\.vite && if exist dist rmdir /s /q dist",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:coverage:watch": "vitest --coverage",
+    "test:coverage:report": "vitest run --coverage && open coverage/index.html"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
@@ -22,9 +28,17 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.1",
     "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/coverage-v8": "^1.1.0",
+    "@vitest/ui": "^1.1.0",
     "cross-env": "^7.0.3",
+    "jsdom": "^23.0.1",
+    "msw": "^2.0.11",
     "shadcn": "^3.6.1",
-    "vite": "^5.0.8"
+    "vite": "^5.0.8",
+    "vitest": "^1.1.0"
   }
 }

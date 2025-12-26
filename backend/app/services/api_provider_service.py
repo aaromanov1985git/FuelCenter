@@ -468,18 +468,14 @@ class WebAdapter:
         Returns:
             True если авторизация успешна, иначе False
         """
-        print(f"\n{'='*80}")
-        print(f"=== WebAdapter._authenticate_xml_api НАЧАЛО ===")
-        print(f"base_url: {self.base_url}")
-        print(f"username: {self.username}")
-        print(f"use_xml_api: {self.use_xml_api}")
-        print(f"xml_api_key: {self.xml_api_key}")
-        print(f"xml_api_signature: {self.xml_api_signature}")
-        print(f"xml_api_salt: {self.xml_api_salt}")
-        print(f"xml_api_cod_azs: {self.xml_api_cod_azs}")
-        print(f"{'='*80}\n")
-        
         logger.info("=== НАЧАЛО XML API АВТОРИЗАЦИИ ===", extra={
+            "base_url": self.base_url,
+            "username": self.username,
+            "use_xml_api": self.use_xml_api,
+            "has_xml_api_key": bool(self.xml_api_key),
+            "has_xml_api_signature": bool(self.xml_api_signature),
+            "has_xml_api_salt": bool(self.xml_api_salt),
+            "xml_api_cod_azs": self.xml_api_cod_azs
             "base_url": self.base_url,
             "username": self.username,
             "use_xml_api": self.use_xml_api,
@@ -505,15 +501,17 @@ class WebAdapter:
                 else:
                     password_hash = self.xml_api_signature
                     hash_source = f"signature (использован полностью)"
-                logger.info(f"✓ Используется готовая подпись как хеш пароля: {hash_source}")
-                print(f"✓ Хеш пароля из подписи: {password_hash[:20]}... (длина: {len(password_hash)})")
+                logger.info(f"✓ Используется готовая подпись как хеш пароля: {hash_source}", extra={
+                    "password_hash_length": len(password_hash)
+                })
             
             # Приоритет 2: Если есть salt, вычисляем хеш sha1(salt + password)
             elif self.xml_api_salt:
                 password_hash = self._hash_password(self.password, self.xml_api_salt)
                 hash_source = f"salt (вычислен sha1(salt + password))"
-                logger.info(f"✓ Вычислен хеш пароля с использованием salt")
-                print(f"✓ Хеш пароля вычислен из salt: {password_hash[:20]}... (длина: {len(password_hash)})")
+                logger.info(f"✓ Вычислен хеш пароля с использованием salt", extra={
+                    "password_hash_length": len(password_hash)
+                })
             
             # Приоритет 3: Если нет ни подписи, ни salt, используем пароль как есть (не рекомендуется)
             else:
@@ -535,15 +533,13 @@ class WebAdapter:
             cod_azs_from_key = None
             if self.xml_api_key:
                 parsed_key = self._parse_xml_api_key(self.xml_api_key)
-                logger.info(f"✓ Ключ распарсен: {parsed_key}")
-                print(f"✓ Распарсенные параметры из ключа '{self.xml_api_key}': {parsed_key}")
+                logger.info(f"✓ Ключ распарсен: {parsed_key}", extra={"parsed_key": parsed_key})
                 
                 # Если в ключе есть значение для COD_AZS (параметр 'i'), используем его
                 if 'i' in parsed_key:
                     cod_azs_from_key = parsed_key['i']
                     self.xml_api_cod_azs = cod_azs_from_key
-                    logger.info(f"✓ COD_AZS извлечен из ключа: {cod_azs_from_key}")
-                    print(f"✓ COD_AZS из ключа: {cod_azs_from_key}")
+                    logger.info(f"✓ COD_AZS извлечен из ключа: {cod_azs_from_key}", extra={"cod_azs": cod_azs_from_key})
                 else:
                     logger.warning(f"⚠ В ключе не найден параметр 'i' для COD_AZS, используем значение по умолчанию: {self.xml_api_cod_azs}")
             else:
@@ -568,11 +564,7 @@ class WebAdapter:
                 "xml_length": len(xml_request),
                 "xml_preview": xml_request[:500]
             })
-            print(f"\n{'='*80}")
-            print(f"XML ЗАПРОС АВТОРИЗАЦИИ:")
-            print(f"{'='*80}")
-            print(xml_request)
-            print(f"{'='*80}\n")
+            logger.debug("XML запрос авторизации", extra={"xml_preview": xml_request[:500]})
             
             # Заголовки для XML API согласно спецификации СНК-ЛК
             # Важно: Content-Length вычисляется автоматически httpx
@@ -619,8 +611,7 @@ class WebAdapter:
             
             for endpoint_url in xml_endpoints:
                 try:
-                    logger.info(f"Пробуем отправить XML запрос на {endpoint_url}")
-                    print(f"Пробуем endpoint: {endpoint_url}")
+                    logger.info(f"Пробуем отправить XML запрос на {endpoint_url}", extra={"endpoint": endpoint_url})
                     
                     # Отправляем XML запрос с правильной кодировкой UTF-8
                     # httpx автоматически установит Content-Length
@@ -635,23 +626,26 @@ class WebAdapter:
                     
                     # Если получили успешный ответ или ошибку авторизации (не 405), используем этот endpoint
                     if response.status_code != 405:
-                        logger.info(f"✓ Найден рабочий endpoint: {endpoint_url}")
-                        print(f"✓ Рабочий endpoint: {endpoint_url}")
+                        logger.info(f"✓ Найден рабочий endpoint: {endpoint_url}", extra={"endpoint": endpoint_url})
                         break
                     else:
                         # Логируем заголовки ответа для диагностики
                         allow_methods = response.headers.get('Allow', 'не указано')
-                        logger.warning(f"Endpoint {endpoint_url} вернул 405 Method Not Allowed. Allow: {allow_methods}")
-                        print(f"✗ {endpoint_url} вернул 405. Разрешенные методы: {allow_methods}")
-                        print(f"  Заголовки ответа: {dict(response.headers)}")
+                        logger.warning(f"Endpoint {endpoint_url} вернул 405 Method Not Allowed. Allow: {allow_methods}", extra={
+                            "endpoint": endpoint_url,
+                            "allow_methods": allow_methods,
+                            "response_headers": dict(response.headers)
+                        })
                         response = None
                         
                 except httpx.HTTPStatusError as e:
                     # Если это не 405, значит endpoint правильный, но есть другая ошибка
                     if e.response.status_code != 405:
                         response = e.response
-                        logger.info(f"✓ Endpoint {endpoint_url} принял запрос (статус {e.response.status_code})")
-                        print(f"✓ Endpoint {endpoint_url} принял запрос (статус {e.response.status_code})")
+                        logger.info(f"✓ Endpoint {endpoint_url} принял запрос (статус {e.response.status_code})", extra={
+                            "endpoint": endpoint_url,
+                            "status_code": e.response.status_code
+                        })
                         break
                     last_error = e
                     response = None
@@ -673,18 +667,13 @@ class WebAdapter:
                     f"3. Проверьте, что сервер СНК-HTTP запущен и доступен"
                 )
                 logger.error(error_msg)
-                print(f"\n{'='*80}")
-                print(f"✗ ОШИБКА: {error_msg}")
-                print(f"{'='*80}\n")
                 raise ValueError(error_msg)
             
-            logger.info(f"Получен ответ: статус {response.status_code}")
-            print(f"\n{'='*80}")
-            print(f"ОТВЕТ ОТ СЕРВЕРА:")
-            print(f"  Статус: {response.status_code}")
-            print(f"  Заголовки: {dict(response.headers)}")
-            print(f"  Тело ответа: {response.text[:1000]}")
-            print(f"{'='*80}\n")
+            logger.info(f"Получен ответ: статус {response.status_code}", extra={
+                "status_code": response.status_code,
+                "response_headers": dict(response.headers),
+                "response_preview": response.text[:500]
+            })
             
             # Проверяем статус ответа
             if response.status_code == 405:
@@ -704,12 +693,7 @@ class WebAdapter:
             # Ответ должен быть в формате JSON (благодаря заголовку Return-type: json)
             try:
                 response_data = response.json()
-                logger.info("✓ Ответ получен в формате JSON")
-                print(f"\n{'='*80}")
-                print(f"JSON ОТВЕТ ОТ СЕРВЕРА:")
-                print(f"{'='*80}")
-                print(json.dumps(response_data, ensure_ascii=False, indent=2))
-                print(f"{'='*80}\n")
+                logger.info("✓ Ответ получен в формате JSON", extra={"response_data": response_data})
             except json.JSONDecodeError as json_error:
                 # Если не JSON, пробуем парсить XML (на случай, если сервер вернул XML)
                 logger.warning(f"Ответ не в формате JSON, пробуем парсить как XML: {str(json_error)}")
@@ -718,7 +702,7 @@ class WebAdapter:
                     logger.info("Ответ получен в формате XML")
                     # Преобразуем XML в словарь для удобства
                     response_data = self._xml_to_dict(root)
-                    print(f"XML ответ (преобразовано): {response_data}")
+                    logger.debug("XML ответ преобразован в словарь", extra={"response_data": response_data})
                 except Exception as xml_error:
                     logger.error(f"Не удалось распарсить ответ (ни JSON, ни XML): {str(xml_error)}")
                     logger.error(f"Сырой ответ: {response_text[:500]}")
@@ -776,9 +760,6 @@ class WebAdapter:
                 
         except Exception as e:
             logger.error(f"Ошибка при XML API авторизации: {str(e)}", exc_info=True)
-            print(f"Ошибка: {str(e)}")
-            import traceback
-            print(traceback.format_exc())
             return False
     
     def _xml_to_dict(self, element: ET.Element) -> Dict[str, Any]:
@@ -842,29 +823,21 @@ class WebAdapter:
         Returns:
             Access token или None, если не удалось авторизоваться
         """
-        print(f"\n{'='*80}")
-        print(f"=== _authenticate_with_playwright НАЧАЛО ===")
-        print(f"base_url: {base_url}")
-        print(f"username: {self.username}")
-        print(f"{'='*80}\n")
-        
-        logger.info("=== ЗАПУСК PLAYWRIGHT ДЛЯ АВТОРИЗАЦИИ ===")
+        logger.info("=== ЗАПУСК PLAYWRIGHT ДЛЯ АВТОРИЗАЦИИ ===", extra={
+            "base_url": base_url,
+            "username": self.username
+        })
         try:
-            print("Импортируем playwright.async_api...")
             from playwright.async_api import async_playwright
-            print("Playwright импортирован успешно")
             logger.info("Playwright импортирован успешно")
         except ImportError as import_error:
-            print(f"ОШИБКА: Playwright не установлен: {str(import_error)}")
             logger.error(f"Playwright не установлен: {str(import_error)}. Установите: pip install playwright && python -m playwright install chromium")
             return None
         
         try:
             import asyncio
-            print("Инициализация Playwright...")
             logger.info("Инициализация Playwright...")
             async with async_playwright() as p:
-                print("Запуск браузера Chromium...")
                 logger.info("Запуск браузера Chromium...")
                 # Запускаем браузер в headless режиме с максимальным скрытием признаков автоматизации
                 browser = await p.chromium.launch(
@@ -879,7 +852,6 @@ class WebAdapter:
                         '--disable-site-isolation-trials',
                     ]
                 )
-                print("Браузер запущен, создаем контекст...")
                 logger.info("Браузер запущен, создаем контекст...")
                 context = await browser.new_context(
                     viewport={'width': 1920, 'height': 1080},
@@ -924,9 +896,8 @@ class WebAdapter:
                             originalQuery(parameters)
                     );
                 """)
-                print("Скрипты для скрытия автоматизации добавлены")
+                logger.debug("Скрипты для скрытия автоматизации добавлены")
                 page = await context.new_page()
-                print("Страница создана")
                 logger.info("Страница создана")
                 
                 # Перехватываем и модифицируем запросы, чтобы они выглядели как из реального браузера
@@ -934,7 +905,7 @@ class WebAdapter:
                     request = route.request
                     # Модифицируем только запросы к /api/auth/login
                     if '/api/auth/login' in request.url:
-                        print(f"Перехвачен запрос к /api/auth/login, модифицируем заголовки...")
+                        logger.debug("Перехвачен запрос к /api/auth/login, модифицируем заголовки...")
                         headers = request.headers.copy()
                         # Убеждаемся, что все заголовки точно как в реальном браузере
                         headers['accept'] = 'application/json, text/plain, */*'
@@ -953,7 +924,7 @@ class WebAdapter:
                         await route.continue_()
                 
                 await page.route('**/*', handle_route)
-                print("Route interception настроен")
+                logger.debug("Route interception настроен")
                 
                 try:
                     # Перехватываем ответ от API при авторизации
@@ -969,46 +940,40 @@ class WebAdapter:
                         
                         # Логируем только важные ответы (не все статические ресурсы)
                         if '/api/' in url or 'captcha' in url.lower():
-                            print(f"Получен ответ: {status} от {url}")
-                            logger.info(f"Получен ответ: {status} от {url}")
+                            logger.debug(f"Получен ответ: {status} от {url}", extra={"url": url, "status": status})
                         
                         if '/api/auth/login' in url:
-                            print(f"!!! Это ответ от /api/auth/login: статус {status} !!!")
-                            logger.info(f"Получен ответ от /api/auth/login: статус {status}")
+                            logger.info(f"Получен ответ от /api/auth/login: статус {status}", extra={"url": url, "status": status})
                             if status == 200:
                                 try:
                                     data = await response.json()
                                     token_from_response = data.get('accessToken') or data.get('token')
-                                    print(f"!!! ТОКЕН ПОЛУЧЕН ИЗ ОТВЕТА: {token_from_response[:50] if token_from_response else 'None'}... !!!")
-                                    logger.info("Токен получен из ответа API через Playwright")
+                                    logger.info("Токен получен из ответа API через Playwright", extra={
+                                        "token_preview": token_from_response[:20] if token_from_response else None
+                                    })
                                     response_received.set()
                                 except Exception as e:
-                                    print(f"Ошибка при парсинге ответа: {str(e)}")
-                                    logger.warning(f"Ошибка при парсинге ответа: {str(e)}")
+                                    logger.warning(f"Ошибка при парсинге ответа: {str(e)}", exc_info=True)
                             elif status == 403:
                                 try:
                                     error_text = await response.text()
-                                    print(f"!!! API вернул 403 Forbidden: {error_text[:500]} !!!")
-                                    logger.error(f"API вернул 403 Forbidden: {error_text[:500]}")
+                                    logger.error(f"API вернул 403 Forbidden: {error_text[:500]}", extra={"error_preview": error_text[:500]})
                                     # Проверяем, не связана ли ошибка с капчей
                                     if 'captcha' in error_text.lower() or 'капча' in error_text.lower():
-                                        print(f"!!! ОШИБКА СВЯЗАНА С КАПЧЕЙ !!!")
                                         logger.error("Ошибка 403 связана с капчей")
                                 except:
                                     logger.warning(f"API вернул статус {status}")
                             else:
                                 try:
                                     error_text = await response.text()
-                                    print(f"API вернул статус {status}: {error_text[:200]}")
-                                    logger.warning(f"API вернул статус {status}: {error_text[:200]}")
+                                    logger.warning(f"API вернул статус {status}: {error_text[:200]}", extra={"status": status, "error_preview": error_text[:200]})
                                 except:
                                     logger.warning(f"API вернул статус {status}")
                     
                     page.on("response", handle_response)
                     
                     # Открываем страницу логина
-                    print(f"Открываем страницу логина: {base_url}/login")
-                    logger.info("Открываем страницу логина через Playwright")
+                    logger.info("Открываем страницу логина через Playwright", extra={"login_url": f"{base_url}/login"})
                     await page.goto(f"{base_url}/login", wait_until="domcontentloaded", timeout=30000)
                     
                     # Устанавливаем cookie rememberMe после загрузки страницы
@@ -1019,36 +984,36 @@ class WebAdapter:
                             "domain": "176.222.217.51",
                             "path": "/",
                         }])
-                        print("Cookie rememberMe=false установлен")
+                        logger.debug("Cookie rememberMe=false установлен")
                     except Exception as cookie_error:
-                        print(f"Не удалось установить cookie rememberMe: {str(cookie_error)}")
+                        logger.debug(f"Не удалось установить cookie rememberMe: {str(cookie_error)}")
                         # Пробуем установить через JavaScript
                         try:
                             await page.evaluate('() => { document.cookie = "rememberMe=false; path=/"; }')
-                            print("Cookie rememberMe=false установлен через JavaScript")
+                            logger.debug("Cookie rememberMe=false установлен через JavaScript")
                         except:
                             pass
                     
-                    print(f"Страница загружена, ждем выполнения JavaScript...")
+                    logger.debug("Страница загружена, ждем выполнения JavaScript...")
                     # Ждем, пока страница загрузится и выполнится JavaScript
                     # Не ждем networkidle, так как на странице могут быть постоянные запросы
                     try:
                         await page.wait_for_load_state("networkidle", timeout=5000)
-                        print(f"Networkidle достигнут")
+                        logger.debug("Networkidle достигнут")
                     except:
-                        print(f"Networkidle не достигнут за 5 сек, продолжаем...")
+                        logger.debug("Networkidle не достигнут за 5 сек, продолжаем...")
                         pass
                     
                     # Ждем, пока появятся поля для ввода
                     try:
                         await page.wait_for_selector('input[type="text"], input[name="username"]', timeout=10000)
-                        print(f"Поля для ввода найдены")
+                        logger.debug("Поля для ввода найдены")
                     except:
-                        print(f"Поля для ввода не найдены, продолжаем...")
+                        logger.debug("Поля для ввода не найдены, продолжаем...")
                         pass
                     
                     await asyncio.sleep(3)  # Дополнительная задержка для выполнения JS
-                    print(f"Страница готова, проверяем наличие капчи...")
+                    logger.debug("Страница готова, проверяем наличие капчи...")
                     
                     # Проверяем наличие капчи на странице
                     captcha_found = False
@@ -1065,8 +1030,7 @@ class WebAdapter:
                             count = await page.locator(selector).count()
                             if count > 0:
                                 captcha_found = True
-                                print(f"!!! ОБНАРУЖЕНА КАПЧА: {selector} !!!")
-                                logger.warning(f"Обнаружена капча на странице: {selector}")
+                                logger.warning(f"Обнаружена капча на странице: {selector}", extra={"selector": selector})
                                 break
                         
                         # Также проверяем через JavaScript
@@ -1085,26 +1049,23 @@ class WebAdapter:
                             }''')
                             if has_captcha:
                                 captcha_found = True
-                                print(f"!!! ОБНАРУЖЕНА КАПЧА (через JS проверку) !!!")
                                 logger.warning("Обнаружена капча на странице (через JS проверку)")
                     except Exception as captcha_check_error:
-                        print(f"Ошибка при проверке капчи: {str(captcha_check_error)}")
+                        logger.debug(f"Ошибка при проверке капчи: {str(captcha_check_error)}")
                     
                     if captcha_found:
-                        print(f"!!! ВНИМАНИЕ: На странице обнаружена капча! Автоматическая авторизация невозможна. !!!")
                         logger.error("На странице обнаружена капча. Автоматическая авторизация невозможна.")
                         await browser.close()
                         return None
                     
-                    print(f"Капча не обнаружена, пробуем прямой вызов API...")
+                    logger.debug("Капча не обнаружена, пробуем прямой вызов API...")
                     
                     # Пробуем прямой вызов API через JavaScript в браузере
-                    print(f"Пробуем прямой вызов API через JavaScript в браузере")
                     logger.info("Пробуем прямой вызов API через JavaScript в браузере")
                     try:
                         # Используем полный URL для fetch
                         full_login_url = f"{base_url}/api/auth/login"
-                        print(f"Вызываем fetch для: {full_login_url}")
+                        logger.debug(f"Вызываем fetch для: {full_login_url}", extra={"login_url": full_login_url})
                         # Используем правильный синтаксис для page.evaluate с async функцией
                         # Передаем аргументы как отдельные параметры
                         js_code = f'''
@@ -1162,31 +1123,29 @@ class WebAdapter:
                         '''
                         result = await page.evaluate(js_code)
                         
-                        print(f"Результат прямого вызова API: {result}")
+                        logger.debug(f"Результат прямого вызова API: {result}", extra={"result": result})
                         if result and result.get('success') and result.get('token'):
                             token = result['token']
-                            print(f"!!! ТОКЕН ПОЛУЧЕН ЧЕРЕЗ ПРЯМОЙ ВЫЗОВ API !!!")
-                            logger.info("Токен получен через прямой вызов API из браузера")
+                            logger.info("Токен получен через прямой вызов API из браузера", extra={"token_preview": token[:20]})
                             await browser.close()
                             return token
                         else:
                             error_info = result.get('error', 'Unknown error') if result else 'No result'
                             status = result.get('status', 'Unknown') if result else 'Unknown'
-                            print(f"Прямой вызов API не удался: status={status}, error={error_info}")
-                            logger.warning(f"Прямой вызов API вернул ошибку: status={status}, error={error_info}")
+                            logger.warning(f"Прямой вызов API вернул ошибку: status={status}, error={error_info}", extra={
+                                "status": status,
+                                "error": error_info
+                            })
                     except Exception as api_error:
-                        print(f"ОШИБКА при прямом вызове API: {str(api_error)}")
                         logger.warning(f"Прямой вызов API не сработал: {str(api_error)}", exc_info=True)
                     
                     # Если прямой вызов не сработал, пробуем через форму
-                    print(f"Пробуем авторизацию через форму на странице...")
                     logger.info("Пробуем авторизацию через форму на странице")
                     
                     # Ищем и заполняем поля для ввода
                     # Пробуем найти все input поля
                     inputs = await page.query_selector_all('input')
-                    print(f"Найдено input полей на странице: {len(inputs)}")
-                    logger.info(f"Найдено input полей на странице: {len(inputs)}")
+                    logger.info(f"Найдено input полей на странице: {len(inputs)}", extra={"inputs_count": len(inputs)})
                     
                     # Выводим информацию о всех полях для отладки
                     for i, input_elem in enumerate(inputs):
@@ -1194,7 +1153,13 @@ class WebAdapter:
                         input_name = await input_elem.get_attribute('name')
                         input_id = await input_elem.get_attribute('id')
                         placeholder = await input_elem.get_attribute('placeholder')
-                        print(f"  Input {i}: type={input_type}, name={input_name}, id={input_id}, placeholder={placeholder}")
+                        logger.debug(f"Input {i}: type={input_type}, name={input_name}, id={input_id}, placeholder={placeholder}", extra={
+                            "index": i,
+                            "type": input_type,
+                            "name": input_name,
+                            "id": input_id,
+                            "placeholder": placeholder
+                        })
                     
                     username_filled = False
                     password_filled = False
@@ -1213,30 +1178,26 @@ class WebAdapter:
                                 await asyncio.sleep(0.1)
                                 await input_elem.type(self.username, delay=50)  # Задержка между символами
                                 username_filled = True
-                                print(f"Заполнено поле username через name: {input_name}")
-                                logger.info(f"Заполнено поле username через name: {input_name}")
+                                logger.info(f"Заполнено поле username через name: {input_name}", extra={"field_name": input_name})
                             elif input_id and ('user' in input_id.lower() or 'login' in input_id.lower()):
                                 await input_elem.click()
                                 await asyncio.sleep(0.1)
                                 await input_elem.type(self.username, delay=50)
                                 username_filled = True
-                                print(f"Заполнено поле username через id: {input_id}")
-                                logger.info(f"Заполнено поле username через id: {input_id}")
+                                logger.info(f"Заполнено поле username через id: {input_id}", extra={"field_id": input_id})
                             elif placeholder and ('логин' in placeholder.lower() or 'login' in placeholder.lower() or 'user' in placeholder.lower()):
                                 await input_elem.click()
                                 await asyncio.sleep(0.1)
                                 await input_elem.type(self.username, delay=50)
                                 username_filled = True
-                                print(f"Заполнено поле username через placeholder: {placeholder}")
-                                logger.info(f"Заполнено поле username через placeholder: {placeholder}")
+                                logger.info(f"Заполнено поле username через placeholder: {placeholder}", extra={"placeholder": placeholder})
                             elif not username_filled and input_type != 'password':
                                 # Берем первое текстовое поле
                                 await input_elem.click()
                                 await asyncio.sleep(0.1)
                                 await input_elem.type(self.username, delay=50)
                                 username_filled = True
-                                print(f"Заполнено первое текстовое поле как username (type={input_type})")
-                                logger.info("Заполнено первое текстовое поле как username")
+                                logger.info("Заполнено первое текстовое поле как username", extra={"input_type": input_type})
                         
                         # Заполняем поле password с реальными событиями
                         if not password_filled and input_type == 'password':
@@ -1244,10 +1205,12 @@ class WebAdapter:
                             await asyncio.sleep(0.1)
                             await input_elem.type(self.password, delay=50)
                             password_filled = True
-                            print(f"Заполнено поле password")
                             logger.info("Заполнено поле password")
                     
-                    print(f"Результат заполнения: username={username_filled}, password={password_filled}")
+                    logger.debug(f"Результат заполнения: username={username_filled}, password={password_filled}", extra={
+                        "username_filled": username_filled,
+                        "password_filled": password_filled
+                    })
                     if not username_filled or not password_filled:
                         logger.warning(f"Не удалось найти поля: username={username_filled}, password={password_filled}")
                     
@@ -1265,128 +1228,115 @@ class WebAdapter:
                         'button',
                     ]
                     
-                    print(f"Ищем кнопку для отправки формы...")
+                    logger.debug("Ищем кнопку для отправки формы...")
                     for selector in button_selectors:
                         try:
                             count = await page.locator(selector).count()
-                            print(f"  Селектор {selector}: найдено {count} элементов")
+                            logger.debug(f"Селектор {selector}: найдено {count} элементов", extra={"selector": selector, "count": count})
                             if count > 0:
                                 # Пробуем несколько способов клика
                                 try:
                                     # Способ 1: Обычный клик
                                     await page.locator(selector).first.click(timeout=5000)
                                     button_clicked = True
-                                    print(f"Нажата кнопка через click: {selector}")
-                                    logger.info(f"Нажата кнопка: {selector}")
+                                    logger.info(f"Нажата кнопка: {selector}", extra={"selector": selector})
                                     break
                                 except:
                                     try:
                                         # Способ 2: JavaScript click
                                         await page.locator(selector).first.evaluate('el => el.click()')
                                         button_clicked = True
-                                        print(f"Нажата кнопка через JS click: {selector}")
-                                        logger.info(f"Нажата кнопка через JS: {selector}")
+                                        logger.info(f"Нажата кнопка через JS: {selector}", extra={"selector": selector})
                                         break
                                     except:
                                         continue
                         except Exception as click_error:
-                            print(f"Ошибка при поиске кнопки {selector}: {str(click_error)}")
-                            logger.debug(f"Не удалось нажать кнопку {selector}: {str(click_error)}")
+                            logger.debug(f"Не удалось нажать кнопку {selector}: {str(click_error)}", extra={"selector": selector})
                             continue
                     
                     if not button_clicked:
                         # Пробуем нажать Enter в поле пароля
                         try:
-                            print(f"Пробуем нажать Enter в поле пароля...")
+                            logger.debug("Пробуем нажать Enter в поле пароля...")
                             await page.press('input[type="password"]', 'Enter')
                             button_clicked = True
-                            print(f"Нажат Enter в поле пароля")
                             logger.info("Нажат Enter в поле пароля")
                         except Exception as enter_error:
-                            print(f"Не удалось нажать Enter: {str(enter_error)}")
+                            logger.debug(f"Не удалось нажать Enter: {str(enter_error)}")
                             pass
                     
-                    print(f"Кнопка нажата: {button_clicked}, ждем ответа от API...")
+                    logger.debug(f"Кнопка нажата: {button_clicked}, ждем ответа от API...", extra={"button_clicked": button_clicked})
                     
                     # Если кнопка не нажата, пробуем отправить форму через JavaScript
                     if not button_clicked:
                         try:
-                            print(f"Пробуем отправить форму через JavaScript submit...")
+                            logger.debug("Пробуем отправить форму через JavaScript submit...")
                             await page.evaluate('() => { const form = document.querySelector("form"); if (form) form.submit(); }')
-                            print(f"Форма отправлена через JS submit")
+                            logger.debug("Форма отправлена через JS submit")
                         except Exception as submit_error:
-                            print(f"Не удалось отправить форму через JS: {str(submit_error)}")
+                            logger.debug(f"Не удалось отправить форму через JS: {str(submit_error)}")
                     
                     # Ждем ответа от API (максимум 15 секунд)
                     try:
-                        print(f"Ожидание ответа от API (таймаут 15 сек)...")
+                        logger.debug("Ожидание ответа от API (таймаут 15 сек)...")
                         await asyncio.wait_for(response_received.wait(), timeout=15.0)
-                        print(f"Получен ответ от API!")
+                        logger.info("Получен ответ от API!")
                     except asyncio.TimeoutError:
-                        print(f"Таймаут ожидания ответа от API")
-                        print(f"Всего получено ответов: {len(all_responses)}")
-                        for resp in all_responses:
-                            print(f"  - {resp['status']} от {resp['url']}")
-                        logger.warning("Таймаут ожидания ответа от API")
+                        logger.warning("Таймаут ожидания ответа от API", extra={
+                            "responses_count": len(all_responses),
+                            "responses": [{"status": resp['status'], "url": resp['url']} for resp in all_responses]
+                        })
                     
                     # Даем еще немного времени на обработку
                     await asyncio.sleep(3)
                     
                     # Пробуем получить токен из различных источников
                     token = token_from_response
-                    print(f"Токен из перехваченного ответа: {'есть' if token else 'нет'}")
+                    logger.debug(f"Токен из перехваченного ответа: {'есть' if token else 'нет'}", extra={"has_token": bool(token)})
                     
                     # 1. Из localStorage
                     if not token:
                         try:
-                            print(f"Проверяем localStorage...")
+                            logger.debug("Проверяем localStorage...")
                             token = await page.evaluate('() => localStorage.getItem("accessToken") || localStorage.getItem("token")')
                             if token:
-                                print(f"!!! ТОКЕН ПОЛУЧЕН ИЗ LOCALSTORAGE !!!")
-                                logger.info("Токен получен из localStorage")
+                                logger.info("Токен получен из localStorage", extra={"token_preview": token[:20]})
                         except Exception as e:
-                            print(f"Ошибка при чтении localStorage: {str(e)}")
+                            logger.debug(f"Ошибка при чтении localStorage: {str(e)}")
                             pass
                     
                     # 2. Из cookies
                     if not token:
                         try:
-                            print(f"Проверяем cookies...")
+                            logger.debug("Проверяем cookies...")
                             cookies = await context.cookies()
-                            print(f"Найдено cookies: {len(cookies)}")
+                            logger.debug(f"Найдено cookies: {len(cookies)}", extra={"cookies_count": len(cookies)})
                             for cookie in cookies:
-                                print(f"Cookie: {cookie['name']} = {cookie['value'][:50]}...")
                                 if 'token' in cookie['name'].lower() or 'access' in cookie['name'].lower():
                                     token = cookie['value']
-                                    print(f"!!! ТОКЕН ПОЛУЧЕН ИЗ COOKIE: {cookie['name']} !!!")
-                                    logger.info(f"Токен получен из cookie: {cookie['name']}")
+                                    logger.info(f"Токен получен из cookie: {cookie['name']}", extra={
+                                        "cookie_name": cookie['name'],
+                                        "token_preview": token[:20]
+                                    })
                                     break
                         except Exception as e:
-                            print(f"Ошибка при чтении cookies: {str(e)}")
+                            logger.debug(f"Ошибка при чтении cookies: {str(e)}")
                             pass
                     
                     await browser.close()
                     
                     if token:
-                        print(f"!!! АВТОРИЗАЦИЯ ЧЕРЕЗ PLAYWRIGHT УСПЕШНА !!!")
-                        logger.info("Авторизация через Playwright успешна")
+                        logger.info("Авторизация через Playwright успешна", extra={"token_preview": token[:20]})
                         return token
                     else:
-                        print(f"!!! НЕ УДАЛОСЬ ПОЛУЧИТЬ ТОКЕН ЧЕРЕЗ PLAYWRIGHT !!!")
                         logger.warning("Не удалось получить токен через Playwright")
                         return None
                         
                 except Exception as e:
-                    print(f"\n!!! ОШИБКА В БЛОКЕ TRY PLAYWRIGHT: {str(e)} !!!")
-                    import traceback
-                    print(traceback.format_exc())
                     await browser.close()
                     logger.error(f"Ошибка при авторизации через Playwright: {str(e)}", exc_info=True)
                     return None
         except Exception as e:
-            print(f"\n!!! ОШИБКА ПРИ ЗАПУСКЕ PLAYWRIGHT: {str(e)} !!!")
-            import traceback
-            print(traceback.format_exc())
             logger.error(f"Ошибка при запуске Playwright: {str(e)}", exc_info=True)
             return None
     
@@ -1395,14 +1345,6 @@ class WebAdapter:
         # Нормализуем базовый URL (убираем лишние слэши и пробелы)
         base_url = self.base_url.strip().rstrip('/')
         login_url = f"{base_url}/api/auth/login"
-        
-        print(f"\n{'='*80}")
-        print(f"=== WebAdapter._authenticate НАЧАЛО ===")
-        print(f"base_url: {base_url}")
-        print(f"login_url: {login_url}")
-        print(f"username: {self.username}")
-        print(f"use_xml_api: {self.use_xml_api}")
-        print(f"{'='*80}\n")
         
         logger.info(f"=== НАЧАЛО АВТОРИЗАЦИИ В ВЕБ-СЕРВИСЕ ===", extra={
             "base_url": base_url,
@@ -2146,11 +2088,7 @@ class WebAdapter:
             logger.info("XML запрос для получения транзакций создан", extra={
                 "xml_length": len(xml_request)
             })
-            print(f"\n{'='*80}")
-            print(f"XML ЗАПРОС ДЛЯ ПОЛУЧЕНИЯ ТРАНЗАКЦИЙ (getsaleext):")
-            print(f"{'='*80}")
-            print(xml_request)
-            print(f"{'='*80}\n")
+            logger.debug("XML запрос для получения транзакций (getsaleext)", extra={"xml_preview": xml_request[:500]})
             
             # Заголовки для XML API
             # Отправляем XML без BOM в кодировке UTF-8
@@ -3669,16 +3607,12 @@ class ApiProviderService:
                     "certificate_preview": xml_api_certificate[:30] + "..." if xml_api_certificate and len(xml_api_certificate) > 30 else xml_api_certificate,
                     "pos_code": xml_api_pos_code
                 })
-                print(f"\n{'='*80}")
-                print(f"XML API ПАРАМЕТРЫ ОБНАРУЖЕНЫ:")
-                print(f"  Сертификат (certificate): {xml_api_certificate[:50]}..." if len(xml_api_certificate) > 50 else f"  Сертификат (certificate): {xml_api_certificate}")
-                if xml_api_pos_code:
-                    print(f"  POS Code: {xml_api_pos_code}")
-                else:
-                    print(f"  POS Code: не указан (запрос по всем POS)")
-                print(f"  → Используется XML API с сертификатом (авторизация не требуется)")
-                print(f"  → Логин, пароль, ключ, подпись и salt не используются")
-                print(f"{'='*80}\n")
+                logger.info("XML API параметры обнаружены", extra={
+                    "has_certificate": bool(xml_api_certificate),
+                    "certificate_preview": xml_api_certificate[:50] + "..." if len(xml_api_certificate) > 50 else xml_api_certificate,
+                    "pos_code": xml_api_pos_code,
+                    "note": "Используется XML API с сертификатом (авторизация не требуется)"
+                })
             else:
                 logger.info("Сертификат XML API не указан. Для работы с XML API требуется сертификат.")
             
@@ -3815,22 +3749,21 @@ class ApiProviderService:
         Returns:
             Результат тестирования
         """
-        print(f"\n[ApiProviderService.test_connection] Начало теста для типа: {template.connection_type}")
         logger.info("ApiProviderService.test_connection вызван", extra={
             "connection_type": template.connection_type,
             "template_id": getattr(template, 'id', None)
         })
         
         try:
-            print(f"[ApiProviderService.test_connection] Создание адаптера...")
+            logger.debug("Создание адаптера...")
             adapter = self.create_adapter(template)
-            print(f"[ApiProviderService.test_connection] Адаптер создан: {type(adapter).__name__}")
+            logger.debug(f"Адаптер создан: {type(adapter).__name__}", extra={"adapter_type": type(adapter).__name__})
             
-            print(f"[ApiProviderService.test_connection] Вход в async with adapter (начнется авторизация)...")
+            logger.debug("Вход в async with adapter (начнется авторизация)...")
             async with adapter:
-                print(f"[ApiProviderService.test_connection] Внутри async with, запускаем healthcheck...")
+                logger.debug("Внутри async with, запускаем healthcheck...")
                 result = await adapter.healthcheck()
-                print(f"[ApiProviderService.test_connection] healthcheck вернул: {result}")
+                logger.debug(f"healthcheck вернул: {result}", extra={"result": result})
                 
                 return {
                     "success": result.get("status") == "ok",
@@ -3843,7 +3776,6 @@ class ApiProviderService:
         except ValueError as e:
             # Специальная обработка для ошибок валидации (например, капча)
             error_msg = str(e)
-            print(f"\n[ApiProviderService.test_connection] ОШИБКА ВАЛИДАЦИИ: {error_msg}")
             logger.error("Ошибка валидации при тестировании подключения", extra={
                 "template_id": getattr(template, 'id', None),
                 "error": error_msg,
@@ -3925,7 +3857,6 @@ class ApiProviderService:
             else:
                 error_msg = f"Ошибка HTTP {status_code}: {error_text}"
             
-            print(f"\n[ApiProviderService.test_connection] HTTP ОШИБКА {status_code}: {error_msg}")
             logger.error(f"Ошибка HTTP при тестировании подключения: {status_code}", extra={
                 "template_id": getattr(template, 'id', None),
                 "status_code": status_code,
@@ -3938,10 +3869,6 @@ class ApiProviderService:
                 "details": {"error": error_text, "status_code": status_code, "error_type": "http"}
                 }
         except Exception as e:
-            print(f"\n[ApiProviderService.test_connection] ИСКЛЮЧЕНИЕ: {type(e).__name__}: {str(e)}")
-            import traceback
-            print(traceback.format_exc())
-            
             logger.error("Ошибка при тестировании подключения к API", extra={
                 "template_id": getattr(template, 'id', None),
                 "error": str(e),
