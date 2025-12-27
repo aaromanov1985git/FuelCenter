@@ -19,26 +19,41 @@ scrape_configs:
       - host: unix:///var/run/docker.sock
         refresh_interval: 5s
     relabel_configs:
-      # Используем имя контейнера как label
+      # Обязательная метка job (всегда должна быть)
+      - target_label: 'job'
+        replacement: 'docker'
+      
+      # Используем имя контейнера как label (убираем префикс /, если есть)
       - source_labels: ['__meta_docker_container_name']
-        regex: '/(.*)'
+        regex: '/(.+)'
+        target_label: 'container'
+        replacement: '${1}'
+      
+      # Если имя контейнера не начинается с /, используем полное имя (fallback)
+      # Это правило сработает только если первое правило не сработало
+      - source_labels: ['__meta_docker_container_name']
+        regex: '^[^/].+'
         target_label: 'container'
       
-      # Добавляем имя сервиса из docker-compose
+      # Добавляем имя сервиса из docker-compose (если есть)
       - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        regex: '(.+)'
         target_label: 'service'
+        replacement: '${1}'
       
-      # Добавляем имя проекта
+      # Добавляем имя проекта (если есть)
       - source_labels: ['__meta_docker_container_label_com_docker_compose_project']
+        regex: '(.+)'
         target_label: 'project'
+        replacement: '${1}'
       
-      # Фильтруем только контейнеры GSM
-      - source_labels: ['__meta_docker_container_name']
-        regex: 'gsm_.*'
+      # Фильтруем только контейнеры GSM (по имени контейнера или метке проекта)
+      - source_labels: ['__meta_docker_container_name', '__meta_docker_container_label_com_docker_compose_project']
+        regex: '(gsm_.*|.*gsm.*|gsm|GSM)'
         action: keep
 
     pipeline_stages:
-      # Парсим JSON логи от FastAPI
+      # Парсим JSON логи от FastAPI (если это JSON)
       - json:
           expressions:
             level: level
@@ -47,12 +62,13 @@ scrape_configs:
             module: module
             function: function
       
-      # Устанавливаем уровень лога как label
+      # Устанавливаем уровень лога как label (только если он есть после парсинга)
+      # Пустые метки не добавляются автоматически
       - labels:
           level:
           module:
       
-      # Устанавливаем timestamp из лога
+      # Устанавливаем timestamp из лога (если есть)
       - timestamp:
           source: timestamp
           format: RFC3339

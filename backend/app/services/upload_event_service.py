@@ -59,15 +59,30 @@ class UploadEventService:
             self.db.commit()
             self.db.refresh(event)
             
-            logger.debug("Событие загрузки успешно записано в журнал", extra={
+            logger.info("Событие загрузки успешно записано в журнал", extra={
                 "event_id": event.id,
                 "source_type": source_type,
                 "status": status,
-                "template_id": template_id
+                "template_id": template_id,
+                "user_id": user_id,
+                "username": username,
+                "file_name": file_name
             })
             
             # Создаем уведомление для пользователя, если указан user_id
+            logger.info(f"Проверка user_id для создания уведомления: user_id={user_id}, event_id={event.id}", extra={
+                "event_id": event.id,
+                "user_id": user_id,
+                "user_id_is_none": user_id is None,
+                "status": status
+            })
+            
             if user_id:
+                logger.info(f"user_id указан ({user_id}), создаем уведомление для события {event.id}", extra={
+                    "event_id": event.id,
+                    "user_id": user_id,
+                    "status": status
+                })
                 try:
                     from app.services.notification_service import NotificationService
                     notification_service = NotificationService(self.db)
@@ -94,8 +109,16 @@ class UploadEventService:
                     if message:
                         notification_message += f"\n{message}"
                     
+                    logger.debug(f"Вызов send_notification для user_id={user_id}, force=True", extra={
+                        "event_id": event.id,
+                        "user_id": user_id,
+                        "title": title,
+                        "category": category,
+                        "notification_type": notification_type
+                    })
+                    
                     # Отправляем уведомление (только in-app, с force=True для обязательной доставки)
-                    notification_service.send_notification(
+                    result = notification_service.send_notification(
                         user_id=user_id,
                         title=title,
                         message=notification_message,
@@ -106,14 +129,32 @@ class UploadEventService:
                         entity_id=event.id,
                         force=True  # Обязательное уведомление, игнорирует настройки пользователя
                     )
-                    logger.debug(f"Уведомление создано для события загрузки {event.id}", extra={
+                    
+                    logger.info(f"Результат создания уведомления для события {event.id}", extra={
                         "event_id": event.id,
                         "user_id": user_id,
-                        "category": category
+                        "category": category,
+                        "result": result,
+                        "delivery_status": result.get("delivery_status", {}),
+                        "channels_used": result.get("channels_used", [])
                     })
                 except Exception as notif_error:
                     # Не прерываем основной процесс, если уведомление не удалось создать
-                    logger.warning(f"Не удалось создать уведомление для события загрузки {event.id}: {notif_error}", exc_info=True)
+                    import traceback
+                    error_traceback = traceback.format_exc()
+                    logger.error(f"Не удалось создать уведомление для события загрузки {event.id}: {notif_error}", extra={
+                        "event_id": event.id,
+                        "user_id": user_id,
+                        "error": str(notif_error),
+                        "error_type": type(notif_error).__name__,
+                        "traceback": error_traceback
+                    }, exc_info=True)
+            else:
+                logger.warning(f"user_id не указан для события {event.id}, уведомление не будет создано", extra={
+                    "event_id": event.id,
+                    "source_type": source_type,
+                    "status": status
+                })
             
             return event
         except Exception as exc:

@@ -30,6 +30,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - default
+      - gsm_network
 
   backend:
     build:
@@ -69,6 +72,13 @@ services:
       - ./backend/scripts:/app/scripts
       - gsm_backups:/app/backups
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - default
+      - gsm_network
+
+networks:
+  gsm_network:
+    name: gsm_network
 
 volumes:
   postgres_data:

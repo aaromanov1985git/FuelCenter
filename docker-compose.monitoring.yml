@@ -97,14 +97,13 @@ services:
     image: oliver006/redis_exporter:v1.55.0
     container_name: gsm_redis_exporter
     environment:
-      - REDIS_ADDR=redis:6379
+      # Используем имя контейнера Redis (gsm_redis из docker-compose.yml)
+      - REDIS_ADDR=gsm_redis:6379
       - REDIS_PASSWORD=
     ports:
       - "9121:9121"
     networks:
       - gsm_network
-    depends_on:
-      - redis
     restart: unless-stopped
 
 networks:

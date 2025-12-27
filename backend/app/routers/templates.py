@@ -1,15 +1,17 @@
 """
 Роутер для работы с шаблонами провайдеров
 """
-from fastapi import APIRouter, UploadFile, File, Depends, Query, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, Query, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Optional, Dict, Any
 from app.database import get_db
 from app.logger import logger
+from app.config import get_settings
 from app.models import Provider, ProviderTemplate, User
 from app.auth import require_auth_if_enabled
 from app.services.logging_service import logging_service
+from app.middleware.rate_limit import limiter
 from app.schemas import (
     ProviderTemplateResponse, ProviderTemplateCreate, ProviderTemplateUpdate,
     ProviderTemplateListResponse
@@ -25,10 +27,11 @@ from app.utils import (
 )
 from app.services.api_provider_service import ApiProviderService
 from app.services.auto_load_service import AutoLoadService
-from app.services.cache_service import CacheService
+from app.services.cache_service import CacheService, invalidate_templates_cache
 import hashlib
 import json
 
+settings = get_settings()
 router = APIRouter(prefix="/api/v1/templates", tags=["templates"])
 cache = CacheService.get_instance()
 

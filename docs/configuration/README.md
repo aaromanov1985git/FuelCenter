@@ -9,14 +9,11 @@
 
 ## HTTPS
 
-- [Настройка HTTPS](./https-setup.md) - общая настройка HTTPS
-- [HTTPS на Windows](./https-setup-windows.md) - настройка HTTPS на Windows
+- [Настройка HTTPS](./https.md) - настройка HTTPS для Linux и Windows
 
 ## API Keys
 
-- [Настройка ключей PPR API](./ppr-api-key-setup.md) - базовая настройка
-- [Детальная настройка ключей](./ppr-api-keys-setup.md) - полная инструкция
-- [Быстрая настройка ключей](./ppr-api-keys-quick-setup.md) - быстрый старт
+- [Настройка API ключей PPR API](./ppr-api-keys.md) - полная инструкция по настройке API ключей
 
 ## Провайдеры
 

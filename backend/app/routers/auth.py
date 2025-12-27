@@ -207,6 +207,29 @@ async def login(
     except Exception as e:
         logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
     
+    # Создаем уведомление о входе
+    try:
+        from app.services.notification_service import NotificationService
+        notification_service = NotificationService(db)
+        
+        # Определяем IP адрес для сообщения
+        ip_info = f"IP: {client_ip}" if client_ip else ""
+        location_info = f"С {client_ip}" if client_ip else "С нового устройства"
+        
+        notification_service.send_notification(
+            user_id=user.id,
+            title="Успешный вход в систему",
+            message=f"Вы успешно вошли в систему.\n{location_info}",
+            category="system",
+            notification_type="success",
+            channels=["in_app"],
+            force=True  # Обязательное уведомление о входе
+        )
+        logger.debug(f"Уведомление о входе создано для пользователя {user.id}")
+    except Exception as e:
+        # Не прерываем процесс входа, если уведомление не удалось создать
+        logger.warning(f"Не удалось создать уведомление о входе для пользователя {user.id}: {e}", exc_info=True)
+    
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -310,6 +333,29 @@ async def login_json(
         )
     except Exception as e:
         logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    # Создаем уведомление о входе
+    try:
+        from app.services.notification_service import NotificationService
+        notification_service = NotificationService(db)
+        
+        # Определяем IP адрес для сообщения
+        ip_info = f"IP: {client_ip}" if client_ip else ""
+        location_info = f"С {client_ip}" if client_ip else "С нового устройства"
+        
+        notification_service.send_notification(
+            user_id=user.id,
+            title="Успешный вход в систему",
+            message=f"Вы успешно вошли в систему.\n{location_info}",
+            category="system",
+            notification_type="success",
+            channels=["in_app"],
+            force=True  # Обязательное уведомление о входе
+        )
+        logger.debug(f"Уведомление о входе создано для пользователя {user.id}")
+    except Exception as e:
+        # Не прерываем процесс входа, если уведомление не удалось создать
+        logger.warning(f"Не удалось создать уведомление о входе для пользователя {user.id}: {e}", exc_info=True)
     
     return {
         "access_token": access_token,
@@ -419,6 +465,29 @@ async def login_secure(
         )
     except Exception as e:
         logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
+    
+    # Создаем уведомление о входе
+    try:
+        from app.services.notification_service import NotificationService
+        notification_service = NotificationService(db)
+        
+        # Определяем IP адрес для сообщения
+        ip_info = f"IP: {client_ip}" if client_ip else ""
+        location_info = f"С {client_ip}" if client_ip else "С нового устройства"
+        
+        notification_service.send_notification(
+            user_id=user.id,
+            title="Успешный вход в систему",
+            message=f"Вы успешно вошли в систему.\n{location_info}",
+            category="system",
+            notification_type="success",
+            channels=["in_app"],
+            force=True  # Обязательное уведомление о входе
+        )
+        logger.debug(f"Уведомление о входе создано для пользователя {user.id}")
+    except Exception as e:
+        # Не прерываем процесс входа, если уведомление не удалось создать
+        logger.warning(f"Не удалось создать уведомление о входе для пользователя {user.id}: {e}", exc_info=True)
     
     # Возвращаем токен и в cookie (для браузеров) и в body (для fallback/мобильных)
     return {

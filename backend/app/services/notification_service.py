@@ -325,13 +325,46 @@ class NotificationService:
         Returns:
             dict: Результат отправки с статусами по каналам
         """
+        logger.debug(f"send_notification вызван", extra={
+            "user_id": user_id,
+            "title": title,
+            "category": category,
+            "notification_type": notification_type,
+            "channels": channels,
+            "force": force
+        })
+        
         # Получаем пользователя
         user = self.db.query(User).filter(User.id == user_id).first()
         if not user:
-            return {"error": "User not found"}
+            logger.error(f"Пользователь с user_id={user_id} не найден в базе данных", extra={
+                "user_id": user_id
+            })
+            return {"error": "User not found", "user_id": user_id}
+        
+        logger.debug(f"Пользователь найден: id={user.id}, username={user.username}", extra={
+            "user_id": user.id,
+            "username": user.username
+        })
         
         # Получаем настройки пользователя
         user_settings = self.notification_repo.get_or_create_settings(user_id)
+        logger.debug(f"Настройки уведомлений для пользователя {user_id}", extra={
+            "user_id": user_id,
+            "settings_id": user_settings.id if user_settings else None,
+            "email_enabled": user_settings.email_enabled if user_settings else None,
+            "telegram_enabled": user_settings.telegram_enabled if user_settings else None,
+            "push_enabled": user_settings.push_enabled if user_settings else None,
+            "in_app_enabled": user_settings.in_app_enabled if user_settings else None
+        })
+        
+        logger.debug(f"Настройки пользователя {user_id}", extra={
+            "user_id": user_id,
+            "email_enabled": user_settings.email_enabled,
+            "telegram_enabled": user_settings.telegram_enabled,
+            "push_enabled": user_settings.push_enabled,
+            "in_app_enabled": user_settings.in_app_enabled
+        })
         
         # Определяем каналы для отправки
         if channels is None:
@@ -356,14 +389,30 @@ class NotificationService:
                     filtered_channels.append(channel)
                 elif channel == "in_app" and user_settings.in_app_enabled:
                     filtered_channels.append(channel)
+            original_channels_list = list(channels)  # Сохраняем оригинальный список
             channels = filtered_channels
-        # Если force=True и channels указаны, используем их напрямую без фильтрации
+            logger.debug(f"Каналы после фильтрации (force=False)", extra={
+                "user_id": user_id,
+                "original_channels": original_channels_list,
+                "filtered_channels": filtered_channels
+            })
+        else:
+            # Если force=True и channels указаны, используем их напрямую без фильтрации
+            logger.debug(f"Используются каналы напрямую (force=True): {channels}", extra={
+                "user_id": user_id,
+                "channels": channels
+            })
         
         # Результаты отправки по каналам
         delivery_status = {}
         
         # Отправка через каждый канал
         for channel_name in channels:
+            logger.debug(f"Обработка канала {channel_name} для user_id={user_id}", extra={
+                "user_id": user_id,
+                "channel": channel_name
+            })
+            
             channel_map = {
                 "email": self.email_channel,
                 "telegram": self.telegram_channel,
@@ -373,6 +422,10 @@ class NotificationService:
             
             channel = channel_map.get(channel_name)
             if not channel:
+                logger.warning(f"Неизвестный канал: {channel_name}", extra={
+                    "user_id": user_id,
+                    "channel": channel_name
+                })
                 delivery_status[channel_name] = "unknown_channel"
                 continue
             
@@ -386,32 +439,112 @@ class NotificationService:
                 "delivery_status": delivery_status
             }
             
-            result = channel.send(
-                user=user,
-                title=title,
-                message=message,
-                notification_type=notification_type,
-                **channel_kwargs
-            )
-            
-            delivery_status[channel_name] = result.get("status", "unknown")
-        
-        # Создаем in-app уведомление с полным статусом доставки
-        if "in_app" not in channels:
-            # Если in-app не был в списке, но он включен, все равно создаем запись
-            if user_settings.in_app_enabled:
-                self.in_app_channel.send(
+            try:
+                result = channel.send(
                     user=user,
                     title=title,
                     message=message,
                     notification_type=notification_type,
-                    db=self.db,
-                    notification_repo=self.notification_repo,
-                    category=category,
-                    entity_type=entity_type,
-                    entity_id=entity_id,
-                    delivery_status=delivery_status
+                    **channel_kwargs
                 )
+                
+                delivery_status[channel_name] = result.get("status", "unknown")
+                
+                logger.info(f"Результат отправки через канал {channel_name}", extra={
+                    "user_id": user_id,
+                    "channel": channel_name,
+                    "status": result.get("status", "unknown"),
+                    "notification_id": result.get("notification_id")
+                })
+            except Exception as e:
+                logger.error(f"Ошибка при отправке через канал {channel_name}", extra={
+                    "user_id": user_id,
+                    "channel": channel_name,
+                    "error": str(e),
+                    "error_type": type(e).__name__
+                }, exc_info=True)
+                delivery_status[channel_name] = "error"
+        
+        # Если force=True и in_app был запрошен, проверяем, что уведомление создано
+        # ВАЖНО: При force=True уведомление должно создаваться независимо от настроек
+        if force and "in_app" in channels:
+            in_app_status = delivery_status.get("in_app")
+            # Если in_app не был обработан или вернул ошибку, создаем принудительно
+            # Также проверяем, что статус действительно "sent" (успешно создано)
+            if in_app_status is None or in_app_status != "sent":
+                logger.warning(f"Канал in_app был запрошен с force=True, но статус '{in_app_status}'. Создаем принудительно", extra={
+                    "user_id": user_id,
+                    "channels": channels,
+                    "delivery_status": delivery_status,
+                    "in_app_status": in_app_status
+                })
+                try:
+                    result = self.in_app_channel.send(
+                        user=user,
+                        title=title,
+                        message=message,
+                        notification_type=notification_type,
+                        db=self.db,
+                        notification_repo=self.notification_repo,
+                        category=category,
+                        entity_type=entity_type,
+                        entity_id=entity_id,
+                        delivery_status=delivery_status
+                    )
+                    new_status = result.get("status", "unknown")
+                    delivery_status["in_app"] = new_status
+                    if new_status == "sent":
+                        logger.info(f"In-app уведомление успешно создано принудительно (force=True)", extra={
+                            "user_id": user_id,
+                            "status": new_status,
+                            "notification_id": result.get("notification_id")
+                        })
+                    else:
+                        logger.error(f"In-app уведомление не создано принудительно. Статус: {new_status}", extra={
+                            "user_id": user_id,
+                            "status": new_status,
+                            "error": result.get("error")
+                        })
+                except Exception as e:
+                    logger.error(f"Ошибка при принудительном создании in-app уведомления", extra={
+                        "user_id": user_id,
+                        "error": str(e),
+                        "error_type": type(e).__name__
+                    }, exc_info=True)
+                    delivery_status["in_app"] = "error"
+        
+        # Создаем in-app уведомление с полным статусом доставки (только если не было создано выше)
+        if "in_app" not in delivery_status and not force:
+            # Если in-app не был в списке, но он включен, все равно создаем запись
+            if user_settings.in_app_enabled:
+                logger.debug(f"Создание in-app уведомления (не было в списке каналов, но включено в настройках)", extra={
+                    "user_id": user_id
+                })
+                try:
+                    result = self.in_app_channel.send(
+                        user=user,
+                        title=title,
+                        message=message,
+                        notification_type=notification_type,
+                        db=self.db,
+                        notification_repo=self.notification_repo,
+                        category=category,
+                        entity_type=entity_type,
+                        entity_id=entity_id,
+                        delivery_status=delivery_status
+                    )
+                    delivery_status["in_app"] = result.get("status", "unknown")
+                except Exception as e:
+                    logger.error(f"Ошибка при создании in-app уведомления (fallback)", extra={
+                        "user_id": user_id,
+                        "error": str(e)
+                    }, exc_info=True)
+        
+        logger.info(f"Завершение send_notification для user_id={user_id}", extra={
+            "user_id": user_id,
+            "delivery_status": delivery_status,
+            "channels_used": channels
+        })
         
         return {
             "success": True,

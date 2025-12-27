@@ -476,13 +476,6 @@ class WebAdapter:
             "has_xml_api_signature": bool(self.xml_api_signature),
             "has_xml_api_salt": bool(self.xml_api_salt),
             "xml_api_cod_azs": self.xml_api_cod_azs
-            "base_url": self.base_url,
-            "username": self.username,
-            "use_xml_api": self.use_xml_api,
-            "has_key": bool(self.xml_api_key),
-            "has_signature": bool(self.xml_api_signature),
-            "has_salt": bool(self.xml_api_salt),
-            "cod_azs": self.xml_api_cod_azs
         })
         
         try:
@@ -4042,6 +4035,30 @@ class ApiProviderService:
                             date_to
                         )
                         
+                        # Фильтруем по типу операции (Type):
+                        # Type = 1: Пополнение счёта (игнорируем)
+                        # Type = 4: Списание со счёта (игнорируем)
+                        # Type = 11: Обслуживание/покупка (нужно)
+                        # Type = 24: Возврат на счёт (нужно для корректного учёта)
+                        # Документация: WebAPI-EMV-v2.pdf, раздел 2.5.1
+                        valid_operation_types = {11, 24}  # Покупка и возврат
+                        original_count = len(transactions)
+                        
+                        transactions = [
+                            trans for trans in transactions
+                            if trans.get("Type") in valid_operation_types
+                        ]
+                        
+                        skipped_by_type = original_count - len(transactions)
+                        if skipped_by_type > 0:
+                            logger.info(f"Отфильтровано {skipped_by_type} операций по типу (пополнения/списания баланса)", extra={
+                                "template_id": template.id,
+                                "original_count": original_count,
+                                "filtered_count": len(transactions),
+                                "skipped_by_type": skipped_by_type,
+                                "valid_types": list(valid_operation_types)
+                            })
+                        
                         # Фильтруем по указанным картам, если они указаны
                         if card_numbers:
                             transactions = [
@@ -4060,7 +4077,8 @@ class ApiProviderService:
                         logger.info(f"Загружено транзакций через API РН-Карт: {len(transactions)}", extra={
                             "template_id": template.id,
                             "cards_count": len(card_numbers) if card_numbers else "all",
-                            "transactions_count": len(transactions)
+                            "transactions_count": len(transactions),
+                            "skipped_by_type": skipped_by_type
                         })
                     except Exception as e:
                         logger.error(f"Ошибка при загрузке транзакций через API РН-Карт: {str(e)}", extra={

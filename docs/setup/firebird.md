@@ -81,6 +81,72 @@ brew install firebird
 # https://firebirdsql.org/en/downloads/
 ```
 
+## Docker
+
+Приложение работает в Docker контейнере (Linux), поэтому библиотека должна быть установлена **внутри контейнера**.
+
+### Автоматическая установка через Dockerfile
+
+Библиотека устанавливается автоматически при сборке образа. Выполните пересборку образа:
+
+```bash
+docker-compose build backend
+```
+
+Это установит библиотеку `libfbclient.so` внутри контейнера.
+
+### Перезапуск контейнера
+
+После пересборки перезапустите контейнер:
+
+```bash
+docker-compose down
+docker-compose up -d
+```
+
+### Проверка установки в контейнере
+
+Проверьте, что библиотека установлена в контейнере:
+
+```bash
+docker-compose exec backend ls -la /usr/lib/x86_64-linux-gnu/libfbclient.so*
+```
+
+Или проверьте переменные окружения:
+
+```bash
+docker-compose exec backend env | grep FIREBIRD
+```
+
+### Ручная установка (если автоматическая не работает)
+
+Если автоматическая установка через пакетный менеджер не работает:
+
+1. Скачайте Firebird Client Library для Linux:
+   ```bash
+   wget https://github.com/FirebirdSQL/firebird/releases/download/v4.0.4/Firebird-4.0.4.3375-0.amd64.tar.gz
+   ```
+
+2. Распакуйте и установите:
+   ```bash
+   tar -xzf Firebird-4.0.4.3375-0.amd64.tar.gz
+   cd Firebird-4.0.4.3375-0.amd64
+   ./install.sh -silent
+   ```
+
+3. Установите переменную окружения в `docker-compose.yml`:
+   ```yaml
+   environment:
+     FIREBIRD_LIB: /opt/firebird/lib/libfbclient.so
+     LD_LIBRARY_PATH: /opt/firebird/lib:${LD_LIBRARY_PATH}
+   ```
+
+### Примечания для Docker
+
+- Библиотека должна быть установлена **внутри Docker контейнера**, а не на хосте
+- После установки библиотеки в контейнере переменная окружения `FIREBIRD_LIB` будет автоматически настроена
+- Если библиотека установлена в другом месте, укажите путь через переменную окружения `FIREBIRD_LIB` в `docker-compose.yml`
+
 ## Проверка установки
 
 После установки клиентской библиотеки перезапустите backend приложение и попробуйте подключиться к базе данных Firebird через интерфейс.
@@ -97,4 +163,3 @@ brew install firebird
 - Официальный сайт Firebird: https://firebirdsql.org/
 - Документация по установке: https://firebirdsql.org/en/documentation/
 - Python библиотека fdb: https://pypi.org/project/fdb/
-

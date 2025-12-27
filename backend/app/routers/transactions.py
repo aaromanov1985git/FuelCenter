@@ -69,7 +69,10 @@ async def upload_file(
             "file_name": file.filename,
             "content_type": file.content_type,
             "method": request.method,
-            "path": request.url.path
+            "path": request.url.path,
+            "current_user_id": current_user.id if current_user else None,
+            "current_username": current_user.username if current_user else None,
+            "current_user_is_none": current_user is None
         }
     )
     start_time = datetime.now()
@@ -319,6 +322,21 @@ async def upload_file(
             if match_info.get("score", 0) > 0:
                 message += f" (совпадение: {match_info['score']}%)"
 
+        # Логируем перед вызовом log_event
+        user_id_to_log = current_user.id if current_user else None
+        username_to_log = current_user.username if current_user else None
+        logger.info(
+            f"Вызов log_event для загрузки файла {file.filename}",
+            extra={
+                "file_name": file.filename,
+                "user_id": user_id_to_log,
+                "username": username_to_log,
+                "current_user_is_none": current_user is None,
+                "transactions_created": created_count,
+                "transactions_skipped": skipped_count
+            }
+        )
+        
         event_service.log_event(
             source_type="manual",
             status="success",
@@ -326,8 +344,8 @@ async def upload_file(
             file_name=file.filename,
             provider_id=provider_id,
             template_id=template_id,
-            user_id=current_user.id if current_user else None,
-            username=current_user.username if current_user else None,
+            user_id=user_id_to_log,
+            username=username_to_log,
             transactions_total=transactions_total,
             transactions_created=created_count,
             transactions_skipped=skipped_count,
@@ -443,7 +461,7 @@ async def upload_file(
             cleanup_temp_file(tmp_file_path)
 
 
-@router.post("/load-from-api", response_model=FileUploadResponse)
+@router.post("/load-from-api")
 @limiter.limit(settings.rate_limit_strict)
 async def load_from_api(
     request: Request,
@@ -537,22 +555,25 @@ async def load_from_api(
         
         if not transactions_data:
             duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
-            event_service.log_event(
-                source_type="manual",
-                status="success",
-                is_scheduled=False,
-                file_name=f"API: {template.name}",
-                provider_id=template.provider_id,
-                template_id=template.id,
-                user_id=current_user.id if current_user else None,
-                username=current_user.username if current_user else None,
-                transactions_total=0,
-                transactions_created=0,
-                transactions_skipped=0,
-                transactions_failed=0,
-                duration_ms=duration_ms,
-                message="Транзакции не найдены за указанный период"
-            )
+            try:
+                event_service.log_event(
+                    source_type="manual",
+                    status="success",
+                    is_scheduled=False,
+                    file_name=f"API: {template.name}",
+                    provider_id=template.provider_id,
+                    template_id=template.id,
+                    user_id=current_user.id if current_user else None,
+                    username=current_user.username if current_user else None,
+                    transactions_total=0,
+                    transactions_created=0,
+                    transactions_skipped=0,
+                    transactions_failed=0,
+                    duration_ms=duration_ms,
+                    message="Транзакции не найдены за указанный период"
+                )
+            except Exception as log_error:
+                logger.warning(f"Ошибка при логировании события: {log_error}")
             return FileUploadResponse(
                 message="Транзакции не найдены за указанный период",
                 transactions_created=0,
@@ -642,93 +663,273 @@ async def load_from_api(
                 logger.info(f"✓ Применен маппинг топлива к {mapped_count} транзакциям (ручная загрузка API)")
         
         # Создаем транзакции в БД с батчевой обработкой
-        batch_processor = TransactionBatchProcessor(db)
-        created_count, skipped_count, warnings = batch_processor.create_transactions(transactions_data)
-        
-        logger.info(
-            "Транзакции из API успешно загружены",
-            extra={
-                "template_id": template_id,
-                "created_count": created_count,
-                "skipped_count": skipped_count,
-                "warnings_count": len(warnings)
-            }
-        )
+        try:
+            batch_processor = TransactionBatchProcessor(db)
+            created_count, skipped_count, warnings = batch_processor.create_transactions(transactions_data)
+            
+            logger.info(
+                "Транзакции из API успешно загружены",
+                extra={
+                    "template_id": template_id,
+                    "created_count": created_count,
+                    "skipped_count": skipped_count,
+                    "warnings_count": len(warnings)
+                }
+            )
+        except Exception as create_error:
+            # Логируем детальную информацию об ошибке
+            import traceback
+            error_traceback = traceback.format_exc()
+            logger.error(
+                "Ошибка при создании транзакций из API",
+                extra={
+                    "template_id": template_id,
+                    "transactions_count": len(transactions_data),
+                    "error": str(create_error),
+                    "error_type": type(create_error).__name__,
+                    "traceback": error_traceback
+                },
+                exc_info=True
+            )
+            # Пробрасываем ошибку дальше для обработки в общем блоке except
+            raise
         
         message = f"Успешно загружено транзакций из API: {created_count}"
         if skipped_count > 0:
             message += f", пропущено дубликатов: {skipped_count}"
+            message += " (дубликаты могут быть в данных из API или уже существовать в базе данных)"
         
         duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
-        event_service.log_event(
-            source_type="manual",
-            status="success",
-            is_scheduled=False,
-            file_name=f"API: {template.name}",
-            provider_id=template.provider_id,
-            template_id=template.id,
-            user_id=current_user.id if current_user else None,
-            username=current_user.username if current_user else None,
-            transactions_total=len(transactions_data),
-            transactions_created=created_count,
-            transactions_skipped=skipped_count,
-            transactions_failed=0,
-            duration_ms=duration_ms,
-            message=message
-        )
         
-        # Инвалидируем кэш при успешной загрузке
-        if created_count > 0:
-            invalidate_transactions_cache()
-            invalidate_dashboard_cache()
-            logger.debug("Кэш транзакций и дашборда инвалидирован после загрузки из API")
-        
-        return FileUploadResponse(
-            message=message,
-            transactions_created=created_count,
-            transactions_skipped=skipped_count,
-            file_name=f"API_{template.name}",
-            validation_warnings=warnings
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
-        error_message = str(e)
+        # Логирование события и инвалидация кэша - не критичны для ответа клиенту
+        # Оборачиваем в try-except, чтобы ошибки здесь не приводили к ошибке 500
         try:
             event_service.log_event(
                 source_type="manual",
-                status="failed",
+                status="success",
                 is_scheduled=False,
                 file_name=f"API: {template.name}",
                 provider_id=template.provider_id,
                 template_id=template.id,
                 user_id=current_user.id if current_user else None,
                 username=current_user.username if current_user else None,
-                transactions_total=0,
-                transactions_created=0,
-                transactions_skipped=0,
+                transactions_total=len(transactions_data),
+                transactions_created=created_count,
+                transactions_skipped=skipped_count,
                 transactions_failed=0,
                 duration_ms=duration_ms,
-                message=error_message
+                message=message
             )
-        except Exception:
-            logger.warning("Не удалось зафиксировать событие загрузки из API", exc_info=True)
+        except Exception as log_error:
+            logger.warning(
+                "Ошибка при логировании события загрузки (транзакции уже созданы)",
+                extra={
+                    "template_id": template_id,
+                    "created_count": created_count,
+                    "error": str(log_error),
+                    "error_type": type(log_error).__name__
+                },
+                exc_info=True
+            )
         
-        logger.error(
-            "Ошибка при загрузке транзакций из API",
-            extra={
-                "template_id": template_id,
-                "error": error_message
-            },
-            exc_info=True
-        )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Ошибка при загрузке транзакций из API: {error_message}"
-        )
+        # Инвалидируем кэш при успешной загрузке
+        try:
+            if created_count > 0:
+                invalidate_transactions_cache()
+                invalidate_dashboard_cache()
+                logger.debug("Кэш транзакций и дашборда инвалидирован после загрузки из API")
+        except Exception as cache_error:
+            logger.warning(
+                "Ошибка при инвалидации кэша (транзакции уже созданы)",
+                extra={
+                    "template_id": template_id,
+                    "error": str(cache_error)
+                }
+            )
+        
+        # Пытаемся создать ответ, но если есть ошибка валидации - все равно возвращаем успех
+        # Транзакции уже созданы, поэтому всегда возвращаем 200 OK
+        print(f"[RESPONSE] Формирование ответа: created={created_count}, skipped={skipped_count}")
+        try:
+            # Убеждаемся, что warnings - это список строк
+            safe_warnings = []
+            if warnings:
+                for w in warnings:
+                    if isinstance(w, str):
+                        safe_warnings.append(w)
+                    else:
+                        safe_warnings.append(str(w))
+            
+            # Ограничиваем длину сообщения и warnings для избежания проблем с валидацией
+            safe_message = message[:500] if len(message) > 500 else message
+            safe_file_name = f"API_{template.name}"[:200] if len(f"API_{template.name}") > 200 else f"API_{template.name}"
+            
+            # Ограничиваем количество warnings
+            safe_warnings = safe_warnings[:50] if len(safe_warnings) > 50 else safe_warnings
+            # Ограничиваем длину каждого warning
+            safe_warnings = [w[:200] if len(w) > 200 else w for w in safe_warnings]
+            
+            print(f"[RESPONSE] JSONResponse: message={safe_message[:50]}..., file={safe_file_name}")
+            # Возвращаем JSONResponse напрямую, чтобы избежать проблем с валидацией Pydantic
+            from fastapi.responses import JSONResponse
+            response_data = {
+                "message": safe_message,
+                "transactions_created": created_count,
+                "transactions_skipped": skipped_count,
+                "file_name": safe_file_name,
+                "validation_warnings": safe_warnings
+            }
+            print(f"[RESPONSE] Успешно создан ответ, возвращаем JSONResponse")
+            return JSONResponse(status_code=200, content=response_data)
+        except Exception as response_error:
+            print(f"[RESPONSE ERROR] Ошибка при создании ответа: {type(response_error).__name__}: {response_error}")
+            # Если транзакции уже созданы, не логируем как ошибку
+            logger.warning(
+                "Ошибка при формировании ответа, но транзакции уже созданы",
+                extra={
+                    "template_id": template_id,
+                    "created_count": created_count,
+                    "skipped_count": skipped_count,
+                    "warnings_count": len(warnings) if warnings else 0,
+                    "error": str(response_error),
+                    "error_type": type(response_error).__name__
+                },
+                exc_info=True
+            )
+            # Всегда возвращаем успех через JSONResponse, так как транзакции созданы
+            from fastapi.responses import JSONResponse
+            safe_message = message[:500] if len(message) > 500 else message
+            print(f"[RESPONSE ERROR] Возвращаем JSONResponse напрямую")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "message": safe_message,
+                    "transactions_created": created_count,
+                    "transactions_skipped": skipped_count,
+                    "file_name": f"API_{template.name}"[:200],
+                    "validation_warnings": []
+                }
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[GLOBAL EXCEPT] Поймано исключение: {type(e).__name__}: {e}")
+        duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+        error_message = str(e)
+        
+        # Пытаемся определить, были ли созданы транзакции
+        # Если ошибка произошла после создания транзакций, логируем как success
+        transactions_were_created = False
+        created_count = 0
+        skipped_count = 0
+        try:
+            # Пытаемся получить значения из локальных переменных
+            if "created_count" in locals():
+                created_count = locals().get("created_count", 0)
+                transactions_were_created = created_count > 0
+            if "skipped_count" in locals():
+                skipped_count = locals().get("skipped_count", 0)
+        except:
+            pass
+        
+        if transactions_were_created:
+            # Транзакции были созданы и закоммичены, НЕ делаем rollback
+            # Только логируем предупреждение
+            logger.warning(
+                "Ошибка при загрузке транзакций из API, но транзакции уже созданы",
+                extra={
+                    "template_id": template_id,
+                    "created_count": created_count,
+                    "skipped_count": skipped_count,
+                    "error": error_message,
+                    "error_type": type(e).__name__
+                },
+                exc_info=True
+            )
+            # Формируем сообщение
+            success_message = f"Успешно загружено транзакций из API: {created_count}"
+            if skipped_count > 0:
+                success_message += f", пропущено дубликатов: {skipped_count}"
+            
+            try:
+                event_service.log_event(
+                    source_type="manual",
+                    status="success",
+                    is_scheduled=False,
+                    file_name=f"API: {template.name}",
+                    provider_id=template.provider_id,
+                    template_id=template.id,
+                    user_id=current_user.id if current_user else None,
+                    username=current_user.username if current_user else None,
+                    transactions_total=len(transactions_data) if 'transactions_data' in locals() else 0,
+                    transactions_created=created_count,
+                    transactions_skipped=skipped_count,
+                    transactions_failed=0,
+                    duration_ms=duration_ms,
+                    message=f"{success_message} (с предупреждениями: {error_message})"
+                )
+            except Exception:
+                logger.warning("Не удалось зафиксировать событие загрузки из API", exc_info=True)
+            
+            # Возвращаем успешный ответ, даже если была ошибка
+            try:
+                return FileUploadResponse(
+                    message=f"{success_message} (с предупреждениями)",
+                    transactions_created=created_count,
+                    transactions_skipped=skipped_count,
+                    file_name=f"API_{template.name}",
+                    validation_warnings=[f"Ошибка при формировании ответа: {error_message[:200]}"]
+                )
+            except Exception:
+                # Если даже это не работает, возвращаем JSON напрямую
+                from fastapi.responses import JSONResponse
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "message": f"{success_message} (с предупреждениями)",
+                        "transactions_created": created_count,
+                        "transactions_skipped": skipped_count,
+                        "file_name": f"API_{template.name}",
+                        "validation_warnings": [f"Ошибка: {error_message[:200]}"]
+                    }
+                )
+        else:
+            # Транзакции НЕ были созданы - это реальная ошибка, делаем rollback
+            db.rollback()
+            # Транзакции не были созданы - это реальная ошибка
+            try:
+                event_service.log_event(
+                    source_type="manual",
+                    status="failed",
+                    is_scheduled=False,
+                    file_name=f"API: {template.name}",
+                    provider_id=template.provider_id,
+                    template_id=template.id,
+                    user_id=current_user.id if current_user else None,
+                    username=current_user.username if current_user else None,
+                    transactions_total=0,
+                    transactions_created=0,
+                    transactions_skipped=0,
+                    transactions_failed=0,
+                    duration_ms=duration_ms,
+                    message=error_message
+                )
+            except Exception:
+                logger.warning("Не удалось зафиксировать событие загрузки из API", exc_info=True)
+            
+            logger.error(
+                "Ошибка при загрузке транзакций из API",
+                extra={
+                    "template_id": template_id,
+                    "error": error_message
+                },
+                exc_info=True
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"Ошибка при загрузке транзакций из API: {error_message}"
+            )
 
 
 @router.post("/load-from-firebird", response_model=FileUploadResponse)

@@ -53,13 +53,18 @@ receivers:
   - name: 'default-receiver'
     # Webhook для интеграции с внешними системами
     webhook_configs:
-      - url: 'http://host.docker.internal:8000/api/v1/notifications/webhook/alertmanager'
+      - url: 'http://gsm_backend:8000/api/v1/notifications/webhook/alertmanager'
         send_resolved: true
+        http_config:
+          # Следовать редиректам
+          follow_redirects: true
 
   - name: 'critical-receiver'
     webhook_configs:
-      - url: 'http://host.docker.internal:8000/api/v1/notifications/webhook/alertmanager'
+      - url: 'http://gsm_backend:8000/api/v1/notifications/webhook/alertmanager'
         send_resolved: true
+        http_config:
+          follow_redirects: true
     # Email для критических (раскомментируйте)
     # email_configs:
     #   - to: 'admin@example.com'
@@ -67,8 +72,10 @@ receivers:
 
   - name: 'warning-receiver'
     webhook_configs:
-      - url: 'http://host.docker.internal:8000/api/v1/notifications/webhook/alertmanager'
+      - url: 'http://gsm_backend:8000/api/v1/notifications/webhook/alertmanager'
         send_resolved: true
+        http_config:
+          follow_redirects: true
 
 # Политики подавления
 inhibit_rules:
