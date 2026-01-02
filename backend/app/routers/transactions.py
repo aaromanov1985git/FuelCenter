@@ -48,7 +48,7 @@ cache = CacheService.get_instance()
 router = APIRouter(prefix="/api/v1/transactions", tags=["transactions"])
 
 
-@router.post("/upload", response_model=FileUploadResponse)
+@router.post("/upload")
 @limiter.limit(settings.rate_limit_strict)
 async def upload_file(
     request: Request,
@@ -337,22 +337,25 @@ async def upload_file(
             }
         )
         
-        event_service.log_event(
-            source_type="manual",
-            status="success",
-            is_scheduled=False,
-            file_name=file.filename,
-            provider_id=provider_id,
-            template_id=template_id,
-            user_id=user_id_to_log,
-            username=username_to_log,
-            transactions_total=transactions_total,
-            transactions_created=created_count,
-            transactions_skipped=skipped_count,
-            transactions_failed=0,
-            duration_ms=int((datetime.now() - start_time).total_seconds() * 1000),
-            message="; ".join(warnings) if warnings else message
-        )
+        try:
+            event_service.log_event(
+                source_type="manual",
+                status="success",
+                is_scheduled=False,
+                file_name=file.filename,
+                provider_id=provider_id,
+                template_id=template_id,
+                user_id=user_id_to_log,
+                username=username_to_log,
+                transactions_total=transactions_total,
+                transactions_created=created_count,
+                transactions_skipped=skipped_count,
+                transactions_failed=0,
+                duration_ms=int((datetime.now() - start_time).total_seconds() * 1000),
+                message="; ".join(warnings) if warnings else message
+            )
+        except Exception as e:
+            logger.error(f"Ошибка при логировании события загрузки: {e}", exc_info=True)
         
         # Логируем действие пользователя
         if current_user:
@@ -381,9 +384,12 @@ async def upload_file(
         
         # Инвалидируем кэш при успешной загрузке
         if created_count > 0:
-            invalidate_transactions_cache()
-            invalidate_dashboard_cache()
-            logger.debug("Кэш транзакций и дашборда инвалидирован после загрузки файла")
+            try:
+                invalidate_transactions_cache()
+                invalidate_dashboard_cache()
+                logger.debug("Кэш транзакций и дашборда инвалидирован после загрузки файла")
+            except Exception as e:
+                logger.error(f"Ошибка при инвалидации кэша: {e}", exc_info=True)
         
         response_data = FileUploadResponse(
             message=message,
@@ -932,7 +938,7 @@ async def load_from_api(
             )
 
 
-@router.post("/load-from-firebird", response_model=FileUploadResponse)
+@router.post("/load-from-firebird")
 @limiter.limit(settings.rate_limit_strict)
 async def load_from_firebird(
     request: Request,
@@ -1407,13 +1413,14 @@ async def load_from_firebird(
             invalidate_dashboard_cache()
             logger.debug("Кэш транзакций и дашборда инвалидирован после загрузки из Firebird")
         
-        return FileUploadResponse(
+        response_data = FileUploadResponse(
             message=message,
             transactions_created=created_count,
             transactions_skipped=skipped_count,
             file_name=f"Firebird: {template.name}",
             validation_warnings=warnings[:10]
         )
+        return JSONResponse(status_code=200, content=response_data.model_dump())
         
     except HTTPException:
         raise

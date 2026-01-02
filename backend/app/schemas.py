@@ -704,8 +704,9 @@ class ProviderTemplateResponse(ProviderTemplateBase):
                     from app.utils.encryption import decrypt_connection_settings
                     parsed_settings = decrypt_connection_settings(parsed_settings)
                     # Скрываем чувствительные данные в ответе (не возвращаем в API)
+                    # НЕ скрываем api_key - это ключ для нашего PPR API, а не внешний пароль
                     if isinstance(parsed_settings, dict):
-                        sensitive_fields = ['password', 'api_token', 'api_key', 'api_secret', 
+                        sensitive_fields = ['password', 'api_token', 'api_secret', 
                                           'xml_api_key', 'xml_api_signature', 'xml_api_salt', 
                                           'certificate', 'secret', 'token']
                         parsed_settings = {k: v for k, v in parsed_settings.items() 
@@ -718,7 +719,8 @@ class ProviderTemplateResponse(ProviderTemplateBase):
                 from app.utils.encryption import decrypt_connection_settings
                 parsed_settings = decrypt_connection_settings(connection_settings_value.copy())
                 # Скрываем чувствительные данные в ответе (не возвращаем в API)
-                sensitive_fields = ['password', 'api_token', 'api_key', 'api_secret', 
+                # НЕ скрываем api_key - это ключ для нашего PPR API, а не внешний пароль
+                sensitive_fields = ['password', 'api_token', 'api_secret', 
                                   'xml_api_key', 'xml_api_signature', 'xml_api_salt', 
                                   'certificate', 'secret', 'token']
                 parsed_settings = {k: v for k, v in parsed_settings.items() 
