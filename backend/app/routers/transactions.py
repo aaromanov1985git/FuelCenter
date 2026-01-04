@@ -550,6 +550,14 @@ async def load_from_api(
     
     try:
         # Загружаем транзакции через API
+        logger.info("Вызов ApiProviderService.fetch_transactions", extra={
+            "template_id": template_id,
+            "template_name": template.name,
+            "date_from": date_from,
+            "date_to": date_to,
+            "card_numbers": card_list
+        })
+        
         api_service = ApiProviderService(db)
         import asyncio
         transactions_data = await api_service.fetch_transactions(
@@ -558,6 +566,11 @@ async def load_from_api(
             date_to=parsed_date_to,
             card_numbers=card_list
         )
+        
+        logger.info("ApiProviderService.fetch_transactions завершен", extra={
+            "template_id": template_id,
+            "transactions_count": len(transactions_data) if transactions_data else 0
+        })
         
         if not transactions_data:
             duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
@@ -580,12 +593,14 @@ async def load_from_api(
                 )
             except Exception as log_error:
                 logger.warning(f"Ошибка при логировании события: {log_error}")
-            return FileUploadResponse(
+            response_data = FileUploadResponse(
                 message="Транзакции не найдены за указанный период",
                 transactions_created=0,
                 transactions_skipped=0,
                 file_name=f"API_{template.name}"
             )
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=200, content=response_data.model_dump())
         
         logger.info(f"Загружено транзакций из API: {len(transactions_data)}", extra={
             "template_id": template_id,
@@ -824,6 +839,56 @@ async def load_from_api(
         duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
         error_message = str(e)
         
+        # Определяем тип провайдера для более детального сообщения
+        provider_type = "unknown"
+        try:
+            if template and template.connection_settings:
+                import json
+                settings = json.loads(template.connection_settings) if isinstance(template.connection_settings, str) else template.connection_settings
+                provider_type = settings.get("provider_type", "unknown") if settings else "unknown"
+        except:
+            pass
+        
+        # Логируем детальную информацию об ошибке ПЕРЕД тем, как она попадет в глобальный обработчик
+        import traceback
+        error_traceback = traceback.format_exc()
+        
+        # КРИТИЧЕСКОЕ ЛОГИРОВАНИЕ - используем logger.error с exc_info=True
+        logger.error(
+            "КРИТИЧЕСКАЯ ОШИБКА при загрузке транзакций через API",
+            extra={
+                "template_id": template_id,
+                "template_name": template.name if template else None,
+                "provider_type": provider_type,
+                "date_from": date_from,
+                "date_to": date_to,
+                "card_numbers": card_numbers,
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "traceback": error_traceback,
+                "error_module": getattr(e, '__module__', None),
+                "error_args": getattr(e, 'args', None)
+            },
+            exc_info=True
+        )
+        
+        # Также выводим в консоль для немедленного обнаружения
+        print(f"[ERROR] Ошибка при загрузке транзакций через API:")
+        print(f"  Тип: {type(e).__name__}")
+        print(f"  Сообщение: {error_message}")
+        print(f"  Template ID: {template_id}")
+        print(f"  Provider Type: {provider_type}")
+        print(f"  Traceback:\n{error_traceback}")
+        
+        # Для ошибок GPN API добавляем более детальное сообщение
+        if provider_type in ["gpn", "gazprom-neft", "gazpromneft"]:
+            if "Не удалось определить дату транзакции" in error_message or "количество" in error_message.lower():
+                error_message = f"Ошибка обработки данных GPN API: {error_message}. Проверьте формат данных в ответе API."
+            elif "contract" in error_message.lower() or "договор" in error_message.lower():
+                error_message = f"Ошибка GPN API: {error_message}. Проверьте настройки подключения и наличие договоров."
+            else:
+                error_message = f"Ошибка при загрузке транзакций через API Газпром-нефть: {error_message}"
+        
         # Пытаемся определить, были ли созданы транзакции
         # Если ошибка произошла после создания транзакций, логируем как success
         transactions_were_created = False
@@ -880,23 +945,35 @@ async def load_from_api(
             
             # Возвращаем успешный ответ, даже если была ошибка
             try:
-                return FileUploadResponse(
-                    message=f"{success_message} (с предупреждениями)",
+                # Убеждаемся, что validation_warnings - это список строк
+                safe_warnings = [f"Ошибка при формировании ответа: {error_message[:200]}"]
+                safe_file_name = f"API_{template.name}"[:200] if len(f"API_{template.name}") > 200 else f"API_{template.name}"
+                safe_message = f"{success_message} (с предупреждениями)"[:500] if len(f"{success_message} (с предупреждениями)") > 500 else f"{success_message} (с предупреждениями)"
+                
+                response_data = FileUploadResponse(
+                    message=safe_message,
                     transactions_created=created_count,
                     transactions_skipped=skipped_count,
-                    file_name=f"API_{template.name}",
-                    validation_warnings=[f"Ошибка при формировании ответа: {error_message[:200]}"]
+                    file_name=safe_file_name,
+                    validation_warnings=safe_warnings
                 )
-            except Exception:
+                # Возвращаем через JSONResponse для гарантии правильного типа
+                from fastapi.responses import JSONResponse
+                return JSONResponse(
+                    status_code=200,
+                    content=response_data.model_dump()
+                )
+            except Exception as resp_error:
                 # Если даже это не работает, возвращаем JSON напрямую
+                logger.error(f"Ошибка при создании ответа: {str(resp_error)}", exc_info=True)
                 from fastapi.responses import JSONResponse
                 return JSONResponse(
                     status_code=200,
                     content={
-                        "message": f"{success_message} (с предупреждениями)",
+                        "message": f"{success_message} (с предупреждениями)"[:500],
                         "transactions_created": created_count,
                         "transactions_skipped": skipped_count,
-                        "file_name": f"API_{template.name}",
+                        "file_name": f"API_{template.name}"[:200],
                         "validation_warnings": [f"Ошибка: {error_message[:200]}"]
                     }
                 )
@@ -932,10 +1009,15 @@ async def load_from_api(
                 },
                 exc_info=True
             )
-            raise HTTPException(
-                status_code=500,
-                detail=f"Ошибка при загрузке транзакций из API: {error_message}"
-            )
+            
+            # Пробрасываем как ValueError, чтобы глобальный обработчик показал детали
+            # Если это не ValueError, оборачиваем в ValueError с деталями
+            if not isinstance(e, ValueError):
+                # Оборачиваем в ValueError, чтобы глобальный обработчик показал детали
+                raise ValueError(error_message) from e
+            else:
+                # Если уже ValueError, просто пробрасываем
+                raise
 
 
 @router.post("/load-from-firebird")

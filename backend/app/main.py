@@ -539,6 +539,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     """
     from sqlalchemy.exc import SQLAlchemyError, DatabaseError
     from pydantic import ValidationError
+    import httpx
     
     # Проверяем, не является ли это ошибкой валидации Pydantic
     # Если это ошибка валидации ответа, но путь указывает на успешную загрузку,
@@ -588,14 +589,31 @@ async def global_exception_handler(request: Request, exc: Exception):
         # Ошибки БД - не раскрываем детали
         client_message = "Ошибка базы данных. Обратитесь к администратору."
     elif isinstance(exc, ValueError):
-        # Ошибки валидации - можно показать сообщение
+        # Ошибки валидации - показываем сообщение (особенно важно для ошибок API)
         client_message = str(exc)
     elif isinstance(exc, PermissionError):
         # Ошибки доступа
         client_message = "Недостаточно прав для выполнения операции."
+    elif isinstance(exc, (httpx.HTTPStatusError, httpx.RequestError)):
+        # Ошибки HTTP запросов к внешним API - показываем детали
+        error_msg = str(exc)
+        if hasattr(exc, 'response') and hasattr(exc.response, 'status_code'):
+            error_msg = f"Ошибка HTTP {exc.response.status_code}: {error_msg}"
+        client_message = f"Ошибка подключения к API: {error_msg}"
+    elif "API" in str(type(exc).__name__) or "api" in str(exc).lower() or "gpn" in str(exc).lower() or "gazprom" in str(exc).lower():
+        # Ошибки, связанные с API - показываем детали
+        client_message = str(exc)
     else:
-        # Остальные ошибки - общее сообщение
+        # Остальные ошибки - общее сообщение, но логируем детали
         client_message = "Внутренняя ошибка сервера. Обратитесь к администратору."
+        # Для ошибок при загрузке через API показываем больше деталей
+        if "/load-from-api" in request.url.path or "/upload" in request.url.path:
+            # Показываем тип ошибки и часть сообщения для диагностики
+            error_type = type(exc).__name__
+            error_msg = str(exc)
+            if error_msg:
+                # Показываем первые 200 символов сообщения об ошибке
+                client_message = f"Ошибка при загрузке данных: {error_type}: {error_msg[:200]}"
     
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

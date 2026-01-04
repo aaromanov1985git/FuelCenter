@@ -207,36 +207,54 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
           // Определяем тип провайдера из существующих настроек или используем PetrolPlus по умолчанию
           const parsed = typeof settings === 'string' ? (() => { try { return JSON.parse(settings) } catch { return {} } })() : (settings || {})
           if (parsed.provider_type === 'rncard') {
-            return { provider_type: 'rncard', base_url: 'https://lkapi.rn-card.ru', login: '', password: '', contract: '', currency: 'RUB', use_md5_hash: true, api_key: '' }
+            return { provider_type: 'rncard', base_url: 'https://lkapi.rn-card.ru', login: '', password: '', contract: '', currency: 'RUB', use_md5_hash: true, api_key: '', ppr_api_key: '' }
           }
           if (parsed.provider_type === 'gpn' || parsed.provider_type === 'gazprom-neft' || parsed.provider_type === 'gazpromneft') {
-            return { provider_type: 'gpn', base_url: 'https://api.opti-24.ru', api_key: '', login: '', password: '', currency: 'RUB' }
+            return { provider_type: 'gpn', base_url: 'https://api.opti-24.ru', api_key: '', ppr_api_key: '', login: '', password: '', currency: 'RUB' }
           }
-          return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB', api_key: '' }
+          return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB', api_key: '', ppr_api_key: '' }
         }
         if (connectionType === 'web') {
-          return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: '', key: '', signature: '', salt: '', cod_azs: 1000001, api_key: '' }
+          return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: '', key: '', signature: '', salt: '', cod_azs: 1000001, api_key: '', ppr_api_key: '' }
         }
-        return { host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8', api_key: '' }
+        return { host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8', api_key: '', ppr_api_key: '' }
       }
     } else {
       parsed = settings
     }
     
-    // Убеждаемся, что api_key присутствует в настройках (для PPR API)
+    // Убеждаемся, что api_key и ppr_api_key присутствуют в настройках
     if (parsed && typeof parsed === 'object') {
-      // Для типа 'file' извлекаем только PPR API ключ
+      // Для типа 'file' извлекаем PPR API ключ (приоритет ppr_api_key)
       if (connectionType === 'file') {
-        return { api_key: parsed.api_key || parsed.apiKey || parsed.КлючАвторизации || '' }
+        const pprKey = parsed.ppr_api_key || parsed.pprApiKey || parsed.api_key || parsed.apiKey || parsed.КлючАвторизации || ''
+        return { 
+          ppr_api_key: pprKey,
+          api_key: pprKey  // Для обратной совместимости
+        }
       }
       
-      // Для других типов сохраняем api_key, если он есть в любом из вариантов названий
-      if (!parsed.api_key && (parsed.apiKey || parsed.КлючАвторизации || parsed.authorization_key || parsed.key)) {
-        parsed.api_key = parsed.apiKey || parsed.КлючАвторизации || parsed.authorization_key || parsed.key
+      // Для других типов сохраняем ppr_api_key отдельно от api_key
+      // PPR API ключ (приоритет ppr_api_key, fallback на api_key для обратной совместимости)
+      if (!parsed.ppr_api_key && !parsed.pprApiKey) {
+        parsed.ppr_api_key = parsed.api_key || parsed.apiKey || parsed.КлючАвторизации || ''
       }
-      // Если api_key отсутствует, добавляем пустое поле
-      if (!parsed.api_key && !parsed.apiKey && !parsed.КлючАвторизации) {
-        parsed.api_key = ''
+      
+      // Для GPN api_key используется для самого API, поэтому не перезаписываем его
+      // Для других типов сохраняем api_key, если он есть в любом из вариантов названий
+      if (parsed.provider_type !== 'gpn') {
+        if (!parsed.api_key && (parsed.apiKey || parsed.КлючАвторизации || parsed.authorization_key || parsed.key)) {
+          parsed.api_key = parsed.apiKey || parsed.КлючАвторизации || parsed.authorization_key || parsed.key
+        }
+        // Если api_key отсутствует, добавляем пустое поле
+        if (!parsed.api_key && !parsed.apiKey && !parsed.КлючАвторизации) {
+          parsed.api_key = ''
+        }
+      }
+      
+      // Убеждаемся, что ppr_api_key присутствует
+      if (!parsed.ppr_api_key && !parsed.pprApiKey) {
+        parsed.ppr_api_key = ''
       }
     }
     
@@ -274,7 +292,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
 
   // Копирование API ключа в буфер обмена
   const copyApiKeyToClipboard = async () => {
-    const apiKey = connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации || ''
+    const apiKey = connectionSettings.ppr_api_key || connectionSettings.pprApiKey || connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации || ''
     if (!apiKey) {
       setError('Нет ключа для копирования')
       return
@@ -743,10 +761,12 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
     } else {
       // Для типа 'file' сохраняем только PPR API ключ, если он указан
       // Остальные настройки подключения не нужны для типа 'file'
-      const pprApiKey = connectionSettings?.api_key || connectionSettings?.apiKey || connectionSettings?.КлючАвторизации || ''
+      const pprApiKey = connectionSettings?.ppr_api_key || connectionSettings?.pprApiKey || connectionSettings?.api_key || connectionSettings?.apiKey || connectionSettings?.КлючАвторизации || ''
       if (pprApiKey && pprApiKey.trim()) {
-        // Сохраняем только PPR API ключ для типа 'file'
+        // Сохраняем PPR API ключ (приоритет ppr_api_key, fallback на api_key для обратной совместимости)
         saveData.connection_settings = {
+          ppr_api_key: pprApiKey.trim(),
+          // Сохраняем также в api_key для обратной совместимости с существующим кодом
           api_key: pprApiKey.trim()
         }
       } else {
@@ -856,13 +876,30 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                   setFormData({ ...formData, connection_type: newConnectionType })
                   setConnectionTestResult(null)
                   // Обновляем настройки подключения в зависимости от типа
-                  // Сохраняем api_key при смене типа подключения
-                  const currentApiKey = connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации || ''
+                  // Сохраняем ppr_api_key и api_key при смене типа подключения
+                  const currentPprApiKey = connectionSettings.ppr_api_key || connectionSettings.pprApiKey || connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации || ''
+                  const currentGpnApiKey = connectionSettings.provider_type === 'gpn' ? (connectionSettings.api_key || '') : ''
                   
                   if (newConnectionType === 'api') {
-                    setConnectionSettings({ provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB', api_key: currentApiKey })
+                    setConnectionSettings({ 
+                      provider_type: 'petrolplus', 
+                      base_url: 'https://online.petrolplus.ru/api', 
+                      api_token: '', 
+                      currency: 'RUB', 
+                      api_key: '',  // Для API провайдеров api_key используется для самого API
+                      ppr_api_key: currentPprApiKey  // PPR API ключ хранится отдельно
+                    })
                   } else if (newConnectionType === 'firebird') {
-                    setConnectionSettings({ host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8', api_key: currentApiKey })
+                    setConnectionSettings({ 
+                      host: 'localhost', 
+                      database: '', 
+                      user: 'SYSDBA', 
+                      password: '', 
+                      port: 3050, 
+                      charset: 'UTF8', 
+                      api_key: '',  // Для Firebird api_key не используется
+                      ppr_api_key: currentPprApiKey  // PPR API ключ хранится отдельно
+                    })
                   } else if (newConnectionType === 'web') {
                     setConnectionSettings({ 
                       base_url: '', 
@@ -875,11 +912,15 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                       signature: '',
                       salt: '',
                       cod_azs: 1000001,
-                      api_key: currentApiKey
+                      api_key: '',  // Для Web api_key не используется
+                      ppr_api_key: currentPprApiKey  // PPR API ключ хранится отдельно
                     })
                   } else {
-                    // Для типа 'file' также сохраняем api_key
-                    setConnectionSettings({ api_key: currentApiKey })
+                    // Для типа 'file' сохраняем только PPR API ключ
+                    setConnectionSettings({ 
+                      ppr_api_key: currentPprApiKey,
+                      api_key: currentPprApiKey  // Для обратной совместимости
+                    })
                   }
                 }}
                 className="input-full-width"
@@ -930,10 +971,14 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                         use_md5_hash: connectionSettings.use_md5_hash !== false
                       })
                     } else if (newProviderType === 'gpn') {
+                      // Для GPN api_key используется для самого API, ppr_api_key - отдельно для PPR API
+                      const currentGpnApiKey = connectionSettings.api_key || connectionSettings.apiKey || ''
+                      const currentPprApiKey = connectionSettings.ppr_api_key || connectionSettings.pprApiKey || ''
                       setConnectionSettings({ 
                         provider_type: 'gpn', 
                         base_url: 'https://api.opti-24.ru', 
-                        api_key: connectionSettings.api_key || connectionSettings.apiKey || '', 
+                        api_key: currentGpnApiKey,  // API ключ для GPN API
+                        ppr_api_key: currentPprApiKey,  // PPR API ключ (отдельно)
                         login: connectionSettings.login || connectionSettings.username || '', 
                         password: connectionSettings.password || '', 
                         currency: connectionSettings.currency || 'RUB'
@@ -1972,12 +2017,14 @@ ORDER BY rg."Date" DESC`}
               <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
                 <input
                   type="text"
-                  value={connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации || ''}
+                  value={connectionSettings.ppr_api_key || connectionSettings.pprApiKey || connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации || ''}
                   onChange={(e) => setConnectionSettings({ 
                     ...connectionSettings, 
-                    api_key: e.target.value,
-                    apiKey: e.target.value,
-                    КлючАвторизации: e.target.value
+                    ppr_api_key: e.target.value,
+                    pprApiKey: e.target.value,
+                    // Сохраняем обратную совместимость: если ppr_api_key не задан, используем api_key
+                    // Но только если это не GPN провайдер (для GPN api_key используется для самого API)
+                    ...(connectionSettings.provider_type !== 'gpn' ? { api_key: e.target.value } : {})
                   })}
                   placeholder="Введите API ключ для PPR API"
                   style={{ flex: 1 }}
@@ -1991,9 +2038,11 @@ ORDER BY rg."Date" DESC`}
                     const newKey = generateApiKey()
                     setConnectionSettings({ 
                       ...connectionSettings, 
-                      api_key: newKey,
-                      apiKey: newKey,
-                      КлючАвторизации: newKey
+                      ppr_api_key: newKey,
+                      pprApiKey: newKey,
+                      // Сохраняем обратную совместимость: если ppr_api_key не задан, используем api_key
+                      // Но только если это не GPN провайдер (для GPN api_key используется для самого API)
+                      ...(connectionSettings.provider_type !== 'gpn' ? { api_key: newKey, apiKey: newKey, КлючАвторизации: newKey } : {})
                     })
                     // Фокусируемся на поле ввода после генерации
                     setTimeout(() => {

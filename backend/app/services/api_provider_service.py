@@ -3475,23 +3475,41 @@ class GPNAdapter:
         """
         try:
             # Получаем транзакции за последние 7 дней
+            # ВАЖНО: используем fetch_card_transactions для получения ТРАНЗАКЦИЙ, а не list_cards
             date_to = date.today()
             date_from = date_to - timedelta(days=7)
             
+            logger.debug("Получение полей транзакций GPN API", extra={
+                "date_from": str(date_from),
+                "date_to": str(date_to),
+                "method": "fetch_card_transactions"
+            })
+            
             try:
                 transactions = await self.fetch_card_transactions("", date_from, date_to)
-            except ValueError:
+                logger.debug(f"Получено транзакций для извлечения полей: {len(transactions)}", extra={
+                    "transactions_count": len(transactions),
+                    "first_transaction_keys": list(transactions[0].keys()) if transactions and isinstance(transactions[0], dict) else []
+                })
+            except ValueError as ve:
                 # Если период слишком большой, пробуем меньший
+                logger.debug(f"Период слишком большой, пробуем меньший период: {str(ve)}")
                 date_from = date_to - timedelta(days=1)
                 transactions = await self.fetch_card_transactions("", date_from, date_to)
+                logger.debug(f"Получено транзакций для извлечения полей (меньший период): {len(transactions)}", extra={
+                    "transactions_count": len(transactions),
+                    "first_transaction_keys": list(transactions[0].keys()) if transactions and isinstance(transactions[0], dict) else []
+                })
             
             if not transactions:
                 logger.warning("Список транзакций пуст при получении полей из API Газпром-нефть")
-                # Возвращаем стандартные поля на основе документации
+                # Возвращаем стандартные поля на основе документации GPN API v2
                 return [
-                    "timestamp", "card_number", "sum", "product_category_id",
-                    "product_category_name", "azs_id", "azs_name", "azs_address",
-                    "volume", "price", "currency"
+                    "id", "timestamp", "utc_time", "card_id", "card_number",
+                    "poi_id", "terminal_id", "type", "product_id", "product_name",
+                    "product_category_id", "currency", "check_id", "stor_transaction_id",
+                    "is_storno", "is_manual_correction", "qty", "price", "price_no_discount",
+                    "sum", "sum_no_discount", "discount", "exchange_rate", "payment_type"
                 ]
             
             # Извлекаем все уникальные ключи из транзакций
@@ -3502,10 +3520,48 @@ class GPNAdapter:
             
             fields_list = sorted(list(all_fields))
             
+            # Логируем детальную информацию о полях для отладки
             logger.info(f"Получено полей из API Газпром-нефть: {len(fields_list)}", extra={
                 "fields_count": len(fields_list),
-                "sample_fields": fields_list[:10]
+                "sample_fields": fields_list[:10],
+                "all_fields": fields_list,
+                "transactions_count": len(transactions),
+                "sample_transaction_keys": list(transactions[0].keys()) if transactions and isinstance(transactions[0], dict) else [],
+                "sample_transaction": {k: str(v)[:100] for k, v in list(transactions[0].items())[:15]} if transactions and isinstance(transactions[0], dict) else None
             })
+            
+            # Убеждаемся, что мы возвращаем поля транзакций, а не карт
+            # Проверяем наличие ключевых полей транзакций GPN API v2
+            expected_transaction_fields = ["id", "timestamp", "qty", "product_name", "poi_id", "sum", "card_number"]
+            has_transaction_fields = any(field in fields_list for field in expected_transaction_fields)
+            
+            # Проверяем, что это НЕ поля карт (карты имеют другие поля)
+            card_fields = ["number", "card_id", "status", "balance", "contract_id"]
+            has_card_fields = any(field in fields_list for field in card_fields)
+            
+            if has_card_fields and not has_transaction_fields:
+                logger.error("ОШИБКА: Получены поля карт вместо полей транзакций!", extra={
+                    "fields": fields_list,
+                    "has_card_fields": has_card_fields,
+                    "has_transaction_fields": has_transaction_fields,
+                    "transactions_sample": transactions[0] if transactions else None
+                })
+                # Возвращаем стандартные поля транзакций вместо полей карт
+                return [
+                    "id", "timestamp", "utc_time", "card_id", "card_number",
+                    "poi_id", "terminal_id", "type", "product_id", "product_name",
+                    "product_category_id", "currency", "check_id", "stor_transaction_id",
+                    "is_storno", "is_manual_correction", "qty", "price", "price_no_discount",
+                    "sum", "sum_no_discount", "discount", "exchange_rate", "payment_type"
+                ]
+            
+            if not has_transaction_fields:
+                logger.warning("Полученные поля не похожи на поля транзакций GPN API v2", extra={
+                    "fields_count": len(fields_list),
+                    "fields": fields_list,
+                    "expected_fields": expected_transaction_fields,
+                    "transactions_sample": transactions[0] if transactions else None
+                })
             
             return fields_list
             
@@ -3513,11 +3569,13 @@ class GPNAdapter:
             logger.error(f"Ошибка при получении полей из API Газпром-нефть: {str(e)}", extra={
                 "error": str(e)
             }, exc_info=True)
-            # Возвращаем стандартные поля на основе документации
+            # Возвращаем стандартные поля на основе документации GPN API v2
             return [
-                "timestamp", "card_number", "sum", "product_category_id",
-                "product_category_name", "azs_id", "azs_name", "azs_address",
-                "volume", "price", "currency"
+                "id", "timestamp", "utc_time", "card_id", "card_number",
+                "poi_id", "terminal_id", "type", "product_id", "product_name",
+                "product_category_id", "currency", "check_id", "stor_transaction_id",
+                "is_storno", "is_manual_correction", "qty", "price", "price_no_discount",
+                "sum", "sum_no_discount", "discount", "exchange_rate", "payment_type"
             ]
 
 
@@ -3943,11 +4001,41 @@ class ApiProviderService:
         Returns:
             Список транзакций в формате системы
         """
-        adapter = self.create_adapter(template)
+        # Определяем тип провайдера для логирования
+        import json
+        provider_type = "unknown"
+        try:
+            if template.connection_settings:
+                settings = json.loads(template.connection_settings) if isinstance(template.connection_settings, str) else template.connection_settings
+                provider_type = settings.get("provider_type", "unknown") if settings else "unknown"
+        except:
+            pass
         
+        logger.info("Начало загрузки транзакций через API", extra={
+            "template_id": template.id,
+            "template_name": template.name,
+            "provider_type": provider_type,
+            "date_from": str(date_from),
+            "date_to": str(date_to),
+            "card_numbers_count": len(card_numbers) if card_numbers else 0
+        })
+        
+        adapter = None
         all_transactions = []
         
         try:
+            logger.debug("Создание адаптера", extra={
+                "template_id": template.id,
+                "template_name": template.name,
+                "connection_type": template.connection_type
+            })
+            adapter = self.create_adapter(template)
+            logger.info(f"Адаптер создан: {type(adapter).__name__}", extra={
+                "template_id": template.id,
+                "template_name": template.name,
+                "adapter_type": type(adapter).__name__,
+                "provider_type": provider_type
+            })
             async with adapter:
                 # Для XML API с сертификатом метод getsaleext может работать без указания карт
                 # Он возвращает все транзакции за указанный период
@@ -4104,18 +4192,58 @@ class ApiProviderService:
                             ]
                         
                         # Преобразуем транзакции в формат системы
-                        for trans in transactions:
-                            # Извлекаем номер карты из транзакции
-                            card_num = str(trans.get("card_number", "")).strip()
-                            system_trans = self._convert_to_system_format(trans, template, card_num)
-                            if system_trans:
-                                all_transactions.append(system_trans)
+                        converted_count = 0
+                        skipped_count = 0
+                        error_details = []
+                        for idx, trans in enumerate(transactions):
+                            try:
+                                # Извлекаем номер карты из транзакции
+                                card_num = str(trans.get("card_number", "")).strip()
+                                system_trans = self._convert_to_system_format(trans, template, card_num)
+                                if system_trans:
+                                    all_transactions.append(system_trans)
+                                    converted_count += 1
+                                else:
+                                    skipped_count += 1
+                                    # Логируем только первые несколько пропущенных для отладки
+                                    if skipped_count <= 3:
+                                        logger.debug(f"Транзакция GPN пропущена (вернулся None)", extra={
+                                            "template_id": template.id,
+                                            "transaction_index": idx,
+                                            "card_number": card_num,
+                                            "transaction_keys": list(trans.keys()) if isinstance(trans, dict) else []
+                                        })
+                            except Exception as convert_error:
+                                skipped_count += 1
+                                error_msg = str(convert_error)
+                                error_details.append(f"Транзакция {idx}: {error_msg[:100]}")
+                                
+                                # Логируем только первые 5 ошибок, чтобы не засорять логи
+                                if skipped_count <= 5:
+                                    logger.warning(f"Ошибка при преобразовании транзакции GPN: {error_msg}", extra={
+                                        "template_id": template.id,
+                                        "transaction_index": idx,
+                                        "error": error_msg,
+                                        "error_type": type(convert_error).__name__,
+                                        "transaction_keys": list(trans.keys()) if isinstance(trans, dict) else [],
+                                        "transaction_sample": {k: str(v)[:100] for k, v in list(trans.items())[:10]} if isinstance(trans, dict) else str(trans)[:200]
+                                    }, exc_info=True)
                         
-                        logger.info(f"Загружено транзакций через API Газпром-нефть: {len(transactions)}", extra={
+                        logger.info(f"Загружено транзакций через API Газпром-нефть: {len(transactions)} (преобразовано: {converted_count}, пропущено: {skipped_count})", extra={
                             "template_id": template.id,
                             "cards_count": len(card_numbers) if card_numbers else "all",
-                            "transactions_count": len(transactions)
+                            "transactions_count": len(transactions),
+                            "converted_count": converted_count,
+                            "skipped_count": skipped_count,
+                            "error_summary": error_details[:5] if error_details else None
                         })
+                        
+                        # Если все транзакции были пропущены, это проблема
+                        if len(transactions) > 0 and converted_count == 0:
+                            error_msg = f"Не удалось преобразовать ни одну транзакцию GPN. Всего транзакций: {len(transactions)}, пропущено: {skipped_count}. "
+                            if error_details:
+                                error_msg += f"Первые ошибки: {'; '.join(error_details[:3])}"
+                            raise ValueError(error_msg)
                     except Exception as e:
                         logger.error(f"Ошибка при загрузке транзакций через API Газпром-нефть: {str(e)}", extra={
                             "template_id": template.id,
@@ -4161,10 +4289,30 @@ class ApiProviderService:
             return all_transactions
             
         except Exception as e:
-            logger.error("Ошибка при загрузке транзакций через API/Web", extra={
+            import traceback
+            error_traceback = traceback.format_exc()
+            logger.error("КРИТИЧЕСКАЯ ОШИБКА при загрузке транзакций через API/Web", extra={
                 "template_id": template.id,
-                "error": str(e)
+                "template_name": template.name,
+                "provider_type": provider_type,
+                "date_from": str(date_from),
+                "date_to": str(date_to),
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "traceback": error_traceback,
+                "adapter_created": adapter is not None,
+                "adapter_type": type(adapter).__name__ if adapter else None
             }, exc_info=True)
+            
+            # Также выводим в консоль для немедленного обнаружения
+            print(f"[ERROR] Ошибка в fetch_transactions:")
+            print(f"  Тип: {type(e).__name__}")
+            print(f"  Сообщение: {str(e)}")
+            print(f"  Template ID: {template.id}")
+            print(f"  Template Name: {template.name}")
+            print(f"  Provider Type: {provider_type}")
+            print(f"  Traceback:\n{error_traceback}")
+            
             raise
     
     def _convert_to_system_format(
@@ -4239,10 +4387,12 @@ class ApiProviderService:
             field_mapping = {}
         
         # Преобразуем дату (поддерживаем разные форматы: стандартный API, XML API, РН-Карт и GPN)
+        # Для GPN API v2 используем timestamp или utc_time
         transaction_date = self._parse_datetime(
+            api_transaction.get("timestamp") or  # GPN API v2 - дата по местному времени
+            api_transaction.get("utc_time") or  # GPN API v2 - дата по UTC
             api_transaction.get("transaction_date") or  # XML API
             api_transaction.get("TransactionDatetime") or  # XML API (оригинальное поле)
-            api_transaction.get("timestamp") or  # GPN (формат ISO или timestamp)
             api_transaction.get("Date") or  # РН-Карт
             api_transaction.get("date") or
             api_transaction.get("dateReg") or
