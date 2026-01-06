@@ -9,6 +9,7 @@ import ComponentsDemo from './ComponentsDemo'
 import NormalizationSettings from './NormalizationSettings'
 import CardInfoSchedulesList from './CardInfoSchedulesList'
 import NotificationSettings from './NotificationSettings'
+import BackupManagement from './BackupManagement'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
@@ -22,8 +23,8 @@ const Settings = () => {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: null, title: '', message: '' })
   const [showClearProviderModal, setShowClearProviderModal] = useState(false)
   const [providers, setProviders] = useState([])
-  const [activeSection, setActiveSection] = useState('cleanup') // 'cleanup', 'admin', 'appearance', 'normalization', 'card-info-schedules', 'notifications'
-  const [adminView, setAdminView] = useState(null) // 'system-logs', 'user-action-logs', 'period-lock'
+  const [activeSection, setActiveSection] = useState('cleanup') // 'cleanup', 'admin', 'appearance', 'normalization', 'card-info-schedules', 'notifications', 'backup'
+  const [adminView, setAdminView] = useState(null) // 'system-logs', 'user-action-logs', 'period-lock', 'backup'
   const [appearanceView, setAppearanceView] = useState(null) // 'ui-components'
   const [fontSize, setFontSize] = useState(() => {
     // Загружаем сохраненный размер шрифта или используем 100% (базовый)
@@ -298,6 +299,9 @@ const Settings = () => {
       case 'period-lock':
         component = <UploadPeriodLock />
         break
+      case 'backup':
+        component = <BackupManagement />
+        break
       default:
         component = null
     }
@@ -479,6 +483,17 @@ const Settings = () => {
                 <div className="admin-option-info">
                   <h3 className="admin-option-label">Закрытие периода</h3>
                   <p className="admin-option-description">Блокировка периодов для загрузки транзакций</p>
+                </div>
+                <div className="admin-option-arrow">→</div>
+              </div>
+            </Card>
+
+            <Card className="admin-option-card" onClick={() => setAdminView('backup')}>
+              <div className="admin-option-content">
+                <div className="admin-option-icon">💾</div>
+                <div className="admin-option-info">
+                  <h3 className="admin-option-label">Резервное копирование</h3>
+                  <p className="admin-option-description">Управление резервными копиями базы данных</p>
                 </div>
                 <div className="admin-option-arrow">→</div>
               </div>

@@ -19,7 +19,7 @@ sys.path.insert(0, '/app')
 from scripts.backup_db import DatabaseBackup
 
 
-router = APIRouter(prefix="/backup", tags=["Backup"])
+router = APIRouter(prefix="/api/v1/backup", tags=["Backup"])
 
 
 class BackupInfo(BaseModel):
@@ -184,4 +184,56 @@ async def get_backup_schedule(
         "retention_days": int(os.getenv("BACKUP_RETENTION_DAYS", "7")),
         "next_run": "Ежедневно в 03:00"
     }
+
+
+@router.post("/{filename}/restore")
+async def restore_backup(
+    filename: str,
+    current_user: User = Depends(require_admin)
+):
+    """
+    Восстановить базу данных из резервной копии.
+    Только для администраторов.
+    ВНИМАНИЕ: Это действие приведёт к полной замене всех данных в базе!
+    """
+    logger.warning(f"Запрос на восстановление бэкапа {filename} от пользователя: {current_user.username}")
+    
+    backup_service = get_backup_service()
+    backup_path = backup_service.backup_dir / filename
+    
+    if not backup_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Резервная копия не найдена"
+        )
+    
+    # Проверка что файл - это бэкап
+    if not filename.startswith("gsm_backup_"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Недопустимое имя файла"
+        )
+    
+    try:
+        success = backup_service.restore_backup(str(backup_path))
+        
+        if success:
+            logger.info(f"База данных восстановлена из бэкапа: {filename} пользователем {current_user.username}")
+            return {
+                "success": True,
+                "message": f"База данных успешно восстановлена из резервной копии {filename}"
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Не удалось восстановить базу данных. Проверьте логи для деталей."
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка восстановления бэкапа: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка восстановления: {str(e)}"
+        )
 
