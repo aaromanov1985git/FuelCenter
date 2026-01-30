@@ -18,6 +18,7 @@ from .geolocation_utils import (
     validate_coordinates,
     format_distance
 )
+from .fuel_mapping import match_fuel_type, normalize_fuel_string
 
 __all__ = [
     "parse_date_range",
@@ -34,6 +35,8 @@ __all__ = [
     "calculate_distance_with_accuracy",
     "is_point_in_radius",
     "validate_coordinates",
-    "format_distance"
+    "format_distance",
+    "match_fuel_type",
+    "normalize_fuel_string"
 ]
 

@@ -9,7 +9,8 @@ from app.logger import logger
 from app.utils import (
     get_firebird_service,
     parse_template_json,
-    parse_date_range
+    parse_date_range,
+    match_fuel_type
 )
 from app.services.api_provider_service import ApiProviderService
 from app.services.upload_event_service import UploadEventService
@@ -309,29 +310,39 @@ class AutoLoadService:
         try:
             if template.fuel_type_mapping:
                 fuel_type_mapping = parse_template_json(template.fuel_type_mapping)
-                logger.info(f"Маппинг топлива загружен для шаблона {template.id}", extra={
-                    "template_id": template.id,
-                    "mapping_keys": list(fuel_type_mapping.keys()) if isinstance(fuel_type_mapping, dict) else None,
-                    "is_dict": isinstance(fuel_type_mapping, dict),
-                    "event_type": "auto_load",
-                    "event_category": "fuel_mapping"
-                })
-                logger.info("Маппинг видов топлива (Firebird) загружен", extra={
-                    "template_id": template.id,
-                    "template_name": template.name,
-                    "mapping_keys": list(fuel_type_mapping.keys()) if isinstance(fuel_type_mapping, dict) else None,
-                    "mapping": fuel_type_mapping if isinstance(fuel_type_mapping, dict) else None,
-                    "event_type": "auto_load",
-                    "event_category": "fuel_mapping"
-                })
+                
+                # Валидация маппинга
+                if not isinstance(fuel_type_mapping, dict):
+                    logger.warning(f"Маппинг топлива для шаблона {template.id} не является словарем", extra={
+                        "template_id": template.id,
+                        "template_name": template.name,
+                        "mapping_type": type(fuel_type_mapping).__name__,
+                        "event_type": "auto_load",
+                        "event_category": "fuel_mapping"
+                    })
+                    fuel_type_mapping = None
+                elif len(fuel_type_mapping) == 0:
+                    logger.warning(f"Маппинг топлива для шаблона {template.id} пустой", extra={
+                        "template_id": template.id,
+                        "template_name": template.name,
+                        "event_type": "auto_load",
+                        "event_category": "fuel_mapping"
+                    })
+                    fuel_type_mapping = None
+                else:
+                    logger.info(f"Маппинг топлива загружен для шаблона {template.id}", extra={
+                        "template_id": template.id,
+                        "template_name": template.name,
+                        "mapping_keys": list(fuel_type_mapping.keys()),
+                        "mapping_keys_count": len(fuel_type_mapping),
+                        "mapping_sample": dict(list(fuel_type_mapping.items())[:5]),  # Первые 5 записей для примера
+                        "is_dict": True,
+                        "event_type": "auto_load",
+                        "event_category": "fuel_mapping"
+                    })
             else:
                 fuel_type_mapping = None
                 logger.warning(f"Маппинг топлива НЕ НАЙДЕН для шаблона {template.id} (fuel_type_mapping пустой)", extra={
-                    "template_id": template.id,
-                    "event_type": "auto_load",
-                    "event_category": "fuel_mapping"
-                })
-                logger.info("Маппинг видов топлива не указан для шаблона", extra={
                     "template_id": template.id,
                     "template_name": template.name,
                     "event_type": "auto_load",
@@ -340,17 +351,13 @@ class AutoLoadService:
         except Exception as fuel_map_err:
             logger.error(f"ОШИБКА при загрузке маппинга топлива для шаблона {template.id}", extra={
                 "template_id": template.id,
+                "template_name": template.name,
                 "error": str(fuel_map_err),
+                "error_type": type(fuel_map_err).__name__,
                 "event_type": "auto_load",
                 "event_category": "fuel_mapping"
             }, exc_info=True)
-            logger.warning("Не удалось разобрать маппинг видов топлива", extra={
-                "template_id": template.id,
-                "template_name": template.name,
-                "error": str(fuel_map_err),
-                "event_type": "auto_load",
-                "event_category": "fuel_mapping"
-            })
+            fuel_type_mapping = None
         
         # Читаем данные из Firebird
         firebird_service = firebird_service_class(self.db)
@@ -451,35 +458,45 @@ class AutoLoadService:
                 kazs_value = str(row.get("kazs") or row.get("azs_number") or "").strip()
                 transaction_data["azs_number"] = app_services.extract_azs_number(kazs_value)
                 transaction_data["azs_original_name"] = kazs_value  # Сохраняем оригинальное название АЗС
-                raw_fuel = str(row.get("fuel") or row.get("product") or "")
-                # Сначала пробуем маппинг видов топлива из шаблона (толерантный к регистру и пробелам/дефисам)
-                def _match_fuel(value: str, mapping: Dict[str, str]) -> Optional[str]:
-                    norm = value.strip().lower().replace(" ", "").replace("-", "")
-                    for source_name, target_name in mapping.items():
-                        if not source_name:
-                            continue
-                        src_norm = source_name.strip().lower().replace(" ", "").replace("-", "")
-                        # прямое соответствие: ключ -> значение
-                        if src_norm == norm:
-                            return target_name
-                        # обратное соответствие: если в данных уже "нормализованное" значение, оставляем как есть
-                        if target_name:
-                            tgt_norm = str(target_name).strip().lower().replace(" ", "").replace("-", "")
-                            if tgt_norm == norm:
-                                return target_name
-                    return None
-
+                
+                # Извлекаем значение топлива из данных
+                raw_fuel = str(row.get("fuel") or row.get("product") or "").strip()
+                
+                # Логируем доступные поля, если топливо не найдено (только для первых нескольких строк)
+                if not raw_fuel and row_idx < 3:
+                    available_fields = list(row.keys())
+                    logger.debug("Поле топлива не найдено в данных Firebird", extra={
+                        "template_id": template.id,
+                        "template_name": template.name,
+                        "row_idx": row_idx,
+                        "available_fields": available_fields,
+                        "row_sample": {k: str(v)[:50] for k, v in list(row.items())[:10]}  # Первые 10 полей
+                    })
+                
+                # Применяем маппинг видов топлива из шаблона
                 normalized_fuel = raw_fuel
+                mapping_applied = False
+                
                 if raw_fuel and fuel_type_mapping:
-                    mapped = _match_fuel(raw_fuel, fuel_type_mapping)
+                    # Используем общую функцию маппинга
+                    mapped = match_fuel_type(
+                        raw_fuel, 
+                        fuel_type_mapping,
+                        template_id=template.id,
+                        template_name=template.name
+                    )
+                    
                     if mapped:
                         normalized_fuel = mapped
-                        logger.debug("Маппинг применен", extra={
+                        mapping_applied = True
+                        logger.debug("Маппинг применен (автоматическая загрузка)", extra={
+                            "template_id": template.id,
+                            "template_name": template.name,
                             "raw_fuel": raw_fuel,
                             "normalized_fuel": normalized_fuel,
-                            "template_id": template.id
+                            "row_idx": row_idx
                         })
-                        logger.info("Маппинг топлива применен (Firebird)", extra={
+                        logger.info("Маппинг топлива применен (Firebird, автоматическая загрузка)", extra={
                             "template_id": template.id,
                             "template_name": template.name,
                             "raw_fuel": raw_fuel,
@@ -488,13 +505,29 @@ class AutoLoadService:
                             "event_category": "fuel_mapping"
                         })
                     else:
-                        logger.debug("Маппинг НЕ НАЙДЕН, используем нормализацию", extra={
-                            "raw_fuel": raw_fuel,
-                            "template_id": template.id
-                        })
+                        # Логируем только первые несколько для отладки
+                        if row_idx < 5:
+                            logger.debug("Маппинг НЕ НАЙДЕН (автоматическая загрузка), используем нормализацию", extra={
+                                "template_id": template.id,
+                                "template_name": template.name,
+                                "raw_fuel": raw_fuel,
+                                "row_idx": row_idx,
+                                "mapping_keys_count": len(fuel_type_mapping) if fuel_type_mapping else 0
+                            })
+                
                 # Если маппинг не сработал, используем стандартную нормализацию
-                if normalized_fuel == raw_fuel:
+                if not mapping_applied and normalized_fuel == raw_fuel and raw_fuel:
+                    normalized_fuel_before = normalized_fuel
                     normalized_fuel = app_services.normalize_fuel(raw_fuel)
+                    # Логируем, если нормализация изменила значение (только первые несколько)
+                    if normalized_fuel != normalized_fuel_before and row_idx < 5:
+                        logger.debug("normalize_fuel изменил значение (автоматическая загрузка)", extra={
+                            "template_id": template.id,
+                            "template_name": template.name,
+                            "before": normalized_fuel_before,
+                            "after": normalized_fuel,
+                            "row_idx": row_idx
+                        })
                 transaction_data["product"] = normalized_fuel
                 transaction_data["operation_type"] = "Покупка"
                 transaction_data["currency"] = "RUB"
@@ -630,34 +663,27 @@ class AutoLoadService:
                 "error": str(fuel_map_err)
             })
 
-        if fuel_type_mapping:
-            def _match_fuel(value: str, mapping: Dict[str, str]) -> Optional[str]:
-                norm = value.strip().lower().replace(" ", "").replace("-", "")
-                for source_name, target_name in mapping.items():
-                    if not source_name:
-                        continue
-                    src_norm = source_name.strip().lower().replace(" ", "").replace("-", "")
-                    # прямое соответствие: ключ -> значение
-                    if src_norm == norm:
-                        return target_name
-                    # обратное соответствие: если в данных уже "нормализованное" значение, возвращаем его
-                    if target_name:
-                        tgt_norm = str(target_name).strip().lower().replace(" ", "").replace("-", "")
-                        if tgt_norm == norm:
-                            return target_name
-                return None
-
+        if fuel_type_mapping and isinstance(fuel_type_mapping, dict):
             for item in api_data:
-                raw_product = item.get("product") or item.get("service") or item.get("serviceName") or ""
+                raw_product = str(item.get("product") or item.get("service") or item.get("serviceName") or "").strip()
                 if not raw_product:
                     continue
-                mapped = _match_fuel(str(raw_product), fuel_type_mapping)
+                # Используем общую функцию маппинга
+                mapped = match_fuel_type(
+                    raw_product,
+                    fuel_type_mapping,
+                    template_id=template.id,
+                    template_name=template.name
+                )
                 if mapped:
                     item["product"] = mapped
-                    logger.info("Маппинг топлива применен (API)", extra={
+                    logger.info("Маппинг топлива применен (API, автоматическая загрузка)", extra={
                         "template_id": template.id,
+                        "template_name": template.name,
                         "raw_product": raw_product,
-                        "mapped_product": mapped
+                        "mapped_product": mapped,
+                        "event_type": "auto_load",
+                        "event_category": "fuel_mapping"
                     })
                 else:
                     item["product"] = app_services.normalize_fuel(raw_product)
