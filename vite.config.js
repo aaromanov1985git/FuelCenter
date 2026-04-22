@@ -61,7 +61,7 @@ export default defineConfig({
   },
   server: {
     port: parseInt(process.env.PORT || '3000'),
-    open: true,
+    open: !process.env.VITE_PROXY_TARGET, // В Docker не открывать браузер
     host: true, // Разрешить доступ с любых хостов
     allowedHosts: [
       'defectively-nimble-rattail.cloudpub.ru',
@@ -71,7 +71,8 @@ export default defineConfig({
     ],
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        // В Docker используйте VITE_PROXY_TARGET=http://backend:8000
+        target: process.env.VITE_PROXY_TARGET || 'http://127.0.0.1:8000',
         changeOrigin: true,
         secure: false,
         // Настройки для корректной передачи cookies через proxy

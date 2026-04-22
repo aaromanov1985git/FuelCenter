@@ -1,0 +1,87 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: gsm_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gsm_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gsm_password}
+      POSTGRES_DB: ${POSTGRES_DB:-gsm_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gsm_user} -d ${POSTGRES_DB:-gsm_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: gsm_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+      - gsm_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gsm_backend
+    env_file:
+      - ./backend/.env
+    environment:
+      # База данных (значение по умолчанию для Docker сети)
+      DATABASE_URL: ${DATABASE_URL:-postgresql://gsm_user:gsm_password@db:5432/gsm_db}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173,http://defectively-nimble-rattail.cloudpub.ru,https://defectively-nimble-rattail.cloudpub.ru}
+      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-52428800}
+      # Rate Limiting
+      ENABLE_RATE_LIMIT: ${ENABLE_RATE_LIMIT:-true}
+      RATE_LIMIT_DEFAULT: ${RATE_LIMIT_DEFAULT:-500/minute}
+      RATE_LIMIT_STRICT: ${RATE_LIMIT_STRICT:-50/minute}
+      # КРИТИЧЕСКИЕ НАСТРОЙКИ БЕЗОПАСНОСТИ - берутся ТОЛЬКО из .env файла!
+      # НЕ указываем здесь значения по умолчанию для:
+      # - SECRET_KEY
+      # - ADMIN_PASSWORD
+      # - ENVIRONMENT
+      # - ENCRYPTION_KEY
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
+      - ./backend/alembic.ini:/app/alembic.ini
+      - ./backend/tests:/app/tests
+      - ./backend/pytest.ini:/app/pytest.ini
+      - ./backend/scripts:/app/scripts
+      - gsm_backups:/app/backups
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - default
+      - gsm_network
+
+networks:
+  gsm_network:
+    name: gsm_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  gsm_backups:
+

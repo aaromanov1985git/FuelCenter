@@ -11,6 +11,18 @@ import './UsersList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
 
+/** Преобразует ответ API об ошибке в читаемую строку (в т.ч. 422 с массивом detail) */
+function formatApiError (detail, fallback) {
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail) && detail.length > 0) {
+    const first = detail[0]
+    const loc = first.loc && first.loc.length > 0 ? first.loc[first.loc.length - 1] : ''
+    const msg = first.msg || ''
+    return loc ? `${String(loc)}: ${msg}` : msg
+  }
+  return fallback
+}
+
 const UsersList = () => {
   const { user: currentUser } = useAuth()
   const { success, error: showError, info } = useToast()
@@ -182,7 +194,8 @@ const UsersList = () => {
         })
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.detail || 'Ошибка сохранения')
+          const msg = formatApiError(errorData.detail, 'Ошибка сохранения')
+          throw new Error(msg)
         }
         success('Пользователь обновлён')
       } else {
@@ -193,7 +206,8 @@ const UsersList = () => {
         })
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.detail || 'Ошибка создания пользователя')
+          const msg = formatApiError(errorData.detail, 'Ошибка создания пользователя')
+          throw new Error(msg)
         }
         const created = await response.json()
         success(`Пользователь ${created.username} создан`)

@@ -108,8 +108,10 @@ services:
     restart: unless-stopped
 
 networks:
+  # Та же сеть, что и в docker-compose.yml (создаётся один раз: docker network create gsm_network)
   gsm_network:
-    driver: bridge
+    name: gsm_network
+    external: true
 
 volumes:
   prometheus_data:

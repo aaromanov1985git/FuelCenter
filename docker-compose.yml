@@ -2,6 +2,8 @@ services:
   db:
     image: postgres:15-alpine
     container_name: gsm_db
+    stop_grace_period: 10s
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-gsm_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gsm_password}
@@ -20,6 +22,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: gsm_redis
+    stop_grace_period: 10s
+    restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
@@ -39,12 +43,14 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: gsm_backend
+    stop_grace_period: 15s
+    restart: unless-stopped
     env_file:
       - ./backend/.env
     environment:
       # База данных (значение по умолчанию для Docker сети)
       DATABASE_URL: ${DATABASE_URL:-postgresql://gsm_user:gsm_password@db:5432/gsm_db}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173,http://defectively-nimble-rattail.cloudpub.ru,https://defectively-nimble-rattail.cloudpub.ru}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:3002,http://127.0.0.1:5173,http://defectively-nimble-rattail.cloudpub.ru,https://defectively-nimble-rattail.cloudpub.ru}
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-52428800}
       # Rate Limiting
       ENABLE_RATE_LIMIT: ${ENABLE_RATE_LIMIT:-true}
@@ -76,9 +82,36 @@ services:
       - default
       - gsm_network
 
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: gsm_frontend
+    stop_grace_period: 15s
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3002}:3000"
+    environment:
+      PORT: 3000
+      # Прокси /api на бэкенд в Docker-сети
+      VITE_PROXY_TARGET: http://backend:8000
+    volumes:
+      - ./src:/app/src
+      - ./index.html:/app/index.html
+      - ./vite.config.js:/app/vite.config.js
+      - ./components.json:/app/components.json
+    depends_on:
+      - backend
+    networks:
+      - default
+      - gsm_network
+
 networks:
+  # Внешняя сеть: не удаляется при docker compose down, используется и стеком мониторинга.
+  # Перед первым запуском: docker network create gsm_network
   gsm_network:
     name: gsm_network
+    external: true
 
 volumes:
   postgres_data:

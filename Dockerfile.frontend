@@ -1,0 +1,19 @@
+# Фронтенд (Vite + React) — dev и production
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Копируем только файлы зависимостей для кэширования слоёв
+COPY package.json package-lock.json* ./
+
+RUN npm ci
+
+# Копируем исходники (в dev-режиме основные папки монтируются через volume)
+COPY . .
+
+# Vite слушает на 0.0.0.0 для доступа с хоста
+ENV PORT=3000
+EXPOSE 3000
+
+# По умолчанию — dev-сервер (в docker-compose можно переопределить на build + nginx для prod)
+CMD ["npm", "run", "dev"]

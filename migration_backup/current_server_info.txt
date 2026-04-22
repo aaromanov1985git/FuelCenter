@@ -1,0 +1,185 @@
+﻿
+======================================================================
+  CURRENT SERVER INFORMATION
+======================================================================
+
+Date: 2026-01-30 16:00:50
+Computer: WSTMNIT01
+User: aaromanov
+
+
+======================================================================
+  SYSTEM
+======================================================================
+
+OS: Майкрософт Windows 11 Pro
+Version: 10.0.22631
+Architecture: 64-разрядная
+
+
+======================================================================
+  DOCKER
+======================================================================
+
+Docker: Docker version 28.5.2, build ecc6942
+Docker Compose: Docker Compose version v2.40.3-desktop.1
+
+Running GSM containers:
+NAMES                STATUS                PORTS
+gsm_grafana          Up 3 days             0.0.0.0:3001->3000/tcp, [::]:3001->3000/tcp
+gsm_promtail         Up 3 days             
+gsm_backend          Up 3 days             0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+gsm_prometheus       Up 3 days             0.0.0.0:9090->9090/tcp, [::]:9090->9090/tcp
+gsm_loki             Up 3 days             0.0.0.0:3100->3100/tcp, [::]:3100->3100/tcp
+gsm_redis_exporter   Up 3 days             0.0.0.0:9121->9121/tcp, [::]:9121->9121/tcp
+gsm_db               Up 3 days (healthy)   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+gsm_redis            Up 3 days (healthy)   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+gsm_alertmanager     Up 3 days             0.0.0.0:9093->9093/tcp, [::]:9093->9093/tcp
+
+Docker volumes:
+DRIVER    VOLUME NAME
+local     gsm_alertmanager_data
+local     gsm_grafana_data
+local     gsm_gsm_backups
+local     gsm_loki_data
+local     gsm_postgres_data
+local     gsm_prometheus_data
+local     gsm_redis_data
+
+
+======================================================================
+  DATABASE
+======================================================================
+
+Database information:
+                                                List of databases
+   Name    |  Owner   | Encoding |  Collate   |   Ctype    | ICU Locale | Locale Provider |   Access privileges   
+-----------+----------+----------+------------+------------+------------+-----------------+-----------------------
+ gsm_db    | gsm_user | UTF8     | en_US.utf8 | en_US.utf8 |            | libc            | 
+ gsm_user  | gsm_user | UTF8     | en_US.utf8 | en_US.utf8 |            | libc            | 
+ postgres  | gsm_user | UTF8     | en_US.utf8 | en_US.utf8 |            | libc            | 
+ template0 | gsm_user | UTF8     | en_US.utf8 | en_US.utf8 |            | libc            | =c/gsm_user          +
+           |          |          |            |            |            |                 | gsm_user=CTc/gsm_user
+ template1 | gsm_user | UTF8     | en_US.utf8 | en_US.utf8 |            | libc            | =c/gsm_user          +
+           |          |          |            |            |            |                 | gsm_user=CTc/gsm_user
+(5 rows)
+
+
+Tables:
+                   List of relations
+ Schema |            Name            | Type  |  Owner   
+--------+----------------------------+-------+----------
+ public | alembic_version            | table | gsm_user
+ public | card_info_schedules        | table | gsm_user
+ public | fuel_card_analysis_results | table | gsm_user
+ public | fuel_cards                 | table | gsm_user
+ public | fuel_types                 | table | gsm_user
+ public | gas_stations               | table | gsm_user
+ public | normalization_settings     | table | gsm_user
+ public | notification_settings      | table | gsm_user
+ public | notifications              | table | gsm_user
+ public | organizations              | table | gsm_user
+ public | provider_templates         | table | gsm_user
+ public | providers                  | table | gsm_user
+ public | system_logs                | table | gsm_user
+ public | system_settings            | table | gsm_user
+ public | transactions               | table | gsm_user
+ public | upload_events              | table | gsm_user
+ public | upload_period_lock         | table | gsm_user
+ public | user_action_logs           | table | gsm_user
+ public | user_organizations         | table | gsm_user
+ public | users                      | table | gsm_user
+ public | vehicle_locations          | table | gsm_user
+ public | vehicle_refuels            | table | gsm_user
+ public | vehicles                   | table | gsm_user
+(23 rows)
+
+
+Transactions count: 46141 
+Fuel cards count: 593 
+Gas stations count: 89 
+
+
+======================================================================
+  ALEMBIC MIGRATIONS
+======================================================================
+
+Current migration version:
+{"timestamp": "2026-01-30T13:00:54.251674Z", "level": "INFO", "logger": "gsm_converter", "message": "╨Ш╤Б╨┐╨╛╨╗╤М╨╖╤Г╨╡╤В╤Б╤П DATABASE_URL ╨╕╨╖ ╨┐╨╡╤А╨╡╨╝╨╡╨╜╨╜╨╛╨╣ ╨╛╨║╤А╤Г╨╢╨╡╨╜╨╕╤П", "module": "database", "function": "<module>", "line": 18}
+{"timestamp": "2026-01-30T13:00:54.251772Z", "level": "INFO", "logger": "gsm_converter", "message": "╨Я╨╛╨┤╨║╨╗╤О╤З╨╡╨╜╨╕╨╡ ╨║ ╨С╨Ф: postgresql://***@db:5432/gsm_db", "module": "database", "function": "<module>", "line": 29}
+{"timestamp": "2026-01-30T13:00:54.251818Z", "level": "INFO", "logger": "gsm_converter", "message": "╨Ш╨╝╤П ╨▒╨░╨╖╤Л ╨┤╨░╨╜╨╜╤Л╤Е ╨▓ URL: gsm_db", "module": "database", "function": "<module>", "line": 56}
+docker : INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+C:\curWork\GSM\migration_backup\check_current_server.ps1:81 знак:18
++     $migration = docker exec gsm_backend alembic current 2>&1
++                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (INFO  [alembic....PostgresqlImpl.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+add_notifications_tables
+add_performance_indexes
+
+
+======================================================================
+  CONFIGURATION
+======================================================================
+
+File backend\.env exists
+Public settings:
+ENABLE_AUTH=true
+JWT_EXPIRE_MINUTES=30
+ADMIN_USERNAME=admin
+ADMIN_EMAIL=aaromanov@starwayp.com
+ENVIRONMENT=production
+COOKIE_SECURE=true
+
+
+======================================================================
+  NETWORK SETTINGS
+======================================================================
+
+Open GSM ports:
+
+  TCP    0.0.0.0:3000           0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:3001           0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:5432           0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:6379           0.0.0.0:0              LISTENING
+  TCP    0.0.0.0:8000           0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:8000         127.0.0.1:50871        TIME_WAIT
+  TCP    127.0.0.1:8000         127.0.0.1:52001        TIME_WAIT
+  TCP    127.0.0.1:8000         127.0.0.1:52500        TIME_WAIT
+  TCP    127.0.0.1:8000         127.0.0.1:52830        TIME_WAIT
+  TCP    127.0.0.1:8000         127.0.0.1:55059        TIME_WAIT
+  TCP    127.0.0.1:8000         127.0.0.1:55698        TIME_WAIT
+  TCP    127.0.0.1:8000         127.0.0.1:58349        TIME_WAIT
+  TCP    127.0.0.1:8000         127.0.0.1:59673        TIME_WAIT
+  TCP    127.0.0.1:8000         127.0.0.1:60833        TIME_WAIT
+  TCP    127.0.0.1:8000         127.0.0.1:62659        TIME_WAIT
+  TCP    127.0.0.1:8000         127.0.0.1:64658        TIME_WAIT
+  TCP    127.0.0.1:8000         127.0.0.1:65256        TIME_WAIT
+  TCP    [::]:3000              [::]:0                 LISTENING
+  TCP    [::]:3001              [::]:0                 LISTENING
+  TCP    [::]:5432              [::]:0                 LISTENING
+  TCP    [::]:6379              [::]:0                 LISTENING
+  TCP    [::]:8000              [::]:0                 LISTENING
+  TCP    [::1]:3001             [::]:0                 LISTENING
+  TCP    [::1]:5432             [::]:0                 LISTENING
+  TCP    [::1]:6379             [::]:0                 LISTENING
+  TCP    [::1]:8000             [::]:0                 LISTENING
+
+
+======================================================================
+  HEALTH CHECK
+======================================================================
+
+Backend health check: OK (Status: 200)
+
+
+======================================================================
+  DATA SIZES
+======================================================================
+
+Database size: 117 MB 
+
+
+
