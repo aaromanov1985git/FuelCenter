@@ -46,6 +46,9 @@ const TAB_LABELS = {
   settings: 'Настройки',
 }
 
+// Вкладки, у которых собственный `<h1>` рендерится внутри страницы
+const TABS_WITH_OWN_H1 = new Set(['transactions', 'settings', 'provider-analysis'])
+
 const App = () => {
   const { success, error: showError, info } = useToast()
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth()
@@ -271,12 +274,14 @@ const App = () => {
               ]}
             />
             
-            {/* Заголовок показываем только для транзакций */}
             {activeTab === 'transactions' && (
               <>
-            <h1>Транзакции ГСМ</h1>
-            <p className="subtitle">Загрузите файл для импорта, затем просматривайте и фильтруйте данные</p>
+                <h1>Транзакции ГСМ</h1>
+                <p className="subtitle">Загрузите файл для импорта, затем просматривайте и фильтруйте данные</p>
               </>
+            )}
+            {!TABS_WITH_OWN_H1.has(activeTab) && (
+              <h1 className="sr-only">{TAB_LABELS[activeTab] || 'Главная'}</h1>
             )}
 
         <AppRoutes

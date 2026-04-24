@@ -95,7 +95,7 @@ const TransactionUpload = ({
     </div>
 
     <div className="upload-dashboard">
-      <h3 className="upload-dashboard-title">Дашборд загрузки</h3>
+      <h2 className="upload-dashboard-title">Дашборд загрузки</h2>
       <div className="upload-dashboard-grid">
         <div className="upload-dashboard-card stat-primary">
           <div className="upload-dashboard-label">Всего транзакций</div>

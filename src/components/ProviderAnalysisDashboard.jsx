@@ -1275,7 +1275,7 @@ const ProviderAnalysisDashboard = () => {
         <Card className="map-card" style={{ marginBottom: 'var(--spacing-section)' }}>
           <Card.Body>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0 }}>Карта заправок</h3>
+              <h2 style={{ margin: 0 }}>Карта заправок</h2>
               <Button
                 variant="secondary"
                 size="sm"
@@ -1348,7 +1348,7 @@ const ProviderAnalysisDashboard = () => {
           <Card className="transactions-card">
             <Card.Body>
               <div className="table-header">
-                <h3>Сводка по картам</h3>
+                <h2>Сводка по картам</h2>
                 {selectedCardForDetails && (
                   <Button variant="secondary" size="sm" onClick={() => setSelectedCardForDetails(null)}>
                     Сбросить выбор
@@ -1454,7 +1454,7 @@ const ProviderAnalysisDashboard = () => {
             <Card className="transactions-card">
               <Card.Body>
                 <div className="table-header">
-                  <h3>Детализация транзакций: {selectedCardForDetails}</h3>
+                  <h2>Детализация транзакций: {selectedCardForDetails}</h2>
                   <Button variant="secondary" size="sm" onClick={handleExportCSV}>
                     Экспорт CSV
                   </Button>
@@ -1552,7 +1552,7 @@ const ProviderAnalysisDashboard = () => {
         <Card className="map-card map-card-fullscreen">
           <Card.Body>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ margin: 0 }}>Карта заправок</h3>
+              <h2 style={{ margin: 0 }}>Карта заправок</h2>
               <Button
                 variant="secondary"
                 size="sm"
@@ -1623,7 +1623,7 @@ const ProviderAnalysisDashboard = () => {
         {/* Распределение по АЗС */}
         <Card>
           <Card.Body>
-            <h3>ТОП-10 АЗС по объёму</h3>
+            <h2>ТОП-10 АЗС по объёму</h2>
             {aggregatedData.kpi?.favoriteGasStation && (
               <div className="favorite-azs">
                 <strong>Любимая АЗС:</strong> {aggregatedData.kpi.favoriteGasStation.name} 
@@ -1661,7 +1661,7 @@ const ProviderAnalysisDashboard = () => {
         {/* Распределение по топливу */}
         <Card>
           <Card.Body>
-            <h3>Распределение по топливу</h3>
+            <h2>Распределение по топливу</h2>
             {aggregatedData.kpi?.mainFuelType && (
               <div className="main-fuel-type">
                 <strong>Основной тип топлива:</strong> {aggregatedData.kpi.mainFuelType.type} 
