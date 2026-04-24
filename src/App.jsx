@@ -19,6 +19,7 @@ import { useSidebar } from './hooks/useSidebar'
 import { useTransactions } from './hooks/useTransactions'
 import { useFileUpload } from './hooks/useFileUpload'
 import { useAuthConfig } from './hooks/useAuthConfig'
+import { useTransactionActions } from './hooks/useTransactionActions'
 import { authFetch } from './utils/api'
 import './App.css'
 
@@ -118,92 +119,17 @@ const App = () => {
     checkFileMatch,
   } = useFileUpload({ onUploaded, setLoading, setError, logout })
 
-  // Экспорт транзакций в Excel через API
-  const downloadExcel = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError('')
-      
-      // Формируем параметры экспорта с учетом текущих фильтров
-      const params = new URLSearchParams({
-        format: 'xlsx'
-      })
-      
-      // Добавляем фильтры, если они установлены
-      if (debouncedCardNumber) params.append('card_number', debouncedCardNumber)
-      if (debouncedAzsNumber) params.append('azs_number', debouncedAzsNumber)
-      if (debouncedProduct) params.append('product', debouncedProduct)
-      
-      // Обрабатываем фильтр по провайдеру
-      // Приоритет у фильтра из расширенного поиска, если он установлен
-      if (debouncedProvider && debouncedProvider !== '') {
-        // debouncedProvider теперь содержит ID провайдера (строка)
-        params.append('provider_id', debouncedProvider)
-      } else if (selectedProviderTab !== null) {
-        // Если фильтр из расширенного поиска не установлен, используем выбранную вкладку
-        params.append('provider_id', selectedProviderTab.toString())
-      }
-      
-      logger.info('Начало экспорта транзакций', { 
-        filters: {
-          card_number: debouncedCardNumber,
-          azs_number: debouncedAzsNumber,
-          product: debouncedProduct,
-          provider_id: selectedProviderTab
-        }
-      })
-      
-      // Загружаем файл с сервера
-      const response = await authFetch(`${API_URL}/api/v1/transactions/export?${params}`)
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Ошибка экспорта' }))
-        throw new Error(errorData.detail || 'Ошибка экспорта транзакций')
-      }
-      
-      // Получаем имя файла из заголовка Content-Disposition или используем по умолчанию
-      const contentDisposition = response.headers.get('Content-Disposition')
-      let fileName = `transactions_export_${new Date().toISOString().split('T')[0]}.xlsx`
-      
-      if (contentDisposition) {
-        const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/i)
-        if (fileNameMatch) {
-          fileName = fileNameMatch[1]
-        }
-      }
-      
-      // Создаем blob и скачиваем файл
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = fileName
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-      
-      success(`Файл ${fileName} успешно экспортирован`)
-      logger.info('Excel файл успешно экспортирован', { filename: fileName })
-    } catch (err) {
-      // Безопасное извлечение сообщения об ошибке
-      let errorText = 'Неизвестная ошибка'
-      if (err instanceof Error) {
-        errorText = err.message || 'Ошибка экспорта'
-      } else if (typeof err === 'string') {
-        errorText = err
-      } else if (err && typeof err === 'object') {
-        errorText = err.detail || err.message || err.error || JSON.stringify(err)
-      }
-      const errorMessage = 'Ошибка экспорта: ' + errorText
-      showError(errorMessage)
-      setError(errorMessage) // Оставляем для обратной совместимости
-      logger.error('Ошибка экспорта в Excel', { error: errorText, originalError: err })
-      setTimeout(() => setError(''), 10000)
-    } finally {
-      setLoading(false)
-    }
-  }, [debouncedCardNumber, debouncedAzsNumber, debouncedProduct, selectedProviderTab, success, showError])
+  const { downloadExcel, clearByProvider, clearAll } = useTransactionActions({
+    debouncedCardNumber,
+    debouncedAzsNumber,
+    debouncedProduct,
+    debouncedProvider,
+    selectedProviderTab,
+    loadTransactions,
+    loadStats,
+    setLoading,
+    setError,
+  })
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -320,138 +246,14 @@ const App = () => {
     setPage(0) // Сбрасываем страницу при изменении сортировки
   }
 
-  // Очистка базы данных
-  const handleClearDatabase = () => {
-    setShowClearConfirm(true)
-  }
-
-  // Очистка транзакций по провайдеру
-  const handleClearProvider = () => {
-    setShowClearProviderModal(true)
-  }
-
   const handleConfirmClearProvider = async (params) => {
-    try {
-      setLoading(true)
-      setError('')
-      setShowClearProviderModal(false)
-      
-      // Формируем URL с параметрами
-      const urlParams = new URLSearchParams({
-        provider_id: params.provider_id.toString(),
-        confirm: 'true'
-      })
-      
-      if (params.date_from) {
-        urlParams.append('date_from', params.date_from)
-      }
-      
-      if (params.date_to) {
-        urlParams.append('date_to', params.date_to)
-      }
-      
-      const response = await authFetch(`${API_URL}/api/v1/transactions/clear-by-provider?${urlParams.toString()}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        let errorMessage = 'Ошибка очистки транзакций провайдера'
-        try {
-          const errorData = await response.json()
-          // Обрабатываем разные форматы ответа об ошибке
-          if (typeof errorData === 'string') {
-            errorMessage = errorData
-          } else if (errorData.detail) {
-            errorMessage = typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail)
-          } else if (errorData.message) {
-            errorMessage = typeof errorData.message === 'string' ? errorData.message : JSON.stringify(errorData.message)
-          } else {
-            errorMessage = JSON.stringify(errorData)
-          }
-        } catch (parseError) {
-          errorMessage = `Ошибка ${response.status}: ${response.statusText}`
-        }
-        throw new Error(errorMessage)
-      }
-
-      const result = await response.json()
-      const message = result.message || `Удалено транзакций: ${result.deleted_count}`
-      success(message)
-      setError(message) // Оставляем для обратной совместимости
-      setTimeout(() => setError(''), 5000)
-      
-      // Перезагружаем данные
-      await loadTransactions()
-      await loadStats()
-    } catch (err) {
-      let errorMessage = 'Ошибка очистки транзакций провайдера'
-      if (err instanceof Error) {
-        errorMessage = err.message
-      } else if (typeof err === 'string') {
-        errorMessage = err
-      } else if (err && typeof err === 'object') {
-        errorMessage = err.message || err.detail || JSON.stringify(err)
-      }
-      showError('Ошибка очистки транзакций провайдера: ' + errorMessage)
-      logger.error('Ошибка очистки транзакций провайдера', { error: errorMessage, stack: err?.stack })
-    } finally {
-      setLoading(false)
-    }
+    setShowClearProviderModal(false)
+    await clearByProvider(params)
   }
 
   const handleConfirmClearDatabase = async () => {
-    try {
-      setLoading(true)
-      setError('')
-      setShowClearConfirm(false)
-      
-      const response = await authFetch(`${API_URL}/api/v1/transactions/clear?confirm=true`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        let errorMessage = 'Ошибка очистки базы данных'
-        try {
-          const errorData = await response.json()
-          // Обрабатываем разные форматы ответа об ошибке
-          if (typeof errorData === 'string') {
-            errorMessage = errorData
-          } else if (errorData.detail) {
-            errorMessage = typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail)
-          } else if (errorData.message) {
-            errorMessage = typeof errorData.message === 'string' ? errorData.message : JSON.stringify(errorData.message)
-          } else {
-            errorMessage = JSON.stringify(errorData)
-          }
-        } catch (parseError) {
-          errorMessage = `Ошибка ${response.status}: ${response.statusText}`
-        }
-        throw new Error(errorMessage)
-      }
-
-      const result = await response.json()
-      const message = `База данных очищена. Удалено транзакций: ${result.deleted_count}`
-      success(message)
-      setError(message) // Оставляем для обратной совместимости
-      setTimeout(() => setError(''), 5000)
-      
-      // Перезагружаем данные
-      await loadTransactions()
-      await loadStats()
-    } catch (err) {
-      let errorMessage = 'Ошибка очистки базы данных'
-      if (err instanceof Error) {
-        errorMessage = err.message
-      } else if (typeof err === 'string') {
-        errorMessage = err
-      } else if (err && typeof err === 'object') {
-        errorMessage = err.message || err.detail || JSON.stringify(err)
-      }
-      setError('Ошибка очистки базы данных: ' + errorMessage)
-      logger.error('Ошибка очистки базы данных', { error: errorMessage, stack: err?.stack })
-    } finally {
-      setLoading(false)
-    }
+    setShowClearConfirm(false)
+    await clearAll()
   }
 
   // Обработка события для установки фильтра транзакций и переключения вкладки
@@ -704,8 +506,8 @@ const App = () => {
             onOpenColumnSettings={() => setShowColumnSettings(true)}
             onDownloadExcel={downloadExcel}
             onRefresh={() => loadTransactions()}
-            onClearAll={handleClearDatabase}
-            onClearByProvider={handleClearProvider}
+            onClearAll={() => setShowClearConfirm(true)}
+            onClearByProvider={() => setShowClearProviderModal(true)}
             onContextMenu={setContextMenu}
             onPageChange={setPage}
             onPageSizeChange={setPageSize}
