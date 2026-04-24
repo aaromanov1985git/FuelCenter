@@ -173,9 +173,9 @@ Dev-сервер поднят на порту 3000, backend отвечает. З
 | 9 | ~~Переставить импорты в [main.jsx](../src/main.jsx): сначала `tokens.css`, потом `index.css`~~ | ~~P2~~ | ✓ Done (уже в правильном порядке) |
 | 10 | ~~Ужесточить fallback `IconButton` aria-label — не утекать сырое имя иконки~~ | ~~P2~~ | ✓ Done |
 | 11 | ~~Свернуть `CardInfoModal` + `CardInfoScheduleModal` + `CardInfoSchedulesList`~~ | ~~P2~~ | Partial: дедуплицирован `loadApiTemplates` в [utils/templates.js](../src/utils/templates.js); объединять в один компонент не стали — функции различны |
-| 12 | Добавить Playwright-script в `qa/` для reproducible визуального diff | P2 | 1 д |
+| 12 | ~~Добавить Playwright-script в `qa/` для reproducible визуального diff~~ | ~~P2~~ | ✓ Done ([qa/capture.mjs](../qa/capture.mjs) + [qa/compare.mjs](../qa/compare.mjs) + [qa/visual-diff.config.mjs](../qa/visual-diff.config.mjs); MCP-флоу описан в [qa/README.md](../qa/README.md)) |
 
-**Остаток P1: ~2.5 нед (react-router + покрытие тестами). P2: ~1 д (#12).**
+**Остаток P1: ~2.5 нед (react-router + покрытие тестами). P2: все закрыто.**
 
 ---
 
