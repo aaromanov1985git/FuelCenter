@@ -3,6 +3,7 @@ import { Modal, Button, Input, Select, Checkbox, Alert } from './ui'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
+import { loadApiTemplates } from '../utils/templates'
 import './CardInfoScheduleModal.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
@@ -105,29 +106,7 @@ const CardInfoScheduleModal = ({
   const loadTemplates = async () => {
     setLoadingTemplates(true)
     try {
-      const response = await authFetch(`${API_URL}/api/v1/templates`)
-      if (response.ok) {
-        const result = await response.json()
-        // Фильтруем шаблоны с типом "web" или "api" (поддерживают получение информации по карте) и активные
-        const apiTemplates = result.items.filter(t => {
-          const connectionType = (t.connection_type || '').toLowerCase()
-          return (connectionType === 'web' || connectionType === 'api') && t.is_active !== false
-        })
-        setLocalTemplates(apiTemplates)
-        
-        // Логируем для отладки
-        if (apiTemplates.length === 0) {
-          logger.warn('Не найдено шаблонов с типом "web" или "api"', {
-            total_templates: result.items.length,
-            templates: result.items.map(t => ({
-              id: t.id,
-              name: t.name,
-              connection_type: t.connection_type,
-              is_active: t.is_active
-            }))
-          })
-        }
-      }
+      setLocalTemplates(await loadApiTemplates())
     } catch (err) {
       logger.error('Ошибка загрузки шаблонов', { error: err.message })
     } finally {

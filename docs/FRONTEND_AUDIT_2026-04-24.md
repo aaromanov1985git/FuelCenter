@@ -145,7 +145,7 @@ Dev-сервер поднят на порту 3000, backend отвечает. З
 - **P2.1.** [src/redesign-ref/shared.jsx](../src/redesign-ref/shared.jsx) — dead code в production-дереве. Эталонные HTML к нему обращаются по битому пути `redesign/shared.jsx`. Чистка: либо переложить пути в эталонах (и положить `shared.jsx` в папку `redesign/`), либо убрать `shared.jsx` из `src/` совсем (оставить только `NewDising/anthropic_design/`).
 - **P2.2.** Эталоны `redesign_dashboard.html`, `redesign_fuel_cards.html` и т.д. ссылаются на `redesign/tokens.css` и `redesign/shared.jsx`, а такой папки **нет**. Из-за этого открыть их через `file://` — пустой белый экран. `redesign_dark.html`/`redesign_light.html` самодостаточны и работают. **Фикс:** создать `src/redesign-ref/redesign/` с симлинками/копиями на `tokens.css` и `shared.jsx`, или исправить относительные пути внутри эталонов.
 - **P2.3.** Порядок импортов в [src/main.jsx](../src/main.jsx) — `index.css` импортируется раньше `tokens.css`. Семантически лучше иначе (сначала переменные, потом глобальные стили, которые могут их использовать). Сейчас работает благодаря специфичности, но это тонкий лёд.
-- **P2.4.** Три похожих компонента — [CardInfoModal.jsx](../src/components/CardInfoModal.jsx), [CardInfoScheduleModal.jsx](../src/components/CardInfoScheduleModal.jsx), [CardInfoSchedulesList.jsx](../src/components/CardInfoSchedulesList.jsx). Вероятно можно свернуть в один компонент с `mode`/`variant` пропом.
+- ~~**P2.4.** Три похожих компонента — [CardInfoModal.jsx](../src/components/CardInfoModal.jsx), [CardInfoScheduleModal.jsx](../src/components/CardInfoScheduleModal.jsx), [CardInfoSchedulesList.jsx](../src/components/CardInfoSchedulesList.jsx). Вероятно можно свернуть в один компонент с `mode`/`variant` пропом.~~ → **Partial.** Три компонента функционально различны (view карты / редактор регламента / список регламентов), поэтому не слиты в один. Но удалён дублирующийся `loadTemplates` с одинаковым фильтром (web/api + is_active) — вынесен в [src/utils/templates.js](../src/utils/templates.js) и переиспользован. `FuelCardEditModal` имеет похожий фильтр, но на другом endpoint (`/providers/{id}/templates`) — не трогаем.
 - **P2.5.** [IconButton.jsx:126](../src/components/IconButton.jsx) — `aria-label={title || icon}`. Сделать `title` обязательным пропом, убрать fallback.
 - ~~**P2.6.** SVG-иконки в сайдбаре — добавить для соответствия эталону~~ → **Done.** Вынесены в [src/components/ui/Icons/Icons.jsx](../src/components/ui/Icons/Icons.jsx), подключены в [App.jsx](../src/App.jsx).
 - **P2.7.** Настройка `<h1>` на каждой странице для соответствия a11y (см. §4).
@@ -172,10 +172,10 @@ Dev-сервер поднят на порту 3000, backend отвечает. З
 | 8 | ~~Удалить/переложить `redesign-ref/shared.jsx`~~ | ~~P2~~ | ✓ N/A (файл не существует, импортов нет) |
 | 9 | ~~Переставить импорты в [main.jsx](../src/main.jsx): сначала `tokens.css`, потом `index.css`~~ | ~~P2~~ | ✓ Done (уже в правильном порядке) |
 | 10 | ~~Ужесточить fallback `IconButton` aria-label — не утекать сырое имя иконки~~ | ~~P2~~ | ✓ Done |
-| 11 | Свернуть `CardInfoModal` + `CardInfoScheduleModal` + `CardInfoSchedulesList` | P2 | 1 д |
+| 11 | ~~Свернуть `CardInfoModal` + `CardInfoScheduleModal` + `CardInfoSchedulesList`~~ | ~~P2~~ | Partial: дедуплицирован `loadApiTemplates` в [utils/templates.js](../src/utils/templates.js); объединять в один компонент не стали — функции различны |
 | 12 | Добавить Playwright-script в `qa/` для reproducible визуального diff | P2 | 1 д |
 
-**Остаток P1: ~2.5 нед (react-router + покрытие тестами). P2: ~2 д (#11 + #12).**
+**Остаток P1: ~2.5 нед (react-router + покрытие тестами). P2: ~1 д (#12).**
 
 ---
 
