@@ -945,7 +945,7 @@ const OrganizationsList = () => {
       {/* KPI row */}
       <div className="org-kpi-grid">
         {kpis.map((k, i) => (
-          <div key={i} className="org-kpi-card" data-testid={`org-kpi-${i}`}>
+          <div key={k.label} className="org-kpi-card" data-testid={`org-kpi-${i}`}>
             <div className="org-kpi-accent" style={{ background: k.color }} />
             <div className="org-kpi-body">
               <div className="t-label">{k.label}</div>

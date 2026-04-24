@@ -760,8 +760,8 @@ const GasStationsList = () => {
     <div className="gsl-root">
       {/* KPI cards */}
       <div className="gsl-kpi-grid">
-        {kpiCards.map((k, i) => (
-          <div key={i} className="gsl-kpi-card">
+        {kpiCards.map((k) => (
+          <div key={k.label} className="gsl-kpi-card">
             <div className="gsl-kpi-accent" style={{ background: k.accent }}/>
             <div className="gsl-kpi-body">
               <div className="gsl-kpi-label t-label">{k.label}</div>
