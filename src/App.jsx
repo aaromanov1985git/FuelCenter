@@ -28,9 +28,8 @@ import ClearProviderModal from './components/ClearProviderModal'
 import TemplateSelectModal from './components/TemplateSelectModal'
 import ClearMenu from './components/ClearMenu'
 import FileUploadProgress from './components/FileUploadProgress'
-import ThemeToggle from './components/ThemeToggle'
 import IconButton from './components/IconButton'
-import NotificationBadge from './components/NotificationBadge'
+import AppSidebar from './components/AppSidebar'
 import Pagination from './components/Pagination'
 import Highlight from './components/Highlight'
 import Breadcrumbs from './components/Breadcrumbs'
@@ -49,7 +48,7 @@ import { SkeletonTable } from './components/Skeleton'
 import { useDebounce } from './hooks/useDebounce'
 import { useTouchGestures } from './hooks/useTouchGestures'
 import { authFetch, getApiUrl } from './utils/api'
-import { Card, Button, Icons } from './components/ui'
+import { Card, Button } from './components/ui'
 import './App.css'
 
 // Используем прокси Vite в режиме разработки или прямой URL
@@ -1593,195 +1592,20 @@ const App = () => {
           />
         )}
 
-        {/* Боковое меню */}
-        <aside className={`sidebar ${sidebarVisible ? '' : 'sidebar-hidden'}`}>
-          <div className="sidebar-header">
-            <div className="sidebar-logo">
-              <div className="sidebar-logo-mark" aria-hidden="true">ГСМ</div>
-              <div className="sidebar-logo-text">
-                <div className="sidebar-logo-title">ГСМ Конвертер</div>
-                <div className="sidebar-logo-sub">v2.0</div>
-              </div>
-            </div>
-          </div>
-          <nav className="sidebar-nav" aria-label="Основная навигация">
-            <div className="sidebar-nav-section">Основное</div>
-            <button
-              className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <span className="nav-item-icon">{Icons.grid}</span>
-              <span className="nav-item-label">Дашборд</span>
-            </button>
-            <button
-              className={`nav-item ${activeTab === 'transactions' ? 'active' : ''}`}
-              onClick={() => setActiveTab('transactions')}
-            >
-              <span className="nav-item-icon">{Icons.list}</span>
-              <span className="nav-item-label">Транзакции</span>
-            </button>
-            <button
-              className={`nav-item ${activeTab === 'vehicles' ? 'active' : ''}`}
-              onClick={() => setActiveTab('vehicles')}
-            >
-              <span className="nav-item-icon">{Icons.car}</span>
-              <span className="nav-item-label">Транспорт</span>
-            </button>
-            <button
-              className={`nav-item ${activeTab === 'cards' ? 'active' : ''}`}
-              onClick={() => setActiveTab('cards')}
-            >
-              <span className="nav-item-icon">{Icons.card}</span>
-              <span className="nav-item-label">Топливные карты</span>
-            </button>
-            <button
-              className={`nav-item ${activeTab === 'fuel-card-analysis' ? 'active' : ''}`}
-              onClick={() => setActiveTab('fuel-card-analysis')}
-            >
-              <span className="nav-item-icon">{Icons.chart}</span>
-              <span className="nav-item-label">Анализ карт</span>
-            </button>
-            <button
-              className={`nav-item ${activeTab === 'gas-stations' ? 'active' : ''}`}
-              onClick={() => setActiveTab('gas-stations')}
-            >
-              <span className="nav-item-icon">{Icons.pin}</span>
-              <span className="nav-item-label">АЗС</span>
-            </button>
-            <button
-              className={`nav-item ${activeTab === 'fuel-types' ? 'active' : ''}`}
-              onClick={() => setActiveTab('fuel-types')}
-            >
-              <span className="nav-item-icon">{Icons.fuel}</span>
-              <span className="nav-item-label">Виды топлива</span>
-            </button>
-
-            <div className="sidebar-nav-section">Интеграции</div>
-            <button
-              className={`nav-item ${activeTab === 'providers' ? 'active' : ''}`}
-              onClick={() => setActiveTab('providers')}
-            >
-              <span className="nav-item-icon">{Icons.plug}</span>
-              <span className="nav-item-label">Провайдеры</span>
-            </button>
-            <button
-              className={`nav-item ${activeTab === 'provider-analysis' ? 'active' : ''}`}
-              onClick={() => setActiveTab('provider-analysis')}
-            >
-              <span className="nav-item-icon">{Icons.chart}</span>
-              <span className="nav-item-label">Анализ Провайдера</span>
-            </button>
-            <button
-              className={`nav-item ${activeTab === 'templates' ? 'active' : ''}`}
-              onClick={() => setActiveTab('templates')}
-            >
-              <span className="nav-item-icon">{Icons.file}</span>
-              <span className="nav-item-label">Шаблоны</span>
-            </button>
-
-            <div className="sidebar-nav-section">Система</div>
-            {isAdmin && (
-              <>
-                <button
-                  className={`nav-item ${activeTab === 'organizations' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('organizations')}
-                >
-                  <span className="nav-item-icon">{Icons.bldg}</span>
-                  <span className="nav-item-label">Организации</span>
-                </button>
-                <button
-                  className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('users')}
-                >
-                  <span className="nav-item-icon">{Icons.users}</span>
-                  <span className="nav-item-label">Пользователи</span>
-                </button>
-              </>
-            )}
-            {user && !isAdmin && (
-              <button
-                className={`nav-item ${activeTab === 'my-actions' ? 'active' : ''}`}
-                onClick={() => setActiveTab('my-actions')}
-              >
-                <span className="nav-item-icon">{Icons.check}</span>
-                <span className="nav-item-label">Мои действия</span>
-              </button>
-            )}
-            <button
-              className={`nav-item ${activeTab === 'upload-events' ? 'active' : ''}`}
-              onClick={() => setActiveTab('upload-events')}
-            >
-              <span className="nav-item-icon">{Icons.up}</span>
-              <span className="nav-item-label">События загрузок</span>
-            </button>
-            <button
-              className={`nav-item ${activeTab === 'notifications' ? 'active' : ''}`}
-              onClick={() => setActiveTab('notifications')}
-            >
-              <span className="nav-item-icon">{Icons.bell}</span>
-              <span className="nav-item-label">Уведомления</span>
-              <NotificationBadge />
-            </button>
-            <button
-              className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-              onClick={() => setActiveTab('settings')}
-            >
-              <span className="nav-item-icon">{Icons.gear}</span>
-              <span className="nav-item-label">Настройки</span>
-            </button>
-          </nav>
-
-          {/* Закладки провайдеров для вкладки транзакций */}
-          {activeTab === 'transactions' && (
-            <div className="provider-tabs">
-              <div className="provider-tabs-header">
-                <h3>Провайдеры</h3>
-              </div>
-              <div className="provider-tabs-list">
-                <button
-                  className={`provider-tab ${selectedProviderTab === null ? 'active' : ''}`}
-                  onClick={() => setSelectedProviderTab(null)}
-                >
-                  Все
-                </button>
-                {providers.filter(p => p.is_active).map(provider => (
-                  <button
-                    key={provider.id}
-                    className={`provider-tab ${selectedProviderTab === provider.id ? 'active' : ''}`}
-                    onClick={() => setSelectedProviderTab(provider.id)}
-                  >
-                    {provider.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {authEnabled && user && (
-            <div className="sidebar-footer">
-              <div className="sidebar-footer-row sidebar-footer-combined">
-                <div className="sidebar-user-section">
-                  <div className="sidebar-user-compact">
-                    <div className="sidebar-user-name">{user.username}</div>
-                    <div className="sidebar-user-role">
-                      {user.role === 'admin' ? 'Администратор' : user.role === 'viewer' ? 'Наблюдатель' : 'Пользователь'}
-                    </div>
-                  </div>
-                  <button
-                    className="sidebar-logout-link"
-                    onClick={logout}
-                    title="Выйти из системы"
-                  >
-                    Выйти
-                  </button>
-                </div>
-                <div className="sidebar-theme-section">
-                  <ThemeToggle currentTheme={theme} onThemeChange={handleThemeChange} />
-                </div>
-              </div>
-            </div>
-          )}
-        </aside>
+        <AppSidebar
+          sidebarVisible={sidebarVisible}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          isAdmin={isAdmin}
+          user={user}
+          authEnabled={authEnabled}
+          logout={logout}
+          theme={theme}
+          onThemeChange={handleThemeChange}
+          providers={providers}
+          selectedProviderTab={selectedProviderTab}
+          setSelectedProviderTab={setSelectedProviderTab}
+        />
 
         {/* Основной контент */}
         <main className="main-content">
