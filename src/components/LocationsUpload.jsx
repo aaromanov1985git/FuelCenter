@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { Card, Button, Input, Alert, Modal } from './ui'
 import { authFetch } from '../utils/api'
 import { useToast } from './ToastContainer'
@@ -6,31 +6,27 @@ import './LocationsUpload.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
 
+const makeEmptyLocation = (uid) => ({
+  _uid: uid,
+  vehicle_id: '',
+  timestamp: '',
+  latitude: '',
+  longitude: '',
+  speed: '',
+  heading: '',
+  accuracy: '',
+  source: 'GLONASS'
+})
+
 const LocationsUpload = ({ isOpen, onClose }) => {
   const { error: showError, success } = useToast()
   const [loading, setLoading] = useState(false)
-  const [locations, setLocations] = useState([{
-    vehicle_id: '',
-    timestamp: '',
-    latitude: '',
-    longitude: '',
-    speed: '',
-    heading: '',
-    accuracy: '',
-    source: 'GLONASS'
-  }])
+  const uidCounter = useRef(0)
+  const nextUid = () => ++uidCounter.current
+  const [locations, setLocations] = useState(() => [makeEmptyLocation(nextUid())])
 
   const handleAddLocation = () => {
-    setLocations([...locations, {
-      vehicle_id: '',
-      timestamp: '',
-      latitude: '',
-      longitude: '',
-      speed: '',
-      heading: '',
-      accuracy: '',
-      source: 'GLONASS'
-    }])
+    setLocations([...locations, makeEmptyLocation(nextUid())])
   }
 
   const handleRemoveLocation = (index) => {
@@ -89,17 +85,7 @@ const LocationsUpload = ({ isOpen, onClose }) => {
         showError(`Ошибки при загрузке: ${result.errors.length} записей`)
       }
 
-      // Сброс формы
-      setLocations([{
-        vehicle_id: '',
-        timestamp: '',
-        latitude: '',
-        longitude: '',
-        speed: '',
-        heading: '',
-        accuracy: '',
-        source: 'GLONASS'
-      }])
+      setLocations([makeEmptyLocation(nextUid())])
       
       onClose()
     } catch (err) {
@@ -125,7 +111,7 @@ const LocationsUpload = ({ isOpen, onClose }) => {
 
           <div className="locations-list">
             {locations.map((location, index) => (
-              <Card key={index} style={{ marginBottom: 'var(--spacing-element)' }}>
+              <Card key={location._uid} style={{ marginBottom: 'var(--spacing-element)' }}>
                 <Card.Header>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h4>Местоположение #{index + 1}</h4>

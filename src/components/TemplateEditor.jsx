@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import IconButton from './IconButton'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
@@ -171,11 +171,13 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   )
   const [fuelTypes, setFuelTypes] = useState([])
   const [loadingFuelTypes, setLoadingFuelTypes] = useState(false)
+  const fuelEntryUidCounter = useRef(0)
+  const nextFuelEntryUid = () => ++fuelEntryUidCounter.current
   const [fuelMappingEntries, setFuelMappingEntries] = useState(() => {
     // Инициализируем из существующего маппинга
     const parsed = parseFuelMapping(template?.fuel_type_mapping)
     if (parsed && typeof parsed === 'object') {
-      return Object.entries(parsed).map(([key, value]) => ({ key, value }))
+      return Object.entries(parsed).map(([key, value]) => ({ _uid: ++fuelEntryUidCounter.current, key, value }))
     }
     return []
   })
@@ -354,7 +356,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       try {
         const parsed = fuelMappingText ? JSON.parse(fuelMappingText) : {}
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          setFuelMappingEntries(Object.entries(parsed).map(([key, value]) => ({ key, value })))
+          setFuelMappingEntries(Object.entries(parsed).map(([key, value]) => ({ _uid: nextFuelEntryUid(), key, value })))
         } else {
           setFuelMappingEntries([])
         }
@@ -376,7 +378,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   }
 
   const addFuelMappingEntry = () => {
-    const newEntries = [...fuelMappingEntries, { key: '', value: '' }]
+    const newEntries = [...fuelMappingEntries, { _uid: nextFuelEntryUid(), key: '', value: '' }]
     setFuelMappingEntries(newEntries)
     updateFuelMappingFromEntries(newEntries)
   }
@@ -2345,7 +2347,7 @@ ORDER BY rg."Date" DESC`}
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-small)' }}>
                         {fuelMappingEntries.map((entry, index) => (
-                          <div key={index} style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
+                          <div key={entry._uid} style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
                             <input
                               type="text"
                               value={entry.key}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { Card, Button, Input, Alert, Modal } from './ui'
 import { authFetch } from '../utils/api'
 import { useToast } from './ToastContainer'
@@ -6,39 +6,31 @@ import './RefuelsUpload.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
 
+const makeEmptyRefuel = (uid) => ({
+  _uid: uid,
+  vehicle_id: '',
+  refuel_date: '',
+  fuel_type: '',
+  quantity: '',
+  fuel_level_before: '',
+  fuel_level_after: '',
+  odometer_reading: '',
+  source_system: 'GLONASS',
+  source_id: '',
+  latitude: '',
+  longitude: '',
+  location_accuracy: ''
+})
+
 const RefuelsUpload = ({ isOpen, onClose }) => {
   const { error: showError, success } = useToast()
   const [loading, setLoading] = useState(false)
-  const [refuels, setRefuels] = useState([{
-    vehicle_id: '',
-    refuel_date: '',
-    fuel_type: '',
-    quantity: '',
-    fuel_level_before: '',
-    fuel_level_after: '',
-    odometer_reading: '',
-    source_system: 'GLONASS',
-    source_id: '',
-    latitude: '',
-    longitude: '',
-    location_accuracy: ''
-  }])
+  const uidCounter = useRef(0)
+  const nextUid = () => ++uidCounter.current
+  const [refuels, setRefuels] = useState(() => [makeEmptyRefuel(nextUid())])
 
   const handleAddRefuel = () => {
-    setRefuels([...refuels, {
-      vehicle_id: '',
-      refuel_date: '',
-      fuel_type: '',
-      quantity: '',
-      fuel_level_before: '',
-      fuel_level_after: '',
-      odometer_reading: '',
-      source_system: 'GLONASS',
-      source_id: '',
-      latitude: '',
-      longitude: '',
-      location_accuracy: ''
-    }])
+    setRefuels([...refuels, makeEmptyRefuel(nextUid())])
   }
 
   const handleRemoveRefuel = (index) => {
@@ -101,21 +93,7 @@ const RefuelsUpload = ({ isOpen, onClose }) => {
         showError(`Ошибки при загрузке: ${result.errors.length} записей`)
       }
 
-      // Сброс формы
-      setRefuels([{
-        vehicle_id: '',
-        refuel_date: '',
-        fuel_type: '',
-        quantity: '',
-        fuel_level_before: '',
-        fuel_level_after: '',
-        odometer_reading: '',
-        source_system: 'GLONASS',
-        source_id: '',
-        latitude: '',
-        longitude: '',
-        location_accuracy: ''
-      }])
+      setRefuels([makeEmptyRefuel(nextUid())])
       
       onClose()
     } catch (err) {
@@ -141,7 +119,7 @@ const RefuelsUpload = ({ isOpen, onClose }) => {
 
           <div className="refuels-list">
             {refuels.map((refuel, index) => (
-              <Card key={index} style={{ marginBottom: 'var(--spacing-element)' }}>
+              <Card key={refuel._uid} style={{ marginBottom: 'var(--spacing-element)' }}>
                 <Card.Header>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h4>Заправка #{index + 1}</h4>
