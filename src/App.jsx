@@ -14,9 +14,9 @@ import StatusIndicator from './components/StatusIndicator'
 import ScrollToTop from './components/ScrollToTop'
 import { useToast } from './components/ToastContainer'
 import { useAuth } from './contexts/AuthContext'
-import { useDebounce } from './hooks/useDebounce'
 import { useTheme } from './hooks/useTheme'
 import { useSidebar } from './hooks/useSidebar'
+import { useTransactions } from './hooks/useTransactions'
 import { authFetch, getApiUrl } from './utils/api'
 import './App.css'
 
@@ -48,36 +48,14 @@ const App = () => {
   const [showRegister, setShowRegister] = useState(false)
   const [authEnabled, setAuthEnabled] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
-  const [data, setData] = useState([])
   const [fileName, setFileName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('') // Оставляем для обратной совместимости, но используем toast
-  const [stats, setStats] = useState(null)
-  const [page, setPage] = useState(0)
-  const [pageSize, setPageSize] = useState(() => {
-    // Загружаем сохраненный размер страницы из localStorage
-    const saved = localStorage.getItem('transaction-page-size')
-    return saved ? parseInt(saved, 10) : 100
-  })
-  const [total, setTotal] = useState(0)
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false) // Флаг для отслеживания первой загрузки
-  const [filters, setFilters] = useState({
-    card_number: '',
-    azs_number: '',
-    product: '',
-    provider: ''
-  })
-  const [sortConfig, setSortConfig] = useState({
-    field: 'transaction_date',
-    order: 'desc'
-  })
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showClearProviderModal, setShowClearProviderModal] = useState(false)
   const [activeTab, setActiveTab] = useState('dashboard') // dashboard, transactions, vehicles, cards, fuel-card-analysis, gas-stations, fuel-types, providers, templates, upload-events, organizations, users, settings, notifications
   const [showRefuelsUpload, setShowRefuelsUpload] = useState(false)
   const [showLocationsUpload, setShowLocationsUpload] = useState(false)
-  const [providers, setProviders] = useState([])
-  const [selectedProviderTab, setSelectedProviderTab] = useState(null) // null = "Все", иначе ID провайдера
   const [dragActive, setDragActive] = useState(false)
   const [fileMatchInfo, setFileMatchInfo] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -97,11 +75,30 @@ const App = () => {
   // Показывать подсказку по горячим клавишам (скрыто по умолчанию)
   const showKeyboardHint = false
 
-  // Debounced фильтры для уменьшения количества запросов к API
-  const debouncedCardNumber = useDebounce(filters.card_number, 500)
-  const debouncedAzsNumber = useDebounce(filters.azs_number, 500)
-  const debouncedProduct = useDebounce(filters.product, 500)
-  const debouncedProvider = useDebounce(filters.provider, 500)
+  const {
+    data,
+    total,
+    stats,
+    hasLoadedOnce,
+    page,
+    pageSize,
+    filters,
+    sortConfig,
+    providers,
+    selectedProviderTab,
+    debouncedCardNumber,
+    debouncedAzsNumber,
+    debouncedProduct,
+    debouncedProvider,
+    setData,
+    setFilters,
+    setSortConfig,
+    setSelectedProviderTab,
+    setPage,
+    setPageSize,
+    loadTransactions,
+    loadStats,
+  } = useTransactions({ authEnabled, isAuthenticated, checkingAuth, setLoading, setError })
 
   // Проверка настроек аутентификации при загрузке приложения
   useEffect(() => {
@@ -343,152 +340,13 @@ const App = () => {
   }, [sidebarVisible, isMobile, activeTab, data.length, showColumnSettings, downloadExcel])
 
 
-  // Загрузка транзакций с сервера
-  const loadTransactions = async () => {
-    setLoading(true)
-    setError('')
-    
-    try {
-      const params = new URLSearchParams({
-        skip: (page * pageSize).toString(),
-        limit: pageSize.toString(),
-        sort_by: sortConfig.field,
-        sort_order: sortConfig.order
-      })
-      
-      // Используем debounced значения для фильтров
-      if (debouncedCardNumber) params.append('card_number', debouncedCardNumber)
-      if (debouncedAzsNumber) params.append('azs_number', debouncedAzsNumber)
-      if (debouncedProduct) params.append('product', debouncedProduct)
-      
-      // Обрабатываем фильтр по провайдеру
-      // Приоритет у фильтра из расширенного поиска, если он установлен
-      // Проверяем, что значение не пустое (может быть '', null, undefined)
-      const providerIdStr = debouncedProvider && String(debouncedProvider).trim() !== '' 
-        ? String(debouncedProvider).trim() 
-        : null
-      
-      if (providerIdStr) {
-        // providerIdStr содержит ID провайдера (строка)
-        logger.debug('Применение фильтра по провайдеру из расширенного поиска', {
-          provider_id: providerIdStr,
-          provider_name: providers.find(p => String(p.id) === providerIdStr)?.name,
-          debouncedProvider: debouncedProvider,
-          debouncedProviderType: typeof debouncedProvider
-        })
-        params.append('provider_id', providerIdStr)
-      } else if (selectedProviderTab !== null) {
-        // Если фильтр из расширенного поиска не установлен, используем выбранную вкладку
-        logger.debug('Применение фильтра по провайдеру из вкладки', {
-          provider_id: selectedProviderTab
-        })
-        params.append('provider_id', selectedProviderTab.toString())
-      }
-
-      logger.debug('Параметры запроса транзакций', {
-        url: `${API_URL}/api/v1/transactions?${params}`,
-        params: Object.fromEntries(params)
-      })
-
-      const response = await authFetch(`${API_URL}/api/v1/transactions?${params}`)
-      
-      if (!response.ok) {
-        // Ошибка 401 обрабатывается централизованно в authFetch
-        throw new Error('Ошибка загрузки данных')
-      }
-      
-      const result = await response.json()
-      
-      // Конвертируем данные для отображения
-      const converted = result.items.map(item => ({
-        ID: item.id,
-        'Дата и время': formatDateFromISO(item.transaction_date),
-        '№ карты': item.card_number || '',
-        'Провайдер': item.provider_name || item.supplier || '-',
-        'Закреплена за': item.vehicle_display_name || item.vehicle || '',
-        'АЗС': item.gas_station_name || item.azs_number || '',
-        'Товар / услуга': item.product || '',
-        'Тип': item.operation_type || 'Покупка',
-        'Кол-во': item.quantity || '',
-        'Валюта транзакции': item.currency || 'RUB',
-        'Курс конвертации': item.exchange_rate || 1,
-        _hasErrors: item.vehicle_has_errors || false  // Скрытое поле для выделения
-      }))
-      
-      setData(converted)
-      setTotal(result.total)
-      setHasLoadedOnce(true) // Отмечаем, что данные были загружены хотя бы раз
-      logger.info('Транзакции загружены', { count: converted.length, total: result.total })
-    } catch (err) {
-      // Не показываем ошибку при 401 - это обрабатывается централизованно
-      if (err.isUnauthorized) {
-        return
-      }
-      // Безопасное извлечение сообщения об ошибке
-      let errorText = 'Неизвестная ошибка'
-      if (err instanceof Error) {
-        errorText = err.message || 'Ошибка загрузки данных'
-      } else if (typeof err === 'string') {
-        errorText = err
-      } else if (err && typeof err === 'object') {
-        errorText = err.detail || err.message || err.error || JSON.stringify(err)
-      }
-      const errorMessage = 'Ошибка загрузки данных: ' + errorText
-      setError(errorMessage) // Оставляем для обратной совместимости
-      showError(errorMessage)
-      logger.error('Ошибка загрузки транзакций', { error: errorText, originalError: err })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Загрузка статистики
-  const loadStats = async () => {
-    try {
-      const params = new URLSearchParams()
-      if (selectedProviderTab !== null) {
-        params.append('provider_id', selectedProviderTab.toString())
-      }
-      const response = await authFetch(`${API_URL}/api/v1/transactions/stats/summary?${params}`)
-      if (response.ok) {
-        const statsData = await response.json()
-        setStats(statsData)
-        logger.debug('Статистика загружена', { stats: statsData })
-      } else {
-        // Если статистика недоступна, не показываем ошибку пользователю
-        logger.warn('Статистика недоступна', { status: response.status })
-      }
-    } catch (err) {
-      // Игнорируем ошибки загрузки статистики при первом запуске
-      logger.warn('Ошибка загрузки статистики', { error: err.message })
-    }
-  }
-
-  // Форматирование даты из ISO формата
-  const formatDateFromISO = (dateStr) => {
-    if (!dateStr) return ''
-    try {
-      const date = new Date(dateStr)
-      const day = String(date.getDate()).padStart(2, '0')
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const year = String(date.getFullYear()).slice(-2)
-      const hours = String(date.getHours()).padStart(2, '0')
-      const minutes = String(date.getMinutes()).padStart(2, '0')
-      return `${day}/${month}/${year} ${hours}:${minutes}`
-    } catch {
-      return ''
-    }
-  }
-
-  // Форматирование числа с разделителями
   const formatNumber = (num) => {
-    return new Intl.NumberFormat('ru-RU', { 
-      minimumFractionDigits: 2, 
-      maximumFractionDigits: 2 
+    return new Intl.NumberFormat('ru-RU', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(num)
   }
 
-  // Форматирование литров: если >= 1000000, то в тысячах
   const formatLiters = (num) => {
     if (!num && num !== 0) return '0.00'
     if (num >= 1000000) {
@@ -497,25 +355,6 @@ const App = () => {
     }
     return formatNumber(num) + ' л'
   }
-
-  // Загрузка списка провайдеров
-  const loadProviders = async () => {
-    try {
-      const response = await authFetch(`${API_URL}/api/v1/providers?limit=1000`)
-      if (response.ok) {
-        const result = await response.json()
-        setProviders(result.items)
-        logger.debug('Провайдеры загружены', { count: result.items.length })
-      }
-    } catch (err) {
-      logger.error('Ошибка загрузки провайдеров', { error: err.message })
-    }
-  }
-
-  useEffect(() => {
-    loadProviders()
-  }, [])
-
 
   // Проверка соответствия файла шаблону
   const checkFileMatch = useCallback(async (file) => {
@@ -1341,27 +1180,6 @@ const App = () => {
     }
   }, [])
 
-  // Сброс страницы при изменении debounced фильтров или провайдера
-  useEffect(() => {
-    setPage(0)
-  }, [debouncedCardNumber, debouncedAzsNumber, debouncedProduct, selectedProviderTab])
-
-  // Загрузка данных при монтировании и изменении debounced фильтров/страницы/сортировки
-  useEffect(() => {
-    // Ждем, пока определится статус аутентификации
-    if (checkingAuth) {
-      return
-    }
-    
-    // Не загружаем транзакции, если аутентификация включена и пользователь не авторизован
-    if (!authEnabled || (authEnabled && isAuthenticated)) {
-      loadTransactions()
-      loadStats()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, debouncedCardNumber, debouncedAzsNumber, debouncedProduct, debouncedProvider, sortConfig.field, sortConfig.order, selectedProviderTab, authEnabled, isAuthenticated, checkingAuth])
-
-
   // Маппинг заголовков на поля API для сортировки
   const headerFieldMap = {
     'ID': 'id',
@@ -1598,11 +1416,7 @@ const App = () => {
             onClearByProvider={handleClearProvider}
             onContextMenu={setContextMenu}
             onPageChange={setPage}
-            onPageSizeChange={(newSize) => {
-              setPageSize(newSize)
-              setPage(0)
-              localStorage.setItem('transaction-page-size', newSize.toString())
-            }}
+            onPageSizeChange={setPageSize}
           />
         )}
           </div>
