@@ -142,7 +142,7 @@ const IconButton = ({
       className={`icon-button icon-button-${variant} icon-button-${size} ${className}`}
       onClick={onClick}
       disabled={disabled}
-      aria-label={title || ICON_LABELS_RU[icon] || (typeof icon === 'string' ? icon : 'Действие')}
+      aria-label={title || ICON_LABELS_RU[icon] || 'Действие'}
       type="button"
     >
       {getIconSVG()}
