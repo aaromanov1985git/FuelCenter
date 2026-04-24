@@ -1819,8 +1819,8 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                   Найдено колонок в таблице "{selectedTable}": {selectedTableColumns.length}
                 </div>
                 <div className="columns-list">
-                  {selectedTableColumns.map((col, idx) => (
-                    <span key={idx} className="column-badge">{col}</span>
+                  {selectedTableColumns.map((col) => (
+                    <span key={col} className="column-badge">{col}</span>
                   ))}
                 </div>
               </div>
@@ -2205,8 +2205,8 @@ ORDER BY rg."Date" DESC`}
                               className={`mapping-select ${isAutoMapped ? 'auto-mapped-select' : ''} ${isRequired && !isMapped ? 'missing-required-select' : ''}`}
                             >
                               <option value="">-- Не выбрано --</option>
-                              {fileColumns.map((col, idx) => (
-                                <option key={idx} value={col}>
+                              {fileColumns.map((col) => (
+                                <option key={col} value={col}>
                                   {col}
                                 </option>
                               ))}
@@ -2221,8 +2221,8 @@ ORDER BY rg."Date" DESC`}
                                 style={{ flex: 1 }}
                               >
                                 <option value="">-- Не выбрано --</option>
-                                {apiFields.map((fieldName, idx) => (
-                                  <option key={idx} value={fieldName}>
+                                {apiFields.map((fieldName) => (
+                                  <option key={fieldName} value={fieldName}>
                                     {fieldName}
                                   </option>
                                 ))}
@@ -2245,8 +2245,8 @@ ORDER BY rg."Date" DESC`}
                                 style={{ flex: 1 }}
                               >
                                 <option value="">-- Не выбрано --</option>
-                                {selectedTableColumns.map((col, idx) => (
-                                  <option key={idx} value={col}>
+                                {selectedTableColumns.map((col) => (
+                                  <option key={col} value={col}>
                                     {col}
                                   </option>
                                 ))}

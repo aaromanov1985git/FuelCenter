@@ -350,8 +350,8 @@ const Dashboard = () => {
 
       {/* Стат-карточки */}
       <div className="dash-stat-grid">
-        {statCards.map((c, i) => (
-          <div key={i} className="dash-stat-card">
+        {statCards.map((c) => (
+          <div key={c.label} className="dash-stat-card">
             <div className="t-label dash-stat-label">{c.label}</div>
             <div className="dash-stat-row">
               <div className="t-value dash-stat-value">
@@ -410,7 +410,7 @@ const Dashboard = () => {
               <div className="t-label">Провайдеры</div>
               <div className="dash-autoload-providers-list">
                 {recentUploads.length > 0 ? recentUploads.map((p, idx) => (
-                  <div key={idx} className="dash-upload-row">
+                  <div key={`${p.name}-${idx}`} className="dash-upload-row">
                     <div className="dash-upload-icon" aria-hidden="true">
                       <svg width="14" height="16" viewBox="0 0 14 16" fill="none">
                         <path d="M1 2a1 1 0 011-1h6l5 5v9a1 1 0 01-1 1H2a1 1 0 01-1-1V2z" stroke="currentColor" strokeWidth="1.3" />
@@ -450,8 +450,8 @@ const Dashboard = () => {
           <div className="dash-chart-container">
             {chartModel && (
               <div className="dash-chart-y-axis" aria-hidden="true">
-                {yAxisValues.map((v, idx) => (
-                  <div key={idx} className="dash-y-axis-label">{formatLitersThousands(v)}</div>
+                {yAxisValues.map((v) => (
+                  <div key={v} className="dash-y-axis-label">{formatLitersThousands(v)}</div>
                 ))}
               </div>
             )}
@@ -505,12 +505,12 @@ const Dashboard = () => {
                 )
               })}
 
-              {chartModel && chartModel.kind === 'simple' && chartModel.data.map((item, idx) => {
+              {chartModel && chartModel.kind === 'simple' && chartModel.data.map((item) => {
                 const quantity = Number(item.quantity) || 0
                 const heightPercent = chartModel.maxQuantity > 0 ? (quantity / chartModel.maxQuantity) * 100 : 0
                 const heightPx = Math.max(8, (heightPercent / 100) * 300)
                 return (
-                  <div key={idx} className="dash-chart-bar-wrapper">
+                  <div key={item.period} className="dash-chart-bar-wrapper">
                     <div
                       className="dash-chart-bar-simple"
                       style={{ height: `${heightPx}px` }}
@@ -545,7 +545,7 @@ const Dashboard = () => {
                   const color = SERIES_COLORS[idx % SERIES_COLORS.length]
                   return (
                     <div
-                      key={idx}
+                      key={provider.provider_name}
                       className={`dash-legend-item${isHidden ? ' is-disabled' : ''}`}
                       onClick={() => toggleProvider(provider.provider_name)}
                       role="button"
@@ -579,7 +579,7 @@ const Dashboard = () => {
               const pct = topProviderMax > 0 ? Math.max(2, (qty / topProviderMax) * 100) : 0
               const color = SERIES_COLORS[idx % SERIES_COLORS.length]
               return (
-                <div key={idx} className="dash-top-row">
+                <div key={p.provider_name || `top-${idx}`} className="dash-top-row">
                   <div className="dash-top-head">
                     <span className="dash-top-name">{p.provider_name || 'Не указано'}</span>
                     <span className="dash-top-value">{formatLiters(qty)}</span>
@@ -698,7 +698,7 @@ const Dashboard = () => {
                     return sortConfigQuantity.order === 'asc' ? comparison : -comparison
                   })
                   return sortedData.map((leader, idx) => (
-                    <tr key={idx}>
+                    <tr key={`${leader.card_number}-${leader.vehicle || idx}`}>
                       <td className="dash-td-idx">{idx + 1}</td>
                       <td>
                         <Tooltip content={leader.card_number} position="top">
@@ -820,7 +820,7 @@ const Dashboard = () => {
                     return sortConfigCount.order === 'asc' ? comparison : -comparison
                   })
                   return sortedData.map((leader, idx) => (
-                    <tr key={idx}>
+                    <tr key={`${leader.card_number}-${leader.vehicle || idx}`}>
                       <td className="dash-td-idx">{idx + 1}</td>
                       <td>
                         <Tooltip content={leader.card_number} position="top">
@@ -854,7 +854,7 @@ const Dashboard = () => {
           </div>
           <div className="dash-products-grid">
             {stats.products.map((product, idx) => (
-              <div key={idx} className="dash-product-card">
+              <div key={product.product || `product-${idx}`} className="dash-product-card">
                 <div className="t-label">{product.product || 'Не указано'}</div>
                 <div className="t-value-sm dash-product-value">{formatLiters(product.quantity)}</div>
                 <div className="dash-product-meta">{product.count} транзакций</div>

@@ -11,11 +11,30 @@ import './IconButton.css'
  * @param {string} title - Подсказка при наведении
  * @param {string} className - Дополнительные CSS классы
  */
-const IconButton = ({ 
-  icon, 
-  variant = 'primary', 
-  onClick, 
-  disabled = false, 
+const ICON_LABELS_RU = {
+  edit: 'Редактировать',
+  delete: 'Удалить',
+  trash: 'Удалить',
+  add: 'Добавить',
+  save: 'Сохранить',
+  cancel: 'Отменить',
+  download: 'Скачать',
+  refresh: 'Обновить',
+  clear: 'Очистить',
+  templates: 'Шаблоны',
+  settings: 'Настройки',
+  copy: 'Копировать',
+  export: 'Экспорт',
+  users: 'Пользователи',
+  search: 'Поиск',
+  view: 'Просмотр',
+}
+
+const IconButton = ({
+  icon,
+  variant = 'primary',
+  onClick,
+  disabled = false,
   title = '',
   className = '',
   size = 'medium' // 'small', 'medium', 'large'
@@ -123,7 +142,7 @@ const IconButton = ({
       className={`icon-button icon-button-${variant} icon-button-${size} ${className}`}
       onClick={onClick}
       disabled={disabled}
-      aria-label={title || icon}
+      aria-label={title || ICON_LABELS_RU[icon] || (typeof icon === 'string' ? icon : 'Действие')}
       type="button"
     >
       {getIconSVG()}
