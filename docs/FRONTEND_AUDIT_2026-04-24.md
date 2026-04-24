@@ -167,7 +167,7 @@ Dev-сервер поднят на порту 3000, backend отвечает. З
 | 3 | ~~Массовая замена `--color-*` → новые имена + удалить backward-compat блок из tokens.css~~ | ~~P1~~ | ✓ Done |
 | 4 | Декомпозиция `App.jsx` + введение `react-router-dom` | P1 | Частично Done: App.jsx 2548→435 строк через 8 хуков и 5 компонентов; остаётся ввести react-router (~2–3 д) |
 | 5 | Покрытие тестами: VehiclesList, FuelCardsList, GasStationsList, OrganizationsList | P1 | 2 нед |
-| 6 | Добавить `<h1>` на каждой странице, починить heading order на «Транзакции»/«Анализ Провайдера» | P2 | 2 ч |
+| 6 | ~~Добавить `<h1>` на каждой странице, починить heading order на «Транзакции»/«Анализ Провайдера»~~ | ~~P2~~ | ✓ Done (sr-only h1 из `TAB_LABELS`; TransactionUpload h3→h2; 6 h3→h2 в ProviderAnalysisDashboard) |
 | 7 | ~~Добавить SVG-иконки в сайдбар~~ | ~~P2~~ | ✓ Done |
 | 8 | ~~Удалить/переложить `redesign-ref/shared.jsx`~~ | ~~P2~~ | ✓ N/A (файл не существует, импортов нет) |
 | 9 | ~~Переставить импорты в [main.jsx](../src/main.jsx): сначала `tokens.css`, потом `index.css`~~ | ~~P2~~ | ✓ Done (уже в правильном порядке) |
@@ -175,7 +175,7 @@ Dev-сервер поднят на порту 3000, backend отвечает. З
 | 11 | Свернуть `CardInfoModal` + `CardInfoScheduleModal` + `CardInfoSchedulesList` | P2 | 1 д |
 | 12 | Добавить Playwright-script в `qa/` для reproducible визуального diff | P2 | 1 д |
 
-**Остаток P1: ~2.5 нед (react-router + покрытие тестами). P2: ~2 д.**
+**Остаток P1: ~2.5 нед (react-router + покрытие тестами). P2: ~2 д (#11 + #12).**
 
 ---
 
