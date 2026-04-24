@@ -781,6 +781,7 @@ const GasStationsList = () => {
             type="text"
             className="gsl-search-input"
             placeholder="Поиск по названию, номеру АЗС, местоположению..."
+            aria-label="Поиск АЗС"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
