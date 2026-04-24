@@ -51,7 +51,7 @@
 .veh-stat[data-tone="green"]   .veh-stat__bar { background: var(--green); }
 .veh-stat[data-tone="amber"]   .veh-stat__bar { background: var(--amber); }
 .veh-stat[data-tone="red"]     .veh-stat__bar { background: var(--red); }
-.veh-stat[data-tone="neutral"] .veh-stat__bar { background: var(--text-3); }
+.veh-stat[data-tone="neutral"] .veh-stat__bar { background: var(--text-1); }
 
 .veh-stat__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
@@ -201,84 +201,34 @@
 
 .veh-card__body > * + * { margin-top: 0; }
 
-/* ---------- License plate (Russian) ---------- */
-/* Inline pill: white body, black border, bold letters, letter-spacing,
-   right-attached RUS flag block (white/blue/red stripes). */
+/* ---------- License plate pill ---------- */
+/* Simple inline pill per redesign_vehicles.html:
+   var(--surface-2) background, monospace, bold, var(--border) outline. */
 .veh-plate {
   display: inline-flex;
-  align-items: stretch;
-  height: 26px;
-  background: #ffffff;
-  color: #0a0a0a;
-  border: 1.5px solid #0a0a0a;
-  border-radius: 4px;
-  overflow: hidden;
-  font-family: 'Roboto Condensed', 'Arial Narrow', Arial, sans-serif;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  line-height: 1;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.35);
-  user-select: all;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text-1);
+  border: 1px solid var(--border);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
   white-space: nowrap;
   vertical-align: middle;
+  user-select: all;
 }
 
 .veh-plate--empty {
   background: transparent;
-  border: 1px dashed var(--border);
+  border-style: dashed;
   color: var(--text-3);
-  padding: 4px 8px;
-  height: auto;
   font-weight: 600;
   letter-spacing: normal;
-  box-shadow: none;
-}
-
-.veh-plate__main {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 8px;
-  font-size: 13px;
-}
-
-.veh-plate__region {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 6px;
-  font-size: 12px;
-  border-left: 1.5px solid #0a0a0a;
-}
-
-.veh-plate__flag {
-  position: relative;
-  display: inline-flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: center;
-  padding: 0 4px 2px;
-  min-width: 22px;
-  background: #ffffff;
-  border-left: 1.5px solid #0a0a0a;
-}
-
-.veh-plate__flag-stripe {
-  position: absolute;
-  left: 0; right: 0;
-  height: 5px;
-}
-.veh-plate__flag-stripe--white { top: 0;  background: #ffffff; }
-.veh-plate__flag-stripe--blue  { top: 5px; background: #0039a6; }
-.veh-plate__flag-stripe--red   { top: 10px; background: #d52b1e; }
-
-.veh-plate__flag-code {
-  position: relative;
-  z-index: 1;
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.4px;
-  color: #0a0a0a;
-  line-height: 1;
-  margin-top: 16px;
 }
 
 .veh-plate-preview {

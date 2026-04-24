@@ -6,29 +6,13 @@ import './VehiclesList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
 
-// Russian license plate component — styled to match redesign_vehicles.html
-// White background, black border, bold letters, country flag block on the right
+// License plate pill — matches redesign_vehicles.html
+// Simple monospace pill on surface-2, used inline in tables and forms.
 const LicensePlate = ({ value }) => {
   if (!value) return <span className="veh-plate veh-plate--empty">—</span>
-  // Try to split "А123ВС 77" into main + region (last group of digits)
-  const trimmed = String(value).trim().toUpperCase()
-  const match = trimmed.match(/^(.+?)[\s\-]?(\d{2,3})$/)
-  let main = trimmed
-  let region = ''
-  if (match) {
-    main = match[1].trim()
-    region = match[2]
-  }
   return (
     <span className="veh-plate" title={value}>
-      <span className="veh-plate__main">{main}</span>
-      {region && <span className="veh-plate__region">{region}</span>}
-      <span className="veh-plate__flag" aria-hidden="true">
-        <span className="veh-plate__flag-stripe veh-plate__flag-stripe--white" />
-        <span className="veh-plate__flag-stripe veh-plate__flag-stripe--blue" />
-        <span className="veh-plate__flag-stripe veh-plate__flag-stripe--red" />
-        <span className="veh-plate__flag-code">RUS</span>
-      </span>
+      {String(value).trim().toUpperCase()}
     </span>
   )
 }
