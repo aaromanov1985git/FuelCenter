@@ -15,3 +15,4 @@ export { default as Tooltip } from './Tooltip';
 export { default as Alert } from './Alert';
 export { default as Toast, useToast } from './Toast';
 export { default as Skeleton } from './Skeleton';
+export { Icons } from './Icons/Icons.jsx';

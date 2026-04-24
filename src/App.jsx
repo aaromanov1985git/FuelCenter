@@ -49,7 +49,7 @@ import { SkeletonTable } from './components/Skeleton'
 import { useDebounce } from './hooks/useDebounce'
 import { useTouchGestures } from './hooks/useTouchGestures'
 import { authFetch, getApiUrl } from './utils/api'
-import { Card, Button } from './components/ui'
+import { Card, Button, Icons } from './components/ui'
 import './App.css'
 
 // Используем прокси Vite в режиме разработки или прямой URL
@@ -1596,112 +1596,138 @@ const App = () => {
         {/* Боковое меню */}
         <aside className={`sidebar ${sidebarVisible ? '' : 'sidebar-hidden'}`}>
           <div className="sidebar-header">
-            <h2>Меню</h2>
+            <div className="sidebar-logo">
+              <div className="sidebar-logo-mark" aria-hidden="true">ГСМ</div>
+              <div className="sidebar-logo-text">
+                <div className="sidebar-logo-title">ГСМ Конвертер</div>
+                <div className="sidebar-logo-sub">v2.0</div>
+              </div>
+            </div>
           </div>
-          <nav className="sidebar-nav">
-            <button 
+          <nav className="sidebar-nav" aria-label="Основная навигация">
+            <div className="sidebar-nav-section">Основное</div>
+            <button
               className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
               onClick={() => setActiveTab('dashboard')}
             >
-              Дашборд
+              <span className="nav-item-icon">{Icons.grid}</span>
+              <span className="nav-item-label">Дашборд</span>
             </button>
-            <button 
+            <button
               className={`nav-item ${activeTab === 'transactions' ? 'active' : ''}`}
               onClick={() => setActiveTab('transactions')}
             >
-              Транзакции
+              <span className="nav-item-icon">{Icons.list}</span>
+              <span className="nav-item-label">Транзакции</span>
             </button>
-            <button 
+            <button
               className={`nav-item ${activeTab === 'vehicles' ? 'active' : ''}`}
               onClick={() => setActiveTab('vehicles')}
             >
-              Транспорт
+              <span className="nav-item-icon">{Icons.car}</span>
+              <span className="nav-item-label">Транспорт</span>
             </button>
-            <button 
+            <button
               className={`nav-item ${activeTab === 'cards' ? 'active' : ''}`}
               onClick={() => setActiveTab('cards')}
             >
-              Топливные карты
+              <span className="nav-item-icon">{Icons.card}</span>
+              <span className="nav-item-label">Топливные карты</span>
             </button>
-            <button 
+            <button
               className={`nav-item ${activeTab === 'fuel-card-analysis' ? 'active' : ''}`}
               onClick={() => setActiveTab('fuel-card-analysis')}
             >
-              Анализ карт
+              <span className="nav-item-icon">{Icons.chart}</span>
+              <span className="nav-item-label">Анализ карт</span>
             </button>
-            <button 
+            <button
               className={`nav-item ${activeTab === 'gas-stations' ? 'active' : ''}`}
               onClick={() => setActiveTab('gas-stations')}
             >
-              АЗС
+              <span className="nav-item-icon">{Icons.pin}</span>
+              <span className="nav-item-label">АЗС</span>
             </button>
-            <button 
+            <button
               className={`nav-item ${activeTab === 'fuel-types' ? 'active' : ''}`}
               onClick={() => setActiveTab('fuel-types')}
             >
-              Виды топлива
+              <span className="nav-item-icon">{Icons.fuel}</span>
+              <span className="nav-item-label">Виды топлива</span>
             </button>
-            <button 
+
+            <div className="sidebar-nav-section">Интеграции</div>
+            <button
               className={`nav-item ${activeTab === 'providers' ? 'active' : ''}`}
               onClick={() => setActiveTab('providers')}
             >
-              Провайдеры
+              <span className="nav-item-icon">{Icons.plug}</span>
+              <span className="nav-item-label">Провайдеры</span>
             </button>
-            <button 
+            <button
               className={`nav-item ${activeTab === 'provider-analysis' ? 'active' : ''}`}
               onClick={() => setActiveTab('provider-analysis')}
             >
-              Анализ Провайдера
+              <span className="nav-item-icon">{Icons.chart}</span>
+              <span className="nav-item-label">Анализ Провайдера</span>
             </button>
-            <button 
+            <button
               className={`nav-item ${activeTab === 'templates' ? 'active' : ''}`}
               onClick={() => setActiveTab('templates')}
             >
-              Шаблоны
+              <span className="nav-item-icon">{Icons.file}</span>
+              <span className="nav-item-label">Шаблоны</span>
             </button>
+
+            <div className="sidebar-nav-section">Система</div>
             {isAdmin && (
               <>
-                <button 
+                <button
                   className={`nav-item ${activeTab === 'organizations' ? 'active' : ''}`}
                   onClick={() => setActiveTab('organizations')}
                 >
-                  Организации
+                  <span className="nav-item-icon">{Icons.bldg}</span>
+                  <span className="nav-item-label">Организации</span>
                 </button>
-                <button 
+                <button
                   className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
                   onClick={() => setActiveTab('users')}
                 >
-                  Пользователи
+                  <span className="nav-item-icon">{Icons.users}</span>
+                  <span className="nav-item-label">Пользователи</span>
                 </button>
               </>
             )}
             {user && !isAdmin && (
-              <button 
+              <button
                 className={`nav-item ${activeTab === 'my-actions' ? 'active' : ''}`}
                 onClick={() => setActiveTab('my-actions')}
               >
-                Мои действия
+                <span className="nav-item-icon">{Icons.check}</span>
+                <span className="nav-item-label">Мои действия</span>
               </button>
             )}
             <button
               className={`nav-item ${activeTab === 'upload-events' ? 'active' : ''}`}
               onClick={() => setActiveTab('upload-events')}
             >
-              События загрузок
+              <span className="nav-item-icon">{Icons.up}</span>
+              <span className="nav-item-label">События загрузок</span>
             </button>
             <button
               className={`nav-item ${activeTab === 'notifications' ? 'active' : ''}`}
               onClick={() => setActiveTab('notifications')}
-              style={{ position: 'relative' }}
             >
-              Уведомления
+              <span className="nav-item-icon">{Icons.bell}</span>
+              <span className="nav-item-label">Уведомления</span>
               <NotificationBadge />
             </button>
             <button
               className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
               onClick={() => setActiveTab('settings')}
             >
-              Настройки
+              <span className="nav-item-icon">{Icons.gear}</span>
+              <span className="nav-item-label">Настройки</span>
             </button>
           </nav>
 
