@@ -19,23 +19,17 @@ const Login = lazy(() => import('./components/Login'))
 const Settings = lazy(() => import('./components/Settings'))
 const NotificationsList = lazy(() => import('./components/NotificationsList'))
 // Keep smaller components as static imports (they're used frequently)
-import ClearMenu from './components/ClearMenu'
-import FileUploadProgress from './components/FileUploadProgress'
-import IconButton from './components/IconButton'
 import AppSidebar from './components/AppSidebar'
 import AppModals from './components/AppModals'
-import Pagination from './components/Pagination'
-import Highlight from './components/Highlight'
+import TransactionUpload, { MAX_FILE_SIZE } from './components/TransactionUpload'
+import TransactionTable from './components/TransactionTable'
 import Breadcrumbs from './components/Breadcrumbs'
 import AdvancedSearch from './components/AdvancedSearch'
 import './components/ColumnSettingsModal.css'
 import StatusIndicator from './components/StatusIndicator'
 import ScrollToTop from './components/ScrollToTop'
-import EmptyState from './components/EmptyState'
-import ExportMenu from './components/ExportMenu'
 import { useToast } from './components/ToastContainer'
 import { useAuth } from './contexts/AuthContext'
-import { SkeletonTable } from './components/Skeleton'
 import { useDebounce } from './hooks/useDebounce'
 import { useTouchGestures } from './hooks/useTouchGestures'
 import { authFetch, getApiUrl } from './utils/api'
@@ -98,7 +92,6 @@ const App = () => {
   const [previewFile, setPreviewFile] = useState(null) // Файл для предпросмотра
   const [showTemplateSelectModal, setShowTemplateSelectModal] = useState(false)
   const [templateSelectData, setTemplateSelectData] = useState(null) // { file, availableTemplates, matchInfo, etc }
-  const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB в байтах
 
   // Показывать подсказку по горячим клавишам (скрыто по умолчанию)
   const showKeyboardHint = false
@@ -1730,145 +1723,27 @@ const App = () => {
         
         {activeTab === 'transactions' && (
           <div className="tx-root">
-        <div
-          className={`upload-section ${dragActive ? 'drag-active' : ''}`}
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
+        <TransactionUpload
+          dragActive={dragActive}
+          loading={loading}
+          fileName={fileName}
+          fileMatchInfo={fileMatchInfo}
+          uploadStatus={uploadStatus}
+          uploadProgress={uploadProgress}
+          uploadedBytes={uploadedBytes}
+          totalBytes={totalBytes}
+          processedItems={processedItems}
+          totalItems={totalItems}
+          error={error}
+          stats={stats}
+          providers={providers}
+          selectedProviderTab={selectedProviderTab}
+          onSelectedProviderTabChange={setSelectedProviderTab}
+          onDrag={handleDrag}
           onDrop={handleDrop}
-        >
-          <div className="drag-drop-area">
-            <input 
-              type="file" 
-              accept=".xlsx,.xls" 
-              onChange={handleFileInput} 
-              className="file-input"
-              disabled={loading}
-              id="file-upload-input"
-            />
-            <label htmlFor="file-upload-input" className="drag-drop-label">
-              <svg xmlns="http://www.w3.org/2000/svg" className="icon-large" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-              <div className="drag-drop-text">
-                <span className="drag-drop-title">Перетащите файл сюда</span>
-                <span className="drag-drop-subtitle">или нажмите для выбора файла</span>
-                <span className="drag-drop-hint">Максимальный размер файла: {(MAX_FILE_SIZE / 1024 / 1024).toFixed(0)}MB</span>
-              </div>
-            </label>
-          </div>
-          
-          {fileName && (
-            <div className="file-info">
-              <span className="file-name">Загружен: {fileName}</span>
-              {fileMatchInfo && fileMatchInfo.provider_name && (
-                <div className="match-info">
-                  <span className="match-label">Определен провайдер:</span>
-                  <span className="match-value">{fileMatchInfo.provider_name}</span>
-                  {fileMatchInfo.template_name && (
-                    <span className="match-template">(шаблон: {fileMatchInfo.template_name})</span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {(uploadStatus || uploadProgress > 0) && (
-            <FileUploadProgress 
-              progress={uploadStatus === 'uploading' ? uploadProgress : (uploadStatus === 'processing' ? 100 : undefined)}
-              fileName={fileName}
-              status={uploadStatus}
-              uploadedBytes={uploadedBytes}
-              totalBytes={totalBytes}
-              processedItems={processedItems}
-              totalItems={totalItems}
-            />
-          )}
-
-          {loading && !uploadStatus && (
-            <div className="loading">
-              <div className="spinner"></div>
-              Обработка...
-            </div>
-          )}
-
-          {/* Оставляем старый блок ошибок для обратной совместимости, но теперь основное - toast */}
-          {error && (
-            <div className={error.includes('Успешно') ? 'success' : 'error'}>
-              {error}
-            </div>
-          )}
-        </div>
-
-        {/* Дашборд загрузки */}
-        <div className="upload-dashboard">
-          <h3 className="upload-dashboard-title">Дашборд загрузки</h3>
-          <div className="upload-dashboard-grid">
-            <div className="upload-dashboard-card stat-primary">
-              <div className="upload-dashboard-label">Всего транзакций</div>
-              <div className="upload-dashboard-value">{stats?.total_transactions || 0}</div>
-            </div>
-            <div className="upload-dashboard-card stat-success">
-              <div className="upload-dashboard-label">Всего литров</div>
-              <div className="upload-dashboard-value">
-                {stats?.total_quantity ? formatLiters(stats.total_quantity) : '0.00 л'}
-              </div>
-            </div>
-            <div className="upload-dashboard-card stat-secondary">
-              <div className="upload-dashboard-label">Видов топлива</div>
-              <div className="upload-dashboard-value">
-                {stats?.products ? Object.keys(stats.products).length : 0}
-              </div>
-            </div>
-            <div className="upload-dashboard-card stat-secondary">
-              <div className="upload-dashboard-label">Провайдеров</div>
-              <div className="upload-dashboard-value">
-                {stats?.provider_count || (selectedProviderTab ? 1 : providers.length)}
-              </div>
-              {selectedProviderTab !== null && (
-                <div className="upload-dashboard-subvalue">
-                  <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>
-                    Фильтр: {providers.find(p => p.id === selectedProviderTab)?.name || '—'}
-                  </span>
-                  <button
-                    onClick={() => setSelectedProviderTab(null)}
-                    style={{
-                      marginLeft: '8px',
-                      padding: '2px 8px',
-                      fontSize: '12px',
-                      background: 'var(--red-soft)',
-                      color: 'var(--red)',
-                      border: '1px solid var(--red)',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                    title="Сбросить фильтр"
-                  >
-                    ✕ Сбросить
-                  </button>
-                </div>
-              )}
-            </div>
-            {fileMatchInfo && fileMatchInfo.provider_name && (
-              <div className="upload-dashboard-card upload-dashboard-card-highlight">
-                <div className="upload-dashboard-label">Последний провайдер</div>
-                <div className="upload-dashboard-value-small">{fileMatchInfo.provider_name}</div>
-                {fileMatchInfo.template_name && (
-                  <div className="upload-dashboard-subvalue">Шаблон: {fileMatchInfo.template_name}</div>
-                )}
-                {fileMatchInfo.score && fileMatchInfo.score > 0 && (
-                  <div className="upload-dashboard-subvalue">Совпадение: {fileMatchInfo.score}%</div>
-                )}
-              </div>
-            )}
-            {fileName && (
-              <div className="upload-dashboard-card">
-                <div className="upload-dashboard-label">Последний файл</div>
-                <div className="upload-dashboard-value-small">{fileName}</div>
-              </div>
-            )}
-          </div>
-        </div>
+          onFileInput={handleFileInput}
+          formatLiters={formatLiters}
+        />
 
         {/* Показываем расширенный поиск, если данные были загружены хотя бы раз */}
         {hasLoadedOnce && (
@@ -1909,204 +1784,35 @@ const App = () => {
           />
         )}
 
-        {/* Показываем таблицу всегда, когда данные были загружены хотя бы раз */}
         {hasLoadedOnce && (
-          <>
-            <div className="result-header">
-              <h2>Результат ({total} записей, показано {data.length})</h2>
-              <div className="header-actions">
-                <IconButton 
-                  icon="settings" 
-                  variant="primary" 
-                  onClick={() => setShowColumnSettings(true)}
-                  title="⚙️ Настройка колонок таблицы"
-                  size="medium"
-                />
-                <ExportMenu
-                  data={data}
-                  headers={displayHeaders}
-                  onExportExcel={downloadExcel}
-                  filename="transactions"
-                />
-                <IconButton 
-                  icon="copy" 
-                  variant="primary" 
-                  onClick={async () => {
-                    // Копируем данные таблицы в формате CSV
-                    const csvHeaders = displayHeaders.join(',')
-                    const csvRows = data.map(row => 
-                      displayHeaders.map(h => {
-                        const value = row[h] || ''
-                        // Экранируем кавычки и оборачиваем в кавычки, если содержит запятую или перенос строки
-                        if (value.includes(',') || value.includes('\n') || value.includes('"')) {
-                          return `"${String(value).replace(/"/g, '""')}"`
-                        }
-                        return value
-                      }).join(',')
-                    ).join('\n')
-                    const csvContent = csvHeaders + '\n' + csvRows
-                    
-                    const copied = await copyToClipboard(csvContent)
-                    if (copied) {
-                      success('Данные скопированы в буфер обмена')
-                    } else {
-                      showError('Не удалось скопировать данные')
-                    }
-                  }}
-                  title="📋 Копировать данные в буфер обмена (CSV)"
-                  size="medium"
-                />
-                <IconButton 
-                  icon="refresh" 
-                  variant="primary" 
-                  onClick={() => loadTransactions()}
-                  title="🔄 Обновить данные"
-                  size="medium"
-                />
-                {isAdmin && (
-                  <ClearMenu
-                    onClearAll={handleClearDatabase}
-                    onClearByProvider={handleClearProvider}
-                    disabled={loading}
-                  />
-                )}
-              </div>
-            </div>
-
-            <div className="table-wrapper">
-              {loading && data.length === 0 ? (
-                <SkeletonTable rows={10} columns={displayHeaders.length} />
-              ) : data.length === 0 ? (
-                <EmptyState
-                  title="Нет данных"
-                  message="Транзакции не найдены. Попробуйте изменить фильтры или загрузить новый файл."
-                  icon="📊"
-                  variant="large"
-                />
-              ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    {displayHeaders.map((h) => {
-                      const field = headerFieldMap[h]
-                      const isSortable = !!field
-                      const isActive = sortConfig.field === field
-                      
-                      return (
-                        <th 
-                          key={h}
-                          className={isSortable ? 'sortable' : ''}
-                          onClick={() => isSortable && handleSort(field)}
-                          style={{ cursor: isSortable ? 'pointer' : 'default' }}
-                          data-label={h}
-                          role={isSortable ? 'columnheader button' : 'columnheader'}
-                          aria-sort={isSortable ? (isActive ? (sortConfig.order === 'asc' ? 'ascending' : 'descending') : 'none') : undefined}
-                          tabIndex={isSortable ? 0 : undefined}
-                          onKeyDown={(e) => {
-                            if (isSortable && (e.key === 'Enter' || e.key === ' ')) {
-                              e.preventDefault()
-                              handleSort(field)
-                            }
-                          }}
-                        >
-                          <span className="th-content">
-                            {h}
-                            {isSortable && (
-                              <span className={`sort-icon ${isActive ? 'active' : ''}`}>
-                                {getSortIcon(h)}
-                              </span>
-                            )}
-                          </span>
-                        </th>
-                      )
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((row, idx) => (
-                    <tr 
-                      key={idx} 
-                      className={row._hasErrors ? 'row-with-errors' : ''}
-                      onContextMenu={(e) => {
-                        e.preventDefault()
-                        setContextMenu({
-                          isOpen: true,
-                          x: e.clientX,
-                          y: e.clientY,
-                          rowIndex: idx
-                        })
-                      }}
-                    >
-                      {displayHeaders.map((h) => {
-                        const searchTerms = [
-                          debouncedCardNumber,
-                          debouncedAzsNumber,
-                          debouncedProduct
-                        ].filter(Boolean)
-                        const cellValue = row[h] || ''
-                        
-                        return (
-                          <td 
-                            key={h} 
-                            data-label={h}
-                            className="table-cell-clickable"
-                            title="Двойной клик для копирования"
-                            onDoubleClick={async () => {
-                              if (cellValue) {
-                                const copied = await copyToClipboard(String(cellValue))
-                                if (copied) {
-                                  success(`Скопировано: ${cellValue}`)
-                                }
-                              }
-                            }}
-                          >
-                            {h === 'Закреплена за' && row._hasErrors ? (
-                              <span className="error-highlight" title="Требуется проверка данных ТС">
-                                {searchTerms.length > 0 ? (
-                                  <Highlight 
-                                    text={cellValue} 
-                                    searchTerm={searchTerms}
-                                  />
-                                ) : (
-                                  cellValue
-                                )}
-                              </span>
-                            ) : searchTerms.length > 0 ? (
-                              <Highlight 
-                                text={cellValue} 
-                                searchTerm={searchTerms}
-                              />
-                            ) : (
-                              cellValue
-                            )}
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              )}
-              <div className="table-footer">
-                Показаны основные колонки. Полные данные — в скачиваемом файле.
-                {total > 0 && (
-                  <Pagination
-                    currentPage={page + 1} // Компонент использует страницы начиная с 1
-                    totalPages={Math.ceil(total / pageSize)}
-                    total={total}
-                    pageSize={pageSize}
-                    onPageChange={(newPage) => setPage(newPage - 1)} // Конвертируем обратно в формат с 0
-                    onPageSizeChange={(newSize) => {
-                      setPageSize(newSize)
-                      setPage(0) // Сбрасываем на первую страницу при изменении размера
-                      localStorage.setItem('transaction-page-size', newSize.toString())
-                    }}
-                    loading={loading}
-                  />
-                )}
-              </div>
-            </div>
-          </>
+          <TransactionTable
+            data={data}
+            total={total}
+            page={page}
+            pageSize={pageSize}
+            loading={loading}
+            displayHeaders={displayHeaders}
+            headerFieldMap={headerFieldMap}
+            sortConfig={sortConfig}
+            debouncedCardNumber={debouncedCardNumber}
+            debouncedAzsNumber={debouncedAzsNumber}
+            debouncedProduct={debouncedProduct}
+            isAdmin={isAdmin}
+            onSort={handleSort}
+            getSortIcon={getSortIcon}
+            onOpenColumnSettings={() => setShowColumnSettings(true)}
+            onDownloadExcel={downloadExcel}
+            onRefresh={() => loadTransactions()}
+            onClearAll={handleClearDatabase}
+            onClearByProvider={handleClearProvider}
+            onContextMenu={setContextMenu}
+            onPageChange={setPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize)
+              setPage(0)
+              localStorage.setItem('transaction-page-size', newSize.toString())
+            }}
+          />
         )}
           </div>
         )}
