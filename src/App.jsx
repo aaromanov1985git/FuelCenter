@@ -21,6 +21,7 @@ import { useFileUpload } from './hooks/useFileUpload'
 import { useAuthConfig } from './hooks/useAuthConfig'
 import { useTransactionActions } from './hooks/useTransactionActions'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
+import { useTableColumns } from './hooks/useTableColumns'
 import { authFetch } from './utils/api'
 import './App.css'
 
@@ -206,79 +207,15 @@ const App = () => {
     }
   }, [])
 
-  // Маппинг заголовков на поля API для сортировки
-  const headerFieldMap = {
-    'ID': 'id',
-    'Дата и время': 'transaction_date',
-    '№ карты': 'card_number',
-    'Провайдер': 'provider_id',
-    'Закреплена за': 'vehicle',
-    'АЗС': 'azs_number',  // Для сортировки используем azs_number, но отображаем gas_station_name
-    'Товар / услуга': 'product',
-    'Тип': 'operation_type',
-    'Кол-во': 'quantity',
-    'Валюта транзакции': 'currency',
-    'Курс конвертации': 'exchange_rate'
-  }
-
-  const allHeaders = [
-    'ID', 
-    'Дата и время', 
-    '№ карты', 
-    'Провайдер',
-    'Закреплена за', 
-    'АЗС',
-    'Товар / услуга', 
-    'Тип', 
-    'Кол-во', 
-    'Валюта транзакции', 
-    'Курс конвертации'
-  ]
-  
-  // Настройки видимости колонок
-  const [visibleColumns, setVisibleColumns] = useState(() => {
-    const saved = localStorage.getItem('visible-columns')
-    if (saved) {
-      try {
-        return JSON.parse(saved)
-      } catch {
-        return {}
-      }
-    }
-    // По умолчанию все колонки видимы
-    return {}
-  })
-  
-  // Фильтруем колонки по настройкам видимости
-  const displayHeaders = allHeaders.filter(header => {
-    // Если настройка не сохранена, колонка видима по умолчанию
-    return visibleColumns[header] !== false
-  })
-  
-  // Сохранение настроек видимости колонок
-  const toggleColumnVisibility = (header) => {
-    const newVisibleColumns = {
-      ...visibleColumns,
-      [header]: visibleColumns[header] === false ? undefined : false
-    }
-    setVisibleColumns(newVisibleColumns)
-    localStorage.setItem('visible-columns', JSON.stringify(newVisibleColumns))
-  }
-  
-  // Сброс всех настроек колонок
-  const resetColumnVisibility = () => {
-    setVisibleColumns({})
-    localStorage.removeItem('visible-columns')
-  }
-
-  // Функция получения иконки сортировки
-  const getSortIcon = (header) => {
-    const field = headerFieldMap[header]
-    if (!field || sortConfig.field !== field) {
-      return '⇅'
-    }
-    return sortConfig.order === 'asc' ? '↑' : '↓'
-  }
+  const {
+    allHeaders,
+    headerFieldMap,
+    displayHeaders,
+    visibleColumns,
+    toggleColumnVisibility,
+    resetColumnVisibility,
+    getSortIcon,
+  } = useTableColumns(sortConfig)
 
   const transactionFilterConfig = useMemo(() => [
     { key: 'card_number', label: 'Номер карты', placeholder: 'Введите номер карты', type: 'text' },
