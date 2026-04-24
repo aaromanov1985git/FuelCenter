@@ -1888,8 +1888,8 @@ const App = () => {
         )}
         
         {activeTab === 'transactions' && (
-          <>
-        <div 
+          <div className="tx-root">
+        <div
           className={`upload-section ${dragActive ? 'drag-active' : ''}`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -2267,7 +2267,7 @@ const App = () => {
             </div>
           </>
         )}
-          </>
+          </div>
         )}
           </div>
         </main>

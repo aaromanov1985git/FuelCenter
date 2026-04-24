@@ -1834,5 +1834,171 @@ h1 {
   text-overflow: ellipsis;
 }
 
+/* =========================================================
+   Transactions page — scoped refinements matching
+   redesign_transactions.html. Uses global tokens only.
+   ========================================================= */
+.tx-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeUp .4s ease;
+  color: var(--text-1);
+}
+
+/* KPI tiles: more compact, side-bar accent like reference */
+.tx-root .upload-dashboard {
+  padding: 14px 16px;
+  border-radius: 10px;
+  margin-bottom: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.tx-root .upload-dashboard-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.tx-root .upload-dashboard-grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+.tx-root .upload-dashboard-card {
+  position: relative;
+  padding: 12px 14px 12px 18px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  gap: 2px;
+}
+.tx-root .upload-dashboard-card.stat-primary,
+.tx-root .upload-dashboard-card.stat-success,
+.tx-root .upload-dashboard-card.stat-secondary {
+  border-left: none;
+}
+.tx-root .upload-dashboard-card.stat-primary::before,
+.tx-root .upload-dashboard-card.stat-success::before,
+.tx-root .upload-dashboard-card.stat-secondary::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 14px;
+  bottom: 14px;
+  width: 4px;
+  border-radius: 2px;
+}
+.tx-root .upload-dashboard-card.stat-primary::before  { background: var(--cyan); }
+.tx-root .upload-dashboard-card.stat-success::before  { background: var(--green); }
+.tx-root .upload-dashboard-card.stat-secondary::before{ background: var(--text-3); }
+.tx-root .upload-dashboard-label {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.tx-root .upload-dashboard-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.3px;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+
+/* Upload dropzone: soften to match new surface */
+.tx-root .upload-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Result header — more compact, uppercase label */
+.tx-root .result-header {
+  padding: 10px 2px 4px;
+  margin-bottom: 0;
+  align-items: center;
+}
+.tx-root .result-header h2 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+/* Table wrapper — token-based */
+.tx-root .table-wrapper {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.tx-root .table-wrapper::after { display: none; }
+
+/* Table header — 10px uppercase matching reference */
+.tx-root .data-table {
+  min-width: 1100px;
+}
+.tx-root .data-table thead {
+  background: var(--surface-2);
+}
+.tx-root .data-table th {
+  padding: 10px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  border-bottom: 1px solid var(--border);
+}
+.tx-root .data-table th:first-child,
+.tx-root .data-table td:first-child {
+  background: var(--surface-2);
+  box-shadow: none;
+}
+.tx-root .data-table tbody tr {
+  transition: background .1s ease;
+}
+.tx-root .data-table tbody tr td {
+  padding: 11px 14px;
+  font-size: 12px;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.tx-root .data-table tbody tr:hover td {
+  background: var(--surface-2);
+}
+.tx-root .data-table tbody tr td:first-child {
+  color: var(--accent);
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: .5px;
+}
+.tx-root .data-table tbody tr.row-with-errors td:first-child {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.tx-root .table-footer {
+  padding: 10px 16px;
+  background: var(--surface);
+  color: var(--text-3);
+  font-size: 11px;
+  border-top: 1px solid var(--border);
+}
+
+
 
 
