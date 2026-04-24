@@ -1,26 +1,10 @@
-import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, Suspense, lazy } from 'react'
 import * as XLSX from 'xlsx'
 import { logger } from './utils/logger'
-// Lazy load large page components for code-splitting
-const VehiclesList = lazy(() => import('./components/VehiclesList'))
-const GasStationsList = lazy(() => import('./components/GasStationsList'))
-const FuelTypesList = lazy(() => import('./components/FuelTypesList'))
-const FuelCardsList = lazy(() => import('./components/FuelCardsList'))
-const FuelCardAnalysisList = lazy(() => import('./components/FuelCardAnalysisList'))
-const ProviderAnalysisDashboard = lazy(() => import('./components/ProviderAnalysisDashboard'))
-const ProvidersList = lazy(() => import('./components/ProvidersList'))
-const TemplatesList = lazy(() => import('./components/TemplatesList'))
-const Dashboard = lazy(() => import('./components/Dashboard'))
-const UsersList = lazy(() => import('./components/UsersList'))
-const OrganizationsList = lazy(() => import('./components/OrganizationsList'))
-const UploadEventsList = lazy(() => import('./components/UploadEventsList'))
-const UserActionLogsList = lazy(() => import('./components/UserActionLogsList'))
 const Login = lazy(() => import('./components/Login'))
-const Settings = lazy(() => import('./components/Settings'))
-const NotificationsList = lazy(() => import('./components/NotificationsList'))
-// Keep smaller components as static imports (they're used frequently)
 import AppSidebar from './components/AppSidebar'
 import AppModals from './components/AppModals'
+import AppRoutes from './components/AppRoutes'
 import TransactionUpload, { MAX_FILE_SIZE } from './components/TransactionUpload'
 import TransactionTable from './components/TransactionTable'
 import Breadcrumbs from './components/Breadcrumbs'
@@ -33,11 +17,28 @@ import { useAuth } from './contexts/AuthContext'
 import { useDebounce } from './hooks/useDebounce'
 import { useTouchGestures } from './hooks/useTouchGestures'
 import { authFetch, getApiUrl } from './utils/api'
-import { Card, Button } from './components/ui'
 import './App.css'
 
 // Используем прокси Vite в режиме разработки или прямой URL
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+
+const TAB_LABELS = {
+  transactions: 'Транзакции',
+  vehicles: 'Транспорт',
+  cards: 'Топливные карты',
+  'fuel-card-analysis': 'Анализ топливных карт',
+  'gas-stations': 'АЗС',
+  'fuel-types': 'Виды топлива',
+  providers: 'Провайдеры',
+  'provider-analysis': 'Анализ Провайдера',
+  templates: 'Шаблоны',
+  organizations: 'Организации',
+  users: 'Пользователи',
+  'my-actions': 'Мои действия',
+  'upload-events': 'События загрузок',
+  notifications: 'Уведомления',
+  settings: 'Настройки',
+}
 
 const App = () => {
   const { success, error: showError, info } = useToast()
@@ -1514,6 +1515,21 @@ const App = () => {
     return sortConfig.order === 'asc' ? '↑' : '↓'
   }
 
+  const transactionFilterConfig = useMemo(() => [
+    { key: 'card_number', label: 'Номер карты', placeholder: 'Введите номер карты', type: 'text' },
+    { key: 'azs_number', label: 'АЗС', placeholder: 'Введите номер АЗС', type: 'text' },
+    { key: 'product', label: 'Товар', placeholder: 'Введите название товара', type: 'text' },
+    {
+      key: 'provider',
+      label: 'Провайдер',
+      placeholder: 'Выберите провайдера',
+      type: 'select',
+      options: providers
+        .filter(p => p.is_active)
+        .map(p => ({ value: p.id.toString(), label: p.name })),
+    },
+  ], [providers])
+
   // Показываем Login, если аутентификация включена и пользователь не авторизован
   if (checkingAuth || authLoading) {
     return (
@@ -1594,25 +1610,10 @@ const App = () => {
         {/* Основной контент */}
         <main className="main-content">
           <div className="container">
-            {/* Breadcrumbs навигация */}
             <Breadcrumbs
               items={[
                 { label: 'Главная', onClick: () => setActiveTab('dashboard') },
-                ...(activeTab === 'transactions' ? [{ label: 'Транзакции' }] : []),
-                ...(activeTab === 'vehicles' ? [{ label: 'Транспорт' }] : []),
-                ...(activeTab === 'cards' ? [{ label: 'Топливные карты' }] : []),
-                ...(activeTab === 'fuel-card-analysis' ? [{ label: 'Анализ топливных карт' }] : []),
-                ...(activeTab === 'gas-stations' ? [{ label: 'АЗС' }] : []),
-                ...(activeTab === 'fuel-types' ? [{ label: 'Виды топлива' }] : []),
-                ...(activeTab === 'providers' ? [{ label: 'Провайдеры' }] : []),
-                ...(activeTab === 'provider-analysis' ? [{ label: 'Анализ Провайдера' }] : []),
-                ...(activeTab === 'templates' ? [{ label: 'Шаблоны' }] : []),
-                ...(activeTab === 'organizations' ? [{ label: 'Организации' }] : []),
-                ...(activeTab === 'users' ? [{ label: 'Пользователи' }] : []),
-                ...(activeTab === 'my-actions' ? [{ label: 'Мои действия' }] : []),
-                ...(activeTab === 'upload-events' ? [{ label: 'События загрузок' }] : []),
-                ...(activeTab === 'notifications' ? [{ label: 'Уведомления' }] : []),
-                ...(activeTab === 'settings' ? [{ label: 'Настройки' }] : [])
+                ...(TAB_LABELS[activeTab] ? [{ label: TAB_LABELS[activeTab] }] : []),
               ]}
             />
             
@@ -1624,102 +1625,11 @@ const App = () => {
               </>
             )}
 
-        {/* Контент вкладок */}
-        {activeTab === 'vehicles' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <VehiclesList />
-          </Suspense>
-        )}
-        {activeTab === 'cards' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <FuelCardsList />
-          </Suspense>
-        )}
-        {activeTab === 'fuel-card-analysis' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <>
-              <FuelCardAnalysisList />
-              <Card style={{ marginTop: 'var(--spacing-section)' }}>
-                <Card.Body>
-                  <div style={{ display: 'flex', gap: 'var(--spacing-element)', flexWrap: 'wrap' }}>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setShowRefuelsUpload(true)}
-                    >
-                      Загрузить заправки
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setShowLocationsUpload(true)}
-                    >
-                      Загрузить местоположения
-                    </Button>
-                  </div>
-                </Card.Body>
-              </Card>
-            </>
-          </Suspense>
-        )}
-        {activeTab === 'gas-stations' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <GasStationsList />
-          </Suspense>
-        )}
-        {activeTab === 'fuel-types' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <FuelTypesList />
-          </Suspense>
-        )}
-        {activeTab === 'providers' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <ProvidersList />
-          </Suspense>
-        )}
-        {activeTab === 'provider-analysis' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <ProviderAnalysisDashboard />
-          </Suspense>
-        )}
-        {activeTab === 'templates' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <TemplatesList />
-          </Suspense>
-        )}
-        {activeTab === 'organizations' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <OrganizationsList />
-          </Suspense>
-        )}
-        {activeTab === 'users' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <UsersList />
-          </Suspense>
-        )}
-        {activeTab === 'my-actions' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <UserActionLogsList showMyActionsOnly={true} />
-          </Suspense>
-        )}
-        {activeTab === 'dashboard' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <Dashboard />
-          </Suspense>
-        )}
-        {activeTab === 'upload-events' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <UploadEventsList />
-          </Suspense>
-        )}
-        {activeTab === 'notifications' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <NotificationsList />
-          </Suspense>
-        )}
-        {activeTab === 'settings' && (
-          <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-            <Settings />
-          </Suspense>
-        )}
+        <AppRoutes
+          activeTab={activeTab}
+          onOpenRefuelsUpload={() => setShowRefuelsUpload(true)}
+          onOpenLocationsUpload={() => setShowLocationsUpload(true)}
+        />
         
         {activeTab === 'transactions' && (
           <div className="tx-root">
@@ -1745,42 +1655,13 @@ const App = () => {
           formatLiters={formatLiters}
         />
 
-        {/* Показываем расширенный поиск, если данные были загружены хотя бы раз */}
         {hasLoadedOnce && (
           <AdvancedSearch
             filters={filters}
             onFiltersChange={setFilters}
             onClear={() => setFilters({ card_number: '', azs_number: '', product: '', provider: '' })}
             loading={loading}
-            filterConfig={[
-              {
-                key: 'card_number',
-                label: 'Номер карты',
-                placeholder: 'Введите номер карты',
-                type: 'text'
-              },
-              {
-                key: 'azs_number',
-                label: 'АЗС',
-                placeholder: 'Введите номер АЗС',
-                type: 'text'
-              },
-              {
-                key: 'product',
-                label: 'Товар',
-                placeholder: 'Введите название товара',
-                type: 'text'
-              },
-              {
-                key: 'provider',
-                label: 'Провайдер',
-                placeholder: 'Выберите провайдера',
-                type: 'select',
-                options: providers
-                  .filter(p => p.is_active)
-                  .map(p => ({ value: p.id.toString(), label: p.name }))
-              }
-            ]}
+            filterConfig={transactionFilterConfig}
           />
         )}
 
