@@ -1,10 +1,37 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Button, Input, Card, Badge, Table, Alert, useToast, Select, Modal } from './ui'
 import { authFetch } from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
 import './VehiclesList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+
+// Russian license plate component — styled to match redesign_vehicles.html
+// White background, black border, bold letters, country flag block on the right
+const LicensePlate = ({ value }) => {
+  if (!value) return <span className="veh-plate veh-plate--empty">—</span>
+  // Try to split "А123ВС 77" into main + region (last group of digits)
+  const trimmed = String(value).trim().toUpperCase()
+  const match = trimmed.match(/^(.+?)[\s\-]?(\d{2,3})$/)
+  let main = trimmed
+  let region = ''
+  if (match) {
+    main = match[1].trim()
+    region = match[2]
+  }
+  return (
+    <span className="veh-plate" title={value}>
+      <span className="veh-plate__main">{main}</span>
+      {region && <span className="veh-plate__region">{region}</span>}
+      <span className="veh-plate__flag" aria-hidden="true">
+        <span className="veh-plate__flag-stripe veh-plate__flag-stripe--white" />
+        <span className="veh-plate__flag-stripe veh-plate__flag-stripe--blue" />
+        <span className="veh-plate__flag-stripe veh-plate__flag-stripe--red" />
+        <span className="veh-plate__flag-code">RUS</span>
+      </span>
+    </span>
+  )
+}
 
 const VehiclesList = () => {
   const { user: currentUser } = useAuth()
@@ -17,7 +44,8 @@ const VehiclesList = () => {
   const [filter, setFilter] = useState('all') // all, pending, valid, invalid
   const [organizations, setOrganizations] = useState([])
   const [showEditModal, setShowEditModal] = useState(false)
-  
+  const [searchQuery, setSearchQuery] = useState('')
+
   // Пагинация
   const [currentPage, setCurrentPage] = useState(1)
   const [total, setTotal] = useState(0)
@@ -30,7 +58,7 @@ const VehiclesList = () => {
   const loadVehicles = async () => {
     setLoading(true)
     setError('')
-    
+
     try {
       const params = new URLSearchParams()
       if (filter !== 'all') {
@@ -38,10 +66,10 @@ const VehiclesList = () => {
       }
       params.append('skip', ((currentPage - 1) * limit).toString())
       params.append('limit', limit.toString())
-      
+
       const response = await authFetch(`${API_URL}/api/v1/vehicles?${params}`)
       if (!response.ok) throw new Error('Ошибка загрузки данных')
-      
+
       const result = await response.json()
       setVehicles(result.items)
       setTotal(result.total)
@@ -63,11 +91,11 @@ const VehiclesList = () => {
 
   const loadErrorsWarnings = async () => {
     setErrorsLoading(true)
-    
+
     try {
       const response = await authFetch(`${API_URL}/api/v1/dashboard/errors-warnings`)
       if (!response.ok) throw new Error('Ошибка загрузки данных')
-      
+
       const result = await response.json()
       setErrorsWarnings(result)
     } catch (err) {
@@ -120,7 +148,6 @@ const VehiclesList = () => {
   const handleSave = async (vehicleId) => {
     try {
       setLoading(true)
-      // Убеждаемся, что organization_id всегда присутствует в запросе (даже если null)
       const payload = {
         garage_number: editForm.garage_number || null,
         license_plate: editForm.license_plate || null,
@@ -147,7 +174,6 @@ const VehiclesList = () => {
       await loadVehicles()
       setError('')
     } catch (err) {
-      // Не показываем ошибку при 401 - это обрабатывается централизованно
       if (err.isUnauthorized) {
         return
       }
@@ -156,8 +182,7 @@ const VehiclesList = () => {
       setLoading(false)
     }
   }
-  
-  // Проверяем, нужно ли перейти на предыдущую страницу после удаления
+
   useEffect(() => {
     if (total > 0 && currentPage > 1 && (currentPage - 1) * limit >= total) {
       setCurrentPage(prev => Math.max(1, prev - 1))
@@ -191,7 +216,39 @@ const VehiclesList = () => {
     )
   }
 
+  // Client-side search over already-loaded rows (does not affect server filter)
+  const searchedVehicles = useMemo(() => {
+    if (!searchQuery) return vehicles
+    const q = searchQuery.toLowerCase()
+    return vehicles.filter(v => {
+      const org = organizations.find(o => o.id === v.organization_id)
+      return [
+        v.original_name,
+        v.garage_number,
+        v.license_plate,
+        org?.name
+      ].some(x => x && String(x).toLowerCase().includes(q))
+    })
+  }, [vehicles, searchQuery, organizations])
+
+  // Stats derived from currently loaded page — best effort
+  const stats = useMemo(() => {
+    const counts = { total: total || vehicles.length, valid: 0, invalid: 0, pending: 0 }
+    vehicles.forEach(v => {
+      if (v.is_validated === 'valid') counts.valid += 1
+      else if (v.is_validated === 'invalid') counts.invalid += 1
+      else counts.pending += 1
+    })
+    return counts
+  }, [vehicles, total])
+
   const columns = [
+    {
+      key: 'license_plate',
+      header: 'Госномер',
+      sortable: true,
+      render: (_, row) => <LicensePlate value={row.license_plate} />
+    },
     { key: 'original_name', header: 'Исходное наименование', sortable: true },
     {
       key: 'organization',
@@ -207,12 +264,6 @@ const VehiclesList = () => {
       header: 'Гаражный номер',
       sortable: true,
       render: (_, row) => row.garage_number || '-'
-    },
-    {
-      key: 'license_plate',
-      header: 'Госномер',
-      sortable: true,
-      render: (_, row) => row.license_plate || '-'
     },
     {
       key: 'is_validated',
@@ -238,14 +289,14 @@ const VehiclesList = () => {
       header: 'Действия',
       sortable: false,
       render: (_, row) => (
-        <Button size="sm" variant="primary" onClick={() => handleEdit(row)}>
+        <Button size="sm" variant="primary" onClick={() => handleEdit(row)} data-testid={`vehicle-edit-${row.id}`}>
           Редактировать
         </Button>
       )
     }
   ]
 
-  const tableData = vehicles.map((v) => ({
+  const tableData = searchedVehicles.map((v) => ({
     ...v,
     id: v.id,
     original_name: v.original_name || '-',
@@ -253,29 +304,92 @@ const VehiclesList = () => {
     license_plate: v.license_plate
   }))
 
+  const filters = [
+    { key: 'all',      label: 'Все',                tone: 'neutral' },
+    { key: 'pending',  label: 'Требуют проверки',   tone: 'amber'   },
+    { key: 'valid',    label: 'Валидные',           tone: 'green'   },
+    { key: 'invalid',  label: 'С ошибками',         tone: 'red'     }
+  ]
+
   return (
-    <div className="vehicles-list">
-      <Card variant="elevated" padding="lg">
-        <Card.Header>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <Card.Title>Справочник транспортных средств</Card.Title>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <Button size="sm" variant={filter === 'all' ? 'primary' : 'secondary'} onClick={() => setFilter('all')}>
-                Все
-              </Button>
-              <Button size="sm" variant={filter === 'pending' ? 'warning' : 'secondary'} onClick={() => setFilter('pending')}>
-                Требуют проверки
-              </Button>
-              <Button size="sm" variant={filter === 'valid' ? 'success' : 'secondary'} onClick={() => setFilter('valid')}>
-                Валидные
-              </Button>
-              <Button size="sm" variant={filter === 'invalid' ? 'error' : 'secondary'} onClick={() => setFilter('invalid')}>
-                С ошибками
-              </Button>
-            </div>
+    <div className="vehicles-list veh-root" data-testid="vehicles-list">
+      {/* Stat cards — mirrors reference dashboard */}
+      <div className="veh-stats" data-testid="vehicles-stats">
+        <div className="veh-stat" data-tone="neutral">
+          <span className="veh-stat__bar" />
+          <div className="veh-stat__body">
+            <div className="veh-stat__label t-label">Всего ТС</div>
+            <div className="veh-stat__value t-value">{stats.total}</div>
           </div>
-        </Card.Header>
-        <Card.Body>
+        </div>
+        <div className="veh-stat" data-tone="green">
+          <span className="veh-stat__bar" />
+          <div className="veh-stat__body">
+            <div className="veh-stat__label t-label">Валидные</div>
+            <div className="veh-stat__value t-value">{stats.valid}</div>
+          </div>
+        </div>
+        <div className="veh-stat" data-tone="amber">
+          <span className="veh-stat__bar" />
+          <div className="veh-stat__body">
+            <div className="veh-stat__label t-label">Требуют проверки</div>
+            <div className="veh-stat__value t-value">{stats.pending}</div>
+          </div>
+        </div>
+        <div className="veh-stat" data-tone="red">
+          <span className="veh-stat__bar" />
+          <div className="veh-stat__body">
+            <div className="veh-stat__label t-label">С ошибками</div>
+            <div className="veh-stat__value t-value">{stats.invalid}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter/search row */}
+      <div className="veh-toolbar" data-testid="vehicles-toolbar">
+        <div className="veh-search">
+          <svg className="veh-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.35-4.35" />
+          </svg>
+          <input
+            type="text"
+            className="veh-search__input"
+            placeholder="Поиск по номеру, наименованию, организации..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            data-testid="vehicles-search"
+          />
+        </div>
+        <div className="veh-filters" role="tablist">
+          {filters.map(f => (
+            <button
+              key={f.key}
+              type="button"
+              className={`veh-chip${filter === f.key ? ' veh-chip--active' : ''}`}
+              data-tone={f.tone}
+              onClick={() => setFilter(f.key)}
+              role="tab"
+              aria-selected={filter === f.key}
+              data-testid={`vehicles-filter-${f.key}`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main data card */}
+      <div className="veh-card">
+        <div className="veh-card__head">
+          <h2 className="veh-card__title">Справочник транспортных средств</h2>
+          {total > 0 && (
+            <span className="veh-card__meta t-label">
+              Всего записей: <strong>{total}</strong>
+            </span>
+          )}
+        </div>
+        <div className="veh-card__body">
           {error && (
             <Alert variant="error" title="Ошибка загрузки">
               {error}
@@ -289,7 +403,7 @@ const VehiclesList = () => {
             striped
             hoverable
             compact
-            defaultSortColumn="original_name"
+            defaultSortColumn="license_plate"
           />
 
           {total > limit && (
@@ -301,8 +415,8 @@ const VehiclesList = () => {
               onPageChange={(page) => setCurrentPage(page)}
             />
           )}
-        </Card.Body>
-      </Card>
+        </div>
+      </div>
 
       {/* Модальное окно редактирования ТС */}
       <Modal
@@ -360,6 +474,12 @@ const VehiclesList = () => {
                 />
               </div>
             </div>
+            {editForm.license_plate && (
+              <div className="veh-plate-preview">
+                <span className="t-label">Предпросмотр:</span>
+                <LicensePlate value={editForm.license_plate} />
+              </div>
+            )}
           </div>
         </Modal.Body>
         <Modal.Footer>
@@ -376,4 +496,3 @@ const VehiclesList = () => {
 }
 
 export default VehiclesList
-
