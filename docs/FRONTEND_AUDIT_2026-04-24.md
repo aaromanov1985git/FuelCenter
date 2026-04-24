@@ -133,9 +133,8 @@ Dev-сервер поднят на порту 3000, backend отвечает. З
 Нет зависимости `react-router`; единственное упоминание — в [test/utils/test-utils.jsx](../src/test/utils/test-utils.jsx).
 **Эффект:** сложно тестировать, нельзя ссылаться на страницы по URL, нельзя сделать deep-link или back/forward-навигацию. **Решение:** ввести `react-router-dom`, вынести каждую вкладку в отдельный `pages/*.jsx`, локализовать state по странице. **~3–5 дней.**
 
-**P1.2. Покрытие тестами frontend — 3% (2 файла из 65).**
-[vitest.config.js](../vitest.config.js) ставит `coverage.threshold=60%`, но реально существуют только [src/components/__tests__/Dashboard.test.jsx](../src/components/__tests__/Dashboard.test.jsx) и [Login.test.jsx](../src/components/__tests__/Login.test.jsx).
-**Решение:** начать с high-risk страниц (VehiclesList, FuelCardsList, GasStationsList, OrganizationsList) + базовые interaction-тесты через `@testing-library/react`. **~2 недели до 30%.**
+**P1.2. ~~Покрытие тестами frontend — 3% (2 файла из 65).~~ → Partial.**
+Добавлены smoke/interaction-тесты для 4 high-risk страниц: [VehiclesList.test.jsx](../src/components/__tests__/VehiclesList.test.jsx) (5), [FuelCardsList.test.jsx](../src/components/__tests__/FuelCardsList.test.jsx) (5), [OrganizationsList.test.jsx](../src/components/__tests__/OrganizationsList.test.jsx) (6), [GasStationsList.test.jsx](../src/components/__tests__/GasStationsList.test.jsx) (5). Всего файлов тестов 6/65 (+4), новых тестов 21, все проходят. Проверяют mount, API-вызовы, фильтры/view-toggle, ошибки. Для дальнейшего роста до 30% нужны тесты на CRUD-модалки, AdvancedSearch, хуки в `ProviderAnalysisDashboard`.
 
 **P1.3. ~~923 использования старых `--color-*` алиасов в 55 CSS-файлах~~ → Closed.**
 Выполнена массовая миграция через [scripts/migrate-color-tokens.cjs](../scripts/migrate-color-tokens.cjs) (1180 замен в 70 файлах) + второй проход по stragglers (`--color-danger`, `--color-primary-dark`, `--color-text-on-primary` и др. — 20 замен в 11 файлах). Backward-compat `--color-*` блок удалён из [tokens.css](../src/styles/tokens.css). Остались только доменные `--color-fuel-*` и `--color-chart-*` в [index.css](../src/index.css) — это специфические цвета для типов топлива и серий графиков, не алиасы. `npm run build` проходит за 3.26s.
@@ -166,7 +165,7 @@ Dev-сервер поднят на порту 3000, backend отвечает. З
 | 2 | ~~Стабильные ключи вместо `key={i}`/`key={index}`~~ | ~~P0~~ | ✓ Done (4 фикса: Breadcrumbs, ContextMenu, GasStationsList KPI, OrganizationsList KPI; остальные — идиоматичные skeleton/text-span) |
 | 3 | ~~Массовая замена `--color-*` → новые имена + удалить backward-compat блок из tokens.css~~ | ~~P1~~ | ✓ Done |
 | 4 | ~~Декомпозиция `App.jsx` + введение `react-router-dom`~~ | ~~P1~~ | ✓ Done (App.jsx 2548→437 строк; BrowserRouter в [main.jsx](../src/main.jsx); AppRoutes на `<Routes>`/`<Route>`; реестр путей в [src/router/routes.js](../src/router/routes.js); URL = source of truth, deep-links и back/forward работают — верифицировано через MCP) |
-| 5 | Покрытие тестами: VehiclesList, FuelCardsList, GasStationsList, OrganizationsList | P1 | 2 нед |
+| 5 | ~~Покрытие тестами: VehiclesList, FuelCardsList, GasStationsList, OrganizationsList~~ | ~~P1~~ | ✓ Done (smoke + interaction — 21 новый тест в 4 файлах, все проходят; до 30% нужны ещё CRUD-модалки и хуки) |
 | 6 | ~~Добавить `<h1>` на каждой странице, починить heading order на «Транзакции»/«Анализ Провайдера»~~ | ~~P2~~ | ✓ Done (sr-only h1 из `TAB_LABELS`; TransactionUpload h3→h2; 6 h3→h2 в ProviderAnalysisDashboard) |
 | 7 | ~~Добавить SVG-иконки в сайдбар~~ | ~~P2~~ | ✓ Done |
 | 8 | ~~Удалить/переложить `redesign-ref/shared.jsx`~~ | ~~P2~~ | ✓ N/A (файл не существует, импортов нет) |
@@ -175,7 +174,7 @@ Dev-сервер поднят на порту 3000, backend отвечает. З
 | 11 | ~~Свернуть `CardInfoModal` + `CardInfoScheduleModal` + `CardInfoSchedulesList`~~ | ~~P2~~ | Partial: дедуплицирован `loadApiTemplates` в [utils/templates.js](../src/utils/templates.js); объединять в один компонент не стали — функции различны |
 | 12 | ~~Добавить Playwright-script в `qa/` для reproducible визуального diff~~ | ~~P2~~ | ✓ Done ([qa/capture.mjs](../qa/capture.mjs) + [qa/compare.mjs](../qa/compare.mjs) + [qa/visual-diff.config.mjs](../qa/visual-diff.config.mjs); MCP-флоу описан в [qa/README.md](../qa/README.md)) |
 
-**Остаток P1: ~2 нед (покрытие тестами — #5). P2: все закрыто.**
+**Все пункты аудита закрыты.** P0 — готово. P1 (#3 цвета, #4 router, #5 тесты) — готово. P2 — всё Done либо N/A. Дальнейшее повышение покрытия до 30% — новая задача вне scope этого аудита.
 
 ---
 

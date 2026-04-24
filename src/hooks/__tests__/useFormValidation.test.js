@@ -225,8 +225,9 @@ describe('useFormValidation', () => {
       useFormValidation({ username: '', email: '' }, validationRules)
     )
 
-    const isValid = act(() => {
-      return result.current.validate()
+    let isValid
+    act(() => {
+      isValid = result.current.validate()
     })
 
     expect(isValid).toBe(false)

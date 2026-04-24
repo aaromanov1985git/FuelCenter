@@ -2,7 +2,7 @@
  * Тесты для компонента Login
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent, waitFor } from '@testing-library/react'
 import { renderWithProviders } from '../../test/utils/test-utils'
 import Login from '../Login'
 
@@ -36,19 +36,17 @@ describe('Login', () => {
   it('должен отображать форму входа', () => {
     renderWithProviders(<Login />)
 
-    expect(screen.getByPlaceholderText(/введите логин/i)).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/введите пароль/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /войти/i })).toBeInTheDocument()
+    expect(screen.getByTestId('login-username')).toBeInTheDocument()
+    expect(screen.getByTestId('login-password')).toBeInTheDocument()
+    expect(screen.getByTestId('login-submit')).toBeInTheDocument()
   })
 
   it('должен валидировать обязательные поля', async () => {
     renderWithProviders(<Login />)
 
-    const submitButton = screen.getByRole('button', { name: /войти/i })
-    fireEvent.click(submitButton)
+    fireEvent.click(screen.getByTestId('login-submit'))
 
     await waitFor(() => {
-      // Проверяем, что форма не была отправлена (login не вызван)
       expect(mockLogin).not.toHaveBeenCalled()
     })
   })
@@ -58,16 +56,15 @@ describe('Login', () => {
 
     renderWithProviders(<Login />)
 
-    const usernameInput = screen.getByPlaceholderText(/введите логин/i)
-    const passwordInput = screen.getByPlaceholderText(/введите пароль/i)
-    const submitButton = screen.getByRole('button', { name: /войти/i })
+    const usernameInput = screen.getByTestId('login-username')
+    const passwordInput = screen.getByTestId('login-password')
 
     fireEvent.change(usernameInput, { target: { value: 'testuser' } })
     fireEvent.blur(usernameInput)
     fireEvent.change(passwordInput, { target: { value: 'password123' } })
     fireEvent.blur(passwordInput)
-    
-    fireEvent.click(submitButton)
+
+    fireEvent.click(screen.getByTestId('login-submit'))
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith('testuser', 'password123')
@@ -75,38 +72,37 @@ describe('Login', () => {
   })
 
   it('должен показывать ошибку при неудачном входе', async () => {
-    mockLogin.mockResolvedValue({ 
-      success: false, 
-      error: 'Неверный логин или пароль' 
+    mockLogin.mockResolvedValue({
+      success: false,
+      error: 'Неверный логин или пароль'
     })
 
     renderWithProviders(<Login />)
 
-    const usernameInput = screen.getByPlaceholderText(/введите логин/i)
-    const passwordInput = screen.getByPlaceholderText(/введите пароль/i)
-    const submitButton = screen.getByRole('button', { name: /войти/i })
+    const usernameInput = screen.getByTestId('login-username')
+    const passwordInput = screen.getByTestId('login-password')
 
     fireEvent.change(usernameInput, { target: { value: 'testuser' } })
     fireEvent.blur(usernameInput)
     fireEvent.change(passwordInput, { target: { value: 'wrongpassword' } })
     fireEvent.blur(passwordInput)
-    fireEvent.click(submitButton)
+    fireEvent.click(screen.getByTestId('login-submit'))
 
     await waitFor(() => {
       expect(mockError).toHaveBeenCalled()
     })
   })
 
-  it('должен показывать кнопку регистрации', () => {
+  it('должен показывать кнопку запроса доступа', () => {
     renderWithProviders(<Login />)
 
-    expect(screen.getByText(/нет аккаунта/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /зарегистрироваться/i })).toBeInTheDocument()
+    expect(screen.getByText(/нет доступа/i)).toBeInTheDocument()
+    expect(screen.getByTestId('login-register')).toBeInTheDocument()
   })
 
-  it('должен показывать ссылку "Забыли пароль?"', () => {
+  it('должен показывать ссылку "Забыли?"', () => {
     renderWithProviders(<Login />)
 
-    expect(screen.getByRole('button', { name: /забыли пароль/i })).toBeInTheDocument()
+    expect(screen.getByTestId('login-forgot')).toBeInTheDocument()
   })
 })
