@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react'
-import { createPortal } from 'react-dom'
 import * as XLSX from 'xlsx'
 import { logger } from './utils/logger'
 // Lazy load large page components for code-splitting
@@ -9,8 +8,6 @@ const FuelTypesList = lazy(() => import('./components/FuelTypesList'))
 const FuelCardsList = lazy(() => import('./components/FuelCardsList'))
 const FuelCardAnalysisList = lazy(() => import('./components/FuelCardAnalysisList'))
 const ProviderAnalysisDashboard = lazy(() => import('./components/ProviderAnalysisDashboard'))
-const RefuelsUpload = lazy(() => import('./components/RefuelsUpload'))
-const LocationsUpload = lazy(() => import('./components/LocationsUpload'))
 const ProvidersList = lazy(() => import('./components/ProvidersList'))
 const TemplatesList = lazy(() => import('./components/TemplatesList'))
 const Dashboard = lazy(() => import('./components/Dashboard'))
@@ -19,17 +16,14 @@ const OrganizationsList = lazy(() => import('./components/OrganizationsList'))
 const UploadEventsList = lazy(() => import('./components/UploadEventsList'))
 const UserActionLogsList = lazy(() => import('./components/UserActionLogsList'))
 const Login = lazy(() => import('./components/Login'))
-const Register = lazy(() => import('./components/Register'))
 const Settings = lazy(() => import('./components/Settings'))
 const NotificationsList = lazy(() => import('./components/NotificationsList'))
 // Keep smaller components as static imports (they're used frequently)
-import ConfirmModal from './components/ConfirmModal'
-import ClearProviderModal from './components/ClearProviderModal'
-import TemplateSelectModal from './components/TemplateSelectModal'
 import ClearMenu from './components/ClearMenu'
 import FileUploadProgress from './components/FileUploadProgress'
 import IconButton from './components/IconButton'
 import AppSidebar from './components/AppSidebar'
+import AppModals from './components/AppModals'
 import Pagination from './components/Pagination'
 import Highlight from './components/Highlight'
 import Breadcrumbs from './components/Breadcrumbs'
@@ -38,12 +32,9 @@ import './components/ColumnSettingsModal.css'
 import StatusIndicator from './components/StatusIndicator'
 import ScrollToTop from './components/ScrollToTop'
 import EmptyState from './components/EmptyState'
-import ContextMenu from './components/ContextMenu'
-import FilePreviewModal from './components/FilePreviewModal'
 import ExportMenu from './components/ExportMenu'
 import { useToast } from './components/ToastContainer'
 import { useAuth } from './contexts/AuthContext'
-import { useCopyToClipboard } from './hooks/useCopyToClipboard'
 import { SkeletonTable } from './components/Skeleton'
 import { useDebounce } from './hooks/useDebounce'
 import { useTouchGestures } from './hooks/useTouchGestures'
@@ -2123,247 +2114,83 @@ const App = () => {
         </main>
       </div>
 
-      <ConfirmModal
-        isOpen={showClearConfirm}
-        title="Подтверждение очистки базы данных"
-        message="Вы уверены, что хотите очистить базу данных? Это действие удалит все транзакции и не может быть отменено."
-        onConfirm={handleConfirmClearDatabase}
-        onCancel={() => setShowClearConfirm(false)}
-        confirmText="Очистить БД"
-        cancelText="Отмена"
-        variant="danger"
-      />
-
-      <ClearProviderModal
-        isOpen={showClearProviderModal}
-        onClose={() => setShowClearProviderModal(false)}
-        onConfirm={handleConfirmClearProvider}
-        providers={providers}
-        loading={loading}
-      />
-
-      <TemplateSelectModal
-        isOpen={showTemplateSelectModal}
-        onClose={() => {
-          setShowTemplateSelectModal(false)
-          setTemplateSelectData(null)
+      <AppModals
+        clearDb={{
+          open: showClearConfirm,
+          onConfirm: handleConfirmClearDatabase,
+          onCancel: () => setShowClearConfirm(false),
         }}
-        onConfirm={async (selected) => {
-          if (templateSelectData && templateSelectData.file) {
+        clearProvider={{
+          open: showClearProviderModal,
+          onClose: () => setShowClearProviderModal(false),
+          onConfirm: handleConfirmClearProvider,
+          providers,
+          loading,
+        }}
+        templateSelect={{
+          open: showTemplateSelectModal,
+          data: templateSelectData,
+          loading,
+          onClose: () => {
             setShowTemplateSelectModal(false)
-            await handleFileWithTemplate(
-              templateSelectData.file,
-              selected.provider_id,
-              selected.template_id
-            )
             setTemplateSelectData(null)
-          }
-        }}
-        availableTemplates={templateSelectData?.availableTemplates || []}
-        detectedProviderId={templateSelectData?.detectedProviderId}
-        detectedTemplateId={templateSelectData?.detectedTemplateId}
-        matchInfo={templateSelectData?.matchInfo}
-        loading={loading}
-      />
-
-      {/* Модальное окно настройки колонок */}
-      {showColumnSettings && createPortal(
-        <div className="column-settings-modal" onClick={() => setShowColumnSettings(false)}>
-          <div className="column-settings-content" onClick={(e) => e.stopPropagation()}>
-            <div className="column-settings-header">
-              <h3 className="column-settings-title">Настройка колонок</h3>
-              <button 
-                className="column-settings-close" 
-                onClick={() => setShowColumnSettings(false)}
-                aria-label="Закрыть"
-              >
-                ×
-              </button>
-            </div>
-            <div className="column-settings-list">
-              <div className="column-settings-grid">
-                {allHeaders.map((header) => {
-                  const isVisible = visibleColumns[header] !== false
-                  return (
-                    <label key={header} className="column-settings-item">
-                      <input
-                        type="checkbox"
-                        checked={isVisible}
-                        onChange={() => toggleColumnVisibility(header)}
-                      />
-                      <span>{header}</span>
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-            <div className="column-settings-actions">
-              <button 
-                className="btn btn-secondary btn-sm" 
-                onClick={resetColumnVisibility}
-              >
-                Сбросить
-              </button>
-              <button 
-                className="btn btn-primary btn-sm" 
-                onClick={() => setShowColumnSettings(false)}
-              >
-                Готово
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {showKeyboardHint && (
-        <div className="keyboard-hint">
-          <div className="keyboard-hint-title">Горячие клавиши</div>
-          <div className="keyboard-hint-item">
-            <span>Переключить меню</span>
-            <kbd className="keyboard-hint-key">Ctrl+B</kbd>
-          </div>
-          <div className="keyboard-hint-item">
-            <span>Поиск</span>
-            <kbd className="keyboard-hint-key">Ctrl+K</kbd>
-          </div>
-          <div className="keyboard-hint-item">
-            <span>Сохранить</span>
-            <kbd className="keyboard-hint-key">Ctrl+S</kbd>
-          </div>
-          <div className="keyboard-hint-item">
-            <span>Новый элемент</span>
-            <kbd className="keyboard-hint-key">Ctrl+N</kbd>
-          </div>
-          <div className="keyboard-hint-item">
-            <span>Фильтр</span>
-            <kbd className="keyboard-hint-key">Ctrl+F</kbd>
-          </div>
-          <div className="keyboard-hint-item">
-            <span>Экспорт</span>
-            <kbd className="keyboard-hint-key">Ctrl+E</kbd>
-          </div>
-          <div className="keyboard-hint-item">
-            <span>Закрыть</span>
-            <kbd className="keyboard-hint-key">Esc</kbd>
-          </div>
-        </div>
-      )}
-
-      {/* Модальное окно предпросмотра файла */}
-      <FilePreviewModal
-        isOpen={!!previewFile}
-        file={previewFile}
-        onConfirm={handleFileConfirm}
-        onCancel={handleFileCancel}
-        onCheckTemplate={checkFileMatch}
-        loading={loading && uploadStatus === 'uploading'}
-      />
-
-      {/* Контекстное меню */}
-      {contextMenu.isOpen && contextMenu.rowIndex !== null && (
-        <ContextMenu
-          isOpen={contextMenu.isOpen}
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onClose={() => setContextMenu({ isOpen: false, x: 0, y: 0, rowIndex: null })}
-          items={[
-            {
-              label: 'Копировать строку',
-              icon: '📋',
-              onClick: async () => {
-                const row = data[contextMenu.rowIndex]
-                const rowData = displayHeaders.map(h => `${h}: ${row[h] || ''}`).join('\n')
-                const copied = await copyToClipboard(rowData)
-                if (copied) {
-                  success('Строка скопирована')
-                }
-              }
-            },
-            {
-              label: 'Копировать все данные',
-              icon: '📄',
-              onClick: async () => {
-                const csvHeaders = displayHeaders.join(',')
-                const csvRows = data.map(r => 
-                  displayHeaders.map(h => {
-                    const value = r[h] || ''
-                    if (value.includes(',') || value.includes('\n') || value.includes('"')) {
-                      return `"${String(value).replace(/"/g, '""')}"`
-                    }
-                    return value
-                  }).join(',')
-                ).join('\n')
-                const csvContent = csvHeaders + '\n' + csvRows
-                const copied = await copyToClipboard(csvContent)
-                if (copied) {
-                  success('Все данные скопированы')
-                }
-              }
-            },
-            { divider: true },
-            {
-              label: 'Экспорт в Excel',
-              icon: '📥',
-              onClick: () => {
-                downloadExcel()
-              }
-            },
-            {
-              label: 'Обновить данные',
-              icon: '🔄',
-              onClick: () => {
-                loadTransactions()
-              }
+          },
+          onConfirm: async (selected) => {
+            if (templateSelectData && templateSelectData.file) {
+              setShowTemplateSelectModal(false)
+              await handleFileWithTemplate(
+                templateSelectData.file,
+                selected.provider_id,
+                selected.template_id
+              )
+              setTemplateSelectData(null)
             }
-          ]}
-        />
-        )}
+          },
+        }}
+        columnSettings={{
+          open: showColumnSettings,
+          onClose: () => setShowColumnSettings(false),
+          allHeaders,
+          visibleColumns,
+          onToggle: toggleColumnVisibility,
+          onReset: resetColumnVisibility,
+        }}
+        keyboardHint={showKeyboardHint}
+        filePreview={{
+          file: previewFile,
+          onConfirm: handleFileConfirm,
+          onCancel: handleFileCancel,
+          onCheckTemplate: checkFileMatch,
+          loading: loading && uploadStatus === 'uploading',
+        }}
+        contextMenu={{
+          state: contextMenu,
+          data,
+          displayHeaders,
+          onClose: () => setContextMenu({ isOpen: false, x: 0, y: 0, rowIndex: null }),
+          onExport: () => downloadExcel(),
+          onRefresh: () => loadTransactions(),
+        }}
+        register={{
+          open: showRegister,
+          onClose: () => setShowRegister(false),
+          onSuccess: () => {
+            setShowRegister(false)
+            success('Пользователь успешно зарегистрирован')
+          },
+        }}
+        refuelsUpload={{
+          open: showRefuelsUpload,
+          onClose: () => setShowRefuelsUpload(false),
+        }}
+        locationsUpload={{
+          open: showLocationsUpload,
+          onClose: () => setShowLocationsUpload(false),
+        }}
+        toastSuccess={success}
+      />
 
-      {/* Модальное окно регистрации */}
-      {showRegister && (
-        <div className="modal-overlay" onClick={() => setShowRegister(false)}>
-          <div className="modal-content auth-modal" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="modal-close"
-              onClick={() => setShowRegister(false)}
-              aria-label="Закрыть"
-            >
-              ×
-            </button>
-            <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-              <Register
-                onSuccess={() => {
-                  setShowRegister(false)
-                  success('Пользователь успешно зарегистрирован')
-                }}
-                onCancel={() => setShowRegister(false)}
-              />
-            </Suspense>
-          </div>
-        </div>
-      )}
-
-      {/* Кнопка "Наверх" */}
       <ScrollToTop />
-
-      {/* Модальные окна для загрузки данных анализа */}
-      {showRefuelsUpload && (
-        <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-          <RefuelsUpload
-            isOpen={showRefuelsUpload}
-            onClose={() => setShowRefuelsUpload(false)}
-          />
-        </Suspense>
-      )}
-      {showLocationsUpload && (
-        <Suspense fallback={<div className="loading"><div className="spinner"></div>Загрузка...</div>}>
-          <LocationsUpload
-            isOpen={showLocationsUpload}
-            onClose={() => setShowLocationsUpload(false)}
-          />
-        </Suspense>
-      )}
     </div>
   )
 }
