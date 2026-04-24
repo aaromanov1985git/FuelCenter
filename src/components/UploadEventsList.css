@@ -15,15 +15,20 @@
 }
 
 .events-stat-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
   margin-bottom: var(--spacing-small);
 }
 
 .events-stat-value {
   font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  font-weight: 700;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.3px;
 }
 
 /* Стили для фильтров */

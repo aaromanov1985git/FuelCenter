@@ -1,0 +1,211 @@
+/* GSM Unified Design System — Dark Pro (с поддержкой светлой темы)
+ * Источник истины для всех страниц редизайна.
+ * Применяется через data-theme="dark" | "light" на <html> или <body>.
+ */
+
+/* ============ DARK (по умолчанию) ============ */
+:root, [data-theme="dark"] {
+  --bg:           #0a0d14;
+  --surface:      #11151e;
+  --surface-2:    #1a1f2b;
+  --sidebar:      #0d1119;
+  --border:       #1f2633;
+  --border-strong:#2a3243;
+
+  --text-1:       #e6e9ef;
+  --text-2:       #97a0b3;
+  --text-3:       #626b7f;
+
+  --accent:       #7c5cff;
+  --accent-soft:  rgba(124,92,255,.14);
+  --accent-glow:  rgba(124,92,255,.3);
+
+  --green:        #22d3a7;
+  --green-soft:   rgba(34,211,167,.12);
+  --red:          #ff6b6b;
+  --red-soft:     rgba(255,107,107,.12);
+  --amber:        #ffb547;
+  --amber-soft:   rgba(255,181,71,.12);
+  --cyan:         #4fd1ff;
+  --cyan-soft:    rgba(79,209,255,.12);
+  --pink:         #ff78c4;
+
+  --shadow-sm:    0 1px 3px rgba(0,0,0,.4);
+  --shadow-md:    0 8px 24px rgba(0,0,0,.5);
+  --shadow-glow:  0 0 0 1px var(--accent-glow), 0 12px 40px rgba(124,92,255,.15);
+
+  --overlay:      rgba(5,7,12,.7);
+}
+
+/* ============ LIGHT ============ */
+[data-theme="light"] {
+  --bg:           #f4f6f9;
+  --surface:      #ffffff;
+  --surface-2:    #f4f6f9;
+  --sidebar:      #ffffff;
+  --border:       #e8ecf0;
+  --border-strong:#d1d9e0;
+
+  --text-1:       #0f1724;
+  --text-2:       #4b5a6e;
+  --text-3:       #8592a6;
+
+  --accent:       #5b46e5;
+  --accent-soft:  rgba(91,70,229,.08);
+  --accent-glow:  rgba(91,70,229,.2);
+
+  --green:        #10b981;
+  --green-soft:   rgba(16,185,129,.1);
+  --red:          #ef4444;
+  --red-soft:     rgba(239,68,68,.1);
+  --amber:        #f59e0b;
+  --amber-soft:   rgba(245,158,11,.1);
+  --cyan:         #06b6d4;
+  --cyan-soft:    rgba(6,182,212,.1);
+  --pink:         #ec4899;
+
+  --shadow-sm:    0 1px 2px rgba(15,23,36,.04);
+  --shadow-md:    0 8px 24px rgba(15,23,36,.06);
+  --shadow-glow:  0 0 0 1px var(--accent-glow), 0 12px 40px rgba(91,70,229,.1);
+
+  --overlay:      rgba(15,23,36,.4);
+}
+
+/* Скролл и сглаживание */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+  /* html всегда скроллится — если body.overflow=hidden повис от закрытого модала,
+     страница не превратится в «мёртвую» */
+  overflow-y: auto;
+}
+html, body {
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background .2s ease, color .2s ease;
+}
+
+/* Глобальное убирание жёлтого автозаполнения Chrome во всех формах */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-2) inset !important;
+  -webkit-text-fill-color: var(--text-1) !important;
+  caret-color: var(--text-1);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* ============ Базовый стиль native form controls (низкая специфичность через :where) ============
+ * Кастомные .input-wrap / ui/Input перекрывают это без !important.
+ */
+:where(
+  input[type="text"], input[type="email"], input[type="password"],
+  input[type="number"], input[type="search"], input[type="tel"],
+  input[type="url"], input[type="date"], input[type="time"],
+  input[type="datetime-local"], textarea, select
+) {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  transition: border-color .15s ease, box-shadow .15s ease;
+  width: 100%;
+}
+:where(
+  input[type="text"], input[type="email"], input[type="password"],
+  input[type="number"], input[type="search"], input[type="tel"],
+  input[type="url"], input[type="date"], input[type="time"],
+  input[type="datetime-local"], textarea, select
+):focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+:where(input, textarea)::placeholder { color: var(--text-3); }
+
+/* ============ Типографические utility-классы ============ */
+.t-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.t-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.3px;
+  line-height: 1.1;
+}
+.t-value-sm {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.2px;
+  line-height: 1.2;
+}
+.t-unit {
+  font-size: 14px;
+  color: var(--text-3);
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+/* Keyframes */
+@keyframes spin     { to { transform: rotate(360deg); } }
+@keyframes fadeUp   { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+@keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:.4} }
+@keyframes shimmer  { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ============ BACKWARD COMPATIBILITY ALIASES ============
+ * Old --color-* variable names from index.css map to new tokens.
+ * Remove this block after all components are migrated to new names.
+ */
+:root, [data-theme="dark"], [data-theme="light"] {
+  --color-primary:        var(--accent);
+  --color-primary-hover:  var(--accent);
+  --color-primary-light:  var(--accent-soft);
+  --color-bg:             var(--bg);
+  --color-bg-primary:     var(--bg);
+  --color-bg-secondary:   var(--surface-2);
+  --color-bg-card:        var(--surface);
+  --color-bg-input:       var(--surface-2);
+  --color-bg-hover:       var(--surface-2);
+  --color-text-primary:   var(--text-1);
+  --color-text-secondary: var(--text-2);
+  --color-text-tertiary:  var(--text-3);
+  --color-border:         var(--border);
+  --color-border-light:   var(--border-strong);
+  --color-success:        var(--green);
+  --color-success-light:  var(--green-soft);
+  --color-success-dark:   var(--green);
+  --color-warning:        var(--amber);
+  --color-warning-light:  var(--amber-soft);
+  --color-warning-dark:   var(--amber);
+  --color-error:          var(--red);
+  --color-error-light:    var(--red-soft);
+  --color-error-dark:     var(--red);
+  --color-info:           var(--cyan);
+  --color-info-light:     var(--cyan-soft);
+  --radius-small:         6px;
+  --radius-medium:        8px;
+  --radius-large:         12px;
+  --spacing-tiny:         4px;
+  --spacing-small:        8px;
+  --spacing-medium:       12px;
+  --spacing-large:        16px;
+  --spacing-section:      24px;
+  --shadow-small:         var(--shadow-sm);
+  --shadow-medium:        var(--shadow-md);
+}

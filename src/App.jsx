@@ -100,7 +100,7 @@ const App = () => {
   const [totalBytes, setTotalBytes] = useState(0)
   const [processedItems, setProcessedItems] = useState(0)
   const [totalItems, setTotalItems] = useState(0)
-  const [theme, setTheme] = useState('light') // 'light', 'midnight'
+  const [theme, setTheme] = useState('dark') // 'dark', 'light'
   const [sidebarVisible, setSidebarVisible] = useState(true) // Видимость сайдбара
   const [isMobile, setIsMobile] = useState(false) // Определение мобильного устройства
   const [showColumnSettings, setShowColumnSettings] = useState(false) // Видимость настроек колонок
@@ -121,12 +121,7 @@ const App = () => {
 
   // Применение темы к документу
   const applyTheme = (themeName) => {
-    const root = document.documentElement
-    if (themeName === 'light') {
-      root.removeAttribute('data-theme')
-    } else {
-      root.setAttribute('data-theme', themeName)
-    }
+    document.documentElement.setAttribute('data-theme', themeName)
   }
 
   // Определение мобильного устройства
@@ -165,7 +160,7 @@ const App = () => {
 
   // Загрузка темы и состояния сайдбара из localStorage при монтировании
   useEffect(() => {
-    const savedTheme = localStorage.getItem('app-theme') || 'light'
+    const savedTheme = localStorage.getItem('gsm-theme') || 'dark'
     setTheme(savedTheme)
     applyTheme(savedTheme)
     
@@ -261,7 +256,7 @@ const App = () => {
     // Небольшая задержка для начала анимации
     requestAnimationFrame(() => {
       setTheme(newTheme)
-      localStorage.setItem('app-theme', newTheme)
+      localStorage.setItem('gsm-theme', newTheme)
       applyTheme(newTheme)
       logger.info('Тема изменена', { theme: newTheme })
       

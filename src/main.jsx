@@ -5,19 +5,18 @@ import { ToastProvider } from './components/ToastContainer'
 import { AuthProvider } from './contexts/AuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import './index.css'
+import './styles/tokens.css'
 import './styles/animations.css'
 import './styles/utilities.css'
 import './styles/responsive.css'
 
 // Применяем сохраненную тему сразу при загрузке страницы (до рендеринга React)
 // чтобы избежать мигания при переключении темы
-const savedTheme = localStorage.getItem('app-theme') || 'light'
+const rawTheme = localStorage.getItem('gsm-theme')
+const savedTheme = (rawTheme === 'light') ? 'light' : 'dark'
+if (rawTheme !== savedTheme) localStorage.setItem('gsm-theme', savedTheme)
 const root = document.documentElement
-if (savedTheme !== 'light') {
-  root.setAttribute('data-theme', savedTheme)
-} else {
-  root.removeAttribute('data-theme')
-}
+root.setAttribute('data-theme', savedTheme)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

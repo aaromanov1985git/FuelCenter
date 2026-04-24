@@ -9,37 +9,43 @@
 .stat-card-header {
   display: flex;
   align-items: center;
-  gap: var(--spacing-small);
-  margin-bottom: var(--spacing-small);
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
 .stat-card-title {
   margin: 0;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .4px;
 }
 
 .stat-card-value {
   font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
+  font-weight: 700;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.3px;
+  line-height: 1.2;
 }
 
 .stat-card-value.success {
-  color: var(--color-success);
+  color: var(--green);
 }
 
 .stat-card-value.error {
-  color: var(--color-error);
+  color: var(--red);
 }
 
 .stat-card-value.warning {
-  color: var(--color-warning);
+  color: var(--amber);
 }
 
 .stat-card-percent {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--text-3);
   margin-top: var(--spacing-tiny);
 }
 
@@ -85,6 +91,179 @@
 .blocked-card {
   opacity: 0.7;
   background-color: var(--color-error-light);
+}
+
+/* ── View toggle ── */
+.fc-view-toggle {
+  display: flex;
+  gap: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 3px;
+}
+
+.fc-view-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.fc-view-btn.active {
+  background: var(--surface);
+  color: var(--text-1);
+}
+
+.fc-view-btn:hover:not(.active) {
+  color: var(--text-2);
+}
+
+/* ── Grid view ── */
+.fc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-bottom: var(--spacing-element);
+}
+
+.fc-grid-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  color: var(--text-3);
+  font-size: 14px;
+}
+
+/* ── Visual card ── */
+.fc-visual-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .2s, transform .2s;
+}
+
+.fc-visual-wrap:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.fc-card-face {
+  padding: 18px 18px 16px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  min-height: 120px;
+}
+
+.fc-card-glow {
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 140px; height: 140px;
+  border-radius: 50%;
+  opacity: .2;
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+.fc-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.fc-card-provider {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: .8;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.fc-card-owner {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: .9;
+  margin-top: 2px;
+}
+
+.fc-card-chip {
+  width: 28px; height: 20px;
+  background: rgba(255,255,255,.2);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fc-card-number {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.fc-card-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  opacity: .8;
+  position: relative;
+}
+
+.fc-card-expires {
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.fc-card-info {
+  padding: 12px 14px;
+}
+
+.fc-card-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fc-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.fc-edit-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color .15s, background .15s;
+}
+
+.fc-edit-btn:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
 }
 
 /* Бейджи теперь используют стандартный Badge из ui библиотеки */

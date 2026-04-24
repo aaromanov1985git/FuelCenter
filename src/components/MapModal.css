@@ -40,8 +40,8 @@
 }
 
 /* Исправление стилей Leaflet для темной темы */
-[data-theme="midnight"] .leaflet-container,
-[data-theme="amber-glow"] .leaflet-container {
+[data-theme="dark"] .leaflet-container,
+[data-theme="dark"] .leaflet-container {
   background: var(--color-bg-card);
 }
 
@@ -56,8 +56,8 @@
   background-color: var(--color-bg-hover);
 }
 
-[data-theme="midnight"] .leaflet-control-zoom a,
-[data-theme="amber-glow"] .leaflet-control-zoom a {
+[data-theme="dark"] .leaflet-control-zoom a,
+[data-theme="dark"] .leaflet-control-zoom a {
   background-color: var(--color-bg-secondary);
   color: var(--color-text-primary);
 }

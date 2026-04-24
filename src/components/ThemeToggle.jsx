@@ -5,7 +5,7 @@ import './ThemeToggle.css'
 const ThemeToggle = ({ currentTheme, onThemeChange }) => {
   const themes = [
     { id: 'light', name: 'Светлая', icon: '☀️' },
-    { id: 'midnight', name: 'Темная', icon: '🌙' }
+    { id: 'dark', name: 'Темная', icon: '🌙' }
   ]
 
   return (

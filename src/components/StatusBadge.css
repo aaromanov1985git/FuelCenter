@@ -73,12 +73,10 @@
 }
 
 /* Улучшенная читаемость для темной темы */
-[data-theme="midnight"] .status-badge.status-pending,
-[data-theme="amber-glow"] .status-badge.status-pending {
+[data-theme="dark"] .status-badge.status-pending {
   background: var(--color-warning-light);
   color: var(--color-warning);
   border-color: var(--color-warning);
-  text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.5);
 }
 
 /* Статус: Активен */

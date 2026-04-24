@@ -9,6 +9,71 @@ import { authFetch } from '../utils/api'
 import { Card, Button, Table, Badge, Skeleton, Alert } from './ui'
 import './FuelCardsList.css'
 
+const PROVIDER_STYLES = {
+  'Газпромнефть': { grad: 'linear-gradient(135deg,#7c5cff,#4338ca)', accent: '#b16cff' },
+  'Лукойл':       { grad: 'linear-gradient(135deg,#ef4444,#b91c1c)', accent: '#fca5a5' },
+  'Роснефть':     { grad: 'linear-gradient(135deg,#ffb547,#b45309)', accent: '#fde68a' },
+  'Татнефть':     { grad: 'linear-gradient(135deg,#22d3a7,#065f46)', accent: '#6ee7b7' },
+  default:        { grad: 'linear-gradient(135deg,#626b7f,#374151)', accent: '#97a0b3' },
+}
+
+const IconGrid = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+    <path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z" stroke="currentColor" strokeWidth="1.4"/>
+  </svg>
+)
+const IconList = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+    <path d="M3 4h10M3 8h10M3 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+  </svg>
+)
+
+const FuelCardVisual = ({ card, providerName, onEdit }) => {
+  const ps = PROVIDER_STYLES[providerName] || PROVIDER_STYLES.default
+  const isBlocked = card.is_blocked
+  const number = card.card_number || '•••• •••• •••• ••••'
+
+  return (
+    <div className="fc-visual-wrap">
+      {/* Gradient card face */}
+      <div className="fc-card-face" style={{ background: ps.grad }}>
+        <div className="fc-card-glow" style={{ background: ps.accent }} />
+        <div className="fc-card-top">
+          <div>
+            <div className="fc-card-provider">{providerName || '—'}</div>
+            <div className="fc-card-owner">{card.normalized_owner || card.original_owner_name || '—'}</div>
+          </div>
+          <div className="fc-card-chip">
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+              <path d="M1 4h14M1 6h14M1 8h14" stroke="#fff" strokeWidth="1" opacity=".6"/>
+            </svg>
+          </div>
+        </div>
+        <div className="fc-card-number">{number}</div>
+        <div className="fc-card-footer">
+          <span>Статус</span>
+          <span className="fc-card-expires">
+            {isBlocked ? 'Заблокирована' : 'Активна'}
+          </span>
+        </div>
+      </div>
+
+      {/* Info below card */}
+      <div className="fc-card-info">
+        <div className="fc-card-status-row">
+          <span
+            className="fc-status-chip"
+            style={{ color: isBlocked ? 'var(--red)' : 'var(--green)', background: isBlocked ? 'var(--red-soft)' : 'var(--green-soft)' }}
+          >
+            {isBlocked ? 'Заблокирована' : 'Активна'}
+          </span>
+          <button className="fc-edit-btn" onClick={() => onEdit(card)} title="Редактировать">⋯</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
 
 const FuelCardsList = () => {
@@ -20,6 +85,7 @@ const FuelCardsList = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [editingCard, setEditingCard] = useState(null)
+  const [viewMode, setViewMode] = useState('list') // 'list' | 'grid'
   
   // Пагинация
   const [currentPage, setCurrentPage] = useState(1)
@@ -344,6 +410,22 @@ const FuelCardsList = () => {
       <Card>
         <Card.Header>
           <Card.Title>Справочник топливных карт</Card.Title>
+          <div className="fc-view-toggle">
+            <button
+              className={`fc-view-btn${viewMode === 'list' ? ' active' : ''}`}
+              onClick={() => setViewMode('list')}
+              title="Список"
+            >
+              <IconList />
+            </button>
+            <button
+              className={`fc-view-btn${viewMode === 'grid' ? ' active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              title="Сетка"
+            >
+              <IconGrid />
+            </button>
+          </div>
         </Card.Header>
 
         <Card.Body>
@@ -394,28 +476,40 @@ const FuelCardsList = () => {
 
           {loading && cards.length === 0 ? (
             <Skeleton rows={10} columns={5} />
-          ) : (
-            <>
-              <Table
-                columns={tableColumns}
-                data={tableData}
-                emptyMessage="Нет данных для отображения"
-              />
-              {total > 0 && Math.ceil(total / limit) > 1 && (
-                <Table.Pagination
-                  currentPage={currentPage}
-                  totalPages={Math.ceil(total / limit)}
-                  total={total}
-                  pageSize={limit}
-                  onPageChange={setCurrentPage}
-                  onPageSizeChange={(newLimit) => {
-                    setLimit(newLimit)
-                    setCurrentPage(1)
-                  }}
-                  pageSizeOptions={[10, 25, 50, 100]}
+          ) : viewMode === 'grid' ? (
+            <div className="fc-grid">
+              {cards.map(card => (
+                <FuelCardVisual
+                  key={card.id}
+                  card={card}
+                  providerName={getProviderName(card.provider_id)}
+                  onEdit={handleEdit}
                 />
+              ))}
+              {cards.length === 0 && (
+                <div className="fc-grid-empty">Нет данных для отображения</div>
               )}
-            </>
+            </div>
+          ) : (
+            <Table
+              columns={tableColumns}
+              data={tableData}
+              emptyMessage="Нет данных для отображения"
+            />
+          )}
+          {total > 0 && Math.ceil(total / limit) > 1 && (
+            <Table.Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(total / limit)}
+              total={total}
+              pageSize={limit}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(newLimit) => {
+                setLimit(newLimit)
+                setCurrentPage(1)
+              }}
+              pageSizeOptions={[10, 25, 50, 100]}
+            />
           )}
         </Card.Body>
       </Card>

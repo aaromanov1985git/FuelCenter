@@ -54,27 +54,32 @@
 }
 
 .stat-card-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
   margin-bottom: var(--spacing-tiny);
 }
 
 .stat-card-value-compact {
   font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text-primary);
+  font-weight: 700;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.3px;
 }
 
 .stat-card-value-compact.error {
-  color: var(--color-error);
+  color: var(--red);
 }
 
 .stat-card-value-compact.warning {
-  color: var(--color-warning);
+  color: var(--amber);
 }
 
 .stat-card-value-compact.success {
-  color: var(--color-success);
+  color: var(--green);
 }
 
 .stats-loading-card {
