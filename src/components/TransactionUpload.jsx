@@ -1,5 +1,6 @@
 import React from 'react'
 import FileUploadProgress from './FileUploadProgress'
+import { formatLiters } from '../utils/format'
 
 const MAX_FILE_SIZE_MB = 50
 
@@ -22,7 +23,6 @@ const TransactionUpload = ({
   onDrag,
   onDrop,
   onFileInput,
-  formatLiters,
 }) => (
   <>
     <div
