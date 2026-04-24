@@ -82,14 +82,13 @@ const App = () => {
     debouncedAzsNumber,
     debouncedProduct,
     debouncedProvider,
-    setData,
     setFilters,
-    setSortConfig,
     setSelectedProviderTab,
     setPage,
     setPageSize,
     loadTransactions,
     loadStats,
+    handleSort,
   } = useTransactions({ authEnabled, isAuthenticated, checkingAuth, setLoading, setError })
 
   const onUploaded = useCallback(async () => {
@@ -142,42 +141,6 @@ const App = () => {
     setShowColumnSettings,
   })
 
-
-  const formatNumber = (num) => {
-    return new Intl.NumberFormat('ru-RU', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(num)
-  }
-
-  const formatLiters = (num) => {
-    if (!num && num !== 0) return '0.00'
-    if (num >= 1000000) {
-      const thousands = num / 1000
-      return formatNumber(thousands) + ' тыс. л'
-    }
-    return formatNumber(num) + ' л'
-  }
-
-  // Обработка сортировки
-  const handleSort = (field) => {
-    setSortConfig(prev => {
-      if (prev.field === field) {
-        // Меняем направление сортировки
-        return {
-          field,
-          order: prev.order === 'asc' ? 'desc' : 'asc'
-        }
-      } else {
-        // Новое поле, сортируем по убыванию
-        return {
-          field,
-          order: 'desc'
-        }
-      }
-    })
-    setPage(0) // Сбрасываем страницу при изменении сортировки
-  }
 
   const handleConfirmClearProvider = async (params) => {
     setShowClearProviderModal(false)
@@ -343,7 +306,6 @@ const App = () => {
           onDrag={handleDrag}
           onDrop={handleDrop}
           onFileInput={handleFileInput}
-          formatLiters={formatLiters}
         />
 
         {hasLoadedOnce && (

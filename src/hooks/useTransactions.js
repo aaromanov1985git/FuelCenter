@@ -180,6 +180,16 @@ export const useTransactions = ({ authEnabled, isAuthenticated, checkingAuth, se
     localStorage.setItem(PAGE_SIZE_STORAGE_KEY, newSize.toString())
   }, [])
 
+  const handleSort = useCallback((field) => {
+    setSortConfig(prev => {
+      if (prev.field === field) {
+        return { field, order: prev.order === 'asc' ? 'desc' : 'asc' }
+      }
+      return { field, order: 'desc' }
+    })
+    setPage(0)
+  }, [])
+
   return {
     data,
     total,
@@ -204,6 +214,7 @@ export const useTransactions = ({ authEnabled, isAuthenticated, checkingAuth, se
     loadTransactions,
     loadStats,
     loadProviders,
+    handleSort,
   }
 }
 
