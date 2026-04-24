@@ -163,19 +163,19 @@ Dev-сервер поднят на порту 3000, backend отвечает. З
 | # | Задача | Приоритет | Оценка |
 |---|---|---|---:|
 | 1 | ~~Починить light-тему сайдбара~~ | ~~P0~~ | ✓ Done |
-| 2 | Заменить `key={i}`/`key={index}` на стабильные ID в 33 местах | P0 | 1 д |
+| 2 | ~~Стабильные ключи вместо `key={i}`/`key={index}`~~ | ~~P0~~ | ✓ Done (4 фикса: Breadcrumbs, ContextMenu, GasStationsList KPI, OrganizationsList KPI; остальные — идиоматичные skeleton/text-span) |
 | 3 | ~~Массовая замена `--color-*` → новые имена + удалить backward-compat блок из tokens.css~~ | ~~P1~~ | ✓ Done |
-| 4 | Ввести `react-router-dom`, разбить `App.jsx` на `pages/*.jsx` | P1 | 3–5 д |
+| 4 | Декомпозиция `App.jsx` + введение `react-router-dom` | P1 | Частично Done: App.jsx 2548→435 строк через 8 хуков и 5 компонентов; остаётся ввести react-router (~2–3 д) |
 | 5 | Покрытие тестами: VehiclesList, FuelCardsList, GasStationsList, OrganizationsList | P1 | 2 нед |
 | 6 | Добавить `<h1>` на каждой странице, починить heading order на «Транзакции»/«Анализ Провайдера» | P2 | 2 ч |
 | 7 | ~~Добавить SVG-иконки в сайдбар~~ | ~~P2~~ | ✓ Done |
-| 8 | Удалить/переложить [src/redesign-ref/shared.jsx](../src/redesign-ref/shared.jsx), починить пути в эталонах | P2 | 1 ч |
-| 9 | Переставить импорты в [main.jsx](../src/main.jsx): сначала `tokens.css`, потом `index.css` | P2 | 5 мин |
-| 10 | Сделать `IconButton.title` обязательным пропом | P2 | 30 мин |
+| 8 | ~~Удалить/переложить `redesign-ref/shared.jsx`~~ | ~~P2~~ | ✓ N/A (файл не существует, импортов нет) |
+| 9 | ~~Переставить импорты в [main.jsx](../src/main.jsx): сначала `tokens.css`, потом `index.css`~~ | ~~P2~~ | ✓ Done (уже в правильном порядке) |
+| 10 | ~~Ужесточить fallback `IconButton` aria-label — не утекать сырое имя иконки~~ | ~~P2~~ | ✓ Done |
 | 11 | Свернуть `CardInfoModal` + `CardInfoScheduleModal` + `CardInfoSchedulesList` | P2 | 1 д |
 | 12 | Добавить Playwright-script в `qa/` для reproducible визуального diff | P2 | 1 д |
 
-**Суммарная оценка P0+P1: ~3–4 недели.**
+**Остаток P1: ~2.5 нед (react-router + покрытие тестами). P2: ~2 д.**
 
 ---
 
