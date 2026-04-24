@@ -20,6 +20,7 @@ import { useTransactions } from './hooks/useTransactions'
 import { useFileUpload } from './hooks/useFileUpload'
 import { useAuthConfig } from './hooks/useAuthConfig'
 import { useTransactionActions } from './hooks/useTransactionActions'
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { authFetch } from './utils/api'
 import './App.css'
 
@@ -131,83 +132,14 @@ const App = () => {
     setError,
   })
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Игнорируем горячие клавиши, если пользователь вводит текст в input/textarea
-      const target = e.target
-      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
-      
-      // Ctrl+B или Cmd+B - переключение сайдбара
-      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-        e.preventDefault()
-        toggleSidebar()
-      }
-      // Ctrl+K или Cmd+K - фокус на поиск
-      else if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault()
-        const searchInput = document.querySelector('.filter-input')
-        if (searchInput) {
-          searchInput.focus()
-          searchInput.select()
-        }
-        logger.debug('Поиск через keyboard shortcut')
-      }
-      // Ctrl+S или Cmd+S - сохранение (только если не в input)
-      else if ((e.ctrlKey || e.metaKey) && e.key === 's' && !isInput) {
-        e.preventDefault()
-        const saveButton = document.querySelector('button[title*="Сохранить"], button[title*="Создать"]')
-        if (saveButton && !saveButton.disabled) {
-          saveButton.click()
-        }
-        logger.debug('Сохранение через keyboard shortcut')
-      }
-      // Ctrl+N или Cmd+N - новый элемент (только если не в input)
-      else if ((e.ctrlKey || e.metaKey) && e.key === 'n' && !isInput) {
-        e.preventDefault()
-        const addButton = document.querySelector('button[title*="Добавить"], button[title*="Создать"]')
-        if (addButton && activeTab !== 'dashboard') {
-          addButton.click()
-        }
-        logger.debug('Создание нового элемента через keyboard shortcut')
-      }
-      // Ctrl+F или Cmd+F - поиск/фильтр
-      else if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !isInput) {
-        e.preventDefault()
-        const searchInput = document.querySelector('.filter-input')
-        if (searchInput) {
-          searchInput.focus()
-          searchInput.select()
-        }
-        logger.debug('Поиск/фильтр через keyboard shortcut')
-      }
-      // Ctrl+E или Cmd+E - экспорт
-      else if ((e.ctrlKey || e.metaKey) && e.key === 'e' && !isInput) {
-        e.preventDefault()
-        if (activeTab === 'transactions' && data.length > 0) {
-          downloadExcel()
-        }
-        logger.debug('Экспорт через keyboard shortcut')
-      }
-      // Escape - закрыть модальное окно или отменить действие
-      else if (e.key === 'Escape') {
-        const modal = document.querySelector('.modal-overlay.active, .confirm-modal-overlay, [aria-modal="true"]')
-        if (modal) {
-          const closeButton = modal.querySelector('button[aria-label="Закрыть"], .modal-close')
-          if (closeButton) {
-            closeButton.click()
-          }
-        }
-        if (showColumnSettings) {
-          setShowColumnSettings(false)
-        }
-        logger.debug('Закрытие через Escape')
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [sidebarVisible, isMobile, activeTab, data.length, showColumnSettings, downloadExcel])
+  useKeyboardShortcuts({
+    activeTab,
+    hasData: data.length > 0,
+    toggleSidebar,
+    downloadExcel,
+    showColumnSettings,
+    setShowColumnSettings,
+  })
 
 
   const formatNumber = (num) => {
