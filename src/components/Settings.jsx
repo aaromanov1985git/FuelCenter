@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Button } from './ui'
+import { Button } from './ui'
 import ConfirmModal from './ConfirmModal'
 import ClearProviderModal from './ClearProviderModal'
 import SystemLogsList from './SystemLogsList'
@@ -140,21 +140,21 @@ const Settings = () => {
     try {
       setLoading(true)
       setShowClearProviderModal(false)
-      
+
       // Формируем URL с параметрами
       const urlParams = new URLSearchParams({
         provider_id: params.provider_id.toString(),
         confirm: 'true'
       })
-      
+
       if (params.date_from) {
         urlParams.append('date_from', params.date_from)
       }
-      
+
       if (params.date_to) {
         urlParams.append('date_to', params.date_to)
       }
-      
+
       const response = await authFetch(`${API_URL}/api/v1/transactions/clear-by-provider?${urlParams.toString()}`, {
         method: 'DELETE'
       })
@@ -211,7 +211,7 @@ const Settings = () => {
   const handleConfirmClear = async () => {
     const { type } = confirmModal
     const option = clearOptions.find(opt => opt.id === type)
-    
+
     if (!option) {
       showError('Неизвестный тип данных для очистки')
       setConfirmModal({ isOpen: false, type: null, title: '', message: '' })
@@ -230,7 +230,7 @@ const Settings = () => {
 
       if (!response.ok) {
         let errorMessage = `Ошибка очистки ${option.label.toLowerCase()}`
-        
+
         if (response.status === 404) {
           errorMessage = `Эндпоинт для очистки ${option.label.toLowerCase()} еще не реализован на сервере`
         } else {
@@ -263,7 +263,7 @@ const Settings = () => {
       } catch (parseError) {
         logger.debug('Пустой ответ от сервера при очистке', { type })
       }
-      
+
       success(message)
       logger.info(`Очистка ${option.label} выполнена`, { type })
     } catch (err) {
@@ -286,6 +286,16 @@ const Settings = () => {
     setConfirmModal({ isOpen: false, type: null, title: '', message: '' })
   }
 
+  // Sidebar tabs definition (icon = emoji/svg kept minimal to avoid extra deps)
+  const sectionTabs = [
+    { id: 'cleanup', label: 'Очистка', icon: '🧹' },
+    { id: 'admin', label: 'Администрирование', icon: '🛡️' },
+    { id: 'appearance', label: 'Внешний вид', icon: '🎨' },
+    { id: 'normalization', label: 'Нормализация', icon: '🧭' },
+    { id: 'card-info-schedules', label: 'Регламенты по картам', icon: '📅' },
+    { id: 'notifications', label: 'Уведомления', icon: '🔔' },
+  ]
+
   // Если открыт какой-то админский компонент, показываем его
   if (adminView) {
     let component = null
@@ -307,9 +317,9 @@ const Settings = () => {
     }
 
     return (
-      <div className="settings-container">
+      <div className="settings-root">
         <div className="settings-header">
-          <button 
+          <button
             className="settings-back-button"
             onClick={() => setAdminView(null)}
           >
@@ -317,7 +327,7 @@ const Settings = () => {
           </button>
           <h1>Настройки</h1>
         </div>
-        {component}
+        <div className="settings-sub-view">{component}</div>
       </div>
     )
   }
@@ -334,9 +344,9 @@ const Settings = () => {
     }
 
     return (
-      <div className="settings-container">
+      <div className="settings-root">
         <div className="settings-header">
-          <button 
+          <button
             className="settings-back-button"
             onClick={() => setAppearanceView(null)}
           >
@@ -344,233 +354,253 @@ const Settings = () => {
           </button>
           <h1>Настройки</h1>
         </div>
-        {component}
+        <div className="settings-sub-view">{component}</div>
       </div>
     )
   }
 
   return (
-    <div className="settings-container">
-      <h1>Настройки</h1>
-      
-      <div className="settings-tabs">
-        <button
-          className={`settings-tab ${activeSection === 'cleanup' ? 'active' : ''}`}
-          onClick={() => setActiveSection('cleanup')}
-        >
-          Очистка
-        </button>
-        <button
-          className={`settings-tab ${activeSection === 'admin' ? 'active' : ''}`}
-          onClick={() => setActiveSection('admin')}
-        >
-          Администрирование
-        </button>
-        <button
-          className={`settings-tab ${activeSection === 'appearance' ? 'active' : ''}`}
-          onClick={() => setActiveSection('appearance')}
-        >
-          Внешний вид
-        </button>
-        <button
-          className={`settings-tab ${activeSection === 'normalization' ? 'active' : ''}`}
-          onClick={() => setActiveSection('normalization')}
-        >
-          Нормализация
-        </button>
-        <button
-          className={`settings-tab ${activeSection === 'card-info-schedules' ? 'active' : ''}`}
-          onClick={() => setActiveSection('card-info-schedules')}
-        >
-          Регламенты получения информации по картам
-        </button>
-        <button
-          className={`settings-tab ${activeSection === 'notifications' ? 'active' : ''}`}
-          onClick={() => setActiveSection('notifications')}
-        >
-          Уведомления
-        </button>
+    <div className="settings-root">
+      <div className="settings-topbar">
+        <div className="settings-topbar-titles">
+          <h1 className="settings-title">Настройки</h1>
+          <div className="settings-subtitle">Конфигурация системы</div>
+        </div>
       </div>
 
-      {activeSection === 'cleanup' && (
-        <div className="settings-section">
-          <h2 className="settings-section-title">Очистка</h2>
-          <p className="settings-section-description">
-            Очистка данных из базы. Внимание: эти действия необратимы.
-          </p>
+      {/* Left sidebar tabs */}
+      <div className="settings-tabs" role="tablist" aria-label="Разделы настроек">
+        {sectionTabs.map(t => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={activeSection === t.id}
+            className={`settings-tab ${activeSection === t.id ? 'is-active' : ''}`}
+            onClick={() => setActiveSection(t.id)}
+          >
+            <span className="settings-tab-icon" aria-hidden="true">{t.icon}</span>
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-        <div className="clear-options-grid">
-          {clearOptions.map(option => (
-            <Card key={option.id} className="clear-option-card">
-              <div className="clear-option-content">
-                <div className="clear-option-icon">{option.icon}</div>
-                <div className="clear-option-info">
-                  <h3 className="clear-option-label">{option.label}</h3>
-                  <p className="clear-option-description">{option.description}</p>
-                </div>
-                {option.id === 'transactions' ? (
-                  <div className="clear-transactions-buttons">
-                    <Button
-                      variant="error"
-                      size="md"
-                      onClick={handleClearAllTransactions}
-                      disabled={loading}
-                      className="clear-option-button"
-                    >
-                      Очистить все
-                    </Button>
-                    <Button
-                      variant="error"
-                      size="md"
-                      onClick={() => handleClearClick(option)}
-                      disabled={loading}
-                      className="clear-option-button"
-                    >
-                      По провайдеру
-                    </Button>
+      {/* Right content column */}
+      <div className="settings-content">
+        {activeSection === 'cleanup' && (
+          <div className="settings-section">
+            <div className="settings-section-head">
+              <h2 className="settings-section-title">Очистка</h2>
+              <p className="settings-section-description">
+                Очистка данных из базы. Внимание: эти действия необратимы.
+              </p>
+            </div>
+
+            <div className="settings-grid">
+              {clearOptions.map(option => (
+                <div key={option.id} className="settings-option">
+                  <div className="settings-option-top">
+                    <div className="settings-option-icon" aria-hidden="true">{option.icon}</div>
+                    <div className="settings-option-info">
+                      <h3 className="settings-option-label">{option.label}</h3>
+                      <p className="settings-option-desc">{option.description}</p>
+                    </div>
                   </div>
-                ) : (
-                  <Button
-                    variant="error"
-                    size="md"
-                    onClick={() => handleClearClick(option)}
-                    disabled={loading}
-                    className="clear-option-button"
-                  >
-                    Очистить
-                  </Button>
-                )}
-              </div>
-            </Card>
-          ))}
-        </div>
-        </div>
-      )}
-
-      {activeSection === 'admin' && (
-        <div className="settings-section">
-          <h2 className="settings-section-title">Администрирование</h2>
-          <p className="settings-section-description">
-            Управление логами и периодами загрузки
-          </p>
-
-          <div className="admin-options-grid">
-            <Card className="admin-option-card" onClick={() => setAdminView('system-logs')}>
-              <div className="admin-option-content">
-                <div className="admin-option-icon">📋</div>
-                <div className="admin-option-info">
-                  <h3 className="admin-option-label">Системные логи</h3>
-                  <p className="admin-option-description">Просмотр системных логов и ошибок</p>
+                  {option.id === 'transactions' ? (
+                    <div className="settings-option-actions">
+                      <Button
+                        variant="error"
+                        size="md"
+                        onClick={handleClearAllTransactions}
+                        disabled={loading}
+                      >
+                        Очистить все
+                      </Button>
+                      <Button
+                        variant="error"
+                        size="md"
+                        onClick={() => handleClearClick(option)}
+                        disabled={loading}
+                      >
+                        По провайдеру
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="settings-option-actions">
+                      <Button
+                        variant="error"
+                        size="md"
+                        onClick={() => handleClearClick(option)}
+                        disabled={loading}
+                      >
+                        Очистить
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                <div className="admin-option-arrow">→</div>
-              </div>
-            </Card>
-
-            <Card className="admin-option-card" onClick={() => setAdminView('user-action-logs')}>
-              <div className="admin-option-content">
-                <div className="admin-option-icon">👤</div>
-                <div className="admin-option-info">
-                  <h3 className="admin-option-label">Действия пользователей</h3>
-                  <p className="admin-option-description">История действий пользователей системы</p>
-                </div>
-                <div className="admin-option-arrow">→</div>
-              </div>
-            </Card>
-
-            <Card className="admin-option-card" onClick={() => setAdminView('period-lock')}>
-              <div className="admin-option-content">
-                <div className="admin-option-icon">🔒</div>
-                <div className="admin-option-info">
-                  <h3 className="admin-option-label">Закрытие периода</h3>
-                  <p className="admin-option-description">Блокировка периодов для загрузки транзакций</p>
-                </div>
-                <div className="admin-option-arrow">→</div>
-              </div>
-            </Card>
-
-            <Card className="admin-option-card" onClick={() => setAdminView('backup')}>
-              <div className="admin-option-content">
-                <div className="admin-option-icon">💾</div>
-                <div className="admin-option-info">
-                  <h3 className="admin-option-label">Резервное копирование</h3>
-                  <p className="admin-option-description">Управление резервными копиями базы данных</p>
-                </div>
-                <div className="admin-option-arrow">→</div>
-              </div>
-            </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {activeSection === 'normalization' && (
-        <div className="settings-section">
-          <NormalizationSettings />
-        </div>
-      )}
+        {activeSection === 'admin' && (
+          <div className="settings-section">
+            <div className="settings-section-head">
+              <h2 className="settings-section-title">Администрирование</h2>
+              <p className="settings-section-description">
+                Управление логами и периодами загрузки
+              </p>
+            </div>
 
-      {activeSection === 'card-info-schedules' && (
-        <div className="settings-section">
-          <CardInfoSchedulesList />
-        </div>
-      )}
-
-      {activeSection === 'notifications' && (
-        <div className="settings-section">
-          <NotificationSettings />
-        </div>
-      )}
-
-      {activeSection === 'appearance' && (
-        <div className="settings-section">
-          <h2 className="settings-section-title">Внешний вид</h2>
-          <p className="settings-section-description">
-            Настройте внешний вид интерфейса под свои предпочтения
-          </p>
-
-          <Card className="appearance-option-card">
-            <div className="appearance-option-content">
-              <div className="appearance-option-header">
-                <div className="appearance-option-info">
-                  <h3 className="appearance-option-label">Размер шрифта</h3>
-                  <p className="appearance-option-description">
-                    Измените размер шрифта для всего интерфейса
-                  </p>
+            <div className="settings-grid">
+              <div
+                className="settings-option is-clickable"
+                onClick={() => setAdminView('system-logs')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setAdminView('system-logs') }}
+              >
+                <div className="settings-option-top">
+                  <div className="settings-option-icon" aria-hidden="true">📋</div>
+                  <div className="settings-option-info">
+                    <h3 className="settings-option-label">Системные логи</h3>
+                    <p className="settings-option-desc">Просмотр системных логов и ошибок</p>
+                  </div>
+                  <div className="settings-option-arrow" aria-hidden="true">→</div>
                 </div>
-                <div className="font-size-value">{fontSize}%</div>
               </div>
-              <div className="font-size-slider-container">
-                <input
-                  type="range"
-                  min="75"
-                  max="150"
-                  step="5"
-                  value={fontSize}
-                  onChange={(e) => setFontSize(parseFloat(e.target.value))}
-                  className="font-size-slider"
-                />
-                <div className="font-size-labels">
-                  <span>75%</span>
-                  <span>112.5%</span>
-                  <span>150%</span>
+
+              <div
+                className="settings-option is-clickable"
+                onClick={() => setAdminView('user-action-logs')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setAdminView('user-action-logs') }}
+              >
+                <div className="settings-option-top">
+                  <div className="settings-option-icon" aria-hidden="true">👤</div>
+                  <div className="settings-option-info">
+                    <h3 className="settings-option-label">Действия пользователей</h3>
+                    <p className="settings-option-desc">История действий пользователей системы</p>
+                  </div>
+                  <div className="settings-option-arrow" aria-hidden="true">→</div>
+                </div>
+              </div>
+
+              <div
+                className="settings-option is-clickable"
+                onClick={() => setAdminView('period-lock')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setAdminView('period-lock') }}
+              >
+                <div className="settings-option-top">
+                  <div className="settings-option-icon" aria-hidden="true">🔒</div>
+                  <div className="settings-option-info">
+                    <h3 className="settings-option-label">Закрытие периода</h3>
+                    <p className="settings-option-desc">Блокировка периодов для загрузки транзакций</p>
+                  </div>
+                  <div className="settings-option-arrow" aria-hidden="true">→</div>
+                </div>
+              </div>
+
+              <div
+                className="settings-option is-clickable"
+                onClick={() => setAdminView('backup')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setAdminView('backup') }}
+              >
+                <div className="settings-option-top">
+                  <div className="settings-option-icon" aria-hidden="true">💾</div>
+                  <div className="settings-option-info">
+                    <h3 className="settings-option-label">Резервное копирование</h3>
+                    <p className="settings-option-desc">Управление резервными копиями базы данных</p>
+                  </div>
+                  <div className="settings-option-arrow" aria-hidden="true">→</div>
                 </div>
               </div>
             </div>
-          </Card>
+          </div>
+        )}
 
-          <Card className="appearance-option-card" onClick={() => setAppearanceView('ui-components')}>
-            <div className="appearance-option-content admin-option-content">
-              <div className="appearance-option-icon admin-option-icon">🎨</div>
-              <div className="appearance-option-info admin-option-info">
-                <h3 className="appearance-option-label admin-option-label">UI Компоненты</h3>
-                <p className="appearance-option-description admin-option-description">
-                  Демонстрация всех UI компонентов системы
-                </p>
-              </div>
-              <div className="admin-option-arrow">→</div>
+        {activeSection === 'normalization' && (
+          <div className="settings-section">
+            <div className="settings-embed">
+              <NormalizationSettings />
             </div>
-          </Card>
-        </div>
-      )}
+          </div>
+        )}
+
+        {activeSection === 'card-info-schedules' && (
+          <div className="settings-section">
+            <div className="settings-embed">
+              <CardInfoSchedulesList />
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'notifications' && (
+          <div className="settings-section">
+            <div className="settings-embed">
+              <NotificationSettings />
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'appearance' && (
+          <div className="settings-section">
+            <div className="settings-section-head">
+              <h2 className="settings-section-title">Внешний вид</h2>
+              <p className="settings-section-description">
+                Настройте внешний вид интерфейса под свои предпочтения
+              </p>
+            </div>
+
+            <div className="settings-font-row">
+              <div className="settings-font-head">
+                <div className="settings-row-info">
+                  <div className="settings-row-title">Размер шрифта</div>
+                  <div className="settings-row-desc">Измените размер шрифта для всего интерфейса</div>
+                </div>
+                <div className="settings-font-value">{fontSize}%</div>
+              </div>
+              <input
+                type="range"
+                min="75"
+                max="150"
+                step="5"
+                value={fontSize}
+                onChange={(e) => setFontSize(parseFloat(e.target.value))}
+                className="settings-font-slider"
+                aria-label="Размер шрифта"
+              />
+              <div className="settings-font-labels">
+                <span>75%</span>
+                <span>112.5%</span>
+                <span>150%</span>
+              </div>
+            </div>
+
+            <div
+              className="settings-option is-clickable"
+              onClick={() => setAppearanceView('ui-components')}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setAppearanceView('ui-components') }}
+              style={{ marginTop: 14 }}
+            >
+              <div className="settings-option-top">
+                <div className="settings-option-icon" aria-hidden="true">🎨</div>
+                <div className="settings-option-info">
+                  <h3 className="settings-option-label">UI Компоненты</h3>
+                  <p className="settings-option-desc">Демонстрация всех UI компонентов системы</p>
+                </div>
+                <div className="settings-option-arrow" aria-hidden="true">→</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       <ConfirmModal
         isOpen={confirmModal.isOpen}
