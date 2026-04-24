@@ -1,4 +1,5 @@
 import React, { Suspense, lazy } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Card, Button } from './ui'
 
 const VehiclesList = lazy(() => import('./VehiclesList'))
@@ -42,33 +43,33 @@ const FuelCardAnalysisPage = ({ onOpenRefuelsUpload, onOpenLocationsUpload }) =>
   </>
 )
 
-const ROUTES = {
-  dashboard: () => <Dashboard />,
-  vehicles: () => <VehiclesList />,
-  cards: () => <FuelCardsList />,
-  'fuel-card-analysis': (ctx) => <FuelCardAnalysisPage {...ctx} />,
-  'gas-stations': () => <GasStationsList />,
-  'fuel-types': () => <FuelTypesList />,
-  providers: () => <ProvidersList />,
-  'provider-analysis': () => <ProviderAnalysisDashboard />,
-  templates: () => <TemplatesList />,
-  organizations: () => <OrganizationsList />,
-  users: () => <UsersList />,
-  'my-actions': () => <UserActionLogsList showMyActionsOnly={true} />,
-  'upload-events': () => <UploadEventsList />,
-  notifications: () => <NotificationsList />,
-  settings: () => <Settings />,
-}
-
-const AppRoutes = ({ activeTab, onOpenRefuelsUpload, onOpenLocationsUpload }) => {
-  const renderRoute = ROUTES[activeTab]
-  if (!renderRoute) return null
-
-  return (
-    <Suspense fallback={<LoadingFallback />}>
-      {renderRoute({ onOpenRefuelsUpload, onOpenLocationsUpload })}
-    </Suspense>
-  )
-}
+const AppRoutes = ({ onOpenRefuelsUpload, onOpenLocationsUpload }) => (
+  <Suspense fallback={<LoadingFallback />}>
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/transactions" element={null} />
+      <Route path="/vehicles" element={<VehiclesList />} />
+      <Route path="/cards" element={<FuelCardsList />} />
+      <Route path="/fuel-card-analysis" element={
+        <FuelCardAnalysisPage
+          onOpenRefuelsUpload={onOpenRefuelsUpload}
+          onOpenLocationsUpload={onOpenLocationsUpload}
+        />
+      } />
+      <Route path="/gas-stations" element={<GasStationsList />} />
+      <Route path="/fuel-types" element={<FuelTypesList />} />
+      <Route path="/providers" element={<ProvidersList />} />
+      <Route path="/provider-analysis" element={<ProviderAnalysisDashboard />} />
+      <Route path="/templates" element={<TemplatesList />} />
+      <Route path="/organizations" element={<OrganizationsList />} />
+      <Route path="/users" element={<UsersList />} />
+      <Route path="/my-actions" element={<UserActionLogsList showMyActionsOnly={true} />} />
+      <Route path="/upload-events" element={<UploadEventsList />} />
+      <Route path="/notifications" element={<NotificationsList />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  </Suspense>
+)
 
 export default AppRoutes

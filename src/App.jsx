@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo, Suspense, lazy } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { logger } from './utils/logger'
 const Login = lazy(() => import('./components/Login'))
 import AppSidebar from './components/AppSidebar'
 import AppModals from './components/AppModals'
 import AppRoutes from './components/AppRoutes'
+import { TAB_LABELS, getTabFromPath, getPathFromTab } from './router/routes'
 import TransactionUpload from './components/TransactionUpload'
 import TransactionTable from './components/TransactionTable'
 import Breadcrumbs from './components/Breadcrumbs'
@@ -28,24 +30,6 @@ import './App.css'
 // Используем прокси Vite в режиме разработки или прямой URL
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
 
-const TAB_LABELS = {
-  transactions: 'Транзакции',
-  vehicles: 'Транспорт',
-  cards: 'Топливные карты',
-  'fuel-card-analysis': 'Анализ топливных карт',
-  'gas-stations': 'АЗС',
-  'fuel-types': 'Виды топлива',
-  providers: 'Провайдеры',
-  'provider-analysis': 'Анализ Провайдера',
-  templates: 'Шаблоны',
-  organizations: 'Организации',
-  users: 'Пользователи',
-  'my-actions': 'Мои действия',
-  'upload-events': 'События загрузок',
-  notifications: 'Уведомления',
-  settings: 'Настройки',
-}
-
 // Вкладки, у которых собственный `<h1>` рендерится внутри страницы
 const TABS_WITH_OWN_H1 = new Set(['transactions', 'settings', 'provider-analysis'])
 
@@ -59,7 +43,10 @@ const App = () => {
   const [error, setError] = useState('') // Оставляем для обратной совместимости, но используем toast
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showClearProviderModal, setShowClearProviderModal] = useState(false)
-  const [activeTab, setActiveTab] = useState('dashboard') // dashboard, transactions, vehicles, cards, fuel-card-analysis, gas-stations, fuel-types, providers, templates, upload-events, organizations, users, settings, notifications
+  const location = useLocation()
+  const navigate = useNavigate()
+  const activeTab = getTabFromPath(location.pathname)
+  const setActiveTab = useCallback((tab) => navigate(getPathFromTab(tab)), [navigate])
   const [showRefuelsUpload, setShowRefuelsUpload] = useState(false)
   const [showLocationsUpload, setShowLocationsUpload] = useState(false)
   const { theme, handleThemeChange } = useTheme('dark')
@@ -285,7 +272,6 @@ const App = () => {
             )}
 
         <AppRoutes
-          activeTab={activeTab}
           onOpenRefuelsUpload={() => setShowRefuelsUpload(true)}
           onOpenLocationsUpload={() => setShowLocationsUpload(true)}
         />

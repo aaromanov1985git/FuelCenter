@@ -165,7 +165,7 @@ Dev-сервер поднят на порту 3000, backend отвечает. З
 | 1 | ~~Починить light-тему сайдбара~~ | ~~P0~~ | ✓ Done |
 | 2 | ~~Стабильные ключи вместо `key={i}`/`key={index}`~~ | ~~P0~~ | ✓ Done (4 фикса: Breadcrumbs, ContextMenu, GasStationsList KPI, OrganizationsList KPI; остальные — идиоматичные skeleton/text-span) |
 | 3 | ~~Массовая замена `--color-*` → новые имена + удалить backward-compat блок из tokens.css~~ | ~~P1~~ | ✓ Done |
-| 4 | Декомпозиция `App.jsx` + введение `react-router-dom` | P1 | Частично Done: App.jsx 2548→435 строк через 8 хуков и 5 компонентов; остаётся ввести react-router (~2–3 д) |
+| 4 | ~~Декомпозиция `App.jsx` + введение `react-router-dom`~~ | ~~P1~~ | ✓ Done (App.jsx 2548→437 строк; BrowserRouter в [main.jsx](../src/main.jsx); AppRoutes на `<Routes>`/`<Route>`; реестр путей в [src/router/routes.js](../src/router/routes.js); URL = source of truth, deep-links и back/forward работают — верифицировано через MCP) |
 | 5 | Покрытие тестами: VehiclesList, FuelCardsList, GasStationsList, OrganizationsList | P1 | 2 нед |
 | 6 | ~~Добавить `<h1>` на каждой странице, починить heading order на «Транзакции»/«Анализ Провайдера»~~ | ~~P2~~ | ✓ Done (sr-only h1 из `TAB_LABELS`; TransactionUpload h3→h2; 6 h3→h2 в ProviderAnalysisDashboard) |
 | 7 | ~~Добавить SVG-иконки в сайдбар~~ | ~~P2~~ | ✓ Done |
@@ -175,7 +175,7 @@ Dev-сервер поднят на порту 3000, backend отвечает. З
 | 11 | ~~Свернуть `CardInfoModal` + `CardInfoScheduleModal` + `CardInfoSchedulesList`~~ | ~~P2~~ | Partial: дедуплицирован `loadApiTemplates` в [utils/templates.js](../src/utils/templates.js); объединять в один компонент не стали — функции различны |
 | 12 | ~~Добавить Playwright-script в `qa/` для reproducible визуального diff~~ | ~~P2~~ | ✓ Done ([qa/capture.mjs](../qa/capture.mjs) + [qa/compare.mjs](../qa/compare.mjs) + [qa/visual-diff.config.mjs](../qa/visual-diff.config.mjs); MCP-флоу описан в [qa/README.md](../qa/README.md)) |
 
-**Остаток P1: ~2.5 нед (react-router + покрытие тестами). P2: все закрыто.**
+**Остаток P1: ~2 нед (покрытие тестами — #5). P2: все закрыто.**
 
 ---
 
