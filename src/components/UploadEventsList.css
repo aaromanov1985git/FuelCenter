@@ -1,100 +1,205 @@
-/* Стили для страницы событий загрузок */
-.upload-events {
-  background: var(--color-bg-primary);
-  padding: var(--spacing-block);
-  border-radius: var(--radius-medium);
+/* ============================================================
+   UploadEventsList — redesigned to match redesign_uploads.html
+   Uses tokens from src/styles/tokens.css. Scope prefix: upl-
+   No hardcoded colors, no token redefinitions.
+   ============================================================ */
+
+.upl-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0;
+  animation: upl-fadeUp 0.4s ease;
+}
+
+@keyframes upl-fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Page header ---------- */
+.upl-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.upl-header__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -0.2px;
+}
+
+.upl-header__subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+/* ---------- Stats grid ---------- */
+.upl-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1100px) {
+  .upl-stats { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 720px) {
+  .upl-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+.upl-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.upl-stat:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.upl-stat__bar {
+  width: 4px;
+  height: 28px;
+  border-radius: 2px;
+  background: var(--text-1);
+  flex: 0 0 4px;
+}
+
+.upl-stat[data-tone="accent"]  .upl-stat__bar { background: var(--accent); }
+.upl-stat[data-tone="green"]   .upl-stat__bar { background: var(--green); }
+.upl-stat[data-tone="amber"]   .upl-stat__bar { background: var(--amber); }
+.upl-stat[data-tone="red"]     .upl-stat__bar { background: var(--red); }
+.upl-stat[data-tone="cyan"]    .upl-stat__bar { background: var(--cyan); }
+.upl-stat[data-tone="neutral"] .upl-stat__bar { background: var(--text-3); }
+
+.upl-stat__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.upl-stat[data-tone="accent"]  .upl-stat__value { color: var(--accent); }
+.upl-stat[data-tone="green"]   .upl-stat__value { color: var(--green); }
+.upl-stat[data-tone="amber"]   .upl-stat__value { color: var(--amber); }
+.upl-stat[data-tone="red"]     .upl-stat__value { color: var(--red); }
+.upl-stat[data-tone="cyan"]    .upl-stat__value { color: var(--cyan); }
+
+/* ---------- Filters panel ---------- */
+.upl-filters {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
   box-shadow: var(--shadow-sm);
 }
 
-/* Стили для статистических карточек */
-.events-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: var(--spacing-element);
-  margin-bottom: var(--spacing-section);
-}
-
-.events-stat-label {
-  font-size: 11px;
-  color: var(--text-3);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .4px;
-  margin-bottom: var(--spacing-small);
-}
-
-.events-stat-value {
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  color: var(--text-1);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -.3px;
-}
-
-/* Стили для фильтров */
-.events-filters-grid {
+.upl-filters__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--spacing-section);
-  margin-bottom: var(--spacing-block);
+  gap: 12px;
 }
 
-/* Стили для данных в таблице */
-.event-datetime-primary {
-  font-weight: var(--font-weight-semibold);
+/* ---------- Main data card ---------- */
+.upl-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
-.event-datetime-secondary {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  margin-top: var(--spacing-tiny);
+.upl-card__body {
+  padding: 0;
 }
 
-.event-username-primary {
-  font-weight: var(--font-weight-semibold);
+/* ---------- Table styling (targets inner <Table/> markup) ---------- */
+.upl-card table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
 }
 
-.event-username-secondary {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  margin-top: var(--spacing-tiny);
+.upl-card thead tr {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
 }
 
-.event-source-primary {
-  font-weight: var(--font-weight-semibold);
+.upl-card th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-3);
+  white-space: nowrap;
+  background: var(--surface-2);
 }
 
-.event-source-secondary {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  margin-top: var(--spacing-tiny);
+.upl-card td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 12px;
+  vertical-align: top;
 }
 
-.event-provider-primary {
-  font-weight: var(--font-weight-semibold);
+.upl-card tbody tr {
+  transition: background-color 0.12s ease;
 }
 
-.event-provider-secondary {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  margin-top: var(--spacing-tiny);
+.upl-card tbody tr:hover {
+  background: var(--surface-2);
 }
 
+.upl-card tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ---------- Row cell content helpers ---------- */
+.event-datetime-primary,
+.event-username-primary,
+.event-source-primary,
+.event-provider-primary,
 .event-transactions-primary {
-  font-weight: var(--font-weight-semibold);
+  font-weight: 600;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
 }
 
+.event-datetime-secondary,
+.event-username-secondary,
+.event-source-secondary,
+.event-provider-secondary,
 .event-transactions-secondary {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  margin-top: var(--spacing-tiny);
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
 }
 
 .event-message-cell {
   display: flex;
   align-items: center;
-  gap: var(--spacing-small);
+  gap: 8px;
   max-width: 400px;
+  color: var(--text-2);
 }
 
 .event-message-truncated {
@@ -106,195 +211,42 @@
 }
 
 .event-message-expand-btn {
-  background: none;
-  border: none;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   cursor: pointer;
-  padding: var(--padding-tiny);
-  font-size: var(--font-size-base);
+  padding: 4px 6px;
+  font-size: 13px;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-small);
-  transition: background-color 0.2s;
+  border-radius: 6px;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
   flex-shrink: 0;
-  color: var(--color-text-secondary);
+  color: var(--text-3);
 }
 
 .event-message-expand-btn:hover {
-  background-color: var(--color-bg-hover);
-  color: var(--color-text-primary);
-}
-
-.event-message-expand-btn:active {
-  background-color: var(--color-bg-active);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .event-message-full {
-  padding: var(--padding-element);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   white-space: pre-wrap;
   word-wrap: break-word;
   max-height: 400px;
   overflow-y: auto;
-  font-size: var(--font-size-sm);
+  font-size: 13px;
   line-height: 1.5;
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
-.event-subtitle {
-  margin: var(--spacing-small) 0 0;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.upload-events__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-section);
-}
-
-.upload-events__subtitle {
-  margin: var(--spacing-small) 0 0;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.upload-events__filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--spacing-section);
-  margin: var(--spacing-section) 0 var(--spacing-block);
-}
-
-.upload-events__filters .filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-small);
-}
-
-.upload-events__filters label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-semibold);
-}
-
-.upload-events__filters input,
-.upload-events__filters select {
-  width: 100%;
-  padding: var(--padding-small) var(--padding-element);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-small);
-  background: var(--color-bg-secondary);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
-}
-
-.upload-events__summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: var(--spacing-element);
-  margin-bottom: var(--spacing-section);
-}
-
-.summary-card {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-small);
-  padding: var(--padding-element);
-  background: var(--color-bg-secondary);
-}
-
-.summary-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-normal);
-}
-
-.summary-value {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-}
-
-.upload-events__table {
-  overflow-x: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-large);
-  overflow: hidden;
-}
-
-.upload-events__table table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.75rem;
-}
-
-.upload-events__table th,
-.upload-events__table td {
-  text-align: left;
-  padding: var(--padding-small) var(--padding-element);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.upload-events__table th {
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-semibold);
-  background: var(--color-bg-hover);
-  font-size: 0.75rem;
-}
-
-.upload-events__table td {
-  font-size: 0.75rem;
-  font-weight: var(--font-weight-normal);
-}
-
-.cell-main {
-  font-weight: var(--font-weight-semibold);
-}
-
-.cell-sub {
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
-  margin-top: var(--spacing-tiny);
-}
-
-.message-cell {
-  max-width: 320px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.upload-events__empty {
-  padding: var(--spacing-block);
-  color: var(--color-text-secondary);
-  text-align: center;
-  font-size: var(--font-size-sm);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--spacing-section);
-}
-
-.upload-events__empty p {
-  margin: 0;
-}
-
-.reset-filters-btn {
-  padding: var(--padding-small) var(--padding-section);
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
-  border: none;
-  border-radius: var(--radius-small);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.reset-filters-btn:hover {
-  background: var(--color-primary-hover);
+/* ---------- Empty state / skeleton container ---------- */
+.upl-card__state {
+  padding: 24px;
 }
