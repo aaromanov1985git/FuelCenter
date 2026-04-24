@@ -16,6 +16,7 @@ import { useToast } from './components/ToastContainer'
 import { useAuth } from './contexts/AuthContext'
 import { useDebounce } from './hooks/useDebounce'
 import { useTouchGestures } from './hooks/useTouchGestures'
+import { useTheme } from './hooks/useTheme'
 import { authFetch, getApiUrl } from './utils/api'
 import './App.css'
 
@@ -85,7 +86,7 @@ const App = () => {
   const [totalBytes, setTotalBytes] = useState(0)
   const [processedItems, setProcessedItems] = useState(0)
   const [totalItems, setTotalItems] = useState(0)
-  const [theme, setTheme] = useState('dark') // 'dark', 'light'
+  const { theme, handleThemeChange } = useTheme('dark')
   const [sidebarVisible, setSidebarVisible] = useState(true) // Видимость сайдбара
   const [isMobile, setIsMobile] = useState(false) // Определение мобильного устройства
   const [showColumnSettings, setShowColumnSettings] = useState(false) // Видимость настроек колонок
@@ -104,10 +105,6 @@ const App = () => {
   const debouncedProvider = useDebounce(filters.provider, 500)
 
   // Применение темы к документу
-  const applyTheme = (themeName) => {
-    document.documentElement.setAttribute('data-theme', themeName)
-  }
-
   // Определение мобильного устройства
   useEffect(() => {
     const checkMobile = () => {
@@ -142,13 +139,7 @@ const App = () => {
     maxSwipeTime: 300
   })
 
-  // Загрузка темы и состояния сайдбара из localStorage при монтировании
   useEffect(() => {
-    const savedTheme = localStorage.getItem('gsm-theme') || 'dark'
-    setTheme(savedTheme)
-    applyTheme(savedTheme)
-    
-    // Восстанавливаем состояние сайдбара только если не мобильное устройство
     if (!isMobile) {
       const savedSidebarState = localStorage.getItem('sidebar-visible')
       if (savedSidebarState !== null) {
@@ -230,26 +221,6 @@ const App = () => {
       }
     }
   }, [authLoading])
-
-  // Переключение темы с плавной анимацией
-  const handleThemeChange = (newTheme) => {
-    // Добавляем класс для плавного перехода
-    const root = document.documentElement
-    root.classList.add('theme-transitioning')
-    
-    // Небольшая задержка для начала анимации
-    requestAnimationFrame(() => {
-      setTheme(newTheme)
-      localStorage.setItem('gsm-theme', newTheme)
-      applyTheme(newTheme)
-      logger.info('Тема изменена', { theme: newTheme })
-      
-      // Удаляем класс после завершения перехода
-      setTimeout(() => {
-        root.classList.remove('theme-transitioning')
-      }, 500)
-    })
-  }
 
   // Экспорт транзакций в Excel через API
   const downloadExcel = useCallback(async () => {
