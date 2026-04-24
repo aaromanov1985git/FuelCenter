@@ -15,8 +15,8 @@ import ScrollToTop from './components/ScrollToTop'
 import { useToast } from './components/ToastContainer'
 import { useAuth } from './contexts/AuthContext'
 import { useDebounce } from './hooks/useDebounce'
-import { useTouchGestures } from './hooks/useTouchGestures'
 import { useTheme } from './hooks/useTheme'
+import { useSidebar } from './hooks/useSidebar'
 import { authFetch, getApiUrl } from './utils/api'
 import './App.css'
 
@@ -87,8 +87,7 @@ const App = () => {
   const [processedItems, setProcessedItems] = useState(0)
   const [totalItems, setTotalItems] = useState(0)
   const { theme, handleThemeChange } = useTheme('dark')
-  const [sidebarVisible, setSidebarVisible] = useState(true) // Видимость сайдбара
-  const [isMobile, setIsMobile] = useState(false) // Определение мобильного устройства
+  const { sidebarVisible, isMobile, toggleSidebar, closeSidebar } = useSidebar()
   const [showColumnSettings, setShowColumnSettings] = useState(false) // Видимость настроек колонок
   const [contextMenu, setContextMenu] = useState({ isOpen: false, x: 0, y: 0, rowIndex: null })
   const [previewFile, setPreviewFile] = useState(null) // Файл для предпросмотра
@@ -103,50 +102,6 @@ const App = () => {
   const debouncedAzsNumber = useDebounce(filters.azs_number, 500)
   const debouncedProduct = useDebounce(filters.product, 500)
   const debouncedProvider = useDebounce(filters.provider, 500)
-
-  // Применение темы к документу
-  // Определение мобильного устройства
-  useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth <= 768
-      setIsMobile(mobile)
-      // На мобильных устройствах сайдбар по умолчанию скрыт
-      if (mobile && !localStorage.getItem('sidebar-visible')) {
-        setSidebarVisible(false)
-      }
-    }
-
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
-
-  // Touch-жесты для мобильных устройств
-  useTouchGestures({
-    onSwipeRight: () => {
-      // Свайп вправо открывает сайдбар на мобильных
-      if (isMobile && !sidebarVisible) {
-        setSidebarVisible(true)
-      }
-    },
-    onSwipeLeft: () => {
-      // Свайп влево закрывает сайдбар на мобильных
-      if (isMobile && sidebarVisible) {
-        setSidebarVisible(false)
-      }
-    },
-    minSwipeDistance: 50,
-    maxSwipeTime: 300
-  })
-
-  useEffect(() => {
-    if (!isMobile) {
-      const savedSidebarState = localStorage.getItem('sidebar-visible')
-      if (savedSidebarState !== null) {
-        setSidebarVisible(savedSidebarState === 'true')
-      }
-    }
-  }, [isMobile])
 
   // Проверка настроек аутентификации при загрузке приложения
   useEffect(() => {
@@ -319,12 +274,7 @@ const App = () => {
       // Ctrl+B или Cmd+B - переключение сайдбара
       if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
         e.preventDefault()
-        const newState = !sidebarVisible
-        setSidebarVisible(newState)
-        if (!isMobile) {
-          localStorage.setItem('sidebar-visible', newState.toString())
-        }
-        logger.debug('Состояние сайдбара изменено через keyboard shortcut', { visible: newState })
+        toggleSidebar()
       }
       // Ctrl+K или Cmd+K - фокус на поиск
       else if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -1528,16 +1478,9 @@ const App = () => {
     <div className="app">
       <div className="app-layout">
         {/* Кнопка переключения сайдбара (hamburger menu на мобильных) */}
-        <button 
+        <button
           className={`sidebar-toggle ${!sidebarVisible ? 'sidebar-hidden-toggle' : ''} ${isMobile ? 'mobile-toggle' : ''}`}
-          onClick={() => {
-            const newState = !sidebarVisible
-            setSidebarVisible(newState)
-            if (!isMobile) {
-              localStorage.setItem('sidebar-visible', newState.toString())
-            }
-            logger.debug('Состояние сайдбара изменено', { visible: newState, isMobile })
-          }}
+          onClick={toggleSidebar}
           title={sidebarVisible ? (isMobile ? 'Закрыть меню' : 'Скрыть меню (Ctrl+B)') : (isMobile ? 'Открыть меню' : 'Показать меню (Ctrl+B)')}
           aria-label={sidebarVisible ? 'Закрыть меню' : 'Открыть меню'}
           aria-expanded={sidebarVisible}
@@ -1551,14 +1494,10 @@ const App = () => {
           </svg>
         </button>
 
-        {/* Overlay для мобильного меню */}
         {isMobile && sidebarVisible && (
-          <div 
+          <div
             className="sidebar-overlay active"
-            onClick={() => {
-              setSidebarVisible(false)
-              logger.debug('Сайдбар закрыт через overlay')
-            }}
+            onClick={closeSidebar}
             aria-label="Закрыть меню"
           />
         )}
