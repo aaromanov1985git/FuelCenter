@@ -6,103 +6,60 @@ import { useToast } from './ToastContainer'
 import AdvancedSearch from './AdvancedSearch'
 import { useDebounce } from '../hooks/useDebounce'
 import { authFetch } from '../utils/api'
-import { Card, Button, Table, Badge, Skeleton, Alert } from './ui'
+import { Card, Table, Skeleton, Alert } from './ui'
 import './FuelCardsList.css'
 
-const PROVIDER_STYLES = {
-  'Газпромнефть': { grad: 'linear-gradient(135deg,#7c5cff,#4338ca)', accent: '#b16cff' },
-  'Лукойл':       { grad: 'linear-gradient(135deg,#ef4444,#b91c1c)', accent: '#fca5a5' },
-  'Роснефть':     { grad: 'linear-gradient(135deg,#ffb547,#b45309)', accent: '#fde68a' },
-  'Татнефть':     { grad: 'linear-gradient(135deg,#22d3a7,#065f46)', accent: '#6ee7b7' },
-  default:        { grad: 'linear-gradient(135deg,#626b7f,#374151)', accent: '#97a0b3' },
-}
-
-const IconGrid = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-    <path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z" stroke="currentColor" strokeWidth="1.4"/>
-  </svg>
-)
-const IconList = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-    <path d="M3 4h10M3 8h10M3 12h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>
-)
-
-const FuelCardVisual = ({ card, providerName, onEdit }) => {
-  const ps = PROVIDER_STYLES[providerName] || PROVIDER_STYLES.default
-  const isBlocked = card.is_blocked
-  const number = card.card_number || '•••• •••• •••• ••••'
-
-  return (
-    <div className="fc-visual-wrap">
-      {/* Gradient card face */}
-      <div className="fc-card-face" style={{ background: ps.grad }}>
-        <div className="fc-card-glow" style={{ background: ps.accent }} />
-        <div className="fc-card-top">
-          <div>
-            <div className="fc-card-provider">{providerName || '—'}</div>
-            <div className="fc-card-owner">{card.normalized_owner || card.original_owner_name || '—'}</div>
-          </div>
-          <div className="fc-card-chip">
-            <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-              <path d="M1 4h14M1 6h14M1 8h14" stroke="#fff" strokeWidth="1" opacity=".6"/>
-            </svg>
-          </div>
-        </div>
-        <div className="fc-card-number">{number}</div>
-        <div className="fc-card-footer">
-          <span>Статус</span>
-          <span className="fc-card-expires">
-            {isBlocked ? 'Заблокирована' : 'Активна'}
-          </span>
-        </div>
-      </div>
-
-      {/* Info below card */}
-      <div className="fc-card-info">
-        <div className="fc-card-status-row">
-          <span
-            className="fc-status-chip"
-            style={{ color: isBlocked ? 'var(--red)' : 'var(--green)', background: isBlocked ? 'var(--red-soft)' : 'var(--green-soft)' }}
-          >
-            {isBlocked ? 'Заблокирована' : 'Активна'}
-          </span>
-          <button className="fc-edit-btn" onClick={() => onEdit(card)} title="Редактировать">⋯</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+
+// Градиенты для провайдеров (соответствуют redesign_fuel_cards.html)
+const PROVIDER_STYLES = {
+  'Газпромнефть':  { grad: 'linear-gradient(135deg,#7c5cff,#4338ca)', accent: '#b16cff' },
+  'Газпром нефть': { grad: 'linear-gradient(135deg,#7c5cff,#4338ca)', accent: '#b16cff' },
+  'ГПН':           { grad: 'linear-gradient(135deg,#7c5cff,#4338ca)', accent: '#b16cff' },
+  'Лукойл':        { grad: 'linear-gradient(135deg,#ef4444,#b91c1c)', accent: '#fca5a5' },
+  'Роснефть':      { grad: 'linear-gradient(135deg,#ffb547,#b45309)', accent: '#fde68a' },
+  'РН':            { grad: 'linear-gradient(135deg,#ffb547,#b45309)', accent: '#fde68a' },
+  'Татнефть':      { grad: 'linear-gradient(135deg,#22d3a7,#065f46)', accent: '#6ee7b7' },
+  'default':       { grad: 'linear-gradient(135deg,#4fd1ff,#1e40af)', accent: '#7dd3fc' },
+}
+
+const getProviderStyle = (providerName) => {
+  if (!providerName) return PROVIDER_STYLES.default
+  const keys = Object.keys(PROVIDER_STYLES)
+  const match = keys.find(k => providerName.toLowerCase().includes(k.toLowerCase()))
+  return match ? PROVIDER_STYLES[match] : PROVIDER_STYLES.default
+}
+
+// Форматирование номера карты группами по 4
+const formatCardNumber = (num) => {
+  if (!num) return ''
+  const s = String(num).replace(/\s+/g, '')
+  return s.replace(/(.{4})/g, '$1 ').trim()
+}
 
 const FuelCardsList = () => {
   const { error: showError, success } = useToast()
   const [cards, setCards] = useState([])
-  const [allCards, setAllCards] = useState([]) // Все карты для статистики
+  const [allCards, setAllCards] = useState([])
   const [vehicles, setVehicles] = useState([])
   const [providers, setProviders] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [editingCard, setEditingCard] = useState(null)
-  const [viewMode, setViewMode] = useState('list') // 'list' | 'grid'
-  
-  // Пагинация
+  const [view, setView] = useState('grid') // grid | list
+
   const [currentPage, setCurrentPage] = useState(1)
   const [total, setTotal] = useState(0)
-  const [limit, setLimit] = useState(10) // Количество записей на странице
-  
-  // Фильтры
+  const [limit, setLimit] = useState(12)
+
   const [filters, setFilters] = useState({
     card_number: '',
-    provider: '', // Теперь это ID провайдера
-    status: '' // 'all', 'active', 'blocked'
+    provider: '',
+    status: ''
   })
-  
-  const debouncedCardNumber = useDebounce(filters.card_number, 500)
-  // Для провайдера не нужен debounce, так как это селект
 
-  // Загрузка всех карт для статистики
+  const debouncedCardNumber = useDebounce(filters.card_number, 500)
+
   const loadAllCards = async () => {
     try {
       const response = await authFetch(`${API_URL}/api/v1/fuel-cards?limit=10000`)
@@ -111,7 +68,6 @@ const FuelCardsList = () => {
         setAllCards(result.items)
       }
     } catch (err) {
-      // Не показываем ошибку при 401 - это обрабатывается централизованно
       if (err.isUnauthorized) {
         return
       }
@@ -122,47 +78,41 @@ const FuelCardsList = () => {
   const loadCards = async () => {
     setLoading(true)
     setError('')
-    
+
     try {
       const params = new URLSearchParams()
       params.append('skip', ((currentPage - 1) * limit).toString())
       params.append('limit', limit.toString())
-      
-      // Добавляем фильтр по статусу
+
       if (filters.status === 'blocked') {
         params.append('is_blocked', 'true')
       } else if (filters.status === 'active') {
         params.append('is_blocked', 'false')
       }
-      // Если статус не выбран или пустой, показываем все
-      
-      // Фильтр по номеру карты
+
       if (debouncedCardNumber) {
         params.append('card_number', debouncedCardNumber)
       }
-      
-      // Фильтр по провайдеру (ID)
+
       if (filters.provider) {
         params.append('provider_id', filters.provider)
       }
-      
+
       const response = await authFetch(`${API_URL}/api/v1/fuel-cards?${params}`)
       if (!response.ok) throw new Error('Ошибка загрузки данных')
-      
+
       const result = await response.json()
-      
-      // Устанавливаем total из ответа API
+
       setTotal(result.total || 0)
       setCards(result.items)
-      
-      logger.debug('Карты загружены', { 
-        total: result.total, 
-        itemsCount: result.items.length, 
+
+      logger.debug('Карты загружены', {
+        total: result.total,
+        itemsCount: result.items.length,
         currentPage,
         limit
       })
     } catch (err) {
-      // Не показываем ошибку при 401 - это обрабатывается централизованно
       if (err.isUnauthorized) {
         return
       }
@@ -181,7 +131,6 @@ const FuelCardsList = () => {
         logger.debug('ТС загружены в FuelCardsList', { count: result.items.length })
       }
     } catch (err) {
-      // Не показываем ошибку при 401 - это обрабатывается централизованно
       if (err.isUnauthorized) {
         return
       }
@@ -198,7 +147,6 @@ const FuelCardsList = () => {
         logger.debug('Провайдеры загружены в FuelCardsList', { count: result.items.length })
       }
     } catch (err) {
-      // Не показываем ошибку при 401 - это обрабатывается централизованно
       if (err.isUnauthorized) {
         return
       }
@@ -206,16 +154,15 @@ const FuelCardsList = () => {
     }
   }
 
-  // Вычисление статистики
   const stats = useMemo(() => {
     if (allCards.length === 0) return null
-    
+
     const total = allCards.length
     const blocked = allCards.filter(c => c.is_blocked).length
     const active = total - blocked
     const assigned = allCards.filter(c => c.vehicle_id).length
     const unassigned = total - assigned
-    
+
     return {
       total,
       blocked,
@@ -232,7 +179,7 @@ const FuelCardsList = () => {
   }, [])
 
   useEffect(() => {
-    setCurrentPage(1) // Сбрасываем на первую страницу при изменении фильтров
+    setCurrentPage(1)
   }, [debouncedCardNumber, filters.provider, filters.status])
 
   useEffect(() => {
@@ -247,7 +194,7 @@ const FuelCardsList = () => {
     try {
       setLoading(true)
       setError('')
-      
+
       const response = await authFetch(`${API_URL}/api/v1/fuel-cards/${cardId}`, {
         method: 'PUT',
         headers: {
@@ -261,16 +208,12 @@ const FuelCardsList = () => {
         throw new Error(errorData.detail || 'Ошибка сохранения')
       }
 
-      // Показываем уведомление об успешном сохранении СРАЗУ
       success('Топливная карта успешно обновлена')
 
-      // Обновляем список карт в фоне (не блокируем UI)
       loadCards().catch(() => {})
 
-      // Закрываем форму после успешного сохранения
       setEditingCard(null)
     } catch (err) {
-      // Не показываем ошибку при 401 - это обрабатывается централизованно
       if (err.isUnauthorized) {
         return
       }
@@ -285,8 +228,7 @@ const FuelCardsList = () => {
   const handleCancel = () => {
     setEditingCard(null)
   }
-  
-  // Проверяем, нужно ли перейти на предыдущую страницу после удаления
+
   useEffect(() => {
     if (total > 0 && currentPage > 1 && (currentPage - 1) * limit >= total) {
       setCurrentPage(prev => Math.max(1, prev - 1))
@@ -305,131 +247,220 @@ const FuelCardsList = () => {
     return provider ? provider.name : `ID: ${providerId}`
   }
 
-  // Подготовка данных для таблицы
+  // Данные для табличного представления
   const tableColumns = [
-    { key: 'card_number', header: 'Номер карты' },
+    { key: 'card_number', header: '№ карты' },
     { key: 'provider', header: 'Провайдер' },
-    { key: 'owner', header: 'Владелец' },
-    { key: 'vehicle', header: 'Закреплена за ТС' },
+    { key: 'owner', header: 'Держатель' },
+    { key: 'vehicle', header: 'Автомобиль' },
     { key: 'status', header: 'Статус' },
-    { key: 'actions', header: 'Действия' }
+    { key: 'actions', header: '' }
   ]
 
   const tableData = cards.map(card => ({
     id: card.id,
-    card_number: card.card_number,
-    provider: getProviderName(card.provider_id),
+    card_number: (
+      <span className="fc-cell-number">{formatCardNumber(card.card_number)}</span>
+    ),
+    provider: (
+      <span className="fc-cell-provider">
+        <span
+          className="fc-provider-dot"
+          style={{ background: getProviderStyle(getProviderName(card.provider_id)).accent }}
+        />
+        {getProviderName(card.provider_id)}
+      </span>
+    ),
     owner: card.normalized_owner || card.original_owner_name || '-',
     vehicle: getVehicleName(card.vehicle_id),
     status: card.is_blocked ? (
-      <Badge variant="error" size="sm">Заблокирована</Badge>
+      <span className="fc-chip fc-chip-red">Заблокирована</span>
     ) : (
-      <Badge variant="success" size="sm">Активна</Badge>
+      <span className="fc-chip fc-chip-green">Активна</span>
     ),
     actions: (
-      <IconButton 
-        icon="edit" 
-        variant="primary" 
+      <IconButton
+        icon="edit"
+        variant="primary"
         onClick={() => handleEdit(card)}
         title="Редактировать"
         size="small"
       />
     ),
-    className: card.is_blocked ? 'blocked-card' : ''
+    className: card.is_blocked ? 'fc-row-blocked' : ''
   }))
 
+  // Отрисовка визуальной карточки (3D-ish фуэл-карта)
+  const renderFuelCard = (card) => {
+    const providerName = getProviderName(card.provider_id)
+    const ps = getProviderStyle(providerName)
+    const isBlocked = card.is_blocked
+    const statusLabel = isBlocked ? 'Заблокирована' : 'Активна'
+    const statusClass = isBlocked ? 'fc-chip fc-chip-red' : 'fc-chip fc-chip-green'
+    const vehicleLabel = getVehicleName(card.vehicle_id)
+    const ownerLabel = card.normalized_owner || card.original_owner_name || '—'
+
+    return (
+      <div
+        key={card.id}
+        className={`fc-card-wrap ${isBlocked ? 'fc-card-blocked' : ''}`}
+        data-testid={`fuel-card-${card.id}`}
+      >
+        <div className="fc-card">
+          {/* Верхняя «физическая» карта */}
+          <div
+            className="fc-card-top"
+            style={{ background: ps.grad }}
+          >
+            <div
+              className="fc-card-glow"
+              style={{ background: ps.accent }}
+            />
+            <div className="fc-card-top-header">
+              <div>
+                <div className="fc-card-provider">{providerName}</div>
+                <div className="fc-card-holder">{ownerLabel}</div>
+              </div>
+              <div className="fc-card-chip" aria-hidden="true">
+                <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+                  <path d="M1 4h14M1 6h14M1 8h14" stroke="#fff" strokeWidth="1" opacity=".6" />
+                </svg>
+              </div>
+            </div>
+            <div className="fc-card-number">{formatCardNumber(card.card_number)}</div>
+            <div className="fc-card-footer-top">
+              <span>ID</span>
+              <span className="fc-card-id-value">#{card.id}</span>
+            </div>
+          </div>
+
+          {/* Нижняя инфо-панель */}
+          <div className="fc-card-bottom">
+            <div className="fc-card-row">
+              <span className={statusClass}>{statusLabel}</span>
+              <span className="fc-card-vehicle" title={vehicleLabel}>{vehicleLabel}</span>
+            </div>
+            <div className="fc-card-meta">
+              <div className="fc-card-meta-item">
+                <span className="fc-card-meta-label">Держатель</span>
+                <span className="fc-card-meta-value">{ownerLabel}</span>
+              </div>
+            </div>
+            <div className="fc-card-actions">
+              <IconButton
+                icon="edit"
+                variant="primary"
+                onClick={() => handleEdit(card)}
+                title="Редактировать"
+                size="small"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const totalPages = Math.ceil(total / limit)
+
   return (
-    <>
+    <div className="fc-root">
       {/* Компактный дашборд */}
       {stats && (
-        <div className="stats-grid">
-          <Card variant="outlined" padding="sm">
-            <div className="stat-card-header">
-              <span>💳</span>
-              <h4 className="stat-card-title">Всего карт</h4>
+        <div className="fc-stats-grid">
+          <div className="fc-stat">
+            <div className="fc-stat-bar fc-stat-bar-neutral" />
+            <div>
+              <div className="fc-stat-label">Всего карт</div>
+              <div className="fc-stat-value">{stats.total}</div>
             </div>
-            <div className="stat-card-value">
-              {stats.total}
-            </div>
-          </Card>
+          </div>
 
-          <Card variant="outlined" padding="sm">
-            <div className="stat-card-header">
-              <span>✅</span>
-              <h4 className="stat-card-title">Активных</h4>
+          <div className="fc-stat">
+            <div className="fc-stat-bar fc-stat-bar-green" />
+            <div>
+              <div className="fc-stat-label">Активных</div>
+              <div className="fc-stat-value fc-stat-value-green">{stats.active}</div>
+              <div className="fc-stat-sub">
+                {stats.total > 0 ? ((stats.active / stats.total) * 100).toFixed(1) : 0}%
+              </div>
             </div>
-            <div className="stat-card-value success">
-              {stats.active}
-            </div>
-            <div className="stat-card-percent">
-              {stats.total > 0 ? ((stats.active / stats.total) * 100).toFixed(1) : 0}%
-            </div>
-          </Card>
+          </div>
 
-          <Card variant="outlined" padding="sm">
-            <div className="stat-card-header">
-              <span>🚫</span>
-              <h4 className="stat-card-title">Заблокированных</h4>
+          <div className="fc-stat">
+            <div className="fc-stat-bar fc-stat-bar-red" />
+            <div>
+              <div className="fc-stat-label">Заблокировано</div>
+              <div className="fc-stat-value fc-stat-value-red">{stats.blocked}</div>
+              <div className="fc-stat-sub">
+                {stats.total > 0 ? ((stats.blocked / stats.total) * 100).toFixed(1) : 0}%
+              </div>
             </div>
-            <div className="stat-card-value error">
-              {stats.blocked}
-            </div>
-            <div className="stat-card-percent">
-              {stats.total > 0 ? ((stats.blocked / stats.total) * 100).toFixed(1) : 0}%
-            </div>
-          </Card>
+          </div>
 
-          <Card variant="outlined" padding="sm">
-            <div className="stat-card-header">
-              <span>🚗</span>
-              <h4 className="stat-card-title">Закрепленных</h4>
+          <div className="fc-stat">
+            <div className="fc-stat-bar fc-stat-bar-accent" />
+            <div>
+              <div className="fc-stat-label">Закреплённых</div>
+              <div className="fc-stat-value fc-stat-value-accent">{stats.assigned}</div>
+              <div className="fc-stat-sub">
+                {stats.total > 0 ? ((stats.assigned / stats.total) * 100).toFixed(1) : 0}%
+              </div>
             </div>
-            <div className="stat-card-value success">
-              {stats.assigned}
-            </div>
-            <div className="stat-card-percent">
-              {stats.total > 0 ? ((stats.assigned / stats.total) * 100).toFixed(1) : 0}%
-            </div>
-          </Card>
+          </div>
 
-          <Card variant="outlined" padding="sm">
-            <div className="stat-card-header">
-              <span>📭</span>
-              <h4 className="stat-card-title">Не закрепленных</h4>
+          <div className="fc-stat">
+            <div className="fc-stat-bar fc-stat-bar-amber" />
+            <div>
+              <div className="fc-stat-label">Не закреплённых</div>
+              <div className="fc-stat-value fc-stat-value-amber">{stats.unassigned}</div>
+              <div className="fc-stat-sub">
+                {stats.total > 0 ? ((stats.unassigned / stats.total) * 100).toFixed(1) : 0}%
+              </div>
             </div>
-            <div className="stat-card-value warning">
-              {stats.unassigned}
-            </div>
-            <div className="stat-card-percent">
-              {stats.total > 0 ? ((stats.unassigned / stats.total) * 100).toFixed(1) : 0}%
-            </div>
-          </Card>
+          </div>
         </div>
       )}
 
-      <Card>
+      <Card className="fc-main-card">
         <Card.Header>
-          <Card.Title>Справочник топливных карт</Card.Title>
-          <div className="fc-view-toggle">
-            <button
-              className={`fc-view-btn${viewMode === 'list' ? ' active' : ''}`}
-              onClick={() => setViewMode('list')}
-              title="Список"
-            >
-              <IconList />
-            </button>
-            <button
-              className={`fc-view-btn${viewMode === 'grid' ? ' active' : ''}`}
-              onClick={() => setViewMode('grid')}
-              title="Сетка"
-            >
-              <IconGrid />
-            </button>
+          <div className="fc-header-row">
+            <Card.Title>Справочник топливных карт</Card.Title>
+            <div className="fc-view-toggle" role="group" aria-label="Вид отображения">
+              <button
+                type="button"
+                className={`fc-view-btn ${view === 'grid' ? 'is-active' : ''}`}
+                onClick={() => setView('grid')}
+                data-testid="fuel-cards-view-grid"
+                aria-pressed={view === 'grid'}
+                title="Плиткой"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+                  <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+                  <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+                  <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+                </svg>
+                <span>Плитка</span>
+              </button>
+              <button
+                type="button"
+                className={`fc-view-btn ${view === 'list' ? 'is-active' : ''}`}
+                onClick={() => setView('list')}
+                data-testid="fuel-cards-view-list"
+                aria-pressed={view === 'list'}
+                title="Списком"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path d="M1 3h12M1 7h12M1 11h12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+                <span>Список</span>
+              </button>
+            </div>
           </div>
         </Card.Header>
 
         <Card.Body>
-          {/* Фильтры и поиск */}
           <AdvancedSearch
             filters={filters}
             onFiltersChange={setFilters}
@@ -476,40 +507,41 @@ const FuelCardsList = () => {
 
           {loading && cards.length === 0 ? (
             <Skeleton rows={10} columns={5} />
-          ) : viewMode === 'grid' ? (
-            <div className="fc-grid">
-              {cards.map(card => (
-                <FuelCardVisual
-                  key={card.id}
-                  card={card}
-                  providerName={getProviderName(card.provider_id)}
-                  onEdit={handleEdit}
-                />
-              ))}
-              {cards.length === 0 && (
-                <div className="fc-grid-empty">Нет данных для отображения</div>
-              )}
-            </div>
           ) : (
-            <Table
-              columns={tableColumns}
-              data={tableData}
-              emptyMessage="Нет данных для отображения"
-            />
-          )}
-          {total > 0 && Math.ceil(total / limit) > 1 && (
-            <Table.Pagination
-              currentPage={currentPage}
-              totalPages={Math.ceil(total / limit)}
-              total={total}
-              pageSize={limit}
-              onPageChange={setCurrentPage}
-              onPageSizeChange={(newLimit) => {
-                setLimit(newLimit)
-                setCurrentPage(1)
-              }}
-              pageSizeOptions={[10, 25, 50, 100]}
-            />
+            <>
+              {view === 'grid' ? (
+                cards.length === 0 ? (
+                  <div className="fc-empty">Нет данных для отображения</div>
+                ) : (
+                  <div className="fc-grid">
+                    {cards.map(card => renderFuelCard(card))}
+                  </div>
+                )
+              ) : (
+                <div className="fc-table-wrap">
+                  <Table
+                    columns={tableColumns}
+                    data={tableData}
+                    emptyMessage="Нет данных для отображения"
+                  />
+                </div>
+              )}
+
+              {total > 0 && totalPages > 1 && (
+                <Table.Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  total={total}
+                  pageSize={limit}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={(newLimit) => {
+                    setLimit(newLimit)
+                    setCurrentPage(1)
+                  }}
+                  pageSizeOptions={[12, 24, 48, 96]}
+                />
+              )}
+            </>
           )}
         </Card.Body>
       </Card>
@@ -523,7 +555,6 @@ const FuelCardsList = () => {
         onCancel={handleCancel}
         loading={loading}
         onCardUpdated={async () => {
-          // Перезагружаем данные карты после обновления из API
           if (editingCard) {
             try {
               const response = await authFetch(`${API_URL}/api/v1/fuel-cards/${editingCard.id}`)
@@ -533,14 +564,13 @@ const FuelCardsList = () => {
                 await loadCards()
               }
             } catch (err) {
-              // Игнорируем ошибки
+              // ignore
             }
           }
         }}
       />
-    </>
+    </div>
   )
 }
 
 export default FuelCardsList
-
