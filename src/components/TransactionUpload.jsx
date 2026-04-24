@@ -2,7 +2,6 @@ import React from 'react'
 import FileUploadProgress from './FileUploadProgress'
 
 const MAX_FILE_SIZE_MB = 50
-const MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024
 
 const TransactionUpload = ({
   dragActive,
@@ -166,5 +165,4 @@ const TransactionUpload = ({
   </>
 )
 
-export { MAX_FILE_SIZE }
 export default TransactionUpload

@@ -5,7 +5,7 @@ const Login = lazy(() => import('./components/Login'))
 import AppSidebar from './components/AppSidebar'
 import AppModals from './components/AppModals'
 import AppRoutes from './components/AppRoutes'
-import TransactionUpload, { MAX_FILE_SIZE } from './components/TransactionUpload'
+import TransactionUpload from './components/TransactionUpload'
 import TransactionTable from './components/TransactionTable'
 import Breadcrumbs from './components/Breadcrumbs'
 import AdvancedSearch from './components/AdvancedSearch'
@@ -17,7 +17,8 @@ import { useAuth } from './contexts/AuthContext'
 import { useTheme } from './hooks/useTheme'
 import { useSidebar } from './hooks/useSidebar'
 import { useTransactions } from './hooks/useTransactions'
-import { authFetch, getApiUrl } from './utils/api'
+import { useFileUpload } from './hooks/useFileUpload'
+import { authFetch } from './utils/api'
 import './App.css'
 
 // Используем прокси Vite в режиме разработки или прямой URL
@@ -48,7 +49,6 @@ const App = () => {
   const [showRegister, setShowRegister] = useState(false)
   const [authEnabled, setAuthEnabled] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
-  const [fileName, setFileName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('') // Оставляем для обратной совместимости, но используем toast
   const [showClearConfirm, setShowClearConfirm] = useState(false)
@@ -56,21 +56,10 @@ const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard') // dashboard, transactions, vehicles, cards, fuel-card-analysis, gas-stations, fuel-types, providers, templates, upload-events, organizations, users, settings, notifications
   const [showRefuelsUpload, setShowRefuelsUpload] = useState(false)
   const [showLocationsUpload, setShowLocationsUpload] = useState(false)
-  const [dragActive, setDragActive] = useState(false)
-  const [fileMatchInfo, setFileMatchInfo] = useState(null)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [uploadStatus, setUploadStatus] = useState(null) // 'uploading', 'processing', null
-  const [uploadedBytes, setUploadedBytes] = useState(0)
-  const [totalBytes, setTotalBytes] = useState(0)
-  const [processedItems, setProcessedItems] = useState(0)
-  const [totalItems, setTotalItems] = useState(0)
   const { theme, handleThemeChange } = useTheme('dark')
   const { sidebarVisible, isMobile, toggleSidebar, closeSidebar } = useSidebar()
   const [showColumnSettings, setShowColumnSettings] = useState(false) // Видимость настроек колонок
   const [contextMenu, setContextMenu] = useState({ isOpen: false, x: 0, y: 0, rowIndex: null })
-  const [previewFile, setPreviewFile] = useState(null) // Файл для предпросмотра
-  const [showTemplateSelectModal, setShowTemplateSelectModal] = useState(false)
-  const [templateSelectData, setTemplateSelectData] = useState(null) // { file, availableTemplates, matchInfo, etc }
 
   // Показывать подсказку по горячим клавишам (скрыто по умолчанию)
   const showKeyboardHint = false
@@ -99,6 +88,35 @@ const App = () => {
     loadTransactions,
     loadStats,
   } = useTransactions({ authEnabled, isAuthenticated, checkingAuth, setLoading, setError })
+
+  const onUploaded = useCallback(async () => {
+    await loadTransactions()
+    await loadStats()
+  }, [loadTransactions, loadStats])
+
+  const {
+    fileName,
+    fileMatchInfo,
+    uploadProgress,
+    uploadStatus,
+    uploadedBytes,
+    totalBytes,
+    processedItems,
+    totalItems,
+    dragActive,
+    previewFile,
+    showTemplateSelectModal,
+    templateSelectData,
+    setShowTemplateSelectModal,
+    setTemplateSelectData,
+    handleDrag,
+    handleDrop,
+    handleFileInput,
+    handleFileConfirm,
+    handleFileCancel,
+    handleFileWithTemplate,
+    checkFileMatch,
+  } = useFileUpload({ onUploaded, setLoading, setError, logout })
 
   // Проверка настроек аутентификации при загрузке приложения
   useEffect(() => {
@@ -354,658 +372,6 @@ const App = () => {
       return formatNumber(thousands) + ' тыс. л'
     }
     return formatNumber(num) + ' л'
-  }
-
-  // Проверка соответствия файла шаблону
-  const checkFileMatch = useCallback(async (file) => {
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const response = await authFetch(`${API_URL}/api/v1/transactions/check-match`, {
-        method: 'POST',
-        body: formData
-      })
-
-      if (response.ok) {
-        const matchData = await response.json()
-        setFileMatchInfo(matchData.match_info)
-        
-        // Проверяем, требуется ли выбор шаблона
-        const requiresSelection = matchData.require_template_selection === true
-        
-        if (requiresSelection) {
-          logger.info('Требуется выбор шаблона', { 
-            matchInfo: matchData.match_info,
-            availableTemplates: matchData.available_templates?.length || 0
-          })
-        } else {
-          logger.info('Проверка соответствия файла завершена', { 
-            matchInfo: matchData.match_info,
-            isMatch: matchData.is_match
-          })
-        }
-        
-        return { requiresSelection, matchData }
-      }
-    } catch (err) {
-      logger.warn('Ошибка проверки соответствия файла', { error: err.message })
-    }
-    return { requiresSelection: false, matchData: null }
-  }, [])
-
-  // Валидация файла перед загрузкой
-  const validateFile = (file) => {
-    // Проверка типа файла
-    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-      return { valid: false, error: 'Поддерживаются только файлы Excel (.xlsx, .xls)' }
-    }
-
-    // Проверка размера файла
-    if (file.size > MAX_FILE_SIZE) {
-      const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
-      const maxSizeMB = (MAX_FILE_SIZE / 1024 / 1024).toFixed(0)
-      return { 
-        valid: false, 
-        error: `Размер файла (${fileSizeMB}MB) превышает максимально допустимый (${maxSizeMB}MB)` 
-      }
-    }
-
-    return { valid: true }
-  }
-
-  // Повторная загрузка файла с выбранным шаблоном
-  const handleFileWithTemplate = async (file, providerId, templateId) => {
-    if (!file) return
-
-    setFileName(file.name)
-    setLoading(true)
-    setError('')
-    setFileMatchInfo(null)
-    setUploadProgress(0)
-    setUploadStatus('uploading')
-    setUploadedBytes(0)
-    setTotalBytes(0)
-    setProcessedItems(0)
-    setTotalItems(0)
-
-    try {
-      // Загружаем файл с отслеживанием прогресса
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const xhr = new XMLHttpRequest()
-      
-      // Устанавливаем таймаут для обработки (10 минут для больших файлов)
-      const PROCESSING_TIMEOUT = 10 * 60 * 1000 // 10 минут
-      let timeoutId = null
-
-      // Отслеживание прогресса загрузки
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          const percentComplete = (e.loaded / e.total) * 100
-          setUploadProgress(percentComplete)
-          setUploadedBytes(e.loaded)
-          setTotalBytes(e.total)
-        }
-      })
-
-      // Обработка завершения загрузки
-      xhr.addEventListener('load', async () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId)
-          timeoutId = null
-        }
-        if (xhr.status >= 200 && xhr.status < 300) {
-          setUploadStatus('processing')
-          setUploadProgress(100)
-          
-          try {
-            const contentType = xhr.getResponseHeader('content-type')
-            if (!contentType || !contentType.includes('application/json')) {
-              throw new Error(`Неожиданный формат ответа от сервера`)
-            }
-            
-            const result = JSON.parse(xhr.responseText)
-            
-            if (result.require_template_selection) {
-              // Если все еще требуется выбор, показываем ошибку
-              throw new Error('Ошибка: требуется выбор шаблона')
-            }
-            
-            if (typeof result.transactions_created === 'undefined') {
-              throw new Error('Некорректный ответ от сервера')
-            }
-
-            setProcessedItems(result.transactions_created || 0)
-            setTotalItems((result.transactions_created || 0) + (result.transactions_skipped || 0))
-            
-            await loadTransactions()
-            await loadStats()
-            
-            let message = `✅ Файл успешно загружен. Обработано ${result.transactions_created} транзакций`
-            if (result.transactions_skipped > 0) {
-              message += `. Пропущено дубликатов: ${result.transactions_skipped}`
-            }
-            
-            if (result.validation_warnings && result.validation_warnings.length > 0) {
-              const warningsText = result.validation_warnings.join(', ')
-              success(message)
-              info(`⚠️ Предупреждения валидации: ${warningsText}`, 10000)
-            } else {
-              success(message)
-            }
-            
-            logger.info('Файл успешно загружен с выбранным шаблоном', { 
-              filename: file.name, 
-              created: result.transactions_created,
-              providerId,
-              templateId
-            })
-          } catch (parseError) {
-            throw new Error('Ошибка парсинга ответа сервера')
-          } finally {
-            setUploadStatus(null)
-            setUploadProgress(0)
-            setLoading(false)
-          }
-        } else {
-          let errorMessage = 'Ошибка загрузки файла'
-          try {
-            const contentType = xhr.getResponseHeader('content-type')
-            if (contentType && contentType.includes('application/json')) {
-              const errorData = JSON.parse(xhr.responseText)
-              errorMessage = errorData.detail || errorData.message || errorMessage
-            }
-          } catch (parseError) {
-            // Игнорируем ошибки парсинга
-          }
-          
-          if (xhr.status === 401) {
-            localStorage.removeItem('auth_token')
-            logout()
-            setUploadStatus(null)
-            setUploadProgress(0)
-            setLoading(false)
-            return
-          }
-          
-          setError(errorMessage)
-          showError(errorMessage)
-          setUploadStatus(null)
-          setUploadProgress(0)
-          setLoading(false)
-        }
-      })
-
-      xhr.addEventListener('error', () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId)
-          timeoutId = null
-        }
-        const networkError = 'Ошибка сети при загрузке файла'
-        setError(networkError)
-        showError(networkError)
-        setUploadStatus(null)
-        setUploadProgress(0)
-        setLoading(false)
-      })
-
-      xhr.addEventListener('timeout', () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId)
-          timeoutId = null
-        }
-        setError('Превышено время ожидания обработки файла')
-        showError('Превышено время ожидания обработки файла')
-        setUploadStatus(null)
-        setUploadProgress(0)
-        setLoading(false)
-      })
-      
-      timeoutId = setTimeout(() => {
-        if (xhr.readyState !== XMLHttpRequest.DONE) {
-          xhr.abort()
-          const timeoutError = 'Превышено время ожидания обработки файла'
-          setError(timeoutError)
-          showError(timeoutError)
-          setUploadStatus(null)
-          setUploadProgress(0)
-          setLoading(false)
-        }
-      }, PROCESSING_TIMEOUT)
-
-      // Отправляем запрос с параметрами шаблона
-      let uploadUrl
-      if (API_URL) {
-        // Если API_URL задан, создаем полный URL
-        uploadUrl = new URL(`${API_URL}/api/v1/transactions/upload`)
-      uploadUrl.searchParams.append('provider_id', providerId.toString())
-      uploadUrl.searchParams.append('template_id', templateId.toString())
-        uploadUrl = uploadUrl.toString()
-      } else {
-        // Если API_URL пустой (dev режим), используем относительный URL
-        const params = new URLSearchParams({
-          provider_id: providerId.toString(),
-          template_id: templateId.toString()
-        })
-        uploadUrl = `/api/v1/transactions/upload?${params.toString()}`
-      }
-      
-      xhr.open('POST', uploadUrl)
-      xhr.timeout = PROCESSING_TIMEOUT
-      
-      const token = localStorage.getItem('auth_token')
-      if (token) {
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`)
-      }
-      
-      xhr.send(formData)
-
-    } catch (err) {
-      // Безопасное извлечение сообщения об ошибке
-      let errorText = 'Неизвестная ошибка'
-      if (err instanceof Error) {
-        errorText = err.message || 'Ошибка загрузки файла'
-      } else if (typeof err === 'string') {
-        errorText = err
-      } else if (err && typeof err === 'object') {
-        errorText = err.detail || err.message || err.error || JSON.stringify(err)
-      }
-      const errorMessage = 'Ошибка загрузки файла: ' + errorText
-      setError(errorMessage)
-      showError(errorMessage)
-      setUploadStatus(null)
-      setUploadProgress(0)
-      setLoading(false)
-    }
-  }
-
-  // Загрузка файла на сервер с отслеживанием прогресса
-  const handleFile = async (file) => {
-    if (!file) return
-
-    // Валидация файла
-    const validation = validateFile(file)
-    if (!validation.valid) {
-      setError(validation.error) // Оставляем для обратной совместимости
-      showError(validation.error)
-      logger.warn('Валидация файла не пройдена', { filename: file.name, error: validation.error })
-      return
-    }
-
-    setFileName(file.name)
-    setLoading(true)
-    setError('')
-    setFileMatchInfo(null)
-    setUploadProgress(0)
-    setUploadStatus('uploading')
-    setUploadedBytes(0)
-    setTotalBytes(0)
-    setProcessedItems(0)
-    setTotalItems(0)
-
-    try {
-      // Загружаем файл с отслеживанием прогресса
-      // Проверка шаблона уже выполнена в handleFileConfirm
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const xhr = new XMLHttpRequest()
-      
-      // Устанавливаем таймаут для обработки (10 минут для больших файлов)
-      const PROCESSING_TIMEOUT = 10 * 60 * 1000 // 10 минут
-      let timeoutId = null
-
-      // Отслеживание прогресса загрузки
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          const percentComplete = (e.loaded / e.total) * 100
-          setUploadProgress(percentComplete)
-          setUploadedBytes(e.loaded)
-          setTotalBytes(e.total)
-          logger.debug('Прогресс загрузки файла', { 
-            filename: file.name, 
-            progress: percentComplete,
-            loaded: e.loaded,
-            total: e.total
-          })
-        }
-      })
-
-      // Обработка завершения загрузки
-      xhr.addEventListener('load', async () => {
-        // Отменяем таймаут при успешной загрузке
-        if (timeoutId) {
-          clearTimeout(timeoutId)
-          timeoutId = null
-        }
-        if (xhr.status >= 200 && xhr.status < 300) {
-          setUploadStatus('processing')
-          setUploadProgress(100)
-          
-          try {
-            // Проверяем тип контента перед парсингом
-            const contentType = xhr.getResponseHeader('content-type')
-            if (!contentType || !contentType.includes('application/json')) {
-              const responseText = xhr.responseText.substring(0, 200)
-              throw new Error(`Неожиданный формат ответа от сервера: ${responseText}`)
-            }
-            
-            const result = JSON.parse(xhr.responseText)
-            
-            // Проверяем, требуется ли выбор шаблона
-            if (result.require_template_selection) {
-              // Показываем модальное окно выбора шаблона
-              setTemplateSelectData({
-                file: file,
-                availableTemplates: result.available_templates || [],
-                detectedProviderId: result.detected_provider_id,
-                detectedTemplateId: result.detected_template_id,
-                matchInfo: result.match_info
-              })
-              setShowTemplateSelectModal(true)
-              setUploadStatus(null)
-              setUploadProgress(0)
-              setLoading(false)
-              logger.info('Требуется выбор шаблона', { 
-                filename: file.name, 
-                availableTemplates: result.available_templates?.length || 0 
-              })
-              return
-            }
-            
-            // Проверяем наличие обязательных полей
-            if (typeof result.transactions_created === 'undefined') {
-              logger.warn('Ответ сервера не содержит transactions_created', { result })
-              throw new Error('Некорректный ответ от сервера: отсутствует информация о созданных транзакциях')
-            }
-            
-            // Обновляем информацию о совпадении из ответа сервера (если есть)
-            if (result.match_info) {
-              setFileMatchInfo(result.match_info)
-            }
-
-            // Обновляем прогресс обработки
-            setProcessedItems(result.transactions_created || 0)
-            setTotalItems((result.transactions_created || 0) + (result.transactions_skipped || 0))
-            
-            // Перезагружаем данные
-            await loadTransactions()
-            await loadStats()
-            
-            let message = `✅ Файл успешно загружен. Обработано ${result.transactions_created} транзакций`
-            if (result.transactions_skipped > 0) {
-              message += `. Пропущено дубликатов: ${result.transactions_skipped}`
-            }
-            
-            // Показываем предупреждения валидации
-            if (result.validation_warnings && result.validation_warnings.length > 0) {
-              const warningsText = result.validation_warnings.join(', ')
-              success(message)
-              info(`⚠️ Предупреждения валидации: ${warningsText}`, 10000)
-              setError(message) // Оставляем для обратной совместимости
-              setTimeout(() => setError(''), 15000)
-            } else {
-              success(message)
-              setError(message) // Оставляем для обратной совместимости
-              setTimeout(() => setError(''), 10000)
-            }
-            
-            logger.info('Файл успешно загружен', { filename: file.name, created: result.transactions_created })
-          } catch (parseError) {
-            throw new Error('Ошибка парсинга ответа сервера')
-          } finally {
-            setUploadStatus(null)
-            setUploadProgress(0)
-            setLoading(false)
-          }
-        } else {
-          // Ошибка от сервера
-          let errorMessage = 'Ошибка загрузки файла'
-          try {
-            // Проверяем тип контента
-            const contentType = xhr.getResponseHeader('content-type')
-            if (contentType && contentType.includes('application/json')) {
-              const errorData = JSON.parse(xhr.responseText)
-              errorMessage = errorData.detail || errorData.message || errorMessage
-              logger.error('Ошибка от сервера (JSON)', { 
-                status: xhr.status, 
-                error: errorData,
-                filename: file.name
-              })
-            } else {
-              // Если не JSON, читаем как текст
-              const errorText = xhr.responseText.substring(0, 500)
-              errorMessage = `Ошибка ${xhr.status}: ${xhr.statusText}. ${errorText}`
-              logger.error('Ошибка от сервера (не JSON)', { 
-                status: xhr.status,
-                statusText: xhr.statusText,
-                responseText: errorText,
-                filename: file.name
-              })
-            }
-          } catch (parseError) {
-            const errorText = xhr.responseText ? xhr.responseText.substring(0, 500) : 'Нет деталей ошибки'
-            errorMessage = `Ошибка ${xhr.status}: ${xhr.statusText}`
-            if (errorText && errorText !== 'Internal Server Error') {
-              errorMessage += `. ${errorText}`
-            }
-            logger.error('Ошибка парсинга ответа об ошибке', { 
-              status: xhr.status,
-              parseError: parseError.message,
-              responseText: errorText,
-              filename: file.name
-            })
-          }
-          
-          // Обработка 401 ошибки - автоматический выход
-          if (xhr.status === 401) {
-            localStorage.removeItem('auth_token')
-            logout()
-            logger.warn('Токен авторизации истек при загрузке файла')
-            setUploadStatus(null)
-            setUploadProgress(0)
-            setUploadedBytes(0)
-            setTotalBytes(0)
-            setProcessedItems(0)
-            setTotalItems(0)
-            setLoading(false)
-            return // Не показываем ошибку, так как будет показана форма входа
-          }
-          
-          // Устанавливаем состояние ошибки перед выбрасыванием
-          setError(errorMessage)
-          setUploadStatus(null)
-          setUploadProgress(0)
-          setUploadedBytes(0)
-          setTotalBytes(0)
-          setProcessedItems(0)
-          setTotalItems(0)
-          setLoading(false)
-          
-          throw new Error(errorMessage)
-        }
-      })
-
-      // Обработка ошибок
-      xhr.addEventListener('error', () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId)
-          timeoutId = null
-        }
-        const networkError = 'Ошибка сети при загрузке файла. Проверьте подключение к серверу и убедитесь, что backend запущен.'
-        setError(networkError)
-        setUploadStatus(null)
-        setUploadProgress(0)
-        setLoading(false)
-        logger.error('Ошибка сети при загрузке файла', { filename: file.name })
-      })
-
-      xhr.addEventListener('abort', () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId)
-          timeoutId = null
-        }
-        // Не показываем ошибку, если это был таймаут (он уже обработан)
-        if (xhr.status === 0) {
-          setError('Загрузка файла прервана')
-          setUploadStatus(null)
-          setUploadProgress(0)
-          setLoading(false)
-          logger.warn('Загрузка файла прервана', { filename: file.name })
-        }
-      })
-      
-      // Обработка таймаута XHR
-      xhr.addEventListener('timeout', () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId)
-          timeoutId = null
-        }
-        setError('Превышено время ожидания обработки файла. Файл может быть слишком большим.')
-        setUploadStatus(null)
-        setUploadProgress(0)
-        setLoading(false)
-        logger.error('Таймаут XHR при загрузке файла', { filename: file.name })
-      })
-      
-      // Таймаут для обработки
-      timeoutId = setTimeout(() => {
-        if (xhr.readyState !== XMLHttpRequest.DONE) {
-          logger.error('Таймаут при обработке файла', { 
-            filename: file.name,
-            readyState: xhr.readyState,
-            status: xhr.status
-          })
-          xhr.abort()
-          const timeoutError = 'Превышено время ожидания обработки файла (10 минут). Файл может быть слишком большим или обработка занимает слишком много времени. Проверьте логи сервера.'
-          setError(timeoutError)
-          setUploadStatus(null)
-          setUploadProgress(0)
-          setLoading(false)
-          setTimeout(() => setError(''), 30000) // Показываем ошибку таймаута 30 секунд
-        }
-      }, PROCESSING_TIMEOUT)
-
-      // Отправляем запрос
-      const uploadUrl = API_URL 
-        ? new URL(`${API_URL}/api/v1/transactions/upload`).toString()
-        : '/api/v1/transactions/upload'
-      xhr.open('POST', uploadUrl)
-      xhr.timeout = PROCESSING_TIMEOUT
-      
-      // Добавляем токен авторизации в заголовки
-      const token = localStorage.getItem('auth_token')
-      if (token) {
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`)
-      }
-      
-      xhr.send(formData)
-
-    } catch (err) {
-      // Безопасное извлечение сообщения об ошибке
-      let errorText = 'Неизвестная ошибка'
-      if (err instanceof Error) {
-        errorText = err.message || 'Ошибка загрузки файла'
-      } else if (typeof err === 'string') {
-        errorText = err
-      } else if (err && typeof err === 'object') {
-        errorText = err.detail || err.message || err.error || JSON.stringify(err)
-      }
-      const errorMessage = 'Ошибка загрузки файла: ' + errorText
-      setError(errorMessage)
-      logger.error('Ошибка загрузки файла', { filename: file.name, error: errorText, originalError: err })
-      setUploadStatus(null)
-      setUploadProgress(0)
-      setLoading(false)
-      
-      // Показываем ошибку дольше для важных сообщений
-      if (errorText.includes('таймаут') || errorText.includes('timeout')) {
-        setTimeout(() => setError(''), 30000) // 30 секунд для таймаутов
-      }
-    }
-  }
-
-  // Обработка drag-and-drop
-  const handleDrag = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true)
-    } else if (e.type === "dragleave") {
-      setDragActive(false)
-    }
-  }
-
-  const handleDrop = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0]
-      // Валидация перед показом предпросмотра
-      const validation = validateFile(file)
-      if (!validation.valid) {
-        showError(validation.error)
-        return
-      }
-      setPreviewFile(file)
-    }
-  }
-
-  const handleFileInput = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      // Валидация перед показом предпросмотра
-      const validation = validateFile(file)
-      if (!validation.valid) {
-        showError(validation.error)
-        e.target.value = '' // Очищаем input
-        return
-      }
-      setPreviewFile(file)
-    }
-  }
-
-  const handleFileConfirm = async (templateData) => {
-    if (previewFile) {
-      setLoading(true)
-      try {
-        // Если передан templateData, используем его для загрузки
-        if (templateData && templateData.provider_id && templateData.template_id) {
-          setPreviewFile(null) // Закрываем модальное окно предпросмотра
-          await handleFileWithTemplate(previewFile, templateData.provider_id, templateData.template_id)
-        } else {
-          // Если шаблон определен автоматически, загружаем файл
-          setPreviewFile(null) // Закрываем модальное окно предпросмотра
-          await handleFile(previewFile)
-        }
-      } catch (err) {
-        setLoading(false)
-        // Безопасное извлечение сообщения об ошибке
-        let errorText = 'Неизвестная ошибка'
-        if (err instanceof Error) {
-          errorText = err.message || 'Ошибка загрузки файла'
-        } else if (typeof err === 'string') {
-          errorText = err
-        } else if (err && typeof err === 'object') {
-          errorText = err.detail || err.message || err.error || JSON.stringify(err)
-        }
-        showError('Ошибка загрузки файла: ' + errorText)
-        logger.error('Ошибка загрузки файла', { error: errorText, originalError: err })
-      }
-    }
-  }
-
-  const handleFileCancel = () => {
-    setPreviewFile(null)
-    // Очищаем input file
-    const fileInput = document.getElementById('file-upload-input')
-    if (fileInput) {
-      fileInput.value = ''
-    }
   }
 
   // Обработка сортировки
