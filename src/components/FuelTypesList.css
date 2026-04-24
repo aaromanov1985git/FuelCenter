@@ -1,93 +1,132 @@
-/* Стили для справочника видов топлива */
-.fuel-types-list {
-  margin-top: var(--spacing-block);
+/* =========================================================
+   FuelTypesList — redesigned
+   Scoped under .ft-root, uses global tokens from
+   src/styles/tokens.css — do NOT redefine tokens here.
+   ========================================================= */
+
+.ft-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--text-1);
+  animation: fadeUp .35s ease;
 }
 
+/* ---------- KPI tiles ---------- */
+.ft-root .ft-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.ft-root .ft-kpi {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.ft-root .ft-kpi:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.ft-root .ft-kpi-bar {
+  width: 4px;
+  height: 28px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  background: var(--text-3);
+}
+
+.ft-root .ft-kpi-error   .ft-kpi-bar { background: var(--red); }
+.ft-root .ft-kpi-warning .ft-kpi-bar { background: var(--amber); }
+.ft-root .ft-kpi-success .ft-kpi-bar { background: var(--green); }
+.ft-root .ft-kpi-neutral .ft-kpi-bar { background: var(--accent); }
+
+.ft-root .ft-kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+  line-height: 1.1;
+  letter-spacing: -.3px;
+}
+
+.ft-root .ft-kpi-value-error   { color: var(--red); }
+.ft-root .ft-kpi-value-warning { color: var(--amber); }
+.ft-root .ft-kpi-value-success { color: var(--green); }
+
+/* ---------- Card wrapper ---------- */
+.ft-root .fuel-types-list {
+  margin-top: 0;
+}
+
+.ft-root .fuel-types-list .card,
+.ft-root .fuel-types-list {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Filter buttons ---------- */
+.ft-root .filter-buttons-container {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Edit modal / form ---------- */
 .fuel-type-edit-form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-block);
+  gap: 16px;
 }
 
 .fuel-type-edit-form .form-section {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-medium);
+  gap: 12px;
 }
 
 .fuel-type-edit-form .form-section-title {
-  margin: 0 0 var(--spacing-medium) 0;
-  font-size: var(--font-size-md);
+  margin: 0 0 8px 0;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 .fuel-type-edit-form .form-row {
   display: flex;
-  gap: var(--spacing-medium);
+  gap: 12px;
   width: 100%;
 }
 
 .fuel-type-edit-form .form-row-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-medium);
+  gap: 12px;
 }
 
 .fuel-type-edit-form .form-actions {
   display: flex;
-  gap: var(--spacing-medium);
+  gap: 10px;
   justify-content: flex-end;
-  margin-top: var(--spacing-block);
-  padding-top: var(--spacing-block);
-  border-top: 1px solid var(--color-border);
-}
-
-.stats-card {
-  margin-bottom: var(--spacing-block);
-}
-
-.stats-grid-compact {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--spacing-medium);
-}
-
-.stat-card-label {
-  font-size: 11px;
-  color: var(--text-3);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .4px;
-  margin-bottom: var(--spacing-tiny);
-}
-
-.stat-card-value-compact {
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  color: var(--text-1);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -.3px;
-}
-
-.stat-card-value-compact.error {
-  color: var(--red);
-}
-
-.stat-card-value-compact.warning {
-  color: var(--amber);
-}
-
-.stat-card-value-compact.success {
-  color: var(--green);
-}
-
-.stats-loading-card {
-  margin-bottom: var(--spacing-block);
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
 }
 
 .alert-with-margin {
-  margin-bottom: var(--spacing-medium);
+  margin-bottom: 12px;
 }
 
 .text-truncate {
@@ -95,28 +134,27 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
+  display: inline-block;
 }
 
-.error-text {
-  color: var(--color-error);
-  font-size: var(--font-size-sm);
+.ft-root .error-text {
+  color: var(--red);
+  font-size: 12px;
 }
 
-/* Настройки колонок - стили перенесены в ColumnSettingsModal.css */
-
+/* ---------- Column Settings modal (reused) ---------- */
 .column-settings-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-medium);
-  border: none !important;
-  outline: none !important;
+  margin-bottom: 12px;
 }
 
 .column-settings-title {
   margin: 0;
-  font-size: var(--font-size-lg);
+  font-size: 16px;
   font-weight: 600;
+  color: var(--text-1);
 }
 
 .column-settings-close {
@@ -124,41 +162,40 @@
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: var(--color-text-secondary);
+  color: var(--text-3);
   padding: 0;
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--border-radius-sm);
-  transition: background-color 0.2s;
+  border-radius: 6px;
+  transition: background-color .15s ease, color .15s ease;
 }
 
 .column-settings-close:hover {
-  background-color: var(--color-background-hover);
+  background-color: var(--surface-2);
+  color: var(--text-1);
 }
 
 .column-settings-list {
   list-style: none;
   padding: 0;
-  margin: 0 0 var(--spacing-block) 0;
-  border: none !important;
-  outline: none !important;
+  margin: 0 0 16px 0;
 }
 
 .column-settings-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-small);
-  padding: var(--spacing-small);
-  border-radius: var(--border-radius-sm);
+  gap: 8px;
+  padding: 8px;
+  border-radius: 6px;
   cursor: move;
-  transition: background-color 0.2s;
+  transition: background-color .15s ease;
 }
 
 .column-settings-item:hover {
-  background-color: var(--color-background-hover);
+  background-color: var(--surface-2);
 }
 
 .column-settings-item.dragging {
@@ -167,8 +204,8 @@
 
 .column-settings-item-handle {
   cursor: grab;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-md);
+  color: var(--text-3);
+  font-size: 14px;
 }
 
 .column-settings-item-handle:active {
@@ -177,22 +214,35 @@
 
 .column-settings-item-checkbox {
   margin: 0;
+  accent-color: var(--accent);
 }
 
 .column-settings-item-label {
   flex: 1;
-  font-size: var(--font-size-sm);
+  font-size: 13px;
+  color: var(--text-1);
 }
 
 .column-settings-actions {
   display: flex;
-  gap: var(--spacing-medium);
+  gap: 10px;
   justify-content: flex-end;
-  padding-top: var(--spacing-medium);
-  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
 
-.filter-buttons-container {
-  display: flex;
-  gap: var(--spacing-tiny);
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .ft-root .ft-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .ft-root .ft-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ft-root .ft-kpi {
+    padding: 12px 14px;
+  }
 }
