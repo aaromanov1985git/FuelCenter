@@ -18,6 +18,7 @@ import { useTheme } from './hooks/useTheme'
 import { useSidebar } from './hooks/useSidebar'
 import { useTransactions } from './hooks/useTransactions'
 import { useFileUpload } from './hooks/useFileUpload'
+import { useAuthConfig } from './hooks/useAuthConfig'
 import { authFetch } from './utils/api'
 import './App.css'
 
@@ -47,8 +48,7 @@ const App = () => {
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth()
   const isAdmin = user && (user.role === 'admin' || user.is_superuser)
   const [showRegister, setShowRegister] = useState(false)
-  const [authEnabled, setAuthEnabled] = useState(false)
-  const [checkingAuth, setCheckingAuth] = useState(true)
+  const { authEnabled, checkingAuth } = useAuthConfig(authLoading)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('') // Оставляем для обратной совместимости, но используем toast
   const [showClearConfirm, setShowClearConfirm] = useState(false)
@@ -117,80 +117,6 @@ const App = () => {
     handleFileWithTemplate,
     checkFileMatch,
   } = useFileUpload({ onUploaded, setLoading, setError, logout })
-
-  // Проверка настроек аутентификации при загрузке приложения
-  useEffect(() => {
-    let abortController = null
-    let timeoutId = null
-    
-    // Резервный таймаут на случай, если authLoading зависнет
-    const fallbackTimeout = setTimeout(() => {
-      logger.warn('Таймаут проверки аутентификации - продолжаем работу')
-      setCheckingAuth(false)
-      setAuthEnabled(false)
-    }, 10000) // Максимум 10 секунд
-
-    const checkAuthSettings = async () => {
-      // Отменяем предыдущий запрос, если он еще выполняется
-      if (abortController) {
-        abortController.abort()
-      }
-      
-      abortController = new AbortController()
-      timeoutId = setTimeout(() => abortController.abort(), 3000) // Таймаут 3 секунды
-      
-      try {
-        // Запрашиваем настройки из API
-        // В dev режиме API_URL пустой, поэтому используем относительный путь для прокси
-        const configUrl = API_URL ? `${API_URL}/api/v1/config` : '/api/v1/config'
-        const response = await authFetch(configUrl, {
-          method: 'GET',
-          signal: abortController.signal
-        })
-        
-        if (response.ok) {
-          const config = await response.json()
-          setAuthEnabled(config.enable_auth === true)
-        } else {
-          // Если не удалось получить настройки, предполагаем, что аутентификация отключена
-          logger.warn('Не удалось получить настройки аутентификации', { status: response.status })
-          logger.debug('[Auth Check] Ошибка получения настроек, устанавливаем authEnabled = false')
-          setAuthEnabled(false)
-        }
-      } catch (error) {
-        // При ошибке сети предполагаем, что аутентификация отключена
-        // или просто не можем проверить - продолжаем работу
-        if (error.name !== 'AbortError') {
-          logger.warn('Не удалось проверить настройки аутентификации', { error: error.message })
-        }
-        setAuthEnabled(false)
-      } finally {
-        if (timeoutId) {
-          clearTimeout(timeoutId)
-          timeoutId = null
-        }
-        clearTimeout(fallbackTimeout)
-        // В любом случае завершаем проверку
-        setCheckingAuth(false)
-      }
-    }
-
-    // Ждем завершения загрузки AuthContext, затем проверяем настройки
-    if (!authLoading) {
-      checkAuthSettings()
-    }
-
-    return () => {
-      clearTimeout(fallbackTimeout)
-      // Отменяем активный запрос при unmount
-      if (abortController) {
-        abortController.abort()
-      }
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
-    }
-  }, [authLoading])
 
   // Экспорт транзакций в Excel через API
   const downloadExcel = useCallback(async () => {
