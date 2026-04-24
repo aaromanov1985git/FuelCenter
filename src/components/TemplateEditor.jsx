@@ -2306,10 +2306,10 @@ ORDER BY rg."Date" DESC`}
                       style={{
                         padding: 'var(--spacing-tiny) var(--spacing-small)',
                         fontSize: 'var(--font-size-sm)',
-                        border: '1px solid var(--color-border)',
+                        border: '1px solid var(--border)',
                         borderRadius: 'var(--border-radius)',
-                        backgroundColor: useVisualEditor ? 'var(--color-primary)' : 'var(--color-bg)',
-                        color: useVisualEditor ? 'white' : 'var(--color-text)',
+                        backgroundColor: useVisualEditor ? 'var(--accent)' : 'var(--bg)',
+                        color: useVisualEditor ? 'white' : 'var(--text-1)',
                         cursor: 'pointer'
                       }}
                     >
@@ -2322,10 +2322,10 @@ ORDER BY rg."Date" DESC`}
                         style={{
                           padding: 'var(--spacing-tiny) var(--spacing-small)',
                           fontSize: 'var(--font-size-sm)',
-                          border: '1px solid var(--color-danger)',
+                          border: '1px solid var(--red)',
                           borderRadius: 'var(--border-radius)',
-                          backgroundColor: 'var(--color-bg)',
-                          color: 'var(--color-danger)',
+                          backgroundColor: 'var(--bg)',
+                          color: 'var(--red)',
                           cursor: 'pointer'
                         }}
                         title="Очистить маппинг"
@@ -2337,9 +2337,9 @@ ORDER BY rg."Date" DESC`}
                 </div>
                 
                 {useVisualEditor ? (
-                  <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--border-radius)', padding: 'var(--spacing-block)' }}>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--border-radius)', padding: 'var(--spacing-block)' }}>
                     {fuelMappingEntries.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: 'var(--spacing-block)', color: 'var(--color-text-secondary)' }}>
+                      <div style={{ textAlign: 'center', padding: 'var(--spacing-block)', color: 'var(--text-2)' }}>
                         Нет записей маппинга. Нажмите "Добавить" для создания новой записи.
                       </div>
                     ) : (
@@ -2354,12 +2354,12 @@ ORDER BY rg."Date" DESC`}
                               style={{
                                 flex: 1,
                                 padding: 'var(--spacing-tiny) var(--spacing-small)',
-                                border: '1px solid var(--color-border)',
+                                border: '1px solid var(--border)',
                                 borderRadius: 'var(--border-radius)',
                                 fontSize: 'var(--font-size-sm)'
                               }}
                             />
-                            <span style={{ color: 'var(--color-text-secondary)' }}>→</span>
+                            <span style={{ color: 'var(--text-2)' }}>→</span>
                             <div style={{ flex: 1, display: 'flex', gap: 'var(--spacing-tiny)' }}>
                               <select
                                 value={entry.value}
@@ -2367,7 +2367,7 @@ ORDER BY rg."Date" DESC`}
                                 style={{
                                   flex: 1,
                                   padding: 'var(--spacing-tiny) var(--spacing-small)',
-                                  border: '1px solid var(--color-border)',
+                                  border: '1px solid var(--border)',
                                   borderRadius: 'var(--border-radius)',
                                   fontSize: 'var(--font-size-sm)'
                                 }}
@@ -2387,7 +2387,7 @@ ORDER BY rg."Date" DESC`}
                                 style={{
                                   flex: 1,
                                   padding: 'var(--spacing-tiny) var(--spacing-small)',
-                                  border: '1px solid var(--color-border)',
+                                  border: '1px solid var(--border)',
                                   borderRadius: 'var(--border-radius)',
                                   fontSize: 'var(--font-size-sm)'
                                 }}
@@ -2398,10 +2398,10 @@ ORDER BY rg."Date" DESC`}
                               onClick={() => removeFuelMappingEntry(index)}
                               style={{
                                 padding: 'var(--spacing-tiny)',
-                                border: '1px solid var(--color-danger)',
+                                border: '1px solid var(--red)',
                                 borderRadius: 'var(--border-radius)',
-                                backgroundColor: 'var(--color-bg)',
-                                color: 'var(--color-danger)',
+                                backgroundColor: 'var(--bg)',
+                                color: 'var(--red)',
                                 cursor: 'pointer',
                                 minWidth: '32px'
                               }}
@@ -2419,10 +2419,10 @@ ORDER BY rg."Date" DESC`}
                       style={{
                         marginTop: 'var(--spacing-block)',
                         padding: 'var(--spacing-small) var(--spacing-block)',
-                        border: '1px solid var(--color-primary)',
+                        border: '1px solid var(--accent)',
                         borderRadius: 'var(--border-radius)',
-                        backgroundColor: 'var(--color-bg)',
-                        color: 'var(--color-primary)',
+                        backgroundColor: 'var(--bg)',
+                        color: 'var(--accent)',
                         cursor: 'pointer',
                         width: '100%'
                       }}

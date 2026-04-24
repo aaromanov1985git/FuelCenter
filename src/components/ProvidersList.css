@@ -12,18 +12,18 @@
   gap: var(--spacing-element);
   margin-top: var(--spacing-block);
   padding-top: var(--spacing-block);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--border);
 }
 
 .pagination-info {
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-weight: var(--font-weight-normal);
 }
 
 /* Обозначение обязательных полей */
 .required-mark {
-  color: var(--color-error);
+  color: var(--red);
   font-weight: var(--font-weight-bold);
   margin-left: 2px;
 }
@@ -39,15 +39,15 @@
 
 .providers-header h2 {
   margin: 0;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
 }
 
 .btn-add {
   padding: var(--padding-small) var(--padding-section);
-  background: var(--color-success);
-  color: var(--color-bg-card);
+  background: var(--green);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -57,20 +57,20 @@
 }
 
 .btn-add:hover {
-  background: var(--color-success-dark);
+  background: var(--green);
 }
 
 .add-form {
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   padding: var(--padding-section);
   border-radius: var(--radius-medium);
   margin-bottom: var(--spacing-block);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
 }
 
 .add-form h3 {
   margin: 0 0 var(--padding-element) 0;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
@@ -87,24 +87,24 @@
   flex-direction: column;
   gap: var(--spacing-tiny);
   font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-weight: var(--font-weight-normal);
 }
 
 .form-row input[type="text"] {
   padding: var(--padding-tiny) var(--padding-small);
-  border: 1px solid var(--color-border-light);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-small);
   font-size: var(--font-size-sm);
   min-width: 200px;
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
+  background: var(--surface);
+  color: var(--text-1);
 }
 
 .form-row input[type="text"]:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .checkbox-label {
@@ -126,8 +126,8 @@
 
 .btn-save {
   padding: var(--padding-tiny) var(--padding-element);
-  background: var(--color-primary);
-  color: var(--color-bg-card);
+  background: var(--accent);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -137,13 +137,13 @@
 }
 
 .btn-save:hover {
-  background: var(--color-primary-hover);
+  background: var(--accent);
 }
 
 .btn-cancel {
   padding: var(--padding-tiny) var(--padding-element);
-  background: var(--color-text-secondary);
-  color: var(--color-bg-card);
+  background: var(--text-2);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -153,62 +153,62 @@
 }
 
 .btn-cancel:hover {
-  background: var(--color-text-primary);
+  background: var(--text-1);
 }
 
 .providers-table-wrapper {
   overflow-x: auto;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-medium);
-  background: var(--color-bg-card);
+  background: var(--surface);
 }
 
 .providers-table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--color-bg-card);
+  background: var(--surface);
 }
 
 .providers-table thead {
-  background: var(--color-bg-hover);
+  background: var(--surface-2);
 }
 
 .providers-table th {
   padding: var(--padding-small);
   text-align: left;
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  border-bottom: 2px solid var(--color-border-light);
+  color: var(--text-1);
+  border-bottom: 2px solid var(--border-strong);
   font-size: 0.75rem;
 }
 
 .providers-table td {
   padding: var(--padding-small);
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-1);
   font-size: 0.75rem;
   font-weight: var(--font-weight-normal);
 }
 
 .providers-table tbody tr:hover {
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
 }
 
 .edit-input {
   padding: var(--spacing-tiny) var(--padding-small);
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--accent);
   border-radius: var(--radius-tiny);
   font-size: var(--font-size-sm);
   width: 100%;
   max-width: 200px;
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
+  background: var(--surface);
+  color: var(--text-1);
 }
 
 .edit-input:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .status-badge {
@@ -220,13 +220,13 @@
 }
 
 .status-active {
-  background: var(--color-success-light);
-  color: var(--color-success-dark);
+  background: var(--green-soft);
+  color: var(--green);
 }
 
 .status-inactive {
-  background: var(--color-error-light);
-  color: var(--color-error-dark);
+  background: var(--red-soft);
+  color: var(--red);
 }
 
 .action-buttons {
@@ -238,8 +238,8 @@
 
 .btn-edit {
   padding: var(--spacing-tiny) var(--padding-small);
-  background: var(--color-primary);
-  color: var(--color-bg-card);
+  background: var(--accent);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -249,13 +249,13 @@
 }
 
 .btn-edit:hover {
-  background: var(--color-primary-hover);
+  background: var(--accent);
 }
 
 .btn-delete {
   padding: var(--spacing-tiny) var(--padding-small);
-  background: var(--color-error);
-  color: var(--color-bg-card);
+  background: var(--red);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -265,13 +265,13 @@
 }
 
 .btn-delete:hover {
-  background: var(--color-error-dark);
+  background: var(--red);
 }
 
 .btn-save-small {
   padding: var(--spacing-tiny) var(--padding-small);
-  background: var(--color-success);
-  color: var(--color-bg-card);
+  background: var(--green);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -281,13 +281,13 @@
 }
 
 .btn-save-small:hover {
-  background: var(--color-success-dark);
+  background: var(--green);
 }
 
 .btn-cancel-small {
   padding: var(--spacing-tiny) var(--padding-small);
-  background: var(--color-text-secondary);
-  color: var(--color-bg-card);
+  background: var(--text-2);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -297,23 +297,23 @@
 }
 
 .btn-cancel-small:hover {
-  background: var(--color-text-primary);
+  background: var(--text-1);
 }
 
 .error-message {
-  background: var(--color-error-light);
-  color: var(--color-error-dark);
+  background: var(--red-soft);
+  color: var(--red);
   padding: var(--padding-small);
   border-radius: var(--radius-small);
   margin-bottom: var(--spacing-block);
   font-weight: var(--font-weight-normal);
-  border: 1px solid var(--color-error);
+  border: 1px solid var(--red);
 }
 
 .loading {
   text-align: center;
   padding: calc(var(--spacing-section) * 1.5);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
 }
 
 .pagination {
@@ -323,24 +323,24 @@
   gap: var(--spacing-element);
   margin-top: var(--spacing-block);
   padding-top: var(--spacing-block);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--border);
 }
 
 .pagination-btn {
   padding: var(--padding-tiny) var(--padding-element);
-  border: 1px solid var(--color-border-light);
-  background: var(--color-bg-card);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
   border-radius: var(--radius-small);
   cursor: pointer;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   transition: all 0.2s;
 }
 
 .pagination-btn:hover:not(:disabled) {
-  background: var(--color-bg-secondary);
-  border-color: var(--color-border);
+  background: var(--surface-2);
+  border-color: var(--border);
 }
 
 .pagination-btn:disabled {
@@ -350,14 +350,14 @@
 
 .pagination-info {
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-weight: var(--font-weight-normal);
 }
 
 .btn-templates {
   padding: var(--spacing-tiny) var(--padding-small);
-  background: var(--color-primary);
-  color: var(--color-bg-card);
+  background: var(--accent);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -367,13 +367,13 @@
 }
 
 .btn-templates:hover {
-  background: var(--color-primary-hover);
+  background: var(--accent);
 }
 
 .templates-cell,
 .template-editor-cell {
   padding: 0 !important;
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
 }
 
 .templates-section {
@@ -389,15 +389,15 @@
 
 .templates-header h4 {
   margin: 0;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-bold);
 }
 
 .btn-add-small {
   padding: var(--spacing-tiny) var(--padding-small);
-  background: var(--color-success);
-  color: var(--color-bg-card);
+  background: var(--green);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -407,7 +407,7 @@
 }
 
 .btn-add-small:hover {
-  background: var(--color-success-dark);
+  background: var(--green);
 }
 
 .templates-list {
@@ -417,8 +417,8 @@
 }
 
 .template-item {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-small);
   padding: var(--padding-small);
   display: flex;
@@ -435,13 +435,13 @@
 
 .template-name {
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-sm);
 }
 
 .template-description {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
 }
 
 .template-status {
@@ -454,13 +454,13 @@
 }
 
 .template-status.active {
-  background: var(--color-success-light);
-  color: var(--color-success-dark);
+  background: var(--green-soft);
+  color: var(--green);
 }
 
 .template-status.inactive {
-  background: var(--color-error-light);
-  color: var(--color-error-dark);
+  background: var(--red-soft);
+  color: var(--red);
 }
 
 .template-actions {
@@ -470,8 +470,8 @@
 
 .btn-edit-small {
   padding: var(--spacing-tiny) var(--padding-tiny);
-  background: var(--color-primary);
-  color: var(--color-bg-card);
+  background: var(--accent);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -481,13 +481,13 @@
 }
 
 .btn-edit-small:hover {
-  background: var(--color-primary-hover);
+  background: var(--accent);
 }
 
 .btn-delete-small {
   padding: var(--spacing-tiny) var(--padding-tiny);
-  background: var(--color-error);
-  color: var(--color-bg-card);
+  background: var(--red);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -497,13 +497,13 @@
 }
 
 .btn-delete-small:hover {
-  background: var(--color-error-dark);
+  background: var(--red);
 }
 
 .no-templates {
   text-align: center;
   padding: var(--padding-section);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: var(--font-size-sm);
 }
 
@@ -555,10 +555,10 @@
 
   .providers-table tr {
     margin-bottom: var(--spacing-element);
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--border);
     border-radius: var(--radius-medium);
     padding: var(--padding-small);
-    background: var(--color-bg-card);
+    background: var(--surface);
     display: block;
   }
 
@@ -566,7 +566,7 @@
     display: block;
     text-align: right;
     padding: var(--spacing-tiny) var(--padding-small);
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 1px solid var(--border-strong);
     position: relative;
     padding-left: 50%;
   }
@@ -578,7 +578,7 @@
     width: 45%;
     text-align: left;
     font-weight: var(--font-weight-semibold);
-    color: var(--color-text-secondary);
+    color: var(--text-2);
     text-transform: uppercase;
     font-size: var(--font-size-xs);
   }
@@ -608,7 +608,7 @@
 .providers-list :global(.form-section) {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
-  border-top: 1px solid var(--color-border, var(--border));
+  border-top: 1px solid var(--border, var(--border));
 }
 
 .providers-list .form-section:first-of-type,
@@ -624,7 +624,7 @@
   margin-top: 0;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--color-text-primary, var(--text-primary));
+  color: var(--text-1, var(--text-primary));
 }
 
 .providers-list .form-group,
@@ -638,7 +638,7 @@
   margin-bottom: 0.25rem;
   font-weight: 500;
   font-size: 0.875rem;
-  color: var(--color-text-primary, var(--text-primary));
+  color: var(--text-1, var(--text-primary));
 }
 
 .providers-list .form-row,

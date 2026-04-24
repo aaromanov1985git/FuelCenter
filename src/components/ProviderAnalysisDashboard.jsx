@@ -73,7 +73,7 @@ function MarkerCluster({ markers, createIcon, onMarkerClick }) {
           const count = cluster.getChildCount()
           return L.divIcon({
             html: `<div style="
-              background-color: var(--color-primary);
+              background-color: var(--accent);
               color: white;
               border-radius: 50%;
               width: 40px;
@@ -145,7 +145,7 @@ function createCustomIcon(transactionCount, maxCount) {
     html: `<div style="
       width: ${size}px;
       height: ${size}px;
-      background-color: var(--color-primary);
+      background-color: var(--accent);
       border: 2px solid white;
       border-radius: 50%;
       display: flex;
@@ -870,17 +870,17 @@ const ProviderAnalysisDashboard = () => {
         style={{ 
           padding: '12px', 
           textAlign: 'left', 
-          borderBottom: '2px solid var(--color-border)',
+          borderBottom: '2px solid var(--border)',
           cursor: 'pointer',
           userSelect: 'none',
           position: 'relative',
-          backgroundColor: isActive ? 'var(--color-bg-secondary)' : 'transparent',
+          backgroundColor: isActive ? 'var(--surface-2)' : 'transparent',
           transition: 'background-color 0.2s'
         }}
         onClick={() => handleCardsSummarySort(field)}
         onMouseEnter={(e) => {
           if (!isActive) {
-            e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)'
+            e.currentTarget.style.backgroundColor = 'var(--surface-2)'
           }
         }}
         onMouseLeave={(e) => {
@@ -893,7 +893,7 @@ const ProviderAnalysisDashboard = () => {
           <span>{label}</span>
           <span style={{ 
             fontSize: '14px', 
-            color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+            color: isActive ? 'var(--accent)' : 'var(--text-2)',
             fontWeight: isActive ? 'bold' : 'normal'
           }}>
             {sortIcon}
@@ -1126,7 +1126,7 @@ const ProviderAnalysisDashboard = () => {
                 />
                 <div className="multiselect-list" style={{ maxHeight: '200px', overflowY: 'auto', padding: 'var(--spacing-xs)' }}>
                   {filteredGasStations.length === 0 ? (
-                    <div style={{ padding: '4px', color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>
+                    <div style={{ padding: '4px', color: 'var(--text-2)', fontSize: '0.85rem' }}>
                       {gasStations.length === 0 
                         ? 'АЗС не загружены' 
                         : selectedProvider 
@@ -1158,7 +1158,7 @@ const ProviderAnalysisDashboard = () => {
               <label>Тип топлива</label>
               <div className="multiselect-list" style={{ maxHeight: '120px', overflowY: 'auto', padding: 'var(--spacing-xs)' }}>
                 {availableFuelTypes.length === 0 ? (
-                  <div style={{ padding: 'var(--spacing-xs)', color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+                  <div style={{ padding: 'var(--spacing-xs)', color: 'var(--text-2)', fontSize: '0.9rem' }}>
                     {loading ? 'Загрузка...' : 'Нет типов топлива'}
                   </div>
                 ) : (
@@ -1400,14 +1400,14 @@ const ProviderAnalysisDashboard = () => {
                             key={cardData.cardNumber || index}
                             onClick={() => setSelectedCardForDetails(cardData.cardNumber === 'Без карты' ? null : cardData.cardNumber)}
                             style={{ 
-                              borderBottom: '1px solid var(--color-border)',
+                              borderBottom: '1px solid var(--border)',
                               cursor: 'pointer',
-                              backgroundColor: selectedCardForDetails === cardData.cardNumber ? 'var(--color-primary-light)' : 'transparent',
+                              backgroundColor: selectedCardForDetails === cardData.cardNumber ? 'var(--accent-soft)' : 'transparent',
                               transition: 'background-color 0.2s'
                             }}
                             onMouseEnter={(e) => {
                               if (selectedCardForDetails !== cardData.cardNumber) {
-                                e.currentTarget.style.backgroundColor = 'var(--color-bg-secondary)'
+                                e.currentTarget.style.backgroundColor = 'var(--surface-2)'
                               }
                             }}
                             onMouseLeave={(e) => {
@@ -1471,17 +1471,17 @@ const ProviderAnalysisDashboard = () => {
                           <tr>
                             <th 
                               onClick={() => handleSort('transaction_date')}
-                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}
+                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border)' }}
                             >
                               Дата и время
                               {sortConfig.field === 'transaction_date' && (
                                 <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
                               )}
                             </th>
-                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}>АЗС</th>
+                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border)' }}>АЗС</th>
                             <th 
                               onClick={() => handleSort('product')}
-                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}
+                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border)' }}
                             >
                               Тип топлива
                               {sortConfig.field === 'product' && (
@@ -1490,7 +1490,7 @@ const ProviderAnalysisDashboard = () => {
                             </th>
                             <th 
                               onClick={() => handleSort('quantity')}
-                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}
+                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border)' }}
                             >
                               Объём (л)
                               {sortConfig.field === 'quantity' && (
@@ -1499,7 +1499,7 @@ const ProviderAnalysisDashboard = () => {
                             </th>
                             <th 
                               onClick={() => handleSort('amount')}
-                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--color-border)' }}
+                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border)' }}
                             >
                               Сумма (₽)
                               {sortConfig.field === 'amount' && (
@@ -1512,7 +1512,7 @@ const ProviderAnalysisDashboard = () => {
                           {detailTransactions
                             .slice((detailCurrentPage - 1) * detailLimit, detailCurrentPage * detailLimit)
                             .map(t => (
-                            <tr key={t.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                            <tr key={t.id} style={{ borderBottom: '1px solid var(--border)' }}>
                               <td style={{ padding: '12px' }}>{formatDateTime(t.transaction_date)}</td>
                               <td style={{ padding: '12px' }}>{t.gasStationName}</td>
                               <td style={{ padding: '12px' }}>{t.product || '—'}</td>

@@ -27,7 +27,7 @@
 }
 
 .template-select-modal-content {
-  background: var(--color-bg-card);
+  background: var(--surface);
   border-radius: var(--radius-large);
   padding: var(--spacing-section);
   max-width: 600px;
@@ -40,7 +40,7 @@
   flex-direction: column;
   gap: var(--spacing-section);
   transform-origin: center;
-  border: 1px solid var(--color-border-light);
+  border: 1px solid var(--border-strong);
 }
 
 @keyframes slideUpScale {
@@ -60,14 +60,14 @@
   align-items: center;
   margin: 0;
   padding-bottom: var(--spacing-section);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 .template-select-modal-title {
   margin: 0;
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   line-height: 1.2;
 }
 
@@ -76,7 +76,7 @@
   border: none;
   font-size: 2rem;
   line-height: 1;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -89,8 +89,8 @@
 }
 
 .template-select-modal-close:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
+  background: var(--surface-2);
+  color: var(--text-1);
 }
 
 .template-select-modal-body {
@@ -106,7 +106,7 @@
   justify-content: flex-end;
   flex-wrap: wrap;
   padding-top: var(--spacing-section);
-  border-top: 1px solid var(--color-border-light);
+  border-top: 1px solid var(--border-strong);
 }
 
 /* Адаптивность */

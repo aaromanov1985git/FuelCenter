@@ -3,7 +3,7 @@
 }
 
 .stats-filters {
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   padding: var(--spacing-element);
   border-radius: var(--radius-md);
 }
@@ -25,11 +25,11 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-element);
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   border-radius: var(--radius-md);
 }
 
 .stat-label {
   font-weight: 500;
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }

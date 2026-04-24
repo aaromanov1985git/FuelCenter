@@ -4,11 +4,11 @@
 
 .provider-analysis-dashboard h1 {
   margin-bottom: var(--spacing-element);
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 .provider-analysis-dashboard .subtitle {
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   margin-bottom: var(--spacing-section);
 }
 
@@ -51,7 +51,7 @@
 .filter-group label {
   font-weight: 600;
   margin-bottom: var(--spacing-element);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: 1rem;
   display: block;
 }
@@ -69,10 +69,10 @@
   max-height: 150px;
   overflow-y: auto;
   overflow-x: hidden;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: var(--spacing-element);
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   font-size: 0.95rem;
   position: relative;
   z-index: 2;
@@ -147,12 +147,12 @@
 .kpi-value {
   font-size: 2rem;
   font-weight: bold;
-  color: var(--color-primary);
+  color: var(--accent);
   margin-bottom: var(--spacing-xs);
 }
 
 .kpi-label {
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: 0.9rem;
 }
 
@@ -230,44 +230,44 @@
 
 .marker-popup h4 {
   margin: 0 0 var(--spacing-xs) 0;
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 .marker-popup p {
   margin: var(--spacing-xs) 0;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: 0.9rem;
 }
 
 .fuel-types-distribution {
   margin-top: var(--spacing-xs);
   padding-top: var(--spacing-xs);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--border);
 }
 
 .fuel-type-item {
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   margin-top: 4px;
 }
 
 .no-coords-list {
   margin-top: var(--spacing-element);
   padding: var(--spacing-element);
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   border-radius: var(--radius-md);
 }
 
 .no-coords-list h4 {
   margin: 0 0 var(--spacing-xs) 0;
   font-size: 0.9rem;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
 }
 
 .no-coords-list ul {
   margin: 0;
   padding-left: 20px;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: 0.9rem;
 }
 
@@ -285,7 +285,7 @@
 
 .table-header h3 {
   margin: 0;
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 .table-header th {
@@ -294,7 +294,7 @@
 }
 
 .table-header th:hover {
-  background: var(--color-bg-hover);
+  background: var(--surface-2);
 }
 
 /* Аналитические блоки */
@@ -306,16 +306,16 @@
 
 .analytics-section .card h3 {
   margin: 0 0 var(--spacing-element) 0;
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 .favorite-azs,
 .main-fuel-type {
   padding: var(--spacing-element);
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-element);
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 /* Барчарт АЗС */
@@ -334,7 +334,7 @@
 
 .bar-label {
   font-size: 0.9rem;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -343,14 +343,14 @@
 .bar-wrapper {
   position: relative;
   height: 30px;
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
 
 .bar {
   height: 100%;
-  background: linear-gradient(to right, var(--color-primary), var(--color-info));
+  background: linear-gradient(to right, var(--accent), var(--cyan));
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -368,7 +368,7 @@
 
 .bar-count {
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   text-align: right;
 }
 
@@ -388,21 +388,21 @@
 
 .fuel-type-label {
   font-size: 0.9rem;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-weight: 500;
 }
 
 .fuel-type-bar-wrapper {
   position: relative;
   height: 25px;
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
 
 .fuel-type-bar {
   height: 100%;
-  background: linear-gradient(to right, var(--color-success), var(--color-warning));
+  background: linear-gradient(to right, var(--green), var(--amber));
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -420,7 +420,7 @@
 
 .fuel-type-details {
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   text-align: right;
 }
 
@@ -498,11 +498,11 @@
 }
 
 .sortable-header:hover {
-  background-color: var(--color-bg-hover) !important;
+  background-color: var(--surface-2) !important;
 }
 
 .sortable-header-active {
-  background-color: var(--color-bg-secondary) !important;
+  background-color: var(--surface-2) !important;
   font-weight: 600;
 }
 
@@ -520,6 +520,6 @@
 
 .sortable-header-active .sort-icon {
   opacity: 1;
-  color: var(--color-primary);
+  color: var(--accent);
   font-weight: bold;
 }

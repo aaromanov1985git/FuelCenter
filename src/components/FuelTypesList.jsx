@@ -604,7 +604,7 @@ const FuelTypesList = () => {
         {fuelTypeToDelete && (
           <div>
             <p>Вы уверены, что хотите удалить вид топлива?</p>
-            <div style={{ marginTop: 'var(--spacing-block)', padding: 'var(--spacing-block)', backgroundColor: 'var(--color-bg-secondary)', borderRadius: 'var(--border-radius)' }}>
+            <div style={{ marginTop: 'var(--spacing-block)', padding: 'var(--spacing-block)', backgroundColor: 'var(--surface-2)', borderRadius: 'var(--border-radius)' }}>
               <p style={{ margin: 0, fontWeight: 'bold' }}>Исходное наименование:</p>
               <p style={{ margin: 'var(--spacing-tiny) 0' }}>{fuelTypeToDelete.original_name}</p>
               <p style={{ margin: 0, fontWeight: 'bold' }}>Нормализованное наименование:</p>
@@ -638,7 +638,7 @@ const FuelTypesList = () => {
                 ×
               </button>
             </div>
-            <p style={{ marginBottom: 'var(--spacing-block)', color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+            <p style={{ marginBottom: 'var(--spacing-block)', color: 'var(--text-2)', fontSize: 'var(--font-size-sm)' }}>
               Перетащите поля для изменения порядка. Отметьте галочками поля, которые хотите видеть в таблице.
             </p>
             <ul className="column-settings-list">
@@ -705,7 +705,7 @@ const FuelTypesList = () => {
                       />
                       <span className="column-settings-item-label">
                         {columnLabels[key] || key}
-                        {key === 'actions' && <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginLeft: 'var(--spacing-tiny)' }}>(обязательно)</span>}
+                        {key === 'actions' && <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-2)', marginLeft: 'var(--spacing-tiny)' }}>(обязательно)</span>}
                       </span>
                     </li>
                   )

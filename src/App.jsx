@@ -1986,7 +1986,7 @@ const App = () => {
               </div>
               {selectedProviderTab !== null && (
                 <div className="upload-dashboard-subvalue">
-                  <span style={{ fontWeight: 'bold', color: 'var(--color-primary)' }}>
+                  <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>
                     Фильтр: {providers.find(p => p.id === selectedProviderTab)?.name || '—'}
                   </span>
                   <button
@@ -1995,9 +1995,9 @@ const App = () => {
                       marginLeft: '8px',
                       padding: '2px 8px',
                       fontSize: '12px',
-                      background: 'var(--color-error-light)',
-                      color: 'var(--color-error-dark)',
-                      border: '1px solid var(--color-error)',
+                      background: 'var(--red-soft)',
+                      color: 'var(--red)',
+                      border: '1px solid var(--red)',
                       borderRadius: '4px',
                       cursor: 'pointer'
                     }}

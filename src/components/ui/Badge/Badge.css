@@ -27,33 +27,33 @@
 
 /* Variants */
 .badge-success {
-  background: var(--color-success-light);
-  color: var(--color-success-dark);
-  border-color: var(--color-success);
+  background: var(--green-soft);
+  color: var(--green);
+  border-color: var(--green);
 }
 
 .badge-warning {
-  background: var(--color-warning-light);
-  color: var(--color-warning-dark);
-  border-color: var(--color-warning);
+  background: var(--amber-soft);
+  color: var(--amber);
+  border-color: var(--amber);
 }
 
 .badge-error {
-  background: var(--color-error-light);
-  color: var(--color-error-dark);
-  border-color: var(--color-error);
+  background: var(--red-soft);
+  color: var(--red);
+  border-color: var(--red);
 }
 
 .badge-info {
-  background: var(--color-info-light);
-  color: var(--color-info-dark);
-  border-color: var(--color-info);
+  background: var(--cyan-soft);
+  color: var(--cyan);
+  border-color: var(--cyan);
 }
 
 .badge-neutral {
-  background: var(--color-bg-secondary);
-  color: var(--color-text-primary);
-  border-color: var(--color-border);
+  background: var(--surface-2);
+  color: var(--text-1);
+  border-color: var(--border);
 }
 
 /* Dot indicator */

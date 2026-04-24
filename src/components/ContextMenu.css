@@ -1,7 +1,7 @@
 .context-menu {
   position: fixed;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   padding: var(--spacing-tiny);
@@ -30,7 +30,7 @@
   border: none;
   background: none;
   text-align: left;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
@@ -39,12 +39,12 @@
 }
 
 .context-menu-item:hover:not(.disabled) {
-  background: var(--color-bg-hover);
-  color: var(--color-primary);
+  background: var(--surface-2);
+  color: var(--accent);
 }
 
 .context-menu-item:active:not(.disabled) {
-  background: var(--color-primary-light);
+  background: var(--accent-soft);
 }
 
 .context-menu-item.disabled {
@@ -67,13 +67,13 @@
 
 .context-menu-shortcut {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  color: var(--text-3);
   font-weight: var(--font-weight-normal);
 }
 
 .context-menu-divider {
   height: 1px;
-  background: var(--color-border-light);
+  background: var(--border-strong);
   margin: var(--spacing-tiny) 0;
 }
 

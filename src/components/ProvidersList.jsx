@@ -488,7 +488,7 @@ const ProvidersList = () => {
 
           {/* Фильтр по организации */}
           <div style={{ marginBottom: 'var(--spacing-element)', display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)' }}>
+            <label style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-1)' }}>
               Фильтр по организации:
             </label>
             <Select

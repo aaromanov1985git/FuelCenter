@@ -24,7 +24,7 @@
 }
 
 .ui-modal {
-  background: var(--color-bg-card);
+  background: var(--surface);
   border-radius: var(--radius-large);
   box-shadow: var(--shadow-xl);
   max-height: 90vh;
@@ -79,13 +79,13 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--padding-section);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .ui-modal-title {
   margin: 0;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
 }
@@ -94,7 +94,7 @@
   background: none;
   border: none;
   font-size: 32px;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -109,8 +109,8 @@
 }
 
 .ui-modal-close:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
+  background: var(--surface-2);
+  color: var(--text-1);
 }
 
 .ui-modal-content {
@@ -129,7 +129,7 @@
   gap: var(--spacing-small);
   justify-content: flex-end;
   padding: var(--padding-section);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -224,6 +224,6 @@
 
   .ui-modal-footer {
     padding: var(--spacing-responsive-element);
-    border-top: 2px solid var(--color-border);
+    border-top: 2px solid var(--border);
   }
 }

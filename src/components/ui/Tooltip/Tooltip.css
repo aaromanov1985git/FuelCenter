@@ -10,8 +10,8 @@
   z-index: var(--z-tooltip);
   max-width: 300px;
   padding: var(--spacing-small) var(--spacing-element);
-  background: var(--color-text-primary);
-  color: var(--color-bg-card);
+  background: var(--text-1);
+  color: var(--surface);
   font-size: var(--font-size-sm);
   line-height: 1.4;
   border-radius: var(--border-radius);
@@ -33,7 +33,7 @@
   position: absolute;
   width: 8px;
   height: 8px;
-  background: var(--color-text-primary);
+  background: var(--text-1);
   transform: rotate(45deg);
 }
 

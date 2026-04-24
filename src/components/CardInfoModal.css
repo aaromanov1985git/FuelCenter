@@ -53,12 +53,12 @@
 }
 
 .status-active {
-  color: var(--color-success);
+  color: var(--green);
   font-weight: 500;
 }
 
 .status-blocked {
-  color: var(--color-error);
+  color: var(--red);
   font-weight: 500;
 }
 

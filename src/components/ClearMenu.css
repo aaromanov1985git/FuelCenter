@@ -17,13 +17,13 @@
   position: absolute;
   right: 4px;
   bottom: 4px;
-  color: var(--color-text-primary, #1e293b);
+  color: var(--text-1, #1e293b);
   pointer-events: none;
   transition: transform 0.2s;
-  background: var(--color-bg-card, #fff);
+  background: var(--surface, #fff);
   border-radius: 2px;
   padding: 1px;
-  fill: var(--color-text-primary, #1e293b);
+  fill: var(--text-1, #1e293b);
   opacity: 1;
 }
 
@@ -32,7 +32,7 @@
 :not([data-theme]) .clear-menu-arrow {
   color: #1e293b;
   fill: #1e293b;
-  background: var(--color-bg-card);
+  background: var(--surface);
 }
 
 .clear-menu.dropdown-open .clear-menu-arrow {

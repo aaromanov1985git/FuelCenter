@@ -1,9 +1,9 @@
 .breadcrumbs {
   margin-bottom: var(--spacing-block);
   padding: var(--spacing-element) var(--spacing-block);
-  background: var(--color-bg-card);
+  background: var(--surface);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-light);
+  border: 1px solid var(--border-strong);
 }
 
 /* Когда сайдбар скрыт, кнопка меню на left: 20px, нужен отступ для breadcrumbs */
@@ -28,7 +28,7 @@
 }
 
 .breadcrumbs-separator {
-  color: var(--color-text-tertiary);
+  color: var(--text-3);
   font-size: var(--font-size-sm);
   user-select: none;
   margin: 0 var(--spacing-tiny);
@@ -39,7 +39,7 @@
   border: none;
   padding: var(--spacing-tiny) var(--padding-tiny);
   margin: calc(-1 * var(--spacing-tiny)) calc(-1 * var(--padding-tiny));
-  color: var(--color-primary);
+  color: var(--accent);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
@@ -50,8 +50,8 @@
 }
 
 .breadcrumbs-link:hover {
-  background: var(--color-primary-light);
-  color: var(--color-primary-hover);
+  background: var(--accent-soft);
+  color: var(--accent);
   text-decoration: underline;
 }
 
@@ -60,12 +60,12 @@
 }
 
 .breadcrumbs-text {
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: var(--font-size-sm);
 }
 
 .breadcrumbs-current {
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   padding: var(--spacing-tiny) var(--padding-tiny);
@@ -109,7 +109,7 @@
 
     .breadcrumbs-item:not(:first-child)::before {
       content: '...';
-      color: var(--color-text-tertiary);
+      color: var(--text-3);
       margin-right: var(--spacing-small);
     }
   }

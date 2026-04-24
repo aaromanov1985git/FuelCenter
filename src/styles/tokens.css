@@ -168,36 +168,11 @@ select:-webkit-autofill {
 @keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:.4} }
 @keyframes shimmer  { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-/* ============ BACKWARD COMPATIBILITY ALIASES ============
- * Old --color-* variable names from index.css map to new tokens.
- * Remove this block after all components are migrated to new names.
+/* ============ LAYOUT ALIASES ============
+ * Radius/spacing/shadow aliases kept — widely used across legacy CSS.
+ * Color --color-* aliases were removed after migration to --accent/--bg/--surface/--text-*.
  */
 :root, [data-theme="dark"], [data-theme="light"] {
-  --color-primary:        var(--accent);
-  --color-primary-hover:  var(--accent);
-  --color-primary-light:  var(--accent-soft);
-  --color-bg:             var(--bg);
-  --color-bg-primary:     var(--bg);
-  --color-bg-secondary:   var(--surface-2);
-  --color-bg-card:        var(--surface);
-  --color-bg-input:       var(--surface-2);
-  --color-bg-hover:       var(--surface-2);
-  --color-text-primary:   var(--text-1);
-  --color-text-secondary: var(--text-2);
-  --color-text-tertiary:  var(--text-3);
-  --color-border:         var(--border);
-  --color-border-light:   var(--border-strong);
-  --color-success:        var(--green);
-  --color-success-light:  var(--green-soft);
-  --color-success-dark:   var(--green);
-  --color-warning:        var(--amber);
-  --color-warning-light:  var(--amber-soft);
-  --color-warning-dark:   var(--amber);
-  --color-error:          var(--red);
-  --color-error-light:    var(--red-soft);
-  --color-error-dark:     var(--red);
-  --color-info:           var(--cyan);
-  --color-info-light:     var(--cyan-soft);
   --radius-small:         6px;
   --radius-medium:        8px;
   --radius-large:         12px;

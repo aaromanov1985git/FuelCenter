@@ -6,29 +6,29 @@
 
 .map-instructions {
   padding: var(--spacing-small);
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   border-radius: var(--radius-medium);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
 }
 
 .map-instructions p {
   margin: 0 0 var(--spacing-small) 0;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-sm);
 }
 
 .coordinates-display {
   padding: var(--spacing-small);
-  background: var(--color-bg-card);
+  background: var(--surface);
   border-radius: var(--radius-small);
   font-family: monospace;
   font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border-light);
+  color: var(--text-1);
+  border: 1px solid var(--border-strong);
 }
 
 .map-container-wrapper {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-medium);
   overflow: hidden;
 }
@@ -42,22 +42,22 @@
 /* Исправление стилей Leaflet для темной темы */
 [data-theme="dark"] .leaflet-container,
 [data-theme="dark"] .leaflet-container {
-  background: var(--color-bg-card);
+  background: var(--surface);
 }
 
 /* Улучшение видимости контролов карты */
 .leaflet-control-zoom a {
-  background-color: var(--color-bg-card);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
+  background-color: var(--surface);
+  color: var(--text-1);
+  border: 1px solid var(--border);
 }
 
 .leaflet-control-zoom a:hover {
-  background-color: var(--color-bg-hover);
+  background-color: var(--surface-2);
 }
 
 [data-theme="dark"] .leaflet-control-zoom a,
 [data-theme="dark"] .leaflet-control-zoom a {
-  background-color: var(--color-bg-secondary);
-  color: var(--color-text-primary);
+  background-color: var(--surface-2);
+  color: var(--text-1);
 }

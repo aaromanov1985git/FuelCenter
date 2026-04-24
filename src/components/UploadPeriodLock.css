@@ -6,14 +6,14 @@
 
 .upload-period-lock h2 {
   margin-bottom: var(--spacing-small);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
 }
 
 .upload-period-lock .description {
   margin-bottom: var(--spacing-block);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   line-height: var(--line-height-relaxed);
   font-size: 1rem;
   font-weight: var(--font-weight-medium);
@@ -21,11 +21,11 @@
 }
 
 .lock-form {
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   padding: var(--padding-section);
   border-radius: var(--radius-medium);
   margin-bottom: var(--spacing-block);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
 }
 
 .form-group {
@@ -36,7 +36,7 @@
   display: block;
   margin-bottom: var(--spacing-small);
   font-weight: var(--font-weight-normal);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-sm);
 }
 
@@ -56,12 +56,12 @@
 
 .info-item {
   margin-bottom: var(--spacing-small);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: var(--font-size-sm);
 }
 
 .info-item strong {
-  color: var(--color-text-primary);
+  color: var(--text-1);
   margin-right: var(--spacing-small);
   font-weight: var(--font-weight-semibold);
 }

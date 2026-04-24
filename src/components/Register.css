@@ -4,17 +4,17 @@
   align-items: center;
   min-height: 100vh;
   padding: var(--padding-section);
-  background: var(--color-bg-primary);
+  background: var(--bg);
 }
 
 .register-card {
   width: 100%;
   max-width: 500px;
   padding: var(--spacing-section);
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
 }
 
 /* Заголовок теперь использует Card.Title */
@@ -22,14 +22,14 @@
   margin: 0 0 var(--spacing-small) 0;
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   text-align: center;
 }
 
 .register-subtitle {
   margin: 0 0 var(--spacing-section) 0;
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   text-align: center;
 }
 
@@ -48,36 +48,36 @@
 .register-label {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 .required {
-  color: var(--color-error);
+  color: var(--red);
 }
 
 .register-select {
   padding: var(--padding-small) var(--padding-small);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   font-size: var(--font-size-base);
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  background: var(--bg);
+  color: var(--text-1);
   transition: all 0.2s ease;
 }
 
 .register-select:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .register-select.error {
-  border-color: var(--color-error);
+  border-color: var(--red);
 }
 
 .register-error-text {
   font-size: var(--font-size-xs);
-  color: var(--color-error);
+  color: var(--red);
 }
 
 /* Кнопки теперь используют стандартный Button из ui библиотеки */
@@ -95,8 +95,8 @@
 .register-error {
   margin: 0 0 16px 0;
   padding: var(--padding-small);
-  background: var(--color-error-light);
-  color: var(--color-error-dark);
+  background: var(--red-soft);
+  color: var(--red);
   border-radius: var(--radius-md);
   text-align: center;
 }
