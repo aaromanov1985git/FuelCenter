@@ -18,22 +18,22 @@
 
 .notification-settings-description {
   margin: 0.5rem 0;
-  color: var(--text-secondary, #666);
+  color: var(--text-2);
   font-size: 0.9rem;
 }
 
 .notification-settings-channel {
   margin-bottom: 1.5rem;
   padding: 1rem;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--card-background, #ffffff);
+  background: var(--surface);
 }
 
 .notification-settings-telegram-fields {
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--border-color, #e0e0e0);
+  border-top: 1px solid var(--border);
 }
 
 .notification-settings-categories {
@@ -44,14 +44,14 @@
 
 .notification-settings-category {
   padding: 1rem;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--card-background, #ffffff);
+  background: var(--surface);
 }
 
 .notification-settings-category-desc {
   margin: 0.5rem 0 0 0;
-  color: var(--text-secondary, #666);
+  color: var(--text-2);
   font-size: 0.875rem;
 }
 
@@ -60,20 +60,20 @@
   justify-content: flex-end;
   margin-top: 2rem;
   padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color, #e0e0e0);
+  border-top: 1px solid var(--border);
 }
 
 .notification-settings-loading {
   padding: 2rem;
   text-align: center;
-  color: var(--text-secondary, #666);
+  color: var(--text-2);
 }
 
 /* Темная тема */
 [data-theme="dark"] .notification-settings-channel,
 [data-theme="dark"] .notification-settings-category {
-  border-color: var(--border-color, #333);
-  background: var(--card-background, #1a1a1a);
+  border-color: var(--border);
+  background: var(--surface);
 }
 
 /* Адаптивность */

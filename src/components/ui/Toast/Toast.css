@@ -47,7 +47,7 @@
   align-items: flex-start;
   gap: var(--spacing-element);
   padding: var(--spacing-element);
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-medium);
   border: 1px solid;
   background: var(--surface);
   box-shadow: var(--shadow-lg);
@@ -123,8 +123,8 @@
 
 .ui-toast-title {
   font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-md);
-  margin-bottom: var(--spacing-xs);
+  font-size: 14px;
+  margin-bottom: var(--spacing-tiny);
   color: var(--text-1);
 }
 

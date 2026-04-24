@@ -286,7 +286,7 @@ const FuelCardEditModal = ({
               <div className="form-group">
                 <label>Шаблон API</label>
                 {loadingTemplates ? (
-                  <div style={{ padding: '0.5rem 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                  <div style={{ padding: '0.5rem 0', fontSize: '0.875rem', color: 'var(--text-2)' }}>
                     Загрузка...
                   </div>
                 ) : apiTemplates.length > 0 ? (
@@ -304,7 +304,7 @@ const FuelCardEditModal = ({
                     fullWidth
                   />
                 ) : (
-                  <div style={{ padding: '0.5rem 0', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                  <div style={{ padding: '0.5rem 0', fontSize: '0.875rem', color: 'var(--text-2)' }}>
                     Нет шаблонов "web" или "api"
                   </div>
                 )}

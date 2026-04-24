@@ -1,8 +1,8 @@
 .masked-input {
   width: 100%;
-  padding: var(--padding-input);
+  padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-input);
+  border-radius: var(--radius-small);
   font-size: var(--font-size-base);
   color: var(--text-1);
   background: var(--bg);

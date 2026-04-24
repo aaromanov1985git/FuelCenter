@@ -1070,7 +1070,7 @@ const ProviderAnalysisDashboard = () => {
                 placeholder="Поиск по карте..."
                 value={cardSearch}
                 onChange={(e) => setCardSearch(e.target.value)}
-                style={{ marginBottom: 'var(--spacing-xs)' }}
+                style={{ marginBottom: 'var(--spacing-tiny)' }}
               />
               <div className="multiselect-container">
                 <Checkbox
@@ -1110,7 +1110,7 @@ const ProviderAnalysisDashboard = () => {
                 placeholder="Поиск по названию..."
                 value={gasStationSearch}
                 onChange={(e) => setGasStationSearch(e.target.value)}
-                style={{ marginBottom: 'var(--spacing-xs)' }}
+                style={{ marginBottom: 'var(--spacing-tiny)' }}
               />
               <div className="multiselect-container">
                 <Checkbox
@@ -1124,7 +1124,7 @@ const ProviderAnalysisDashboard = () => {
                   }}
                   label="Все"
                 />
-                <div className="multiselect-list" style={{ maxHeight: '200px', overflowY: 'auto', padding: 'var(--spacing-xs)' }}>
+                <div className="multiselect-list" style={{ maxHeight: '200px', overflowY: 'auto', padding: 'var(--spacing-tiny)' }}>
                   {filteredGasStations.length === 0 ? (
                     <div style={{ padding: '4px', color: 'var(--text-2)', fontSize: '0.85rem' }}>
                       {gasStations.length === 0 
@@ -1156,9 +1156,9 @@ const ProviderAnalysisDashboard = () => {
             {/* Тип топлива */}
             <div className="filter-group">
               <label>Тип топлива</label>
-              <div className="multiselect-list" style={{ maxHeight: '120px', overflowY: 'auto', padding: 'var(--spacing-xs)' }}>
+              <div className="multiselect-list" style={{ maxHeight: '120px', overflowY: 'auto', padding: 'var(--spacing-tiny)' }}>
                 {availableFuelTypes.length === 0 ? (
-                  <div style={{ padding: 'var(--spacing-xs)', color: 'var(--text-2)', fontSize: '0.9rem' }}>
+                  <div style={{ padding: 'var(--spacing-tiny)', color: 'var(--text-2)', fontSize: '0.9rem' }}>
                     {loading ? 'Загрузка...' : 'Нет типов топлива'}
                   </div>
                 ) : (

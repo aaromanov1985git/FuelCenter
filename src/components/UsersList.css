@@ -1,7 +1,7 @@
 .users-card {
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-large);
   padding: var(--spacing-block);
   box-shadow: var(--shadow-md);
 }
@@ -29,7 +29,7 @@
 .users-search {
   padding: var(--padding-small) var(--padding-element);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   background: var(--bg);
   min-width: 240px;
 }
@@ -37,7 +37,7 @@
 .users-add-button {
   padding: var(--padding-element) var(--padding-small);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   background: var(--accent);
   color: #fff;
   cursor: pointer;
@@ -58,7 +58,7 @@
 .users-select {
   padding: var(--padding-small) var(--padding-element);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   background: var(--bg);
 }
 
@@ -75,7 +75,7 @@
 .users-save,
 .users-cancel {
   padding: var(--padding-element) var(--padding-small);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   border: 1px solid var(--border);
   cursor: pointer;
 }
@@ -154,7 +154,7 @@
 
 .users-toggle {
   padding: var(--padding-tiny) var(--padding-element);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   border: 1px solid var(--border);
   background: var(--surface-2);
   cursor: pointer;
@@ -196,7 +196,7 @@
 .users-modal-content {
   position: relative;
   background: var(--surface-2);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-large);
   box-shadow: var(--shadow-lg);
   padding: var(--spacing-block);
   width: min(520px, calc(100% - 32px));
@@ -243,9 +243,9 @@
 }
 
 .users-pagination-btn {
-  padding: var(--padding-small) var(--padding-block);
+  padding: var(--padding-small) 8px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   background: var(--bg);
   color: var(--text-1);
   cursor: pointer;

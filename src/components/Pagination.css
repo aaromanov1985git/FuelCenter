@@ -5,7 +5,7 @@
   margin-top: var(--spacing-block);
   padding: var(--spacing-block);
   background: var(--surface);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   border: 1px solid var(--border-strong);
 }
 
@@ -33,7 +33,7 @@
 .pagination-page-size-select {
   padding: var(--padding-tiny) var(--padding-small);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   background: var(--bg);
   color: var(--text-1);
   font-size: var(--font-size-sm);
@@ -69,7 +69,7 @@
   height: 36px;
   padding: 0 12px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   background: var(--bg);
   color: var(--text-1);
   font-size: var(--font-size-sm);
@@ -145,7 +145,7 @@
   width: 60px;
   padding: var(--padding-tiny) var(--padding-small);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   background: var(--bg);
   color: var(--text-1);
   font-size: var(--font-size-sm);

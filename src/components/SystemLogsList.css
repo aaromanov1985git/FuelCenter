@@ -38,7 +38,7 @@
 .logs-filters select.filter-select {
   padding: var(--padding-small) var(--padding-element);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   background: var(--bg);
   color: var(--text-1);
   font-size: var(--font-size-sm);
@@ -89,7 +89,7 @@
   padding: var(--padding-element);
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   font-family: 'Courier New', monospace;
   font-size: var(--font-size-sm);
   white-space: pre-wrap;
@@ -116,7 +116,7 @@
 .table-wrapper {
   overflow-x: auto;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   margin-top: var(--spacing-section);
 }
 

@@ -5,7 +5,7 @@
 .stats-filters {
   background: var(--surface-2);
   padding: var(--spacing-element);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
 }
 
 .stats-content {
@@ -26,7 +26,7 @@
   align-items: center;
   padding: var(--spacing-element);
   background: var(--surface-2);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
 }
 
 .stat-label {

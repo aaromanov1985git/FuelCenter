@@ -3,7 +3,7 @@
   align-items: center;
   gap: var(--spacing-small);
   padding: var(--spacing-tiny) var(--padding-small);
-  border-radius: var(--radius-full);
+  border-radius: 9999px;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   background: var(--surface-2);

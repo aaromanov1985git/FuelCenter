@@ -624,7 +624,7 @@
   margin-top: 0;
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--text-1, var(--text-primary));
+  color: var(--text-1, var(--text-1));
 }
 
 .providers-list .form-group,
@@ -638,7 +638,7 @@
   margin-bottom: 0.25rem;
   font-weight: 500;
   font-size: 0.875rem;
-  color: var(--text-1, var(--text-primary));
+  color: var(--text-1, var(--text-1));
 }
 
 .providers-list .form-row,

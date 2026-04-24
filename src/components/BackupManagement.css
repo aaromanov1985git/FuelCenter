@@ -16,12 +16,12 @@
   font-size: 24px;
   font-weight: 600;
   margin: 0 0 8px 0;
-  color: var(--text-primary);
+  color: var(--text-1);
 }
 
 .backup-description {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-2);
   margin: 0;
 }
 
@@ -41,7 +41,7 @@
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: var(--text-primary);
+  color: var(--text-1);
 }
 
 .backup-schedule-info {
@@ -49,7 +49,7 @@
   flex-direction: column;
   gap: 8px;
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-2);
 }
 
 .backup-schedule-info p {
@@ -57,7 +57,7 @@
 }
 
 .backup-schedule-info strong {
-  color: var(--text-primary);
+  color: var(--text-1);
   font-weight: 600;
 }
 
@@ -79,13 +79,13 @@
 
 .backup-stat-label {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-2);
 }
 
 .backup-stat-value {
   font-size: 24px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-1);
 }
 
 .backup-loading {
@@ -115,12 +115,12 @@
   font-size: 20px;
   font-weight: 600;
   margin: 0;
-  color: var(--text-primary);
+  color: var(--text-1);
 }
 
 .backup-empty-content p {
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-2);
   margin: 0;
 }
 
@@ -162,7 +162,7 @@
   font-size: 16px;
   font-weight: 600;
   margin: 0;
-  color: var(--text-primary);
+  color: var(--text-1);
   word-break: break-all;
 }
 
@@ -171,7 +171,7 @@
   align-items: center;
   gap: 16px;
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text-2);
 }
 
 .backup-item-date {

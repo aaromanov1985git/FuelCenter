@@ -14,7 +14,7 @@
   color: var(--surface);
   font-size: var(--font-size-sm);
   line-height: 1.4;
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-medium);
   box-shadow: var(--shadow-lg);
   pointer-events: none;
   opacity: 0;

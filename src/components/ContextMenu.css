@@ -2,7 +2,7 @@
   position: fixed;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   box-shadow: var(--shadow-lg);
   padding: var(--spacing-tiny);
   z-index: 10000;
@@ -34,7 +34,7 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   transition: all 0.15s ease;
 }
 

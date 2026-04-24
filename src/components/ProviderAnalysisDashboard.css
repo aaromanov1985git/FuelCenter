@@ -70,7 +70,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   padding: var(--spacing-element);
   background: var(--surface-2);
   font-size: 0.95rem;
@@ -89,7 +89,7 @@
 .multiselect-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-tiny);
 }
 
 .multiselect-list label {
@@ -110,7 +110,7 @@
 
 .quick-periods {
   display: flex;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-tiny);
   flex-wrap: wrap;
   margin-bottom: var(--spacing-element);
 }
@@ -122,7 +122,7 @@
 
 .date-range {
   display: flex;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-tiny);
   flex-direction: column;
   margin-top: var(--spacing-element);
 }
@@ -148,7 +148,7 @@
   font-size: 2rem;
   font-weight: bold;
   color: var(--accent);
-  margin-bottom: var(--spacing-xs);
+  margin-bottom: var(--spacing-tiny);
 }
 
 .kpi-label {
@@ -210,13 +210,13 @@
 }
 
 .map-container-wrapper {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   overflow: hidden;
   margin-top: var(--spacing-element);
 }
 
 .map-container {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
 }
 
 .custom-marker {
@@ -229,19 +229,19 @@
 }
 
 .marker-popup h4 {
-  margin: 0 0 var(--spacing-xs) 0;
+  margin: 0 0 var(--spacing-tiny) 0;
   color: var(--text-1);
 }
 
 .marker-popup p {
-  margin: var(--spacing-xs) 0;
+  margin: var(--spacing-tiny) 0;
   color: var(--text-2);
   font-size: 0.9rem;
 }
 
 .fuel-types-distribution {
-  margin-top: var(--spacing-xs);
-  padding-top: var(--spacing-xs);
+  margin-top: var(--spacing-tiny);
+  padding-top: var(--spacing-tiny);
   border-top: 1px solid var(--border);
 }
 
@@ -255,11 +255,11 @@
   margin-top: var(--spacing-element);
   padding: var(--spacing-element);
   background: var(--surface-2);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
 }
 
 .no-coords-list h4 {
-  margin: 0 0 var(--spacing-xs) 0;
+  margin: 0 0 var(--spacing-tiny) 0;
   font-size: 0.9rem;
   color: var(--text-2);
 }
@@ -313,7 +313,7 @@
 .main-fuel-type {
   padding: var(--spacing-element);
   background: var(--surface-2);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   margin-bottom: var(--spacing-element);
   color: var(--text-1);
 }
@@ -344,18 +344,18 @@
   position: relative;
   height: 30px;
   background: var(--surface-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   overflow: hidden;
 }
 
 .bar {
   height: 100%;
   background: linear-gradient(to right, var(--accent), var(--cyan));
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-right: var(--spacing-xs);
+  padding-right: var(--spacing-tiny);
   transition: width 0.3s ease;
 }
 
@@ -396,18 +396,18 @@
   position: relative;
   height: 25px;
   background: var(--surface-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   overflow: hidden;
 }
 
 .fuel-type-bar {
   height: 100%;
   background: linear-gradient(to right, var(--green), var(--amber));
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-right: var(--spacing-xs);
+  padding-right: var(--spacing-tiny);
   transition: width 0.3s ease;
 }
 
@@ -463,7 +463,7 @@
   .bar-item,
   .fuel-type-item {
     grid-template-columns: 1fr;
-    gap: var(--spacing-xs);
+    gap: var(--spacing-tiny);
   }
   
   .bar-label,

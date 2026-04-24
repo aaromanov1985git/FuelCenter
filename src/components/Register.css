@@ -12,7 +12,7 @@
   max-width: 500px;
   padding: var(--spacing-section);
   background: var(--surface-2);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-large);
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border);
 }
@@ -58,7 +58,7 @@
 .register-select {
   padding: var(--padding-small) var(--padding-small);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   font-size: var(--font-size-base);
   background: var(--bg);
   color: var(--text-1);
@@ -97,7 +97,7 @@
   padding: var(--padding-small);
   background: var(--red-soft);
   color: var(--red);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   text-align: center;
 }
 

@@ -1,6 +1,6 @@
 .advanced-search {
   background: var(--surface);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   border: 1px solid var(--border-strong);
   margin-bottom: var(--spacing-block);
   position: relative;
@@ -64,7 +64,7 @@
   border: 1px solid var(--border);
   color: var(--text-1);
   padding: var(--padding-tiny) var(--padding-small);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
@@ -127,7 +127,7 @@
   right: 0;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   box-shadow: var(--shadow-lg);
   z-index: 10001;
   max-height: 200px;
@@ -161,7 +161,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   transition: all 0.2s ease;
 }
 

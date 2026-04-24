@@ -264,7 +264,7 @@ const CardInfoScheduleModal = ({
             <div className="form-group">
               <label>Шаблон провайдера (API) *</label>
               {loadingTemplates ? (
-                <div style={{ padding: '0.5rem', color: 'var(--text-secondary)' }}>Загрузка шаблонов...</div>
+                <div style={{ padding: '0.5rem', color: 'var(--text-2)' }}>Загрузка шаблонов...</div>
               ) : templateOptions.length === 0 ? (
                 <>
                   <Select
@@ -299,7 +299,7 @@ const CardInfoScheduleModal = ({
                     fullWidth
                     disabled={loading}
                   />
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem', display: 'block' }}>
                     Выберите шаблон провайдера с типом подключения "web" или "api"
                   </span>
                 </>
@@ -337,7 +337,7 @@ const CardInfoScheduleModal = ({
                   fullWidth
                   disabled={loading}
                 />
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem', display: 'block' }}>
                   Формат: минута час день месяц день_недели. Примеры: "0 2 * * *" - каждый день в 2:00, "0 */6 * * *" - каждые 6 часов
                 </span>
               </div>
@@ -437,7 +437,7 @@ const CardInfoScheduleModal = ({
                 fullWidth
                 disabled={loading}
               />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem', display: 'block' }}>
                 23 = ФИО + телефон (1+2+4+16). 1=Имя, 2=Фамилия, 4=Отчество, 8=Дата рождения, 16=Телефон, 32=Пол
               </span>
             </div>

@@ -14,7 +14,7 @@
   margin: 0 0 1rem 0;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-1);
   border-bottom: 1px solid var(--border);
   padding-bottom: 0.5rem;
 }
@@ -38,15 +38,15 @@
 .card-info-item label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-2);
 }
 
 .card-info-item > div {
   font-size: 0.9375rem;
-  color: var(--text-primary);
+  color: var(--text-1);
   padding: 0.5rem;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border-radius: var(--radius-small);
   min-height: 2rem;
   display: flex;
   align-items: center;

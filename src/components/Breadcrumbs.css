@@ -2,7 +2,7 @@
   margin-bottom: var(--spacing-block);
   padding: var(--spacing-element) var(--spacing-block);
   background: var(--surface);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   border: 1px solid var(--border-strong);
 }
 
@@ -44,7 +44,7 @@
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   text-decoration: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   transition: all 0.2s ease;
   display: inline-block;
 }

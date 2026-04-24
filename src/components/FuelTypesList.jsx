@@ -604,7 +604,7 @@ const FuelTypesList = () => {
         {fuelTypeToDelete && (
           <div>
             <p>Вы уверены, что хотите удалить вид топлива?</p>
-            <div style={{ marginTop: 'var(--spacing-block)', padding: 'var(--spacing-block)', backgroundColor: 'var(--surface-2)', borderRadius: 'var(--border-radius)' }}>
+            <div style={{ marginTop: 'var(--spacing-block)', padding: 'var(--spacing-block)', backgroundColor: 'var(--surface-2)', borderRadius: 'var(--radius-medium)' }}>
               <p style={{ margin: 0, fontWeight: 'bold' }}>Исходное наименование:</p>
               <p style={{ margin: 'var(--spacing-tiny) 0' }}>{fuelTypeToDelete.original_name}</p>
               <p style={{ margin: 0, fontWeight: 'bold' }}>Нормализованное наименование:</p>

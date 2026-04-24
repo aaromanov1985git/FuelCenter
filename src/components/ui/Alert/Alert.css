@@ -3,7 +3,7 @@
   align-items: flex-start;
   gap: var(--spacing-element);
   padding: var(--spacing-element);
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-medium);
   border: 1px solid;
   font-size: var(--font-size-sm);
   line-height: 1.5;
@@ -27,7 +27,7 @@
 
 .ui-alert-title {
   font-weight: var(--font-weight-semibold);
-  margin-bottom: var(--spacing-xs);
+  margin-bottom: var(--spacing-tiny);
 }
 
 .ui-alert-message {

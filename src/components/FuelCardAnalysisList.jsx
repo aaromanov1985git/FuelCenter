@@ -435,7 +435,7 @@ const FuelCardAnalysisList = () => {
                     marginTop: 'var(--spacing-element)', 
                     padding: 'var(--spacing-element)',
                     backgroundColor: 'var(--surface-2)',
-                    borderRadius: 'var(--radius-md)',
+                    borderRadius: 'var(--radius-medium)',
                     overflow: 'auto',
                     maxHeight: '400px'
                   }}>

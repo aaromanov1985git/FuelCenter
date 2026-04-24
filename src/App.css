@@ -287,7 +287,7 @@ html, body {
   padding: 8px 12px;
   margin-top: 8px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   font-size: var(--font-size-sm);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -373,7 +373,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
   transition: all 0.2s ease;
 }
 

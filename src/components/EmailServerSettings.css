@@ -4,13 +4,13 @@
 
 .email-server-settings h3 {
   margin: 0 0 0.5rem 0;
-  color: var(--text-primary);
+  color: var(--text-1);
   font-size: 1.1rem;
   font-weight: 600;
 }
 
 .email-settings-description {
-  color: var(--text-secondary);
+  color: var(--text-2);
   margin-bottom: 1.5rem;
   font-size: 0.9rem;
 }
@@ -18,7 +18,7 @@
 .email-settings-loading {
   padding: 2rem;
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--text-2);
 }
 
 .email-settings-form {
@@ -53,7 +53,7 @@
 .email-settings-label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--text-1);
   margin-bottom: 0.5rem;
 }
 
@@ -65,14 +65,14 @@
 .email-settings-test {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border);
 }
 
 .email-settings-test h4 {
   margin: 0 0 1rem 0;
   font-size: 1rem;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--text-1);
 }
 
 .email-settings-test-row {
@@ -91,7 +91,7 @@
 .email-settings-actions {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border);
   display: flex;
   gap: 1rem;
 }

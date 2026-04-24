@@ -206,7 +206,7 @@ const NormalizationSettings = () => {
                 options={CASE_OPTIONS}
                 fullWidth
               />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem', display: 'block' }}>
                 Как приводить регистр текста
               </span>
             </div>
@@ -251,7 +251,7 @@ const NormalizationSettings = () => {
                 placeholder="Например: -, _, ."
                 fullWidth
               />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem', display: 'block' }}>
                 Укажите символы, которые нужно удалять из текста
               </span>
             </div>
@@ -271,7 +271,7 @@ const NormalizationSettings = () => {
                         label="Приоритет госномера"
                       />
                     </label>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem', display: 'block' }}>
                       Искать госномер в первую очередь
                     </span>
                   </div>
@@ -283,7 +283,7 @@ const NormalizationSettings = () => {
                         label="Приоритет гаражного номера"
                       />
                     </label>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem', display: 'block' }}>
                       Искать гаражный номер (только цифры)
                     </span>
                   </div>
