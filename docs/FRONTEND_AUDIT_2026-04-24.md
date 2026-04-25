@@ -208,6 +208,51 @@ Diagnostic (после фикса, `data-theme="dark"`):
 
 ---
 
+## 6c. Повторная сверка 2026-04-25 — раунд 2 (follow-up)
+
+Третий проход через Playwright MCP (15 страниц, dark+light, dev-сервер `:3011`, авторизованная сессия). Закрыл оба «оставшихся мелочей» из §6b.
+
+**R3. 🟡 Глобальный `text-align: center` на `h1` и `.subtitle` в [src/App.css](../src/App.css).**
+Под центрирование попадали страничные заголовки на Транзакциях, Анализе Провайдера и любая страница, рендерящая `<p className="subtitle">`. В redesign reference (`redesign_dark.html`, `redesign_light.html`) все страничные заголовки **left-align**, центруется только Login (через локальный `.login-title`/`.login-subtitle` в [Login.css](../src/components/Login.css), которые имеют свои `text-align: center`).
+
+**Fix:** убран `text-align: center` из глобальных правил `h1` и `.subtitle` в [App.css](../src/App.css). Логин по-прежнему центрирован за счёт более специфичной `.login-title`. Verified через `getComputedStyle(h1).textAlign === "start"` на Транзакциях.
+
+**R4. 🟡 9 CTA-кнопок с `variant="success"` рендерились ярко-зелёными.**
+Семантика: `success` = статусный цвет (Badge «Активен», Alert «Сохранено»), а не основной CTA. Primary-CTA в редизайне — акцентно-фиолетовый `var(--accent)` (`#7c5cff`). Изменено на `variant="primary"`:
+
+| Файл | Строка | Кнопка | Было | Стало |
+|---|---:|---|---|---|
+| [ProvidersList.jsx](../src/components/ProvidersList.jsx) | 466 | `+ Добавить провайдера` (top CTA) | `success` | `primary` |
+| [ProvidersList.jsx](../src/components/ProvidersList.jsx) | 654 | IconButton add template | `success` | `primary` |
+| [TemplatesList.jsx](../src/components/TemplatesList.jsx) | 379 | `Загрузить (Firebird)` | `success` | `primary` |
+| [TemplatesList.jsx](../src/components/TemplatesList.jsx) | 392 | `Загрузить (API)` / `(XML API)` | `success` | `primary` |
+| [TemplatesList.jsx](../src/components/TemplatesList.jsx) | 463 | `Создать шаблон` | `success` | `primary` |
+| [CardInfoSchedulesList.jsx](../src/components/CardInfoSchedulesList.jsx) | 257 | `+ Создать регламент` | `success` | `primary` |
+| [CardInfoScheduleModal.jsx](../src/components/CardInfoScheduleModal.jsx) | 436 | `Сохранить` / `Создать` (modal footer) | `success` | `primary` |
+| [NormalizationSettings.jsx](../src/components/NormalizationSettings.jsx) | 340 | `Сохранить настройки` | `success` | `primary` |
+| [FuelCardEditModal.jsx](../src/components/FuelCardEditModal.jsx) | 337 | `Сохранить` (modal footer) | `success` | `primary` |
+
+**Намеренно НЕ трогали:**
+- `<IconButton icon="save" variant="success" />` в **ProvidersList.jsx:599** и **TemplateEditor.jsx:2568** — это inline-row-save в режиме редактирования: маленькая иконка, зелёный сигнализирует «commit row edits» в отличие от purple primary edit-icon. Стандартный data-table pattern.
+- `<Button variant="success" />` в **TemplatesList.jsx:766** — это `ConfirmModal variant="success"` для финального экрана «Загрузка завершена». Зелёный = success-state, корректно.
+- `<Badge variant="success">`, `<Alert variant="success">`, `<Toast type="success">` — статусные индикаторы, остаются зелёными.
+- `UsersList.jsx:391` `variant={u.is_active ? 'error' : 'success'}` — toggle activate/deactivate, зелёный для «активировать» — корректная семантика.
+
+**Verified после фикса:**
+- `npm run build` → `built in 4.09s`, нет ошибок и warning-ов кроме существующих.
+- `npx vitest run` → **15/15 Test Files, 106/106 тестов зелёные** (9.27s).
+- Live-проверка через Playwright MCP: Login, Dashboard, Transactions, Топливные карты, Провайдеры, Шаблоны (с раскрытым провайдером), Light theme — все рендерятся без console errors. CTA «+ Добавить провайдера» теперь purple `rgb(124, 92, 255)`, «Создать шаблон» — purple, h1 на Транзакциях `text-align: start`, Login title по-прежнему центрирован.
+
+**Computed styles после фикса** (Транзакции, dark):
+```
+{ h1Text:"Транзакции ГСМ", h1Align:"start", h1Shadow:"none",
+  subText:"Загрузите файл для импорта…", subAlign:"start" }
+```
+
+После раунда 2 §6b закрыт полностью, явных визуальных расхождений между live и `redesign_dark.html`/`redesign_light.html` не обнаружено. Незакрытые задачи теперь только в P0/P1/P2 листе из §5 (key-prop, App.jsx-декомпозиция — частично закрыта в b8e808d, тестовое покрытие).
+
+---
+
 ## 7. Методология и ограничения
 
 **Что сделано:**

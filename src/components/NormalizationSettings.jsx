@@ -337,7 +337,7 @@ const NormalizationSettings = () => {
               Тест нормализации
             </Button>
             <Button
-              variant="success"
+              variant="primary"
               onClick={handleSave}
               disabled={saving}
               loading={saving}

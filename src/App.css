@@ -542,16 +542,18 @@ h1 {
   font-weight: var(--font-weight-bold);
   color: var(--text-1);
   margin-bottom: var(--spacing-small);
-  text-align: center;
+  /* text-align не задаём — по умолчанию left, как в редизайне.
+     Login осознанно центрирует свой <h1 class="login-title"> локально
+     (см. src/components/Login.css). */
 }
 
 .subtitle {
   color: var(--text-1);
   font-weight: var(--font-weight-semibold);
   margin-bottom: var(--spacing-block);
-  text-align: center;
   font-size: 1.125rem;
   opacity: 0.95;
+  /* text-align не задаём — по умолчанию left (редизайн). */
 }
 
 .upload-section {

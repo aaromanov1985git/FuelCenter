@@ -463,7 +463,7 @@ const ProvidersList = () => {
           <Card.Title>Справочник провайдеров</Card.Title>
           <Card.Actions>
             <Button
-              variant={showAddModal ? "secondary" : "success"}
+              variant={showAddModal ? "secondary" : "primary"}
               icon={showAddModal ? "×" : "+"}
               onClick={() => {
                 if (showAddModal) {
@@ -649,9 +649,9 @@ const ProvidersList = () => {
                         <div className="templates-section">
                           <div className="templates-header">
                             <h4>Шаблоны провайдера</h4>
-                            <IconButton 
-                              icon="add" 
-                              variant="success" 
+                            <IconButton
+                              icon="add"
+                              variant="primary"
                               onClick={() => handleAddTemplate(provider.id)}
                               title="Добавить шаблон"
                               size="small"

@@ -254,7 +254,7 @@ const CardInfoSchedulesList = () => {
       <Card>
         <Card.Header>
           <Card.Title>Регламенты получения информации по картам</Card.Title>
-          <Button variant="success" onClick={handleAdd}>
+          <Button variant="primary" onClick={handleAdd}>
             + Создать регламент
           </Button>
         </Card.Header>

@@ -376,7 +376,7 @@ const TemplatesList = () => {
           {row.connection_type === 'firebird' && (
             <Button
               size="sm"
-              variant="success"
+              variant="primary"
               onClick={() => setLoadFirebirdModal({
                 isOpen: true,
                 templateId: row.id,
@@ -389,7 +389,7 @@ const TemplatesList = () => {
           {(row.connection_type === 'api' || row.connection_type === 'web') && (
             <Button
               size="sm"
-              variant="success"
+              variant="primary"
               onClick={() => setLoadApiModal({
                 isOpen: true,
                 templateId: row.id,
@@ -460,7 +460,7 @@ const TemplatesList = () => {
 
           {selectedProviderId && (
             <div style={{ marginTop: 16, marginBottom: 16, display: 'flex', justifyContent: 'flex-start' }}>
-              <Button variant="success" onClick={handleAddTemplate}>
+              <Button variant="primary" onClick={handleAddTemplate}>
                 Создать шаблон
               </Button>
             </div>
