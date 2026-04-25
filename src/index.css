@@ -5,30 +5,13 @@
 }
 
 :root {
-  /* Тема Sunrise (светлая) - по умолчанию */
-  --bg: #ffffff;
-  --surface-2: #f9fafb;
-  --surface: #ffffff;
-  --surface-2: #f3f4f6;
-  --text-1: #111827;
-  --text-2: #4b5563;
-  --text-3: #6b7280;
-  --border: #e5e7eb;
-  --border-strong: #d1d5db;
-  --accent: #4f46e5;
-  --accent: #4338ca;
-  --accent-soft: #eef2ff;
-  --green: #10b981;
-  --green-soft: #d1fae5;
-  --green: #059669;
-  --red: #ef4444;
-  --red-soft: #fee2e2;
-  --red: #dc2626;
-  --amber: #f59e0b;
-  --amber-soft: #fef3c7;
-  --amber: #d97706;
-  --cyan: #3b82f6;
-  --cyan-soft: #dbeafe;
+  /* Темы (--bg, --surface, --surface-2, --sidebar, --border, --border-strong,
+     --text-1/2/3, --accent(-soft/-glow), --green/-soft, --red/-soft,
+     --amber/-soft, --cyan/-soft, --pink, --shadow-sm/-md/-glow, --overlay)
+     определены в src/styles/tokens.css — там единый источник истины по цветам
+     и теням для data-theme="dark" | "light". Здесь держим только
+     нецветовые токены (отступы, типографика, graph-цвета, анимации, z-index).
+  */
 
   /* Система отступов (8px grid system) */
   --spacing-section: 32px;        /* 4x = 32px - отступы между секциями */
@@ -51,9 +34,7 @@
   --radius-large: 12px;          /* Большие элементы (модальные окна) */
   --radius-badge: 12px;          /* Бейджи статусов */
 
-  /* Тени */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  /* Тени (--shadow-sm / --shadow-md — в tokens.css per theme) */
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.15);
 

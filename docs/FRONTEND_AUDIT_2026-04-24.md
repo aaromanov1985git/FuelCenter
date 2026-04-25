@@ -178,6 +178,36 @@ Dev-сервер поднят на порту 3000, backend отвечает. З
 
 ---
 
+## 6b. Повторная сверка 2026-04-25 (follow-up)
+
+Повторный прогон через Playwright MCP на свежем HEAD (ветка `claude/naughty-villani-53dcc5`, dev-сервер на `:3011`) выявил две РАНЕЕ НЕ ЗАМЕЧЕННЫЕ регрессии:
+
+**R1. 🔴 Критично — `:root` в [src/index.css](../src/index.css) переопределял core-цвета тёмной темы.**
+Файл импортируется ПОСЛЕ [tokens.css](../src/styles/tokens.css) в [main.jsx](../src/main.jsx), поэтому `:root { --bg:#ffffff; --surface:#ffffff; --text-1:#111827; --accent:#4338ca; ... }` побеждал селектор `:root, [data-theme="dark"]` из tokens.css при равной специфичности. Live-страницы рендерились со СМЕШАННЫМИ значениями: `--sidebar` брался из tokens.css (#0d1119, правильно для dark), а `--bg` / `--surface` / `--text-1` — из index.css (светлые). Это объясняет проблему «KPI-карточки Dashboard в light остаются тёмными», упомянутую в §3 — визуально тема была наполовину сломана в обе стороны.
+
+Diagnostic (до фикса, `data-theme="dark"`):
+```
+{ theme:"dark", bg:"#ffffff", surface:"#ffffff", text1:"#111827", accent:"#4338ca", sidebar:"#0d1119", bodyBg:"rgb(255,255,255)" }
+```
+
+Diagnostic (после фикса, `data-theme="dark"`):
+```
+{ theme:"dark", bg:"#0a0d14", surface:"#11151e", text1:"#e6e9ef", accent:"#7c5cff", sidebar:"#0d1119", bodyBg:"rgb(10,13,20)" }
+```
+
+**Fix:** из `:root` в [src/index.css](../src/index.css) удалены дублирующиеся цветовые токены (`--bg`, `--surface`, `--surface-2`, `--text-1/2/3`, `--border(-strong)`, `--accent(-soft)`, `--green(-soft)`, `--red(-soft)`, `--amber(-soft)`, `--cyan(-soft)`, `--shadow-sm/-md`). tokens.css теперь единый источник истины по цветам и базовым теням per theme. В index.css остались только нецветовые токены: отступы, padding, радиусы, типографика, `--shadow-lg/-xl`, overlay, fuel/chart-цвета, анимации, z-index, duration/ease.
+
+**R2. 🟡 Глобальный `text-shadow` на `h1` и `.subtitle` в [src/App.css](../src/App.css).**
+Унаследованное из pre-redesign состояние: `h1 { text-shadow: 0 2px 4px rgba(0,0,0,0.3); } [data-theme="dark"] h1 { text-shadow: 0 2px 4px rgba(0,0,0,0.5); }` + аналогичное на `.subtitle`. На Login-странице живой `<h1 class="login-title">Вход в систему</h1>` получал видимую «грязную» тень, чего нет ни в одном из [src/redesign-ref/redesign_*.html](../src/redesign-ref/) (0 вхождений `text-shadow`). Тень срезана.
+
+**Проверено после фикса** (dark + light): Login, Dashboard, Transactions, Vehicles, Топливные карты, АЗС, Виды топлива, Провайдеры, Шаблоны, Анализ Провайдера, Организации, Пользователи, События загрузок, Уведомления, Настройки — 0 console errors, 0 network failures, дизайн-система корректно откликается на переключение `data-theme`. Все 15/15 Test Files, 106/106 тестов по-прежнему зелёные.
+
+**Оставшиеся мелочи** (не блокеры, не трогались в этой итерации):
+- Транзакции: инлайн `<h1>Транзакции ГСМ</h1>` центрирован через общий `h1 { text-align:center; }` в App.css — редизайн использует left-align. Безопасно снять только вместе с ревизией конкретных страниц (Login осознанно центрирует свой заголовок локально).
+- Провайдеры: `<Button variant="success">Добавить провайдера</Button>` рендерит ярко-зелёный CTA. В редизайне primary-CTA акцентно-фиолетовый (`variant="primary"`). Аналогично в TemplatesList, CardInfoSchedulesList, ProvidersList (save/add), FuelCardEditModal, CardInfoScheduleModal, NormalizationSettings. Это полу-семантический выбор (green = success), но на CTA лучше сменить на primary — задача на отдельную итерацию.
+
+---
+
 ## 7. Методология и ограничения
 
 **Что сделано:**

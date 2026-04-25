@@ -543,13 +543,6 @@ h1 {
   color: var(--text-1);
   margin-bottom: var(--spacing-small);
   text-align: center;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-[data-theme="dark"] h1,
-[data-theme="dark"] h1 {
-  color: var(--text-1);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .subtitle {
@@ -557,16 +550,8 @@ h1 {
   font-weight: var(--font-weight-semibold);
   margin-bottom: var(--spacing-block);
   text-align: center;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
   font-size: 1.125rem;
   opacity: 0.95;
-}
-
-[data-theme="dark"] .subtitle,
-[data-theme="dark"] .subtitle {
-  color: var(--text-1);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
-  opacity: 1;
 }
 
 .upload-section {
