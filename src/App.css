@@ -1086,7 +1086,9 @@ h1 {
   border-radius: 12px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   overflow-x: auto;
-  overflow-y: visible;
+  /* `visible` coerces to `auto` per spec when overflow-x != visible —
+     wheel-trap. `clip` keeps the y-axis non-trapping. */
+  overflow-y: clip;
   -webkit-overflow-scrolling: touch; /* Плавная прокрутка на iOS */
   position: relative;
 }

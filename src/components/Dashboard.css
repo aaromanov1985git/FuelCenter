@@ -255,8 +255,12 @@
 .dash-chart-container {
   position: relative;
   padding: 16px 16px 8px 72px;
-  overflow-x: auto;
-  overflow-y: visible;
+  /* Раньше было `overflow-x: auto; overflow-y: visible` — но спека CSS
+     коэрсит `visible` в `auto`/`hidden` когда другая ось не-visible, поэтому
+     контейнер становился wheel-trap (захватывал колесо мыши без возможности
+     прокрутки страницы). Родитель .dash-card { overflow: clip } сам
+     обрежет график визуально, если он выйдет за границу карточки. */
+  overflow: visible;
 }
 
 .dash-chart-y-axis {
@@ -493,7 +497,12 @@
 
 .dash-export-btn { white-space: nowrap; }
 
-.dash-table-wrap { overflow-x: auto; }
+.dash-table-wrap {
+  /* Аналогично .dash-chart-container — убрали overflow-x:auto, чтобы не было
+     wheel-trap. Маленькие виджет-таблицы дашборда укладываются в карточку.
+     Большие таблицы транзакций / т.д. живут в собственном .ui-table-wrapper. */
+  overflow: visible;
+}
 
 .dash-table {
   width: 100%;

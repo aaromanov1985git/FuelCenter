@@ -2,7 +2,10 @@
 .ui-table-wrapper {
   width: 100%;
   overflow-x: auto;
-  overflow-y: visible;
+  /* `visible` here gets coerced to `auto` by the spec because overflow-x is
+     not `visible` — that turns the wrapper into a wheel-trap when content
+     fits vertically. `clip` keeps the y-axis non-scrollable, non-trapping. */
+  overflow-y: clip;
   border-radius: var(--radius-large);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
