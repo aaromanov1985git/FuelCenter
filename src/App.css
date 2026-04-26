@@ -2,7 +2,14 @@
   min-height: 100vh;
 }
 
-html, body {
+/* ВАЖНО: НЕ ставим `body { overflow-y: auto }`.
+   Когда `body` сам становится scroll-контейнером (auto/scroll/hidden),
+   а его `scrollHeight === clientHeight` (содержимое влезает в его box),
+   браузер ловит wheel-события на body и НЕ передаёт их в html.
+   Получается: курсор над содержимым → колесо не работает; курсор над
+   полосой прокрутки → wheel идёт прямо на scrollbar → работает.
+   Скролл страницы должен идти через `html` (см. src/styles/tokens.css). */
+html {
   overflow-y: auto;
 }
 
