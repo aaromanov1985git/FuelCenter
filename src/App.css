@@ -1990,7 +1990,7 @@ h1 {
   letter-spacing: .4px;
 }
 .tx-root .upload-dashboard-value {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text-1);
   font-variant-numeric: tabular-nums;
@@ -1998,6 +1998,12 @@ h1 {
   line-height: 1.1;
   margin-top: 2px;
 }
+/* Окрашиваем число в цвет accent-полоски слева — как в эталоне
+   redesign_transactions.html: значение выделяется тем же цветом, что и
+   вертикальный бар. */
+.tx-root .upload-dashboard-card.stat-primary .upload-dashboard-value  { color: var(--cyan); }
+.tx-root .upload-dashboard-card.stat-success .upload-dashboard-value  { color: var(--green); }
+.tx-root .upload-dashboard-card.stat-secondary .upload-dashboard-value { color: var(--text-1); }
 
 /* Upload dropzone: soften to match new surface */
 .tx-root .upload-section {
