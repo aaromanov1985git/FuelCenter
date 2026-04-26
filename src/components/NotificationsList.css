@@ -1,5 +1,5 @@
 /* =========================================================
-   NotificationsList — redesigned
+   NotificationsList — redesigned per ui_kits/web_app/redesign_notifications.html
    Scoped under .notif-root, all rules prefixed with notif-.
    Uses global tokens from src/styles/tokens.css — do NOT
    redefine tokens here.
@@ -12,16 +12,110 @@
   padding: 4px 0;
   animation: fadeUp .35s ease;
   color: var(--text-1);
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-/* ---------- Header ---------- */
+/* ---------- Filter card (chips + category select + "Прочитать всё") ---------- */
+.notif-root .notif-filter-card {
+  /* Card padding="sm" already gives compact spacing; nothing extra here. */
+}
+
+.notif-root .notif-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.notif-root .notif-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.notif-root .notif-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .12s ease, color .12s ease;
+}
+
+.notif-root .notif-pill:hover {
+  background: var(--surface-2);
+  color: var(--text-1);
+}
+
+.notif-root .notif-pill:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.notif-root .notif-pill.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.notif-root .notif-pill-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.notif-root .notif-pill.is-active .notif-pill-count {
+  background: var(--accent);
+  color: #fff;
+}
+
+.notif-root .notif-filter-extras {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notif-root .notif-category-select {
+  min-width: 180px;
+}
+
+.notif-root .notif-filter-spacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ---------- Items card ---------- */
+.notif-root .notif-items-card {
+  /* List uses Card="sm" padding so the header has breathing room
+     while individual rows control their own padding. */
+}
+
 .notif-root .notif-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  padding: 4px 4px 12px;
 }
 
 .notif-root .notif-title-h {
@@ -51,20 +145,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.notif-root .notif-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-/* ---------- Filters ---------- */
-.notif-root .notif-filters {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-}
-
 /* ---------- Items list ---------- */
 .notif-root .notif-items {
   display: flex;
@@ -72,7 +152,6 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -286,6 +365,36 @@
 
 /* ---------- Responsive ---------- */
 @media (max-width: 768px) {
+  .notif-root .notif-filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .notif-root .notif-pills {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+
+  .notif-root .notif-pill {
+    flex-shrink: 0;
+  }
+
+  .notif-root .notif-filter-extras {
+    width: 100%;
+  }
+
+  .notif-root .notif-category-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .notif-root .notif-filter-spacer {
+    display: none;
+  }
+
   .notif-root .notif-item {
     grid-template-columns: auto 1fr;
     gap: 10px;
@@ -299,14 +408,6 @@
     justify-content: flex-end;
     width: 100%;
     margin-top: 6px;
-  }
-
-  .notif-root .notif-filters {
-    flex-direction: column;
-  }
-
-  .notif-root .notif-filters > * {
-    width: 100% !important;
   }
 
   .notif-root .notif-item-header {

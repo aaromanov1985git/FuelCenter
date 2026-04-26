@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card, Button, Select, Skeleton } from './ui'
 import Pagination from './Pagination'
 import { useToast } from './ToastContainer'
@@ -49,6 +49,25 @@ const CloseIcon = (
   </svg>
 )
 
+// Pill-chip filter (matches redesign_notifications.html reference).
+// Each chip combines `is_read` and `notification_type` into one mutually-exclusive selection.
+const QUICK_FILTERS = [
+  { id: 'all',      label: 'Все',             read: null,  type: '' },
+  { id: 'unread',   label: 'Непрочитанные',   read: false, type: '' },
+  { id: 'error',    label: 'Ошибки',          read: null,  type: 'error' },
+  { id: 'warning',  label: 'Предупреждения',  read: null,  type: 'warning' },
+  { id: 'success',  label: 'Успех',           read: null,  type: 'success' },
+  { id: 'info',     label: 'Информация',      read: null,  type: 'info' }
+]
+
+const CATEGORY_OPTIONS = [
+  { value: '',                label: 'Все категории' },
+  { value: 'system',          label: 'Системные' },
+  { value: 'upload_events',   label: 'Загрузки' },
+  { value: 'errors',          label: 'Ошибки' },
+  { value: 'transactions',    label: 'Транзакции' }
+]
+
 const NotificationsList = () => {
   const { success, error: showError } = useToast()
   const [notifications, setNotifications] = useState([])
@@ -57,9 +76,14 @@ const NotificationsList = () => {
   const [loading, setLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [limit] = useState(50)
-  const [filterRead, setFilterRead] = useState(null) // null = все, true = только прочитанные, false = только непрочитанные
+  const [quickFilter, setQuickFilter] = useState('all') // id из QUICK_FILTERS
   const [filterCategory, setFilterCategory] = useState('')
-  const [filterType, setFilterType] = useState('')
+
+  // Производные значения filterRead/filterType из quickFilter
+  const { filterRead, filterType } = useMemo(() => {
+    const f = QUICK_FILTERS.find(x => x.id === quickFilter) || QUICK_FILTERS[0]
+    return { filterRead: f.read, filterType: f.type }
+  }, [quickFilter])
 
   const loadNotifications = useCallback(async () => {
     setLoading(true)
@@ -173,9 +197,69 @@ const NotificationsList = () => {
 
   const totalPages = Math.ceil(total / limit)
 
+  // Счётчики для чипов: для "all"/"unread" есть точные значения с бэкенда,
+  // для остальных типов — счётчик не показываем (нет API).
+  const chipCount = (id) => {
+    if (id === 'all') return total
+    if (id === 'unread') return unreadCount
+    return null
+  }
+
   return (
     <div className="notif-root">
-      <Card>
+      <Card className="notif-filter-card" padding="sm">
+        <div className="notif-filter-row">
+          <div className="notif-pills" role="group" aria-label="Фильтр уведомлений">
+            {QUICK_FILTERS.map(f => {
+              const active = quickFilter === f.id
+              const cnt = chipCount(f.id)
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  className={`notif-pill${active ? ' is-active' : ''}`}
+                  aria-pressed={active}
+                  onClick={() => {
+                    setQuickFilter(f.id)
+                    setCurrentPage(1)
+                  }}
+                >
+                  <span className="notif-pill-label">{f.label}</span>
+                  {cnt !== null && (
+                    <span className="notif-pill-count" aria-hidden="true">{cnt}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="notif-filter-extras">
+            <Select
+              options={CATEGORY_OPTIONS}
+              value={filterCategory}
+              onChange={(value) => {
+                setFilterCategory(value || '')
+                setCurrentPage(1)
+              }}
+              className="notif-category-select"
+            />
+          </div>
+
+          <div className="notif-filter-spacer" />
+
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => markAsRead(null)}
+            >
+              Прочитать всё
+            </Button>
+          )}
+        </div>
+      </Card>
+
+      <Card className="notif-items-card" padding="sm">
         <div className="notif-header">
           <h2 className="notif-title-h">
             <span>Уведомления</span>
@@ -185,63 +269,6 @@ const NotificationsList = () => {
               </span>
             )}
           </h2>
-          <div className="notif-actions">
-            {unreadCount > 0 && (
-              <Button
-                variant="secondary"
-                size="small"
-                onClick={() => markAsRead(null)}
-              >
-                Отметить все как прочитанные
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="notif-filters">
-          <Select
-            value={filterRead === null ? 'all' : (filterRead ? 'read' : 'unread')}
-            onChange={(e) => {
-              const value = e.target.value
-              setFilterRead(value === 'all' ? null : value === 'read')
-              setCurrentPage(1)
-            }}
-            style={{ width: '150px' }}
-          >
-            <option value="all">Все</option>
-            <option value="unread">Непрочитанные</option>
-            <option value="read">Прочитанные</option>
-          </Select>
-
-          <Select
-            value={filterCategory}
-            onChange={(e) => {
-              setFilterCategory(e.target.value)
-              setCurrentPage(1)
-            }}
-            style={{ width: '150px' }}
-          >
-            <option value="">Все категории</option>
-            <option value="system">Системные</option>
-            <option value="upload_events">Загрузки</option>
-            <option value="errors">Ошибки</option>
-            <option value="transactions">Транзакции</option>
-          </Select>
-
-          <Select
-            value={filterType}
-            onChange={(e) => {
-              setFilterType(e.target.value)
-              setCurrentPage(1)
-            }}
-            style={{ width: '150px' }}
-          >
-            <option value="">Все типы</option>
-            <option value="info">Информация</option>
-            <option value="success">Успех</option>
-            <option value="warning">Предупреждение</option>
-            <option value="error">Ошибка</option>
-          </Select>
         </div>
 
         {loading ? (
