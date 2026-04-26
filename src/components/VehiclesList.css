@@ -201,15 +201,21 @@
 
 .veh-card__body > * + * { margin-top: 0; }
 
-/* ---------- License plate (Russian) ---------- */
-/* Inline pill: white body, black border, bold letters, letter-spacing,
-   right-attached RUS flag block (white/blue/red stripes). */
+/* ---------- License plate (Russian) ----------
+   Inline pill: white body, black border, bold letters, letter-spacing,
+   right-attached RUS flag block (white/blue/red stripes).
+
+   ВАЖНО: цвета жёстко заданы через !important — иначе глобальное правило
+   `[data-theme="dark"] * { color: inherit }` в src/index.css перебивает наш
+   `color: #0a0a0a` (специфичности равны, побеждает последний — иногда это
+   глобальное правило). На белой плашке текст должен быть чёрным во всех
+   темах. */
 .veh-plate {
   display: inline-flex;
   align-items: stretch;
   height: 26px;
-  background: #ffffff;
-  color: #0a0a0a;
+  background: #ffffff !important;
+  color: #0a0a0a !important;
   border: 1.5px solid #0a0a0a;
   border-radius: 4px;
   overflow: clip;
@@ -221,6 +227,14 @@
   user-select: all;
   white-space: nowrap;
   vertical-align: middle;
+}
+
+/* Все потомки plate тоже принудительно чёрные на белом — закрывает
+   `[data-theme="dark"] *`, который форсит `color: inherit` на каждом
+   узле и тем самым крадёт нашу декларацию у `.veh-plate__main`/__region. */
+.veh-plate,
+.veh-plate * {
+  color: #0a0a0a !important;
 }
 
 .veh-plate--empty {
@@ -335,6 +349,70 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: middle;
+}
+
+/* ---------- Status: dot + label (per redesign_vehicles.html) ----------
+   Денсный вариант вместо pill-Badge — 6px цветная точка + текст того же
+   цвета. Используется в колонке «Статус» каждой строки. */
+.veh-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-3);
+}
+
+.veh-status__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: 0 0 6px;
+  background: currentColor;
+}
+
+.veh-status--green { color: var(--green); }
+.veh-status--amber { color: var(--amber); }
+.veh-status--red   { color: var(--red); }
+
+/* ---------- Row action: kebab (⋯) icon button ----------
+   Заменяет полноразмерную кнопку «Редактировать». Соответствует ⋯ menu
+   в redesign_vehicles.html. */
+.veh-row-action {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-3);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.veh-row-action:hover {
+  background: var(--surface-2);
+  color: var(--text-1);
+}
+
+.veh-row-action:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ---------- Monospace cell (для гаражного номера и подобных кодов) ---------- */
+.veh-cell--mono {
+  font-family: 'JetBrains Mono', 'SF Mono', Consolas, Monaco, monospace;
+  font-size: 11px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Form styles inside modal ---------- */

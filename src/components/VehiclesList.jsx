@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { Button, Input, Card, Badge, Table, Alert, useToast, Select, Modal } from './ui'
 import { authFetch } from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
+import { logger } from '../utils/logger'
 import './VehiclesList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
@@ -202,17 +203,20 @@ const VehiclesList = () => {
     }
   }
 
+  // Status as colored dot + label (matches reference redesign_vehicles.html style:
+  // small 6px dot in semantic color, then text in same color — denser than full pill).
   const getStatusBadge = (status) => {
     const map = {
-      valid: { variant: 'success', label: 'Валидно' },
-      invalid: { variant: 'error', label: 'Ошибки' },
-      pending: { variant: 'warning', label: 'Требует проверки' }
+      valid:   { tone: 'green', label: 'Валидно' },
+      invalid: { tone: 'red',   label: 'Ошибки' },
+      pending: { tone: 'amber', label: 'Требует проверки' }
     }
     const conf = map[status] || map.pending
     return (
-      <Badge size="sm" variant={conf.variant}>
+      <span className={`veh-status veh-status--${conf.tone}`}>
+        <span className="veh-status__dot" aria-hidden="true" />
         {conf.label}
-      </Badge>
+      </span>
     )
   }
 
@@ -263,7 +267,9 @@ const VehiclesList = () => {
       key: 'garage_number',
       header: 'Гаражный номер',
       sortable: true,
-      render: (_, row) => row.garage_number || '-'
+      render: (_, row) => row.garage_number
+        ? <span className="veh-cell--mono">{row.garage_number}</span>
+        : '-'
     },
     {
       key: 'is_validated',
@@ -286,12 +292,19 @@ const VehiclesList = () => {
     },
     {
       key: 'actions',
-      header: 'Действия',
+      header: '',
       sortable: false,
       render: (_, row) => (
-        <Button size="sm" variant="primary" onClick={() => handleEdit(row)} data-testid={`vehicle-edit-${row.id}`}>
-          Редактировать
-        </Button>
+        <button
+          type="button"
+          className="veh-row-action"
+          onClick={() => handleEdit(row)}
+          aria-label="Редактировать"
+          title="Редактировать"
+          data-testid={`vehicle-edit-${row.id}`}
+        >
+          <span aria-hidden="true">⋯</span>
+        </button>
       )
     }
   ]
