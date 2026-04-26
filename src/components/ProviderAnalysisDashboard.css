@@ -1,4 +1,4 @@
-.provider-analysis-dashboard {
+﻿.provider-analysis-dashboard {
   padding: var(--spacing-section);
 }
 
@@ -211,7 +211,7 @@
 
 .map-container-wrapper {
   border-radius: var(--radius-medium);
-  overflow: hidden;
+  overflow: clip;
   margin-top: var(--spacing-element);
 }
 
@@ -335,7 +335,7 @@
 .bar-label {
   font-size: 0.9rem;
   color: var(--text-1);
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -345,7 +345,7 @@
   height: 30px;
   background: var(--surface-2);
   border-radius: var(--radius-small);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .bar {
@@ -397,7 +397,7 @@
   height: 25px;
   background: var(--surface-2);
   border-radius: var(--radius-small);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .fuel-type-bar {

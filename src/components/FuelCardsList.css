@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    Fuel Cards — redesign (scoped to .fc-root)
    Соответствует redesign_fuel_cards.html
    ============================================================ */
@@ -162,7 +162,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: hidden;
+  overflow: clip;
   box-shadow: var(--shadow-md);
   transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
   display: flex;
@@ -183,7 +183,7 @@
   position: relative;
   padding: 18px 18px 16px;
   color: #fff;
-  overflow: hidden;
+  overflow: clip;
   min-height: 150px;
 }
 
@@ -222,7 +222,7 @@
   opacity: .95;
   margin-top: 2px;
   max-width: 180px;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -288,7 +288,7 @@
   color: var(--text-3);
   font-weight: 500;
   max-width: 60%;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -315,7 +315,7 @@
   color: var(--text-1);
   font-weight: 600;
   max-width: 60%;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -375,7 +375,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .fc-root .fc-table-wrap table {

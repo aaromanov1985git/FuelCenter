@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    NotificationsList — redesigned per ui_kits/web_app/redesign_notifications.html
    Scoped under .notif-root, all rules prefixed with notif-.
    Uses global tokens from src/styles/tokens.css — do NOT
@@ -152,7 +152,7 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .notif-root .notif-item {
@@ -374,6 +374,7 @@
   .notif-root .notif-pills {
     width: 100%;
     overflow-x: auto;
+    overflow-y: clip;
     flex-wrap: nowrap;
     padding-bottom: 4px;
   }

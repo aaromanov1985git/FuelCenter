@@ -1,4 +1,4 @@
-.file-upload-progress {
+﻿.file-upload-progress {
   width: 100%;
   margin-top: var(--spacing-block);
   padding: var(--spacing-block);
@@ -28,7 +28,7 @@
   font-weight: var(--font-weight-semibold);
   color: var(--text-1);
   white-space: nowrap;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
 }
 
@@ -50,7 +50,7 @@
   height: 24px;
   background: var(--surface-2);
   border-radius: var(--radius-small);
-  overflow: hidden;
+  overflow: clip;
   position: relative;
   margin-bottom: var(--spacing-element);
 }
@@ -64,7 +64,7 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .progress-bar::after {

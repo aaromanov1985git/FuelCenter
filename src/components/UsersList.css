@@ -1,4 +1,4 @@
-.users-card {
+﻿.users-card {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-large);
@@ -92,6 +92,7 @@
 
 .users-table-wrapper {
   overflow-x: auto;
+  overflow-y: clip;
   border: 1px solid var(--border);
   border-radius: var(--radius-large);
   -webkit-overflow-scrolling: touch;

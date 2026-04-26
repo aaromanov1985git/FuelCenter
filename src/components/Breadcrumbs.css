@@ -1,4 +1,4 @@
-.breadcrumbs {
+﻿.breadcrumbs {
   margin-bottom: var(--spacing-block);
   padding: var(--spacing-element) var(--spacing-block);
   background: var(--surface);
@@ -83,6 +83,7 @@
   .breadcrumbs {
     padding: var(--spacing-element);
     overflow-x: auto;
+    overflow-y: clip;
     -webkit-overflow-scrolling: touch;
     margin-left: 60px; /* Отступ для кнопки меню на мобильных (10px left + 40px ширина + 10px отступ) */
   }

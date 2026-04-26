@@ -1,4 +1,4 @@
-.system-logs-list {
+﻿.system-logs-list {
   padding: var(--spacing-block);
 }
 
@@ -58,7 +58,7 @@
 
 .log-message {
   max-width: 500px;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-1);
@@ -115,6 +115,7 @@
 
 .table-wrapper {
   overflow-x: auto;
+  overflow-y: clip;
   border: 1px solid var(--border);
   border-radius: var(--radius-medium);
   margin-top: var(--spacing-section);

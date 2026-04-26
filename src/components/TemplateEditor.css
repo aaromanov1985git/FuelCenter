@@ -1,4 +1,4 @@
-.template-editor {
+﻿.template-editor {
   background: var(--surface);
   border-radius: var(--radius-medium);
   padding: var(--padding-card);
@@ -7,7 +7,7 @@
   min-width: 0; /* Позволяет редактору сжиматься */
   width: 100%; /* Занимает всю доступную ширину */
   box-sizing: border-box; /* Учитывает padding и border в ширине */
-  overflow: hidden; /* Предотвращает выход содержимого за границы */
+  overflow: clip; /* Предотвращает выход содержимого за границы */
 }
 
 .template-editor-header {
@@ -36,7 +36,7 @@
   padding: var(--padding-card);
   background: var(--surface-2);
   min-width: 0; /* Позволяет секции сжиматься */
-  overflow: hidden; /* Предотвращает выход содержимого за границы */
+  overflow: clip; /* Предотвращает выход содержимого за границы */
 }
 
 .form-section:not(:last-child) {
@@ -314,6 +314,7 @@
 
 .mapping-table {
   overflow-x: auto;
+  overflow-y: clip;
 }
 
 .mapping-table table {
@@ -720,7 +721,7 @@
 /* Улучшаем отображение полей в form-row */
 .form-row .form-group {
   min-width: 0; /* Позволяет полям сжиматься */
-  overflow: hidden; /* Предотвращает выход за границы */
+  overflow: clip; /* Предотвращает выход за границы */
 }
 
 .form-row .form-group input,
@@ -956,6 +957,7 @@
   /* Таблица маппинга - табличный вид с прокруткой */
   .mapping-table {
     overflow-x: auto;
+    overflow-y: clip;
     -webkit-overflow-scrolling: touch;
   }
 

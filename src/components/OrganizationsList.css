@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    OrganizationsList — redesigned (Dark Pro)
    Scoped under .org-root. Uses global tokens from
    src/styles/tokens.css — do NOT redefine tokens here.
@@ -182,7 +182,7 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  overflow: clip;
   display: flex;
   flex-direction: column;
 }
@@ -257,7 +257,7 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--text-1);
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -360,7 +360,7 @@
   color: var(--text-1);
   letter-spacing: -.3px;
   margin: 0;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
 }
 
@@ -418,7 +418,7 @@
   font-size: 13px;
   color: var(--text-1);
   font-weight: 600;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
 }
 

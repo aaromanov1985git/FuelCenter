@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    GasStationsList — redesigned
    Scoped under .gsl-root, all rules prefixed with gsl-.
    Uses global tokens from src/styles/tokens.css — do NOT
@@ -356,7 +356,7 @@
 }
 
 .gsl-root .gsl-card-address-text {
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -405,7 +405,7 @@
 .gsl-root .gsl-card-name {
   font-size: 12px;
   color: var(--text-2);
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
   padding-bottom: 2px;
@@ -436,7 +436,7 @@
   border-radius: 4px;
   border: 1px solid var(--border);
   white-space: nowrap;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   max-width: 160px;
 }
@@ -484,7 +484,7 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .gsl-root .gsl-pagination-wrap {
@@ -499,7 +499,7 @@
 .gsl-root .text-truncate {
   display: inline-block;
   max-width: 100%;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: middle;
@@ -509,7 +509,7 @@
   color: var(--red);
   font-size: 12px;
   display: block;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 300px;
@@ -534,6 +534,7 @@
 
   .gsl-root .gsl-filter-tabs {
     overflow-x: auto;
+    overflow-y: clip;
   }
 
   .gsl-root .gsl-action-bar {

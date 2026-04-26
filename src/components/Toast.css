@@ -1,4 +1,4 @@
-/* Toast Container - позиционирование */
+﻿/* Toast Container - позиционирование */
 .toast-container {
   position: fixed;
   top: var(--spacing-section);
@@ -22,7 +22,7 @@
   max-width: 400px;
   position: relative;
   pointer-events: auto;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid var(--border);
   animation: toastSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   transition: all 0.3s ease;
@@ -129,7 +129,7 @@
   height: 3px;
   width: 100%;
   background: var(--surface-2);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .toast-progress-bar {

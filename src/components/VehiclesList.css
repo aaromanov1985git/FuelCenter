@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    VehiclesList — redesigned to match redesign_vehicles.html
    Uses tokens from src/styles/tokens.css. Scope prefix: veh-
    ============================================================ */
@@ -167,7 +167,7 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .veh-card__head {
@@ -212,7 +212,7 @@
   color: #0a0a0a;
   border: 1.5px solid #0a0a0a;
   border-radius: 4px;
-  overflow: hidden;
+  overflow: clip;
   font-family: 'Roboto Condensed', 'Arial Narrow', Arial, sans-serif;
   font-weight: 800;
   letter-spacing: 1.2px;
@@ -331,7 +331,7 @@
   font-weight: 500;
   display: inline-block;
   max-width: 320px;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: middle;

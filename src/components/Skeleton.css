@@ -1,4 +1,4 @@
-/* Base Skeleton */
+﻿/* Base Skeleton */
 .skeleton {
   background: linear-gradient(
     90deg,
@@ -81,7 +81,7 @@
 .skeleton-card {
   background: var(--surface);
   border-radius: var(--radius-medium);
-  overflow: hidden;
+  overflow: clip;
   box-shadow: var(--shadow-sm);
 }
 

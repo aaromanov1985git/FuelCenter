@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    UploadEventsList — redesigned to match redesign_uploads.html
    Uses tokens from src/styles/tokens.css. Scope prefix: upl-
    No hardcoded colors, no token redefinitions.
@@ -121,7 +121,7 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .upl-card__body {
@@ -205,7 +205,7 @@
 .event-message-truncated {
   flex: 1;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   min-width: 0;
 }

@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    FuelTypesList — redesigned
    Scoped under .ft-root, uses global tokens from
    src/styles/tokens.css — do NOT redefine tokens here.
@@ -130,7 +130,7 @@
 }
 
 .text-truncate {
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;

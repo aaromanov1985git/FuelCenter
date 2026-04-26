@@ -1,4 +1,4 @@
-.providers-list {
+﻿.providers-list {
   padding: var(--padding-section);
   max-width: 1200px;
   margin: 0 auto;
@@ -158,6 +158,7 @@
 
 .providers-table-wrapper {
   overflow-x: auto;
+  overflow-y: clip;
   border: 1px solid var(--border);
   border-radius: var(--radius-medium);
   background: var(--surface);
@@ -540,6 +541,7 @@
     font-size: var(--font-size-xs);
     display: block;
     overflow-x: auto;
+    overflow-y: clip;
     -webkit-overflow-scrolling: touch;
   }
 

@@ -1,4 +1,4 @@
-.advanced-search {
+﻿.advanced-search {
   background: var(--surface);
   border-radius: var(--radius-medium);
   border: 1px solid var(--border-strong);
@@ -201,7 +201,7 @@
 
 .advanced-search-history-text {
   flex: 1;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
