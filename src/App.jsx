@@ -142,6 +142,20 @@ const App = () => {
     await clearAll()
   }
 
+  // Safety net: на каждой смене маршрута сбрасываем body.overflow и body.paddingRight,
+  // если они залипли в "hidden" из-за модала, который не отмонтировался корректно.
+  // useScrollLock и ручные body.style.overflow в модалках обычно сами восстанавливают
+  // значение, но при повторных рендерах/ошибках/HMR оно может остаться "hidden" — тогда
+  // вся страница перестаёт скроллиться. Этот эффект страхует от такого случая.
+  useEffect(() => {
+    if (document.body.style.overflow === 'hidden') {
+      document.body.style.overflow = ''
+    }
+    if (document.body.style.paddingRight) {
+      document.body.style.paddingRight = ''
+    }
+  }, [location.pathname])
+
   // Обработка события для установки фильтра транзакций и переключения вкладки
   useEffect(() => {
     const handleSetTransactionFilter = (event) => {

@@ -3,20 +3,26 @@
    page still renders if tokens.css is not yet loaded.
 */
 
-/* ---------- Background ---------- */
+/* ---------- Background ----------
+   Block-flow container (NOT position:fixed) per redesign_login.html reference.
+   Using position:fixed+inset:0 here previously pinned the entire login screen
+   to the viewport and broke scrolling on shorter viewports — the form was
+   cut off and `overflow:hidden` blocked scrolling. Now the box can grow
+   beyond viewport, html/body scroll naturally, and `align-items: safe center`
+   keeps the form centered when it fits but falls back to top-aligned when
+   the form is taller than the viewport (so the top is still reachable).
+*/
 .login-bg {
-  position: fixed;
-  inset: 0;
+  position: relative;
   min-height: 100vh;
   min-height: 100dvh;
-  width: 100vw;
+  width: 100%;
   display: flex;
-  align-items: center;
+  align-items: safe center;
   justify-content: center;
   padding: 24px;
-  overflow: hidden;
+  overflow: hidden; /* clips decorative blob gradients only */
   background: var(--bg, #0b0b12);
-  z-index: 9999;
   box-sizing: border-box;
   animation: loginFadeIn 0.35s ease;
 }
