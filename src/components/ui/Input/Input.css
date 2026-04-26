@@ -12,7 +12,7 @@
 .input-label {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   display: block;
   line-height: 1.4;
 }
@@ -23,7 +23,7 @@
 }
 
 .input-required {
-  color: var(--color-error);
+  color: var(--red);
   margin-left: 4px;
   display: inline;
 }
@@ -38,23 +38,23 @@
   width: 100%;
   height: 36px;
   padding: 0 var(--padding-small);
-  border: 1px solid var(--color-border-light);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-small);
   font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  background: var(--color-bg-card);
+  color: var(--text-1);
+  background: var(--surface);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-family: inherit;
 }
 
 .input-field:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .input-field::placeholder {
-  color: var(--color-text-tertiary);
+  color: var(--text-3);
 }
 
 /* With icons */
@@ -74,7 +74,7 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
 }
 
 .input-icon-left {
@@ -99,27 +99,27 @@
 
 /* States */
 .input-error .input-field {
-  border-color: var(--color-error);
+  border-color: var(--red);
 }
 
 .input-error .input-field:focus {
-  box-shadow: 0 0 0 3px var(--color-error-light);
+  box-shadow: 0 0 0 3px var(--red-soft);
 }
 
 .input-disabled .input-field {
   opacity: 0.6;
   cursor: not-allowed;
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
 }
 
 /* Helper text */
 .input-helper {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   margin-top: 2px;
   line-height: 1.3;
 }
 
 .input-helper-error {
-  color: var(--color-error-dark);
+  color: var(--red);
 }

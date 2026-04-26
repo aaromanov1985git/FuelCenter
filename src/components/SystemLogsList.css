@@ -1,4 +1,4 @@
-.system-logs-list {
+﻿.system-logs-list {
   padding: var(--spacing-block);
 }
 
@@ -14,7 +14,7 @@
   margin: 0;
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 .logs-filters {
@@ -37,31 +37,31 @@
 
 .logs-filters select.filter-select {
   padding: var(--padding-small) var(--padding-element);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
+  background: var(--bg);
+  color: var(--text-1);
   font-size: var(--font-size-sm);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .logs-filters select.filter-select:hover {
-  border-color: var(--color-primary-hover);
+  border-color: var(--accent);
 }
 
 .logs-filters select.filter-select:focus {
   outline: none;
-  border-color: var(--color-primary);
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 .log-message {
   max-width: 500px;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 .log-detail {
@@ -81,53 +81,54 @@
 
 .detail-row strong {
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-sm);
 }
 
 .detail-value {
   padding: var(--padding-element);
-  background: var(--color-bg-hover);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
   font-family: 'Courier New', monospace;
   font-size: var(--font-size-sm);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 300px;
   overflow-y: auto;
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 .detail-value.stack-trace {
   font-size: var(--font-size-xs);
   line-height: 1.6;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
 }
 
 .loading-state,
 .empty-state {
   padding: var(--spacing-block);
   text-align: center;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: var(--font-size-sm);
 }
 
 .table-wrapper {
   overflow-x: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  overflow-y: clip;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
   margin-top: var(--spacing-section);
 }
 
 .logs-table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--color-bg-primary);
+  background: var(--bg);
 }
 
 .logs-table thead {
-  background: var(--color-bg-hover);
+  background: var(--surface-2);
 }
 
 .logs-table th {
@@ -135,19 +136,19 @@
   text-align: left;
   font-weight: var(--font-weight-semibold);
   font-size: 0.75rem;
-  color: var(--color-text-primary);
-  border-bottom: 2px solid var(--color-border);
+  color: var(--text-1);
+  border-bottom: 2px solid var(--border);
 }
 
 .logs-table td {
   padding: var(--padding-element) var(--padding-small);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--border);
   font-size: 0.75rem;
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 .logs-table tbody tr:hover {
-  background: var(--color-bg-hover);
+  background: var(--surface-2);
 }
 
 .logs-table tbody tr:last-child td {

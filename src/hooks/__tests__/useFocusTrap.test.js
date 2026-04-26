@@ -47,13 +47,15 @@ describe('useFocusTrap', () => {
     container.appendChild(button1)
     container.appendChild(button2)
 
+    // Начинаем с isActive=false, задаём ref, затем активируем — чтобы useEffect
+    // увидел ref.current (иначе он запустится раньше, чем мы присвоим контейнер)
     const { result, rerender } = renderHook(({ isActive }) => useFocusTrap(isActive), {
-      initialProps: { isActive: true }
+      initialProps: { isActive: false }
     })
-
     result.current.current = container
-    button2.focus()
+    rerender({ isActive: true })
 
+    button2.focus()
     fireEvent.keyDown(container, { key: 'Tab' })
 
     expect(document.activeElement).toBe(button1)
@@ -66,12 +68,12 @@ describe('useFocusTrap', () => {
     container.appendChild(button2)
 
     const { result, rerender } = renderHook(({ isActive }) => useFocusTrap(isActive), {
-      initialProps: { isActive: true }
+      initialProps: { isActive: false }
     })
-
     result.current.current = container
-    button1.focus()
+    rerender({ isActive: true })
 
+    button1.focus()
     fireEvent.keyDown(container, { key: 'Tab', shiftKey: true })
 
     expect(document.activeElement).toBe(button2)
@@ -110,11 +112,16 @@ describe('useFocusTrap', () => {
     const button1 = document.createElement('button')
     container.appendChild(button1)
 
-    const { result, unmount } = renderHook(() => useFocusTrap(true))
-
-    result.current.current = container
-
+    // Шпиона ставим ДО того, как эффект подпишется — это гарантирует, что мы
+    // увидим addEventListener и потом removeEventListener на cleanup.
     const removeEventListenerSpy = vi.spyOn(container, 'removeEventListener')
+
+    const { result, rerender, unmount } = renderHook(
+      ({ isActive }) => useFocusTrap(isActive),
+      { initialProps: { isActive: false } }
+    )
+    result.current.current = container
+    rerender({ isActive: true })
 
     unmount()
 

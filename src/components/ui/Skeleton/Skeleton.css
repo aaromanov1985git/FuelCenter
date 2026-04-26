@@ -1,6 +1,6 @@
 /* Базовый скелетон */
 .ui-skeleton {
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   border-radius: var(--radius-medium);
   display: block;
 }
@@ -37,7 +37,7 @@
 .ui-skeleton-animation-wave {
   position: relative;
   overflow: hidden;
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
 }
 
 .ui-skeleton-animation-wave::after {
@@ -50,7 +50,7 @@
   background: linear-gradient(
     90deg,
     transparent,
-    var(--color-bg-hover),
+    var(--surface-2),
     transparent
   );
   animation: skeleton-wave 1.5s ease-in-out infinite;
@@ -88,9 +88,9 @@
 /* Карточка скелетон */
 .ui-skeleton-card {
   border-radius: var(--radius-medium);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   overflow: hidden;
-  background: var(--color-bg-card);
+  background: var(--surface);
 }
 
 /* Таблица скелетон */
@@ -106,7 +106,7 @@
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: var(--padding-tiny);
   padding: var(--padding-tiny);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--border);
 }
 
 .ui-skeleton-table-row:last-child {
@@ -126,7 +126,7 @@
   gap: var(--spacing-element);
   padding: var(--spacing-element);
   border-radius: var(--radius-medium);
-  background: var(--color-bg-card);
+  background: var(--surface);
 }
 
 .ui-skeleton-list-content {

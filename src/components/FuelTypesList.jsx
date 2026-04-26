@@ -384,50 +384,39 @@ const FuelTypesList = () => {
   }, [fuelTypes, handleEdit])
 
   return (
-    <>
-      {/* Дашборд статистики */}
+    <div className="ft-root">
+      {/* Дашборд статистики — KPI-tiles со цветным side-bar */}
       {stats && (
-        <Card variant="outlined" className="stats-card">
-          <Card.Header>
-            <Card.Title>Статистика по видам топлива</Card.Title>
-          </Card.Header>
-          <Card.Body>
-            <div className="stats-grid-compact">
-              <Card variant="outlined" padding="sm">
-                <div className="stat-card-label">
-                  С ошибками
-                </div>
-                <div className="stat-card-value-compact error">
-                  {stats.invalid}
-                </div>
-              </Card>
-              <Card variant="outlined" padding="sm">
-                <div className="stat-card-label">
-                  Требуют проверки
-                </div>
-                <div className="stat-card-value-compact warning">
-                  {stats.pending}
-                </div>
-              </Card>
-              <Card variant="outlined" padding="sm">
-                <div className="stat-card-label">
-                  Валидные
-                </div>
-                <div className="stat-card-value-compact success">
-                  {stats.valid}
-                </div>
-              </Card>
-              <Card variant="outlined" padding="sm">
-                <div className="stat-card-label">
-                  Всего
-                </div>
-                <div className="stat-card-value-compact">
-                  {stats.total}
-                </div>
-              </Card>
+        <div className="ft-kpi-grid">
+          <div className="ft-kpi ft-kpi-error">
+            <div className="ft-kpi-bar" />
+            <div>
+              <div className="t-label">С ошибками</div>
+              <div className="ft-kpi-value ft-kpi-value-error">{stats.invalid}</div>
             </div>
-          </Card.Body>
-        </Card>
+          </div>
+          <div className="ft-kpi ft-kpi-warning">
+            <div className="ft-kpi-bar" />
+            <div>
+              <div className="t-label">Требуют проверки</div>
+              <div className="ft-kpi-value ft-kpi-value-warning">{stats.pending}</div>
+            </div>
+          </div>
+          <div className="ft-kpi ft-kpi-success">
+            <div className="ft-kpi-bar" />
+            <div>
+              <div className="t-label">Валидные</div>
+              <div className="ft-kpi-value ft-kpi-value-success">{stats.valid}</div>
+            </div>
+          </div>
+          <div className="ft-kpi ft-kpi-neutral">
+            <div className="ft-kpi-bar" />
+            <div>
+              <div className="t-label">Всего</div>
+              <div className="ft-kpi-value">{stats.total}</div>
+            </div>
+          </div>
+        </div>
       )}
 
       {statsLoading && (
@@ -615,7 +604,7 @@ const FuelTypesList = () => {
         {fuelTypeToDelete && (
           <div>
             <p>Вы уверены, что хотите удалить вид топлива?</p>
-            <div style={{ marginTop: 'var(--spacing-block)', padding: 'var(--spacing-block)', backgroundColor: 'var(--color-bg-secondary)', borderRadius: 'var(--border-radius)' }}>
+            <div style={{ marginTop: 'var(--spacing-block)', padding: 'var(--spacing-block)', backgroundColor: 'var(--surface-2)', borderRadius: 'var(--radius-medium)' }}>
               <p style={{ margin: 0, fontWeight: 'bold' }}>Исходное наименование:</p>
               <p style={{ margin: 'var(--spacing-tiny) 0' }}>{fuelTypeToDelete.original_name}</p>
               <p style={{ margin: 0, fontWeight: 'bold' }}>Нормализованное наименование:</p>
@@ -649,7 +638,7 @@ const FuelTypesList = () => {
                 ×
               </button>
             </div>
-            <p style={{ marginBottom: 'var(--spacing-block)', color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+            <p style={{ marginBottom: 'var(--spacing-block)', color: 'var(--text-2)', fontSize: 'var(--font-size-sm)' }}>
               Перетащите поля для изменения порядка. Отметьте галочками поля, которые хотите видеть в таблице.
             </p>
             <ul className="column-settings-list">
@@ -716,7 +705,7 @@ const FuelTypesList = () => {
                       />
                       <span className="column-settings-item-label">
                         {columnLabels[key] || key}
-                        {key === 'actions' && <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginLeft: 'var(--spacing-tiny)' }}>(обязательно)</span>}
+                        {key === 'actions' && <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-2)', marginLeft: 'var(--spacing-tiny)' }}>(обязательно)</span>}
                       </span>
                     </li>
                   )
@@ -752,7 +741,7 @@ const FuelTypesList = () => {
         </div>,
         document.body
       )}
-    </>
+    </div>
   )
 }
 

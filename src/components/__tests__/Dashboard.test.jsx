@@ -34,7 +34,12 @@ describe('Dashboard', () => {
         total_transactions: 0,
         total_amount: 0,
         total_volume: 0,
-        providers: []
+        providers: [],
+        products: [],
+        period_data: [],
+        period_providers: {},
+        leaders_by_quantity: [],
+        leaders_by_count: []
       })
     })
 
@@ -48,7 +53,12 @@ describe('Dashboard', () => {
       total_transactions: 100,
       total_amount: 50000,
       total_volume: 1000,
-      providers: []
+      providers: [],
+      products: [],
+      period_data: [],
+      period_providers: {},
+      leaders_by_quantity: [],
+      leaders_by_count: []
     }
 
     mockAuthFetch.mockResolvedValue({

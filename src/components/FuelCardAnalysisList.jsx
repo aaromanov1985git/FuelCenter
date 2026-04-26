@@ -434,8 +434,8 @@ const FuelCardAnalysisList = () => {
                   <pre style={{ 
                     marginTop: 'var(--spacing-element)', 
                     padding: 'var(--spacing-element)',
-                    backgroundColor: 'var(--color-bg-secondary)',
-                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--surface-2)',
+                    borderRadius: 'var(--radius-medium)',
                     overflow: 'auto',
                     maxHeight: '400px'
                   }}>

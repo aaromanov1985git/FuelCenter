@@ -350,7 +350,7 @@ const UsersList = () => {
               </Badge>
             ))
         ) : (
-          <span style={{ color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>—</span>
+          <span style={{ color: 'var(--text-2)', fontStyle: 'italic' }}>—</span>
         )}
       </div>
     ),
@@ -411,7 +411,7 @@ const UsersList = () => {
     return (
       <Card>
         <Card.Body>
-          <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)', padding: 'var(--spacing-block)' }}>
+          <div style={{ textAlign: 'center', color: 'var(--text-2)', padding: 'var(--spacing-block)' }}>
             Управление пользователями доступно только администраторам
           </div>
         </Card.Body>
@@ -425,7 +425,7 @@ const UsersList = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <div>
             <Card.Title>Пользователи</Card.Title>
-            <p style={{ margin: 'var(--spacing-tiny) 0 0', color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
+            <p style={{ margin: 'var(--spacing-tiny) 0 0', color: 'var(--text-2)', fontSize: 'var(--font-size-sm)' }}>
               Всего: {total}
             </p>
           </div>
@@ -569,23 +569,23 @@ const UsersList = () => {
               display: 'block', 
               marginBottom: 'var(--spacing-small)', 
               fontWeight: 'var(--font-weight-semibold)',
-              color: 'var(--color-text-primary)'
+              color: 'var(--text-1)'
             }}>
               Выберите организации:
             </label>
             <div style={{ 
               maxHeight: '300px', 
               overflowY: 'auto', 
-              border: '1px solid var(--color-border)', 
+              border: '1px solid var(--border)', 
               borderRadius: 'var(--radius-medium)', 
               padding: 'var(--spacing-small)',
-              background: 'var(--color-bg-card)'
+              background: 'var(--surface)'
             }}>
               {organizations.length === 0 ? (
                 <div style={{ 
                   padding: 'var(--spacing-element)', 
                   textAlign: 'center', 
-                  color: 'var(--color-text-secondary)' 
+                  color: 'var(--text-2)' 
                 }}>
                   Нет доступных организаций
                 </div>
@@ -619,7 +619,7 @@ const UsersList = () => {
                         transition: 'background-color var(--duration-fast) var(--ease-in-out)',
                         marginBottom: 'var(--spacing-tiny)'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)'}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--surface-2)'}
                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       <div 
@@ -637,7 +637,7 @@ const UsersList = () => {
                       >
                         <div style={{ 
                           fontWeight: 'var(--font-weight-medium)',
-                          color: 'var(--color-text-primary)',
+                          color: 'var(--text-1)',
                           marginBottom: 'var(--spacing-tiny)'
                         }}>
                           {org.name}
@@ -645,7 +645,7 @@ const UsersList = () => {
                         {org.description && (
                           <div style={{ 
                             fontSize: 'var(--font-size-sm)', 
-                            color: 'var(--color-text-secondary)'
+                            color: 'var(--text-2)'
                           }}>
                             {org.description}
                           </div>

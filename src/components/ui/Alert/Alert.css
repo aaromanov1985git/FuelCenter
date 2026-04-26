@@ -3,7 +3,7 @@
   align-items: flex-start;
   gap: var(--spacing-element);
   padding: var(--spacing-element);
-  border-radius: var(--border-radius);
+  border-radius: var(--radius-medium);
   border: 1px solid;
   font-size: var(--font-size-sm);
   line-height: 1.5;
@@ -27,7 +27,7 @@
 
 .ui-alert-title {
   font-weight: var(--font-weight-semibold);
-  margin-bottom: var(--spacing-xs);
+  margin-bottom: var(--spacing-tiny);
 }
 
 .ui-alert-message {
@@ -60,25 +60,25 @@
 
 /* Variants */
 .ui-alert-success {
-  background: var(--color-success-light);
-  color: var(--color-success-dark);
-  border-color: var(--color-success);
+  background: var(--green-soft);
+  color: var(--green);
+  border-color: var(--green);
 }
 
 .ui-alert-error {
-  background: var(--color-error-light);
-  color: var(--color-error-dark);
-  border-color: var(--color-error);
+  background: var(--red-soft);
+  color: var(--red);
+  border-color: var(--red);
 }
 
 .ui-alert-warning {
-  background: var(--color-warning-light);
-  color: var(--color-warning-dark);
-  border-color: var(--color-warning);
+  background: var(--amber-soft);
+  color: var(--amber);
+  border-color: var(--amber);
 }
 
 .ui-alert-info {
-  background: var(--color-primary-light);
-  color: var(--color-primary-dark);
-  border-color: var(--color-primary);
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
 }

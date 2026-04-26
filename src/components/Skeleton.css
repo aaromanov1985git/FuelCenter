@@ -1,13 +1,13 @@
-/* Base Skeleton */
+﻿/* Base Skeleton */
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-bg-secondary) 0%,
-    var(--color-border-light) 50%,
-    var(--color-bg-secondary) 100%
+    var(--surface-2) 0%,
+    var(--border-strong) 50%,
+    var(--surface-2) 100%
   );
   background-size: 200% 100%;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   display: inline-block;
 }
 
@@ -26,7 +26,7 @@
 
 /* Variants */
 .skeleton-rectangular {
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
 }
 
 .skeleton-circular {
@@ -35,7 +35,7 @@
 
 .skeleton-text {
   height: 1em;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
 }
 
 /* Text Container */
@@ -74,14 +74,14 @@
   gap: var(--spacing-small);
   margin-bottom: var(--spacing-small);
   padding: var(--spacing-element);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 /* Card Skeleton */
 .skeleton-card {
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+  background: var(--surface);
+  border-radius: var(--radius-medium);
+  overflow: clip;
   box-shadow: var(--shadow-sm);
 }
 
@@ -104,9 +104,9 @@
   align-items: center;
   gap: var(--spacing-block);
   padding: var(--spacing-block);
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-light);
+  background: var(--surface);
+  border-radius: var(--radius-medium);
+  border: 1px solid var(--border-strong);
 }
 
 .skeleton-list-content {

@@ -1,6 +1,7 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from './ui'
+import { useScrollLock } from '../hooks/useScrollLock'
 import './ConfirmModal.css'
 
 /**
@@ -26,7 +27,9 @@ const ConfirmModal = ({
   cancelText = 'Отмена',
   variant = 'info'
 }) => {
-  if (!isOpen) return null
+  // Reentrant body-scroll lock — handles nested modals correctly. Must be
+  // called BEFORE the early-return so hook order stays stable across renders.
+  useScrollLock(isOpen)
 
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) {
@@ -41,16 +44,14 @@ const ConfirmModal = ({
   }
 
   React.useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = 'hidden'
-    }
-    
+    if (!isOpen) return
+    document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = ''
     }
   }, [isOpen])
+
+  if (!isOpen) return null
 
   // Маппинг вариантов ConfirmModal на варианты Button
   const getButtonVariant = () => {

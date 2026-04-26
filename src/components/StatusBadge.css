@@ -50,79 +50,77 @@
 
 /* Статус: Валидно */
 .status-badge.status-valid {
-  background: var(--color-success-light) !important;
-  color: var(--color-success-dark) !important;
-  border: 1px solid var(--color-success) !important;
+  background: var(--green-soft) !important;
+  color: var(--green) !important;
+  border: 1px solid var(--green) !important;
   font-weight: var(--font-weight-bold) !important;
 }
 
 /* Статус: Ошибки */
 .status-badge.status-invalid {
-  background: var(--color-error-light) !important;
-  color: var(--color-error-dark) !important;
-  border: 1px solid var(--color-error) !important;
+  background: var(--red-soft) !important;
+  color: var(--red) !important;
+  border: 1px solid var(--red) !important;
   font-weight: var(--font-weight-bold) !important;
 }
 
 /* Статус: Требует проверки */
 .status-badge.status-pending {
-  background: var(--color-warning-light) !important;
-  color: var(--color-warning-dark) !important;
-  border-color: var(--color-warning) !important;
+  background: var(--amber-soft) !important;
+  color: var(--amber) !important;
+  border-color: var(--amber) !important;
   font-weight: var(--font-weight-bold) !important;
 }
 
 /* Улучшенная читаемость для темной темы */
-[data-theme="midnight"] .status-badge.status-pending,
-[data-theme="amber-glow"] .status-badge.status-pending {
-  background: var(--color-warning-light);
-  color: var(--color-warning);
-  border-color: var(--color-warning);
-  text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.5);
+[data-theme="dark"] .status-badge.status-pending {
+  background: var(--amber-soft);
+  color: var(--amber);
+  border-color: var(--amber);
 }
 
 /* Статус: Активен */
 .status-badge.status-active {
-  background: var(--color-success-light);
-  color: var(--color-success-dark);
-  border: 1px solid var(--color-success);
+  background: var(--green-soft);
+  color: var(--green);
+  border: 1px solid var(--green);
 }
 
 /* Статус: Неактивен */
 .status-badge.status-inactive {
-  background: var(--color-bg-secondary);
-  color: var(--color-text-tertiary);
-  border: 1px solid var(--color-border);
+  background: var(--surface-2);
+  color: var(--text-3);
+  border: 1px solid var(--border);
 }
 
 /* Статус: Заблокировано */
 .status-badge.status-locked {
-  background: var(--color-error-light);
-  color: var(--color-error-dark);
-  border: 1px solid var(--color-error);
+  background: var(--red-soft);
+  color: var(--red);
+  border: 1px solid var(--red);
 }
 
 /* Статус: Успешно */
 .status-badge.status-success {
-  background: var(--color-success-light) !important;
-  color: var(--color-success-dark) !important;
-  border: 1px solid var(--color-success) !important;
+  background: var(--green-soft) !important;
+  color: var(--green) !important;
+  border: 1px solid var(--green) !important;
   font-weight: var(--font-weight-bold) !important;
 }
 
 /* Статус: Ошибка */
 .status-badge.status-failed {
-  background: var(--color-error-light) !important;
-  color: var(--color-error-dark) !important;
-  border: 1px solid var(--color-error) !important;
+  background: var(--red-soft) !important;
+  color: var(--red) !important;
+  border: 1px solid var(--red) !important;
   font-weight: var(--font-weight-bold) !important;
 }
 
 /* Статус: Частично */
 .status-badge.status-partial {
-  background: var(--color-warning-light) !important;
-  color: var(--color-warning-dark) !important;
-  border-color: var(--color-warning) !important;
+  background: var(--amber-soft) !important;
+  color: var(--amber) !important;
+  border-color: var(--amber) !important;
   font-weight: var(--font-weight-bold) !important;
 }
 

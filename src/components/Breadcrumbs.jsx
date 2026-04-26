@@ -40,7 +40,7 @@ const Breadcrumbs = ({ items = [], separator = '>', className = '' }) => {
           const isClickable = item.onClick || item.path
           
           return (
-            <li key={index} className="breadcrumbs-item">
+            <li key={item.label} className="breadcrumbs-item">
               {index > 0 && (
                 <span className="breadcrumbs-separator" aria-hidden="true">
                   {separator}

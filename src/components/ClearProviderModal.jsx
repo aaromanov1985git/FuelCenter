@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Button, Input, Select, Alert } from './ui'
 import FormField from './FormField'
+import { useScrollLock } from '../hooks/useScrollLock'
 import './ClearProviderModal.css'
 
 const ClearProviderModal = ({
@@ -76,15 +77,15 @@ const ClearProviderModal = ({
     }
   }
 
-  useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = 'hidden'
-    }
+  // Reentrant body-scroll lock — must be called unconditionally before any
+  // early-return so hook order stays stable.
+  useScrollLock(isOpen)
 
+  useEffect(() => {
+    if (!isOpen) return
+    document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = ''
     }
   }, [isOpen])
 

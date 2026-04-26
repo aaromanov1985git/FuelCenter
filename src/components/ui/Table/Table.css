@@ -1,10 +1,13 @@
-/* Table Container */
+﻿/* Table Container */
 .ui-table-wrapper {
   width: 100%;
   overflow-x: auto;
-  overflow-y: visible;
+  /* `visible` here gets coerced to `auto` by the spec because overflow-x is
+     not `visible` — that turns the wrapper into a wheel-trap when content
+     fits vertically. `clip` keeps the y-axis non-scrollable, non-trapping. */
+  overflow-y: clip;
   border-radius: var(--radius-large);
-  background: var(--color-bg-card);
+  background: var(--surface);
   box-shadow: var(--shadow-sm);
   /* Скроллбар - заметный и контрастный */
   scrollbar-width: thin;
@@ -25,8 +28,8 @@
 }
 
 /* Для темной темы используем светлый скроллбар */
-[data-theme="midnight"] .ui-table-wrapper,
-[data-theme="amber-glow"] .ui-table-wrapper {
+[data-theme="dark"] .ui-table-wrapper,
+[data-theme="dark"] .ui-table-wrapper {
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
@@ -45,8 +48,8 @@
 }
 
 /* Темная тема */
-[data-theme="midnight"] .ui-table-wrapper::-webkit-scrollbar-track,
-[data-theme="amber-glow"] .ui-table-wrapper::-webkit-scrollbar-track {
+[data-theme="dark"] .ui-table-wrapper::-webkit-scrollbar-track,
+[data-theme="dark"] .ui-table-wrapper::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.05);
 }
 
@@ -67,13 +70,13 @@
 }
 
 /* Темная тема - светлый скроллбар */
-[data-theme="midnight"] .ui-table-wrapper::-webkit-scrollbar-thumb,
-[data-theme="amber-glow"] .ui-table-wrapper::-webkit-scrollbar-thumb {
+[data-theme="dark"] .ui-table-wrapper::-webkit-scrollbar-thumb,
+[data-theme="dark"] .ui-table-wrapper::-webkit-scrollbar-thumb {
   background-color: rgba(255, 255, 255, 0.4);
 }
 
-[data-theme="midnight"] .ui-table-wrapper::-webkit-scrollbar-thumb:hover,
-[data-theme="amber-glow"] .ui-table-wrapper::-webkit-scrollbar-thumb:hover {
+[data-theme="dark"] .ui-table-wrapper::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] .ui-table-wrapper::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.6);
 }
 
@@ -82,15 +85,15 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.75rem;
-  color: var(--color-text-primary);
-  background: var(--color-bg-card);
+  color: var(--text-1);
+  background: var(--surface);
   position: relative;
 }
 
 /* Header */
 .ui-table-header {
-  background: var(--color-bg-secondary);
-  border-bottom: 2px solid var(--color-border);
+  background: var(--surface-2);
+  border-bottom: 2px solid var(--border);
 }
 
 .ui-table-header-cell {
@@ -113,20 +116,20 @@
 }
 
 .ui-table-sortable:hover {
-  background: var(--color-bg-hover);
+  background: var(--surface-2);
 }
 
 .ui-table-sortable:focus {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
 .ui-table-sorted {
-  background: var(--color-bg-hover);
+  background: var(--surface-2);
 }
 
 .ui-table-sort-icon {
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: var(--font-size-sm);
   opacity: 0.5;
   transition: opacity var(--duration-fast) var(--ease-in-out);
@@ -134,7 +137,7 @@
 
 .ui-table-sort-icon.active {
   opacity: 1;
-  color: var(--color-primary);
+  color: var(--accent);
 }
 
 .ui-table-sortable:hover .ui-table-sort-icon {
@@ -144,7 +147,7 @@
 /* Cells */
 .ui-table-cell {
   padding: var(--spacing-element);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--border-strong);
   vertical-align: middle;
   min-width: 0;
   word-wrap: break-word;
@@ -174,7 +177,7 @@
 }
 
 .ui-table-hoverable .ui-table-row:hover {
-  background: var(--color-bg-hover);
+  background: var(--surface-2);
 }
 
 .ui-table-row-clickable {
@@ -182,17 +185,17 @@
 }
 
 .ui-table-row-clickable:focus {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
 .ui-table-row-selected {
-  background: var(--color-primary-light) !important;
+  background: var(--accent-soft) !important;
 }
 
 /* Striped Rows */
 .ui-table-striped .ui-table-row:nth-child(even) {
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
 }
 
 /* Sticky Header */
@@ -223,9 +226,9 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-section);
-  background: var(--color-bg-card);
+  background: var(--surface);
   border-radius: var(--radius-large);
-  border: 2px dashed var(--color-border);
+  border: 2px dashed var(--border);
   min-height: 300px;
 }
 
@@ -236,7 +239,7 @@
 }
 
 .ui-table-empty-message {
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: var(--font-size-lg);
 }
 
@@ -257,7 +260,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(var(--color-bg-card-rgb, 255, 255, 255), 0.9);
+  background: var(--surface);
+  opacity: 0.9;
   backdrop-filter: blur(4px);
   z-index: var(--z-fixed);
   gap: var(--spacing-element);
@@ -266,8 +270,8 @@
 .ui-table-spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid var(--color-border);
-  border-top-color: var(--color-primary);
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin var(--duration-slow) linear infinite;
 }
@@ -279,14 +283,14 @@
   justify-content: space-between;
   gap: var(--spacing-element);
   padding: var(--spacing-element);
-  background: var(--color-bg-secondary);
-  border-top: 1px solid var(--color-border);
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
   border-radius: 0 0 var(--radius-large) var(--radius-large);
   flex-wrap: wrap;
 }
 
 .ui-table-pagination-info {
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: var(--font-size-sm);
 }
 
@@ -299,23 +303,23 @@
 
 .ui-table-pagination-select {
   padding: var(--spacing-tiny) var(--spacing-small);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-medium);
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
+  background: var(--surface);
+  color: var(--text-1);
   font-size: var(--font-size-sm);
   cursor: pointer;
   transition: border-color var(--duration-fast) var(--ease-in-out);
 }
 
 .ui-table-pagination-select:hover {
-  border-color: var(--color-primary);
+  border-color: var(--accent);
 }
 
 .ui-table-pagination-select:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .ui-table-pagination-controls {
@@ -327,7 +331,7 @@
 .ui-table-pagination-pages {
   padding: 0 var(--spacing-small);
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   white-space: nowrap;
 }
 
@@ -338,24 +342,24 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-medium);
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
+  background: var(--surface);
+  color: var(--text-1);
   font-size: var(--font-size-lg);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-in-out);
 }
 
 .ui-table-pagination-button:hover:not(:disabled) {
-  background: var(--color-primary);
+  background: var(--accent);
   color: white;
-  border-color: var(--color-primary);
+  border-color: var(--accent);
 }
 
 .ui-table-pagination-button:focus {
   outline: none;
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .ui-table-pagination-button:disabled {
@@ -367,6 +371,7 @@
 @media (max-width: 768px) {
   .ui-table-wrapper {
     overflow-x: auto;
+    overflow-y: clip;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -382,16 +387,16 @@
   .ui-table-row {
     display: block;
     margin-bottom: var(--spacing-element);
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--border);
     border-radius: var(--radius-medium);
-    background: var(--color-bg-card);
+    background: var(--surface);
   }
 
   .ui-table-cell {
     display: flex;
     justify-content: space-between;
     padding: var(--spacing-small) var(--spacing-element);
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 1px solid var(--border-strong);
   }
 
   .ui-table-cell:last-child {
@@ -401,7 +406,7 @@
   .ui-table-cell::before {
     content: attr(data-label);
     font-weight: var(--font-weight-semibold);
-    color: var(--color-text-secondary);
+    color: var(--text-2);
     margin-right: var(--spacing-element);
   }
 

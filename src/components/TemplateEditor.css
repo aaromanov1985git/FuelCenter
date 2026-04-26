@@ -1,5 +1,5 @@
-.template-editor {
-  background: var(--color-bg-card);
+﻿.template-editor {
+  background: var(--surface);
   border-radius: var(--radius-medium);
   padding: var(--padding-card);
   margin-bottom: var(--spacing-block);
@@ -7,7 +7,7 @@
   min-width: 0; /* Позволяет редактору сжиматься */
   width: 100%; /* Занимает всю доступную ширину */
   box-sizing: border-box; /* Учитывает padding и border в ширине */
-  overflow: hidden; /* Предотвращает выход содержимого за границы */
+  overflow: clip; /* Предотвращает выход содержимого за границы */
 }
 
 .template-editor-header {
@@ -16,7 +16,7 @@
 
 .template-editor-header h3 {
   margin: 0;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
@@ -31,12 +31,12 @@
 }
 
 .form-section {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-medium);
   padding: var(--padding-card);
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   min-width: 0; /* Позволяет секции сжиматься */
-  overflow: hidden; /* Предотвращает выход содержимого за границы */
+  overflow: clip; /* Предотвращает выход содержимого за границы */
 }
 
 .form-section:not(:last-child) {
@@ -48,7 +48,7 @@
   align-items: center;
   gap: var(--padding-small);
   margin: 0 0 var(--spacing-small) 0;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
 }
@@ -59,8 +59,8 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
+  background: var(--accent);
+  color: #fff;
   border-radius: 50%;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -68,14 +68,14 @@
 
 .section-description {
   margin: 0 0 var(--spacing-element) 0;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-normal);
 }
 
 .file-upload-section {
-  background: var(--color-info-light);
-  border-color: var(--color-info);
+  background: var(--cyan-soft);
+  border-color: var(--cyan);
 }
 
 .file-upload-group {
@@ -96,10 +96,10 @@
   align-items: center;
   gap: var(--spacing-small);
   padding: var(--padding-small) var(--padding-section);
-  background: var(--color-bg-card);
-  border: 2px dashed var(--color-primary);
+  background: var(--surface);
+  border: 2px dashed var(--accent);
   border-radius: var(--radius-medium);
-  color: var(--color-primary);
+  color: var(--accent);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-normal);
   transition: all 0.2s;
@@ -107,8 +107,8 @@
 }
 
 .file-upload-button:hover {
-  background: var(--color-primary-light);
-  border-color: var(--color-primary-hover);
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .file-upload-button .icon {
@@ -120,7 +120,7 @@
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid var(--color-primary);
+  border: 2px solid var(--accent);
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
@@ -139,8 +139,8 @@
   align-items: center;
   gap: var(--spacing-small);
   padding: var(--padding-tiny) var(--padding-small);
-  background: var(--color-success-light);
-  color: var(--color-success-dark);
+  background: var(--green-soft);
+  color: var(--green);
   border-radius: var(--radius-small);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-normal);
@@ -154,8 +154,8 @@
 .auto-mapping-info {
   margin-top: var(--padding-tiny);
   padding: var(--spacing-tiny) var(--padding-small);
-  background: var(--color-info-light);
-  color: var(--color-info);
+  background: var(--cyan-soft);
+  color: var(--cyan);
   border-radius: var(--radius-small);
   font-size: var(--font-size-xs);
 }
@@ -171,7 +171,7 @@
 
 .form-group label {
   font-size: var(--font-size-base);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-weight: var(--font-weight-semibold);
   display: flex;
   flex-direction: column;
@@ -187,14 +187,14 @@
 .form-group textarea {
   width: 100%;
   padding: var(--padding-small);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-small);
   font-size: var(--font-size-base);
   font-family: inherit;
   transition: border-color 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
+  background: var(--surface);
+  color: var(--text-1);
   min-width: 0; /* Позволяет полям сжиматься */
   max-width: 100%; /* Предотвращает выход за границы */
 }
@@ -205,19 +205,19 @@
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 /* Стили для select в тёмной теме */
 .form-group select {
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
+  background: var(--surface);
+  color: var(--text-1);
 }
 
 .form-group select option {
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
+  background: var(--surface);
+  color: var(--text-1);
 }
 
 /* Специальные стили для поля пути к базе данных */
@@ -282,82 +282,83 @@
 
 .analyzing {
   margin-left: var(--spacing-small);
-  color: var(--color-primary);
+  color: var(--accent);
   font-size: var(--font-size-xs);
 }
 
 .columns-info {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   margin-top: var(--spacing-tiny);
 }
 
 .mapping-section {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-small);
   padding: var(--padding-element);
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
 }
 
 .mapping-section h4 {
   margin: 0 0 var(--spacing-small) 0;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-bold);
 }
 
 .mapping-help {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   margin: 0 0 var(--padding-element) 0;
 }
 
 .mapping-table {
   overflow-x: auto;
+  overflow-y: clip;
 }
 
 .mapping-table table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--color-bg-card);
+  background: var(--surface);
   border-radius: var(--radius-tiny);
 }
 
 .mapping-table th {
-  background: var(--color-bg-hover);
+  background: var(--surface-2);
   padding: var(--padding-small);
   text-align: left;
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: 0.75rem;
-  border-bottom: 2px solid var(--color-border-light);
+  border-bottom: 2px solid var(--border-strong);
 }
 
 .mapping-table td {
   padding: var(--padding-small);
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-1);
   min-height: 40px;
-  background: var(--color-bg-card);
+  background: var(--surface);
   vertical-align: middle;
   font-size: 0.75rem;
 }
 
 .mapping-table tr.required {
-  background: var(--color-warning-light);
+  background: var(--amber-soft);
 }
 
 .mapping-table tr.auto-mapped {
-  background: var(--color-success-light);
+  background: var(--green-soft);
 }
 
 .mapping-table tr.missing-required {
-  background: var(--color-error-light);
+  background: var(--red-soft);
 }
 
 .mapping-table tr.missing-required td {
-  border-left: 3px solid var(--color-error);
-  color: var(--color-text-primary);
+  border-left: 3px solid var(--red);
+  color: var(--text-1);
 }
 
 .mapping-status-cell {
@@ -376,18 +377,18 @@
 }
 
 .status-auto {
-  background: var(--color-success-light);
-  color: var(--color-success-dark);
+  background: var(--green-soft);
+  color: var(--green);
 }
 
 .status-manual {
-  background: var(--color-info-light);
-  color: var(--color-info);
+  background: var(--cyan-soft);
+  color: var(--cyan);
 }
 
 .status-empty {
-  background: var(--color-bg-hover);
-  color: var(--color-text-secondary);
+  background: var(--surface-2);
+  color: var(--text-2);
 }
 
 .icon-tiny {
@@ -396,13 +397,13 @@
 }
 
 .auto-mapped-select {
-  border-color: var(--color-success);
-  background: var(--color-success-light);
+  border-color: var(--green);
+  background: var(--green-soft);
 }
 
 .missing-required-select {
-  border-color: var(--color-error);
-  background: var(--color-error-light);
+  border-color: var(--red);
+  background: var(--red-soft);
 }
 
 .field-label {
@@ -410,7 +411,7 @@
 }
 
 .mapping-table tr:hover {
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
 }
 
 .mapping-table tr:hover td {
@@ -418,7 +419,7 @@
 }
 
 .required-mark {
-  color: var(--color-error);
+  color: var(--red);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -427,11 +428,11 @@
 .mapping-table select.mapping-select {
   width: 100%;
   padding: var(--padding-element);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-small);
   font-size: var(--font-size-base);
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
+  background: var(--surface);
+  color: var(--text-1);
   min-height: 40px;
   box-sizing: border-box;
   font-family: inherit;
@@ -440,18 +441,18 @@
 .mapping-table .mapping-select:focus,
 .mapping-table select.mapping-select:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .mapping-table .mapping-select option {
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
+  background: var(--surface);
+  color: var(--text-1);
 }
 
 .mapped-badge {
   margin-left: var(--spacing-small);
-  color: var(--color-success);
+  color: var(--green);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -482,8 +483,8 @@
 
 .btn-save {
   padding: var(--padding-small) var(--padding-section);
-  background: var(--color-success);
-  color: var(--color-bg-card);
+  background: var(--green);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -493,13 +494,13 @@
 }
 
 .btn-save:hover {
-  background: var(--color-success-dark);
+  background: var(--green);
 }
 
 .btn-cancel {
   padding: var(--padding-small) var(--padding-section);
-  background: var(--color-text-secondary);
-  color: var(--color-bg-card);
+  background: var(--text-2);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -509,7 +510,7 @@
 }
 
 .btn-cancel:hover {
-  background: var(--color-text-primary);
+  background: var(--text-1);
 }
 
 /* Стили для Firebird подключения */
@@ -523,8 +524,8 @@
 
 .btn-test-connection {
   padding: var(--padding-small) var(--padding-section);
-  background: var(--color-primary);
-  color: var(--color-bg-card);
+  background: var(--accent);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -543,7 +544,7 @@
 }
 
 .btn-test-connection:hover:not(:disabled) {
-  background: var(--color-primary-hover);
+  background: var(--accent);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
@@ -564,15 +565,15 @@
 }
 
 .connection-test-result.success {
-  background: var(--color-success-light);
-  color: var(--color-success-dark);
-  border: 1px solid var(--color-success);
+  background: var(--green-soft);
+  color: var(--green);
+  border: 1px solid var(--green);
 }
 
 .connection-test-result.error {
-  background: var(--color-error-light);
-  color: var(--color-error-dark);
-  border: 1px solid var(--color-error);
+  background: var(--red-soft);
+  color: var(--red);
+  border: 1px solid var(--red);
 }
 
 .connection-test-result .icon-small {
@@ -593,8 +594,8 @@
 /* Стили для загрузки таблиц Firebird */
 .btn-load-tables {
   padding: var(--padding-small);
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
+  background: var(--accent);
+  color: #fff;
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -609,7 +610,7 @@
 }
 
 .btn-load-tables:hover:not(:disabled) {
-  background: var(--color-primary-hover);
+  background: var(--accent);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
@@ -621,8 +622,8 @@
 
 .btn-load-columns {
   padding: var(--padding-small) var(--padding-section);
-  background: var(--color-success);
-  color: var(--color-text-on-primary);
+  background: var(--green);
+  color: #fff;
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -639,7 +640,7 @@
 }
 
 .btn-load-columns:hover:not(:disabled) {
-  background: var(--color-success-dark);
+  background: var(--green);
   opacity: 0.9;
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
@@ -648,15 +649,15 @@
 .btn-load-columns:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  background: var(--color-text-secondary);
+  background: var(--text-2);
 }
 
 .table-columns-info {
   margin-top: var(--spacing-small);
   padding: var(--padding-small);
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   border-radius: var(--radius-small);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
 }
 
 .columns-list {
@@ -669,42 +670,42 @@
 .column-badge {
   display: inline-block;
   padding: var(--spacing-tiny) var(--padding-tiny);
-  background: var(--color-primary-light);
-  color: var(--color-primary);
+  background: var(--accent-soft);
+  color: var(--accent);
   border-radius: var(--radius-small);
   font-size: var(--font-size-xs);
   font-family: monospace;
 }
 
 .error-message {
-  background: var(--color-error-light);
-  color: var(--color-error-dark);
+  background: var(--red-soft);
+  color: var(--red);
   padding: var(--padding-small);
   border-radius: var(--radius-small);
   margin-bottom: var(--padding-element);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  border: 1px solid var(--color-error);
+  border: 1px solid var(--red);
 }
 
 .export-settings-section {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-small);
   padding: var(--padding-element);
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   margin-top: var(--spacing-small);
 }
 
 .export-settings-section h4 {
   margin: 0 0 var(--spacing-small) 0;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-bold);
 }
 
 .export-help {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   margin: 0 0 var(--padding-element) 0;
 }
 
@@ -720,7 +721,7 @@
 /* Улучшаем отображение полей в form-row */
 .form-row .form-group {
   min-width: 0; /* Позволяет полям сжиматься */
-  overflow: hidden; /* Предотвращает выход за границы */
+  overflow: clip; /* Предотвращает выход за границы */
 }
 
 .form-row .form-group input,
@@ -773,7 +774,7 @@
 .field-help {
   display: block;
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   margin-top: var(--spacing-tiny);
   font-style: normal;
   line-height: var(--line-height-normal);
@@ -877,17 +878,17 @@
   .mapping-table tr {
     display: block;
     margin-bottom: var(--spacing-element);
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--border);
     border-radius: var(--radius-medium);
     padding: var(--spacing-element);
-    background: var(--color-bg-card);
+    background: var(--surface);
     box-shadow: var(--shadow-sm);
   }
 
   .mapping-table td {
     display: block;
     padding: var(--spacing-small);
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 1px solid var(--border-strong);
     text-align: left;
     position: relative;
     padding-left: 45%;
@@ -901,7 +902,7 @@
     left: var(--spacing-small);
     width: 40%;
     font-weight: var(--font-weight-semibold);
-    color: var(--color-text-secondary);
+    color: var(--text-2);
     font-size: var(--font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -956,6 +957,7 @@
   /* Таблица маппинга - табличный вид с прокруткой */
   .mapping-table {
     overflow-x: auto;
+    overflow-y: clip;
     -webkit-overflow-scrolling: touch;
   }
 

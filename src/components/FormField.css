@@ -12,11 +12,11 @@
   margin-bottom: var(--spacing-small);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 .required-mark {
-  color: var(--color-error);
+  color: var(--red);
   font-weight: var(--font-weight-bold);
 }
 
@@ -30,11 +30,11 @@
   width: 100%;
   padding: var(--padding-small) var(--padding-element);
   padding-right: 40px; /* Место для иконки */
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-small);
   font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  background: var(--color-bg-primary);
+  color: var(--text-1);
+  background: var(--bg);
   transition: all 0.2s ease;
   min-height: 48px;
   line-height: 1.5;
@@ -42,28 +42,28 @@
 
 .form-field-input:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .form-field-input-error {
-  border-color: var(--color-error);
+  border-color: var(--red);
   padding-right: 40px;
 }
 
 .form-field-input-error:focus {
-  border-color: var(--color-error);
-  box-shadow: 0 0 0 3px var(--color-error-light);
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-soft);
 }
 
 .form-field-input-valid {
-  border-color: var(--color-success);
+  border-color: var(--green);
   padding-right: 40px;
 }
 
 .form-field-input-valid:focus {
-  border-color: var(--color-success);
-  box-shadow: 0 0 0 3px var(--color-success-light);
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-soft);
 }
 
 /* Иконки состояния */
@@ -81,11 +81,11 @@
 }
 
 .form-field-icon-valid {
-  color: var(--color-success);
+  color: var(--green);
 }
 
 .form-field-icon-error {
-  color: var(--color-error);
+  color: var(--red);
 }
 
 .form-field-icon svg {
@@ -97,7 +97,7 @@
 .form-field-error-message {
   margin-top: var(--spacing-small);
   font-size: var(--font-size-sm);
-  color: var(--color-error);
+  color: var(--red);
   display: flex;
   align-items: center;
   gap: var(--padding-tiny);
@@ -118,16 +118,16 @@
 .form-field-help {
   margin-top: var(--spacing-small);
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
 }
 
 /* Состояния формы */
 .form-field-error .form-field-label {
-  color: var(--color-error);
+  color: var(--red);
 }
 
 .form-field-valid .form-field-label {
-  color: var(--color-success);
+  color: var(--green);
 }
 
 /* Для select и textarea */

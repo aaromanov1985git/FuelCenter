@@ -3,9 +3,9 @@
 }
 
 .stats-filters {
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   padding: var(--spacing-element);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-medium);
 }
 
 .stats-content {
@@ -25,11 +25,11 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-element);
-  background: var(--color-bg-secondary);
-  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border-radius: var(--radius-medium);
 }
 
 .stat-label {
   font-weight: 500;
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }

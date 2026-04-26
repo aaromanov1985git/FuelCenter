@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Button, Select, Alert } from './ui'
+import { useScrollLock } from '../hooks/useScrollLock'
 import './TemplateSelectModal.css'
 
 const TemplateSelectModal = ({
@@ -89,15 +90,15 @@ const TemplateSelectModal = ({
     }
   }
 
-  useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = 'hidden'
-    }
+  // Reentrant body-scroll lock — handles the case when this modal is opened
+  // on top of another modal (e.g. ConfirmModal).
+  useScrollLock(isOpen)
 
+  useEffect(() => {
+    if (!isOpen) return
+    document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = ''
     }
   }, [isOpen])
 
@@ -198,7 +199,7 @@ const TemplateSelectModal = ({
               ]}
             />
             {selectedProvider && filteredTemplates.length === 0 && (
-              <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+              <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--text-2)' }}>
                 У выбранного провайдера нет активных шаблонов
               </div>
             )}

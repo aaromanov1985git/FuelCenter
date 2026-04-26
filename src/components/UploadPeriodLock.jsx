@@ -221,7 +221,7 @@ const UploadPeriodLock = () => {
           </div>
 
           {currentLock && (
-            <Card variant="outlined" style={{ marginTop: 'var(--spacing-block)', borderLeft: '4px solid var(--color-info)' }}>
+            <Card variant="outlined" style={{ marginTop: 'var(--spacing-block)', borderLeft: '4px solid var(--cyan)' }}>
               <Card.Body>
                 <h3 style={{ marginTop: 0, marginBottom: 'var(--padding-element)', fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)' }}>
                   Текущие настройки
@@ -242,9 +242,9 @@ const UploadPeriodLock = () => {
           )}
 
           {!currentLock && (
-            <Card variant="outlined" style={{ marginTop: 'var(--spacing-block)', borderLeft: '4px solid var(--color-warning)' }}>
+            <Card variant="outlined" style={{ marginTop: 'var(--spacing-block)', borderLeft: '4px solid var(--amber)' }}>
               <Card.Body>
-                <p style={{ margin: 0, color: 'var(--color-warning)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)' }}>
+                <p style={{ margin: 0, color: 'var(--amber)', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)' }}>
                   Период загрузки не закрыт. Можно загружать транзакции с любыми датами.
                 </p>
               </Card.Body>

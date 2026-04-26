@@ -1,0 +1,31 @@
+export const config = {
+  baseUrl: process.env.QA_BASE_URL || 'http://localhost:3000',
+  auth: {
+    username: process.env.QA_USER || 'admin',
+    password: process.env.QA_PASSWORD || 'admin123',
+  },
+  viewports: [
+    { name: '1440', width: 1440, height: 900 },
+    { name: '1024', width: 1024, height: 768 },
+  ],
+  themes: ['dark', 'light'],
+  pages: [
+    { tab: 'dashboard',          label: 'Дашборд' },
+    { tab: 'transactions',       label: 'Транзакции' },
+    { tab: 'vehicles',           label: 'Транспорт' },
+    { tab: 'cards',              label: 'Топливные карты' },
+    { tab: 'fuel-card-analysis', label: 'Анализ топливных карт' },
+    { tab: 'gas-stations',       label: 'АЗС' },
+    { tab: 'fuel-types',         label: 'Виды топлива' },
+    { tab: 'providers',          label: 'Провайдеры' },
+    { tab: 'provider-analysis',  label: 'Анализ Провайдера' },
+    { tab: 'templates',          label: 'Шаблоны' },
+    { tab: 'organizations',      label: 'Организации' },
+    { tab: 'users',              label: 'Пользователи' },
+    { tab: 'upload-events',      label: 'События загрузок' },
+    { tab: 'notifications',      label: 'Уведомления' },
+    { tab: 'settings',           label: 'Настройки' },
+  ],
+  diffThreshold: 0.1,
+  waitAfterNavigate: 600,
+}

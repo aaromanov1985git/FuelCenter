@@ -1,6 +1,6 @@
 .highlight-mark {
-  background: var(--color-warning-light);
-  color: var(--color-warning-dark);
+  background: var(--amber-soft);
+  color: var(--amber);
   padding: 2px var(--spacing-tiny);
   border-radius: var(--radius-tiny);
   font-weight: var(--font-weight-semibold);

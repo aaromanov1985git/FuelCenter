@@ -94,7 +94,7 @@ const NormalizationTestModal = ({
                 }
               }}
             />
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', marginTop: '0.25rem', display: 'block' }}>
               Нажмите Enter для быстрого тестирования
             </span>
           </div>

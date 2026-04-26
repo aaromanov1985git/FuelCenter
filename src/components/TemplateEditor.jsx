@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import IconButton from './IconButton'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
@@ -171,11 +171,13 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   )
   const [fuelTypes, setFuelTypes] = useState([])
   const [loadingFuelTypes, setLoadingFuelTypes] = useState(false)
+  const fuelEntryUidCounter = useRef(0)
+  const nextFuelEntryUid = () => ++fuelEntryUidCounter.current
   const [fuelMappingEntries, setFuelMappingEntries] = useState(() => {
     // Инициализируем из существующего маппинга
     const parsed = parseFuelMapping(template?.fuel_type_mapping)
     if (parsed && typeof parsed === 'object') {
-      return Object.entries(parsed).map(([key, value]) => ({ key, value }))
+      return Object.entries(parsed).map(([key, value]) => ({ _uid: ++fuelEntryUidCounter.current, key, value }))
     }
     return []
   })
@@ -354,7 +356,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       try {
         const parsed = fuelMappingText ? JSON.parse(fuelMappingText) : {}
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          setFuelMappingEntries(Object.entries(parsed).map(([key, value]) => ({ key, value })))
+          setFuelMappingEntries(Object.entries(parsed).map(([key, value]) => ({ _uid: nextFuelEntryUid(), key, value })))
         } else {
           setFuelMappingEntries([])
         }
@@ -376,7 +378,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   }
 
   const addFuelMappingEntry = () => {
-    const newEntries = [...fuelMappingEntries, { key: '', value: '' }]
+    const newEntries = [...fuelMappingEntries, { _uid: nextFuelEntryUid(), key: '', value: '' }]
     setFuelMappingEntries(newEntries)
     updateFuelMappingFromEntries(newEntries)
   }
@@ -1819,8 +1821,8 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                   Найдено колонок в таблице "{selectedTable}": {selectedTableColumns.length}
                 </div>
                 <div className="columns-list">
-                  {selectedTableColumns.map((col, idx) => (
-                    <span key={idx} className="column-badge">{col}</span>
+                  {selectedTableColumns.map((col) => (
+                    <span key={col} className="column-badge">{col}</span>
                   ))}
                 </div>
               </div>
@@ -2205,8 +2207,8 @@ ORDER BY rg."Date" DESC`}
                               className={`mapping-select ${isAutoMapped ? 'auto-mapped-select' : ''} ${isRequired && !isMapped ? 'missing-required-select' : ''}`}
                             >
                               <option value="">-- Не выбрано --</option>
-                              {fileColumns.map((col, idx) => (
-                                <option key={idx} value={col}>
+                              {fileColumns.map((col) => (
+                                <option key={col} value={col}>
                                   {col}
                                 </option>
                               ))}
@@ -2221,8 +2223,8 @@ ORDER BY rg."Date" DESC`}
                                 style={{ flex: 1 }}
                               >
                                 <option value="">-- Не выбрано --</option>
-                                {apiFields.map((fieldName, idx) => (
-                                  <option key={idx} value={fieldName}>
+                                {apiFields.map((fieldName) => (
+                                  <option key={fieldName} value={fieldName}>
                                     {fieldName}
                                   </option>
                                 ))}
@@ -2245,8 +2247,8 @@ ORDER BY rg."Date" DESC`}
                                 style={{ flex: 1 }}
                               >
                                 <option value="">-- Не выбрано --</option>
-                                {selectedTableColumns.map((col, idx) => (
-                                  <option key={idx} value={col}>
+                                {selectedTableColumns.map((col) => (
+                                  <option key={col} value={col}>
                                     {col}
                                   </option>
                                 ))}
@@ -2306,10 +2308,10 @@ ORDER BY rg."Date" DESC`}
                       style={{
                         padding: 'var(--spacing-tiny) var(--spacing-small)',
                         fontSize: 'var(--font-size-sm)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--border-radius)',
-                        backgroundColor: useVisualEditor ? 'var(--color-primary)' : 'var(--color-bg)',
-                        color: useVisualEditor ? 'white' : 'var(--color-text)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-medium)',
+                        backgroundColor: useVisualEditor ? 'var(--accent)' : 'var(--bg)',
+                        color: useVisualEditor ? 'white' : 'var(--text-1)',
                         cursor: 'pointer'
                       }}
                     >
@@ -2322,10 +2324,10 @@ ORDER BY rg."Date" DESC`}
                         style={{
                           padding: 'var(--spacing-tiny) var(--spacing-small)',
                           fontSize: 'var(--font-size-sm)',
-                          border: '1px solid var(--color-danger)',
-                          borderRadius: 'var(--border-radius)',
-                          backgroundColor: 'var(--color-bg)',
-                          color: 'var(--color-danger)',
+                          border: '1px solid var(--red)',
+                          borderRadius: 'var(--radius-medium)',
+                          backgroundColor: 'var(--bg)',
+                          color: 'var(--red)',
                           cursor: 'pointer'
                         }}
                         title="Очистить маппинг"
@@ -2337,15 +2339,15 @@ ORDER BY rg."Date" DESC`}
                 </div>
                 
                 {useVisualEditor ? (
-                  <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--border-radius)', padding: 'var(--spacing-block)' }}>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-medium)', padding: 'var(--spacing-block)' }}>
                     {fuelMappingEntries.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: 'var(--spacing-block)', color: 'var(--color-text-secondary)' }}>
+                      <div style={{ textAlign: 'center', padding: 'var(--spacing-block)', color: 'var(--text-2)' }}>
                         Нет записей маппинга. Нажмите "Добавить" для создания новой записи.
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-small)' }}>
                         {fuelMappingEntries.map((entry, index) => (
-                          <div key={index} style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
+                          <div key={entry._uid} style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
                             <input
                               type="text"
                               value={entry.key}
@@ -2354,12 +2356,12 @@ ORDER BY rg."Date" DESC`}
                               style={{
                                 flex: 1,
                                 padding: 'var(--spacing-tiny) var(--spacing-small)',
-                                border: '1px solid var(--color-border)',
-                                borderRadius: 'var(--border-radius)',
+                                border: '1px solid var(--border)',
+                                borderRadius: 'var(--radius-medium)',
                                 fontSize: 'var(--font-size-sm)'
                               }}
                             />
-                            <span style={{ color: 'var(--color-text-secondary)' }}>→</span>
+                            <span style={{ color: 'var(--text-2)' }}>→</span>
                             <div style={{ flex: 1, display: 'flex', gap: 'var(--spacing-tiny)' }}>
                               <select
                                 value={entry.value}
@@ -2367,8 +2369,8 @@ ORDER BY rg."Date" DESC`}
                                 style={{
                                   flex: 1,
                                   padding: 'var(--spacing-tiny) var(--spacing-small)',
-                                  border: '1px solid var(--color-border)',
-                                  borderRadius: 'var(--border-radius)',
+                                  border: '1px solid var(--border)',
+                                  borderRadius: 'var(--radius-medium)',
                                   fontSize: 'var(--font-size-sm)'
                                 }}
                               >
@@ -2387,8 +2389,8 @@ ORDER BY rg."Date" DESC`}
                                 style={{
                                   flex: 1,
                                   padding: 'var(--spacing-tiny) var(--spacing-small)',
-                                  border: '1px solid var(--color-border)',
-                                  borderRadius: 'var(--border-radius)',
+                                  border: '1px solid var(--border)',
+                                  borderRadius: 'var(--radius-medium)',
                                   fontSize: 'var(--font-size-sm)'
                                 }}
                               />
@@ -2398,10 +2400,10 @@ ORDER BY rg."Date" DESC`}
                               onClick={() => removeFuelMappingEntry(index)}
                               style={{
                                 padding: 'var(--spacing-tiny)',
-                                border: '1px solid var(--color-danger)',
-                                borderRadius: 'var(--border-radius)',
-                                backgroundColor: 'var(--color-bg)',
-                                color: 'var(--color-danger)',
+                                border: '1px solid var(--red)',
+                                borderRadius: 'var(--radius-medium)',
+                                backgroundColor: 'var(--bg)',
+                                color: 'var(--red)',
                                 cursor: 'pointer',
                                 minWidth: '32px'
                               }}
@@ -2419,10 +2421,10 @@ ORDER BY rg."Date" DESC`}
                       style={{
                         marginTop: 'var(--spacing-block)',
                         padding: 'var(--spacing-small) var(--spacing-block)',
-                        border: '1px solid var(--color-primary)',
-                        borderRadius: 'var(--border-radius)',
-                        backgroundColor: 'var(--color-bg)',
-                        color: 'var(--color-primary)',
+                        border: '1px solid var(--accent)',
+                        borderRadius: 'var(--radius-medium)',
+                        backgroundColor: 'var(--bg)',
+                        color: 'var(--accent)',
                         cursor: 'pointer',
                         width: '100%'
                       }}

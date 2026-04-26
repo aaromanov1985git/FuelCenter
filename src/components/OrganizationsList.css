@@ -1,540 +1,729 @@
-.organizations-list {
-  padding: 1.5rem;
-}
+﻿/* =========================================================
+   OrganizationsList — redesigned (Dark Pro)
+   Scoped under .org-root. Uses global tokens from
+   src/styles/tokens.css — do NOT redefine tokens here.
+   ========================================================= */
 
-/* Компактные стили для формы в модальном окне организаций */
-.organizations-list :global(.ui-modal-body) {
-  padding: 0.2rem 0.4rem !important;
-}
-
-.organizations-header {
+.org-root {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0;
+  color: var(--text-1);
+  animation: fadeUp .35s ease;
+}
+
+/* ---------- KPI cards ---------- */
+.org-root .org-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.org-root .org-kpi-card {
+  display: flex;
   align-items: center;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  gap: 1rem;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color .15s ease;
 }
 
-.organizations-header h2 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
+.org-root .org-kpi-card:hover {
+  border-color: var(--border-strong);
 }
 
-.organizations-actions {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.search-input {
-  min-width: 200px;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: center;
-}
-
-.empty-state {
-  padding: 3rem;
-  text-align: center;
-  color: var(--text-secondary);
-}
-
-.form-group {
-  margin-bottom: 0.15rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.1rem;
-  font-weight: 500;
-  font-size: 0.75rem;
-  color: var(--text-primary);
-}
-
-/* Выделение обязательных полей */
-.form-group:has(.required) label {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.form-group:has(.required) {
-  position: relative;
-}
-
-.form-group:has(.required)::before {
-  content: '';
-  position: absolute;
-  left: -0.25rem;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background-color: var(--primary, #6366f1);
+.org-root .org-kpi-accent {
+  width: 4px;
+  height: 28px;
   border-radius: 2px;
-}
-
-.form-group .required {
-  color: var(--error, #dc3545);
-  font-weight: 700;
-  font-size: 0.8125rem;
-  margin-left: 0.1rem;
-}
-
-.error-message {
-  display: flex;
-  align-items: center;
-  gap: 0.2rem;
-  margin-top: 0.1rem;
-  font-size: 0.6875rem;
-  color: var(--error);
-}
-
-.error-icon {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.875rem;
   flex-shrink: 0;
 }
 
-.form-section.has-error {
-  background-color: rgba(var(--error-rgb, 220, 53, 69), 0.05);
-  border-color: rgba(var(--error-rgb, 220, 53, 69), 0.3);
-  border-radius: 4px;
-  padding: 0.375rem;
-  margin-top: 0.25rem;
-  transition: background-color 0.2s, border-color 0.2s;
-}
-
-.form-group.has-error {
-  position: relative;
-}
-
-.form-group.has-error::before {
-  content: '';
-  position: absolute;
-  left: -0.5rem;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background-color: var(--error, #dc3545);
-  border-radius: 2px;
-}
-
-.form-group.has-error label {
-  color: var(--error, #dc3545);
-  font-weight: 600;
-}
-
-.form-group.has-error :global(.input-field) {
-  border-color: var(--error, #dc3545) !important;
-  background-color: rgba(220, 53, 69, 0.05);
-}
-
-.form-group.has-error textarea {
-  border-color: var(--error, #dc3545) !important;
-  background-color: rgba(220, 53, 69, 0.05);
-}
-
-/* Выделение незаполненных обязательных полей */
-.form-group.required-empty label {
-  color: var(--error, #dc3545);
-  font-weight: 600;
-}
-
-.form-group.required-empty::before {
-  content: '';
-  position: absolute;
-  left: -0.5rem;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background-color: var(--error, #dc3545);
-  border-radius: 2px;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-.form-group.required-empty :global(.input-field) {
-  border-color: var(--error, #dc3545) !important;
-  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
-}
-
-.form-group.required-empty textarea {
-  border-color: var(--error, #dc3545) !important;
-  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
-}
-
-/* Стили для блока с ошибками валидации */
-.validation-summary {
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.form-textarea {
-  font-size: 0.8125rem;
-  line-height: 1.35;
-  padding: 0.35rem 0.5rem;
-  min-height: 2rem;
-}
-
-.modal-actions {
+.org-root .org-kpi-body {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.3rem;
-  margin-top: 0.2rem;
-  padding-top: 0.2rem;
-  border-top: 1px solid var(--border);
+  flex-direction: column;
+  min-width: 0;
 }
 
-/* Подсказка для неактивной кнопки */
-.modal-actions :global(.ui-button:disabled) {
-  position: relative;
-  cursor: not-allowed;
-  opacity: 0.6;
+.org-root .org-kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-top: 3px;
+  line-height: 1.1;
 }
 
-.modal-actions :global(.ui-button:disabled):hover::after {
-  content: attr(title);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 0.5rem;
-  padding: 0.5rem;
-  background: var(--text-primary, #333);
-  color: var(--bg-card, #fff);
-  border-radius: 4px;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  z-index: 1000;
-  pointer-events: none;
+/* ---------- Toolbar / filter ---------- */
+.org-root .org-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
 }
 
-.checkbox-label {
+.org-root .org-search {
+  flex: 1;
+  min-width: 220px;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.4rem;
+  gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.org-root .org-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.org-root .org-search-icon {
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+}
+
+.org-root .org-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-1);
+  font-family: inherit;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.org-root .org-search-input::placeholder {
+  color: var(--text-3);
+}
+
+/* ---------- Buttons ---------- */
+.org-root .org-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  font-size: 0.75rem;
+  white-space: nowrap;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
 
-.checkbox-label:hover {
-  background-color: var(--bg-secondary);
+.org-root .org-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
 }
 
-.checkbox-label input[type="checkbox"] {
+.org-root .org-btn-primary {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #fff;
+  box-shadow: 0 6px 18px var(--accent-glow);
+}
+
+.org-root .org-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+
+.org-root .org-btn-secondary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+}
+
+.org-root .org-btn-secondary:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+/* ---------- Empty / loading ---------- */
+.org-root .org-empty {
+  text-align: center;
+  padding: 48px 24px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.org-root .org-skeleton-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+/* ---------- Main split layout ---------- */
+.org-root .org-split {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 14px;
+}
+
+/* ---------- Left: org list ---------- */
+.org-root .org-list-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  overflow: clip;
+  display: flex;
+  flex-direction: column;
+}
+
+.org-root .org-list-head {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.org-root .org-list-body {
+  overflow-y: auto;
+  flex: 1;
+  max-height: 640px;
+}
+
+.org-root .org-list-item {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  background: transparent;
+  border-left: 3px solid transparent;
+  transition: background .1s ease, border-color .1s ease;
+}
+
+.org-root .org-list-item:hover {
+  background: var(--surface-2);
+}
+
+.org-root .org-list-item-active {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+
+.org-root .org-list-item-active:hover {
+  background: var(--accent-soft);
+}
+
+.org-root .org-list-item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.org-root .org-list-item-tile {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  color: var(--text-3);
+}
+
+.org-root .org-list-item-tile-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.org-root .org-list-item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.org-root .org-list-item-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  overflow: clip;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.org-root .org-list-item-inn {
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  margin-top: 1px;
+}
+
+.org-root .org-list-item-code {
+  font-size: 11px;
+  color: var(--text-2);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  margin-top: 8px;
+  margin-left: 42px;
+}
+
+/* ---------- Chips ---------- */
+.org-root .org-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.org-root .org-chip-green {
+  background: var(--green-soft);
+  color: var(--green);
+  border: 1px solid var(--green-soft);
+}
+
+.org-root .org-chip-muted {
+  background: var(--surface-2);
+  color: var(--text-3);
+  border: 1px solid var(--border);
+}
+
+/* ---------- Right: details ---------- */
+.org-root .org-detail-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  height: fit-content;
+}
+
+.org-root .org-detail-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.org-root .org-detail-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  background: var(--surface-2);
+}
+
+.org-root .org-detail-badge-active {
+  background: linear-gradient(135deg, var(--accent), var(--pink));
+  box-shadow: 0 6px 16px var(--accent-glow);
+}
+
+.org-root .org-detail-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.org-root .org-detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.org-root .org-detail-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -.3px;
   margin: 0;
-  cursor: pointer;
+  overflow: clip;
+  text-overflow: ellipsis;
 }
 
-.pagination-wrapper {
+.org-root .org-detail-sub {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.org-root .org-detail-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ---------- Sections inside detail card ---------- */
+.org-root .org-section-label {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 10px;
+}
+
+.org-root .org-field-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.org-root .org-field-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.org-root .org-field-tile {
+  padding: 12px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+
+.org-root .org-field-label {
+  font-size: 10px;
+  color: var(--text-3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 4px;
+}
+
+.org-root .org-field-value {
+  font-size: 13px;
+  color: var(--text-1);
+  font-weight: 600;
+  overflow: clip;
+  text-overflow: ellipsis;
+}
+
+.org-root .org-field-value-mono {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.org-root .org-field-value-green { color: var(--green); }
+.org-root .org-field-value-muted { color: var(--text-3); }
+
+/* Pagination */
+.org-root .org-pagination {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-2);
+  font-size: 13px;
 }
 
-.text-muted {
-  color: var(--text-secondary);
-  font-style: italic;
-}
-
-.form-section {
-  margin-top: 0.2rem;
-  padding-top: 0.2rem;
-  border-top: 1px solid var(--border);
-}
-
-.form-section:first-of-type {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-}
-
-.form-section h3 {
-  margin-bottom: 0.2rem;
-  margin-top: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-/* Стили для сворачиваемых секций */
-.collapsible-section {
-  position: relative;
-}
-
-.form-section-header {
-  padding: 0.15rem 0;
-  margin-bottom: 0;
-  transition: background-color 0.2s;
-  border-radius: 4px;
-}
-
-.form-section-header:hover {
-  background-color: var(--bg-secondary, rgba(0, 0, 0, 0.02));
-}
-
-.form-section-header h3 {
-  margin-bottom: 0;
-  padding: 0.15rem 0;
-}
-
-.form-section-content {
-  margin-top: 0.3rem;
-  animation: slideDown 0.2s ease-out;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    max-height: 0;
-    overflow: hidden;
+/* ---------- Responsive ---------- */
+@media (max-width: 1100px) {
+  .org-root .org-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
-  to {
-    opacity: 1;
-    max-height: 2000px;
+
+  .org-root .org-split {
+    grid-template-columns: 1fr;
   }
-}
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.2rem;
-  margin-bottom: 0.1rem;
-}
-
-.form-row .form-group {
-  margin-bottom: 0;
-}
-
-/* Убеждаемся, что Input компоненты в form-row имеют полные границы */
-.form-row :global(.input-wrapper) {
-  width: 100%;
-  min-width: 0; /* Позволяет grid правильно сжимать элементы */
-}
-
-.form-row :global(.input-container) {
-  width: 100%;
-}
-
-.form-row :global(.input-field) {
-  border: 1px solid var(--color-border-light, var(--border)) !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-  min-width: 0; /* Позволяет grid правильно сжимать элементы */
-  height: 32px !important;
-  padding: 0.25rem 0.5rem !important;
-  font-size: 0.8125rem !important;
-}
-
-.form-row :global(.input-field:focus) {
-  border-color: var(--color-primary, var(--primary)) !important;
-}
-
-.form-row :global(.input-error .input-field) {
-  border-color: var(--color-error, var(--error)) !important;
-}
-
-/* Убеждаемся, что все поля имеют полные границы */
-.form-group :global(.input-wrapper) {
-  width: 100%;
-}
-
-.form-group :global(.input-field) {
-  border: 1px solid var(--color-border-light, var(--border));
-  box-sizing: border-box;
-  height: 32px;
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8125rem;
+  .org-root .org-list-body {
+    max-height: 420px;
+  }
 }
 
 @media (max-width: 768px) {
-  .organizations-list {
-    padding: 0.75rem;
+  .org-root .org-kpi-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
-  .organizations-header {
+  .org-root .org-toolbar {
     flex-direction: column;
     align-items: stretch;
-    margin-bottom: 1rem;
   }
 
-  .organizations-header h2 {
-    font-size: 1.25rem;
+  .org-root .org-detail-card {
+    padding: 16px;
   }
 
-  .organizations-actions {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .search-input {
-    width: 100%;
-  }
-
-  /* Мобильная адаптация модального окна */
-  .organizations-list :global(.ui-modal-overlay) {
-    padding: 0;
-    align-items: flex-end;
-  }
-
-  .organizations-list :global(.ui-modal) {
-    width: 100%;
-    max-width: 100%;
-    max-height: 95vh;
-    border-radius: var(--radius-large) var(--radius-large) 0 0;
-    margin: 0;
-  }
-
-  .organizations-list :global(.ui-modal-xl) {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .organizations-list :global(.ui-modal-body) {
-    padding: 0.75rem 1rem !important;
-    max-height: calc(95vh - 120px);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Мобильная адаптация формы */
-  .form-section {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-  }
-
-  .form-section h3 {
-    font-size: 0.875rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .form-group {
-    margin-bottom: 0.5rem;
-  }
-
-  .form-group label {
-    font-size: 0.875rem;
-    margin-bottom: 0.25rem;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .form-row .form-group {
-    margin-bottom: 0.5rem;
-  }
-
-  /* Мобильная адаптация textarea */
-  .form-textarea {
-    font-size: 0.875rem;
-    min-height: 2.5rem;
-  }
-
-  /* Мобильная адаптация кнопок */
-  .modal-actions {
-    flex-direction: column-reverse;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
-  }
-
-  .modal-actions :global(.ui-button) {
-    width: 100%;
-    min-height: 44px; /* Минимальный размер для удобного нажатия */
-  }
-
-  /* Мобильная адаптация чекбоксов */
-  .checkbox-label {
-    padding: 0.75rem;
-    font-size: 0.875rem;
-  }
-
-  /* Мобильная адаптация сообщений об ошибках */
-  .error-message {
-    font-size: 0.75rem;
-    margin-top: 0.25rem;
-  }
-
-  .form-section.has-error {
-    padding: 0.5rem;
-    margin-top: 0.5rem;
-  }
-
-  /* Мобильная адаптация tooltip иконок */
-  .form-group label span[style*="cursor: help"] {
-    font-size: 0.875rem;
-  }
-
-  /* Мобильная адаптация сворачиваемых секций */
-  .form-section-header {
-    padding: 0.5rem 0;
-  }
-
-  .form-section-header h3 {
-    font-size: 0.875rem;
-  }
-
-  .form-section-content {
-    margin-top: 0.75rem;
+  .org-root .org-field-grid-3 {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
 @media (max-width: 480px) {
-  .organizations-list {
-    padding: 0.5rem;
+  .org-root .org-kpi-grid {
+    grid-template-columns: 1fr;
   }
 
-  .organizations-list :global(.ui-modal-body) {
-    padding: 0.5rem 0.75rem !important;
+  .org-root .org-field-grid-2,
+  .org-root .org-field-grid-3 {
+    grid-template-columns: 1fr;
   }
+}
 
-  .form-section {
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
-  }
+/* =========================================================
+   Modal form styles (rendered via portal, outside .org-root)
+   ========================================================= */
 
-  .form-section h3 {
-    font-size: 0.8125rem;
-  }
+.org-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 
-  .form-group label {
-    font-size: 0.8125rem;
-  }
+.org-form .form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
 
-  .form-textarea {
-    font-size: 0.8125rem;
+.org-form .form-section:last-of-type {
+  border-bottom: none;
+}
+
+.org-form .form-section h3 {
+  margin: 0 0 4px 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.org-form .form-section-header {
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+  border-radius: 6px;
+  transition: background .15s ease;
+}
+
+.org-form .form-section-header:hover {
+  background: var(--surface-2);
+}
+
+.org-form .form-section-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.org-form .form-section-header .chev {
+  display: inline-block;
+  transition: transform .15s ease;
+  color: var(--text-3);
+  font-size: 10px;
+}
+
+.org-form .form-section-header.expanded .chev {
+  transform: rotate(90deg);
+}
+
+.org-form .form-section-hint {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.org-form .form-section.has-error {
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--red-soft);
+  border: 1px solid var(--red);
+}
+
+.org-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+
+.org-form .form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  letter-spacing: .2px;
+}
+
+.org-form .form-group label .required {
+  color: var(--red);
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.org-form .form-group.has-error label,
+.org-form .form-group.required-empty label {
+  color: var(--red);
+}
+
+.org-form .form-group.has-error :global(.input-field),
+.org-form .form-group.has-error textarea {
+  border-color: var(--red) !important;
+  background: var(--red-soft) !important;
+}
+
+.org-form .form-group.required-empty :global(.input-field),
+.org-form .form-group.required-empty textarea {
+  border-color: var(--red) !important;
+}
+
+.org-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.org-form .form-textarea {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  resize: vertical;
+  min-height: 36px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.org-form .form-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.org-form .form-textarea[readonly] {
+  background: var(--surface);
+  color: var(--text-3);
+  cursor: not-allowed;
+}
+
+.org-form .error-message {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--red);
+}
+
+.org-form .error-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.org-form .checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+}
+
+.org-form .checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
+}
+
+.org-form .tooltip-icon {
+  margin-left: 4px;
+  cursor: help;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.org-form .sync-hint {
+  font-size: 11px;
+  color: var(--text-3);
+  font-style: italic;
+  margin-bottom: 4px;
+}
+
+.org-form .validation-summary {
+  flex: 1;
+  padding: 10px 12px;
+  margin-right: 8px;
+  background: var(--red-soft);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--red);
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.org-form .validation-summary ul {
+  margin: 4px 0 0 18px;
+  padding: 0;
+}
+
+.org-form .validation-summary li {
+  margin-bottom: 2px;
+}
+
+.org-form .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background .15s ease;
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+.org-form .checkbox-label:hover {
+  background: var(--surface-2);
+}
+
+.org-form .checkbox-label input[type="checkbox"] {
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .org-form .form-row {
+    grid-template-columns: 1fr;
   }
 }

@@ -1,5 +1,5 @@
-.templates-list {
-  background: var(--color-bg-card);
+﻿.templates-list {
+  background: var(--surface);
   border-radius: var(--radius-medium);
   padding: var(--padding-card);
   box-shadow: var(--shadow-md);
@@ -11,14 +11,14 @@
 
 .templates-header h2 {
   margin: 0 0 var(--spacing-small) 0;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
 }
 
 .templates-subtitle {
   margin: 0;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-normal);
 }
@@ -34,14 +34,14 @@
   flex-direction: column;
   gap: var(--spacing-element);
   padding: var(--padding-element);
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   border-radius: var(--radius-small);
 }
 
 .provider-selector-label {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   margin-bottom: var(--spacing-small);
 }
 
@@ -56,8 +56,8 @@
   display: flex;
   align-items: center;
   padding: var(--padding-small) var(--padding-element);
-  background: var(--color-bg-card);
-  border: 2px solid var(--color-border-light);
+  background: var(--surface);
+  border: 2px solid var(--border-strong);
   border-radius: var(--radius-small);
   cursor: pointer;
   transition: all 0.2s;
@@ -65,16 +65,16 @@
 }
 
 .provider-card:hover {
-  border-color: var(--color-primary);
-  background: var(--color-bg-secondary);
+  border-color: var(--accent);
+  background: var(--surface-2);
   transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
 }
 
 .provider-card-selected {
-  border-color: var(--color-primary);
-  background: var(--color-primary-light);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .provider-radio {
@@ -93,44 +93,44 @@
 .provider-name {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 .provider-code {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-family: 'Courier New', monospace;
 }
 
 .provider-card-selected .provider-name {
-  color: var(--color-primary-dark);
+  color: var(--accent);
   font-weight: var(--font-weight-semibold);
 }
 
 .provider-card-selected .provider-code {
-  color: var(--color-text-primary);
+  color: var(--text-1);
 }
 
 .provider-actions {
   display: flex;
   justify-content: flex-end;
   padding-top: var(--spacing-small);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--border);
 }
 
 .no-providers {
   grid-column: 1 / -1;
   padding: var(--padding-card);
   text-align: center;
-  color: var(--color-text-secondary);
-  background: var(--color-bg-card);
+  color: var(--text-2);
+  background: var(--surface);
   border-radius: var(--radius-small);
 }
 
 .btn-add-template {
   padding: var(--padding-tiny) var(--padding-element);
-  background: var(--color-success);
-  color: var(--color-bg-card);
+  background: var(--green);
+  color: var(--surface);
   border: none;
   border-radius: var(--radius-small);
   font-size: var(--font-size-sm);
@@ -141,7 +141,7 @@
 }
 
 .btn-add-template:hover {
-  background: var(--color-success-dark);
+  background: var(--green);
 }
 
 .template-editor-section {
@@ -154,46 +154,47 @@
 
 .templates-table-wrapper {
   overflow-x: auto;
+  overflow-y: clip;
 }
 
 .templates-table {
   width: 100%;
   border-collapse: collapse;
-  background: var(--color-bg-card);
+  background: var(--surface);
   border-radius: var(--radius-medium);
-  overflow: hidden;
+  overflow: clip;
   box-shadow: var(--shadow-md);
 }
 
 .templates-table thead {
-  background: var(--color-bg-hover);
+  background: var(--surface-2);
 }
 
 .templates-table th {
   padding: var(--padding-small) var(--padding-element);
   text-align: left;
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: 0.75rem;
-  border-bottom: 2px solid var(--color-border-light);
+  border-bottom: 2px solid var(--border-strong);
   letter-spacing: 0.02em;
 }
 
 .templates-table td {
   padding: var(--padding-small) var(--padding-element);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--border);
   font-size: 0.75rem;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-weight: var(--font-weight-normal);
-  background: var(--color-bg-card);
+  background: var(--surface);
 }
 
 .templates-table tbody tr:nth-child(odd) td {
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
 }
 
 .templates-table tbody tr:hover td {
-  background: var(--color-bg-hover);
+  background: var(--surface-2);
 }
 
 .template-name-cell {
@@ -201,12 +202,12 @@
 }
 
 .template-description-cell {
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   max-width: 300px;
 }
 
 .no-description {
-  color: var(--color-text-tertiary);
+  color: var(--text-3);
   font-style: italic;
 }
 
@@ -219,13 +220,13 @@
 }
 
 .status-active {
-  background: var(--color-success-light);
-  color: var(--color-success-dark);
+  background: var(--green-soft);
+  color: var(--green);
 }
 
 .status-inactive {
-  background: var(--color-error-light);
-  color: var(--color-error-dark);
+  background: var(--red-soft);
+  color: var(--red);
 }
 
 .action-buttons {
@@ -248,27 +249,27 @@
 }
 
 .btn-edit {
-  background: var(--color-primary);
-  color: var(--color-bg-card);
+  background: var(--accent);
+  color: var(--surface);
 }
 
 .btn-edit:hover {
-  background: var(--color-primary-hover);
+  background: var(--accent);
 }
 
 .btn-delete {
-  background: var(--color-error);
-  color: var(--color-bg-card);
+  background: var(--red);
+  color: var(--surface);
 }
 
 .btn-delete:hover {
-  background: var(--color-error-dark);
+  background: var(--red);
 }
 
 .no-templates {
   padding: calc(var(--spacing-section) * 1.5) var(--padding-card);
   text-align: center;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
 }
 
 .no-templates p {
@@ -278,26 +279,26 @@
 .no-provider-selected {
   padding: calc(var(--spacing-section) * 1.5) var(--padding-card);
   text-align: center;
-  color: var(--color-text-secondary);
-  background: var(--color-bg-secondary);
+  color: var(--text-2);
+  background: var(--surface-2);
   border-radius: var(--radius-small);
 }
 
 .error-message {
-  background: var(--color-error-light);
-  color: var(--color-error-dark);
+  background: var(--red-soft);
+  color: var(--red);
   padding: var(--padding-small);
   border-radius: var(--radius-small);
   margin-bottom: var(--spacing-element);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-normal);
-  border: 1px solid var(--color-error);
+  border: 1px solid var(--red);
 }
 
 .loading {
   padding: var(--padding-card);
   text-align: center;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
 }
 
 .pagination {
@@ -307,24 +308,24 @@
   gap: var(--spacing-element);
   margin-top: var(--spacing-block);
   padding-top: var(--spacing-block);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--border);
 }
 
 .pagination-btn {
   padding: var(--padding-tiny) var(--padding-element);
-  border: 1px solid var(--color-border-light);
-  background: var(--color-bg-card);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
   border-radius: var(--radius-small);
   cursor: pointer;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   transition: all 0.2s;
 }
 
 .pagination-btn:hover:not(:disabled) {
-  background: var(--color-bg-secondary);
-  border-color: var(--color-border);
+  background: var(--surface-2);
+  border-color: var(--border);
 }
 
 .pagination-btn:disabled {
@@ -334,7 +335,7 @@
 
 .pagination-info {
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-weight: var(--font-weight-normal);
 }
 
@@ -374,6 +375,7 @@
     font-size: var(--font-size-xs);
     display: block;
     overflow-x: auto;
+    overflow-y: clip;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -389,10 +391,10 @@
 
   .templates-table tr {
     margin-bottom: var(--spacing-element);
-    border: 1px solid var(--color-border);
+    border: 1px solid var(--border);
     border-radius: var(--radius-medium);
     padding: var(--padding-small);
-    background: var(--color-bg-card);
+    background: var(--surface);
     display: block;
   }
 
@@ -400,7 +402,7 @@
     display: block;
     text-align: right;
     padding: var(--spacing-tiny) var(--padding-small);
-    border-bottom: 1px solid var(--color-border-light);
+    border-bottom: 1px solid var(--border-strong);
     position: relative;
     padding-left: 50%;
   }
@@ -412,7 +414,7 @@
     width: 45%;
     text-align: left;
     font-weight: var(--font-weight-semibold);
-    color: var(--color-text-secondary);
+    color: var(--text-2);
     text-transform: uppercase;
     font-size: var(--font-size-xs);
   }

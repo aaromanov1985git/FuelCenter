@@ -11,7 +11,7 @@
   margin-bottom: 0.5rem;
   font-weight: 500;
   font-size: 0.875rem;
-  color: var(--text-primary);
+  color: var(--text-1);
 }
 
 .normalization-test-results {
@@ -24,14 +24,14 @@
   margin: 0 0 1rem 0;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-1);
 }
 
 .normalization-test-results h4 {
   margin: 0 0 0.75rem 0;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-2);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -57,18 +57,18 @@
   margin-bottom: 0.5rem;
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-2);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .normalization-result-value {
   padding: 0.75rem;
-  background: var(--bg-secondary);
+  background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 0.875rem;
-  color: var(--text-primary);
+  color: var(--text-1);
   word-break: break-word;
   min-height: 2.5rem;
   display: flex;
@@ -76,14 +76,14 @@
 }
 
 .normalization-result-value.original {
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
+  background: var(--surface-2);
+  color: var(--text-2);
   font-style: italic;
 }
 
 .normalization-result-value.normalized {
-  background: var(--success-light, #e8f5e9);
-  color: var(--success-dark, #2e7d32);
+  background: var(--green-soft);
+  color: var(--green);
   font-weight: 500;
 }
 

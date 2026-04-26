@@ -496,7 +496,7 @@ const ComponentsDemo = () => {
             <h3>Базовые варианты</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--text-2)' }}>
                   Текст:
                 </p>
                 <Skeleton variant="text" width="100%" />
@@ -505,7 +505,7 @@ const ComponentsDemo = () => {
               </div>
 
               <div>
-                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--text-2)' }}>
                   Аватар:
                 </p>
                 <div style={{ display: 'flex', gap: '12px' }}>
@@ -516,7 +516,7 @@ const ComponentsDemo = () => {
               </div>
 
               <div>
-                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--text-2)' }}>
                   Прямоугольник:
                 </p>
                 <Skeleton variant="rectangular" height={200} />
@@ -526,19 +526,19 @@ const ComponentsDemo = () => {
             <h3>Анимации</h3>
             <div style={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
               <div>
-                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--text-2)' }}>
                   Pulse (по умолчанию):
                 </p>
                 <Skeleton variant="rectangular" height={60} animation="pulse" />
               </div>
               <div>
-                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--text-2)' }}>
                   Wave:
                 </p>
                 <Skeleton variant="rectangular" height={60} animation="wave" />
               </div>
               <div>
-                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--text-2)' }}>
                   Без анимации:
                 </p>
                 <Skeleton variant="rectangular" height={60} animation="none" />
@@ -548,14 +548,14 @@ const ComponentsDemo = () => {
             <h3>Готовые шаблоны</h3>
             <div style={{ display: 'grid', gap: '24px' }}>
               <div>
-                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--text-2)' }}>
                   Карточка:
                 </p>
                 <Skeleton.Card />
               </div>
 
               <div>
-                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                <p style={{ marginBottom: '8px', fontSize: '0.875rem', color: 'var(--text-2)' }}>
                   Список:
                 </p>
                 <Skeleton.List items={3} avatar={true} />

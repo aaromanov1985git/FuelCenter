@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { Card, Input, Select, Table, Button, Badge, Skeleton, Modal } from './ui'
+import React, { useEffect, useState } from 'react'
+import { Input, Select, Table, Button, Skeleton, Modal } from './ui'
 import { authFetch } from '../utils/api'
 import { useToast } from './ToastContainer'
 import { useDebounce } from '../hooks/useDebounce'
@@ -97,7 +97,7 @@ const UploadEventsList = () => {
 
       const url = `${API_URL}/api/v1/upload-events?${params.toString()}`
       logger.debug('Загрузка событий:', { url })
-      
+
       const response = await authFetch(url)
       if (!response.ok) {
         const detail = await response.json().catch(() => ({}))
@@ -106,10 +106,10 @@ const UploadEventsList = () => {
       }
 
       const data = await response.json()
-      logger.debug('Данные событий получены:', { 
-        total: data.total, 
+      logger.debug('Данные событий получены:', {
+        total: data.total,
         itemsCount: data.items?.length || 0,
-        stats: data.stats 
+        stats: data.stats
       })
       setEvents(data.items || [])
       // Всегда устанавливаем stats, даже если пустые
@@ -163,6 +163,12 @@ const UploadEventsList = () => {
   const handleFilterChange = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }))
   }
+
+  const hasActiveFilters = Boolean(
+    filters.provider_id || filters.source_type || filters.status ||
+    filters.is_scheduled !== 'all' || filters.date_from || filters.date_to ||
+    debouncedSearch.trim()
+  )
 
   // Подготовка данных для таблицы
   const tableColumns = [
@@ -254,18 +260,39 @@ const UploadEventsList = () => {
     )
   }))
 
+  const statTiles = [
+    { label: 'Всего событий', value: stats?.total_events || 0, tone: 'accent' },
+    { label: 'Создано транзакций', value: stats?.total_created || 0, tone: 'green' },
+    { label: 'Пропущено', value: stats?.total_skipped || 0, tone: 'amber' },
+    { label: 'Ошибок', value: stats?.failed_events || 0, tone: 'red' },
+    { label: 'Регламентных', value: stats?.scheduled_events || 0, tone: 'cyan' }
+  ]
+
   return (
-    <Card>
-      <Card.Header>
+    <div className="upl-root" data-testid="upload-events-list">
+      <div className="upl-header">
         <div>
-          <Card.Title>События загрузок</Card.Title>
-          <p className="event-subtitle">
+          <h2 className="upl-header__title">События загрузок</h2>
+          <p className="upl-header__subtitle event-subtitle">
             Кто, когда и сколько загрузил. Регламентные загрузки включены.
           </p>
         </div>
-      </Card.Header>
-      <Card.Body>
-        <div className="events-filters-grid">
+      </div>
+
+      <div className="upl-stats events-stats-grid" data-testid="upload-events-stats">
+        {statTiles.map((tile) => (
+          <div key={tile.label} className="upl-stat" data-tone={tile.tone}>
+            <span className="upl-stat__bar" />
+            <div className="upl-stat__body">
+              <div className="t-label">{tile.label}</div>
+              <div className="t-value-sm upl-stat__value">{tile.value}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="upl-filters">
+        <div className="upl-filters__grid events-filters-grid">
           <Input
             label="Поиск"
             type="text"
@@ -335,106 +362,71 @@ const UploadEventsList = () => {
             fullWidth
           />
         </div>
+      </div>
 
-        <div className="events-stats-grid">
-          <Card variant="outlined" padding="sm">
-            <div className="events-stat-label">
-              Всего событий
+      <div className="upl-card">
+        <div className="upl-card__body">
+          {loading ? (
+            <div className="upl-card__state">
+              <Skeleton rows={6} columns={8} />
             </div>
-            <div className="events-stat-value">
-              {stats?.total_events || 0}
-            </div>
-          </Card>
-          <Card variant="outlined" padding="sm">
-            <div className="events-stat-label">
-              Создано транзакций
-            </div>
-            <div className="events-stat-value">
-              {stats?.total_created || 0}
-            </div>
-          </Card>
-          <Card variant="outlined" padding="sm">
-            <div className="events-stat-label">
-              Пропущено
-            </div>
-            <div className="events-stat-value">
-              {stats?.total_skipped || 0}
-            </div>
-          </Card>
-          <Card variant="outlined" padding="sm">
-            <div className="events-stat-label">
-              Ошибок
-            </div>
-            <div className="events-stat-value">
-              {stats?.failed_events || 0}
-            </div>
-          </Card>
-          <Card variant="outlined" padding="sm">
-            <div className="events-stat-label">
-              Регламентных
-            </div>
-            <div className="events-stat-value">
-              {stats?.scheduled_events || 0}
-            </div>
-          </Card>
-        </div>
-
-        {loading ? (
-          <Skeleton rows={6} columns={8} />
-        ) : tableData.length === 0 ? (
-          <EmptyState
-            title="Нет событий по выбранным фильтрам"
-            message={
-              (filters.provider_id || filters.source_type || filters.status || filters.is_scheduled !== 'all' || filters.date_from || filters.date_to || debouncedSearch.trim())
-                ? "Попробуйте изменить параметры фильтрации или сбросить фильтры, чтобы увидеть все события."
-                : "События загрузок пока отсутствуют. Загрузите файл для создания первого события."
-            }
-            icon="📋"
-            variant="default"
-            action={
-              (filters.provider_id || filters.source_type || filters.status || filters.is_scheduled !== 'all' || filters.date_from || filters.date_to || debouncedSearch.trim()) ? (
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    setFilters({
-                      search: '',
-                      provider_id: '',
-                      source_type: '',
-                      status: '',
-                      is_scheduled: 'all',
-                      date_from: '',
-                      date_to: ''
-                    })
-                  }}
-                >
-                  Сбросить фильтры
-                </Button>
-              ) : null
-            }
-          />
-        ) : (
-          <>
-            <Table
-              columns={tableColumns}
-              data={tableData}
-              emptyMessage="Нет событий по выбранным фильтрам"
-              striped
-              hoverable
-              compact
-            />
-            {total > limit && (
-              <Table.Pagination
-                currentPage={page}
-                totalPages={Math.ceil(total / limit)}
-                total={total}
-                pageSize={limit}
-                onPageChange={setPage}
+          ) : tableData.length === 0 ? (
+            <div className="upl-card__state">
+              <EmptyState
+                title="Нет событий по выбранным фильтрам"
+                message={
+                  hasActiveFilters
+                    ? 'Попробуйте изменить параметры фильтрации или сбросить фильтры, чтобы увидеть все события.'
+                    : 'События загрузок пока отсутствуют. Загрузите файл для создания первого события.'
+                }
+                icon="📋"
+                variant="default"
+                action={
+                  hasActiveFilters ? (
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        setFilters({
+                          search: '',
+                          provider_id: '',
+                          source_type: '',
+                          status: '',
+                          is_scheduled: 'all',
+                          date_from: '',
+                          date_to: ''
+                        })
+                      }}
+                    >
+                      Сбросить фильтры
+                    </Button>
+                  ) : null
+                }
               />
-            )}
-          </>
-        )}
-      </Card.Body>
-      
+            </div>
+          ) : (
+            <>
+              <Table
+                columns={tableColumns}
+                data={tableData}
+                emptyMessage="Нет событий по выбранным фильтрам"
+                striped
+                hoverable
+                compact
+              />
+              {total > limit && (
+                <Table.Pagination
+                  currentPage={page}
+                  totalPages={Math.ceil(total / limit)}
+                  total={total}
+                  pageSize={limit}
+                  onPageChange={setPage}
+                />
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
       <Modal
         isOpen={messageModal.isOpen}
         onClose={() => setMessageModal({ isOpen: false, message: '', title: '' })}
@@ -455,7 +447,7 @@ const UploadEventsList = () => {
           </Button>
         </Modal.Footer>
       </Modal>
-    </Card>
+    </div>
   )
 }
 

@@ -17,13 +17,13 @@
   position: absolute;
   right: 4px;
   bottom: 4px;
-  color: var(--color-text-primary, #1e293b);
+  color: var(--text-1, #1e293b);
   pointer-events: none;
   transition: transform 0.2s;
-  background: var(--color-bg-card, #fff);
+  background: var(--surface, #fff);
   border-radius: 2px;
   padding: 1px;
-  fill: var(--color-text-primary, #1e293b);
+  fill: var(--text-1, #1e293b);
   opacity: 1;
 }
 
@@ -32,7 +32,7 @@
 :not([data-theme]) .clear-menu-arrow {
   color: #1e293b;
   fill: #1e293b;
-  background: var(--color-bg-card);
+  background: var(--surface);
 }
 
 .clear-menu.dropdown-open .clear-menu-arrow {
@@ -43,8 +43,8 @@
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  background: var(--bg-primary, #ffffff);
-  border: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
   min-width: 280px;
@@ -66,7 +66,7 @@
 
 .clear-menu-item {
   border-radius: 0 !important;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--border);
   transition: background-color 0.2s;
   min-height: 60px;
   padding: 0.75rem 1rem !important;
@@ -79,7 +79,7 @@
 }
 
 .clear-menu-item:hover {
-  background-color: var(--bg-secondary, #f5f5f5) !important;
+  background-color: var(--surface-2) !important;
 }
 
 .clear-menu-icon {
@@ -90,7 +90,7 @@
 .clear-menu-label {
   font-weight: 500;
   font-size: 0.9rem;
-  color: var(--text-primary, #333);
+  color: var(--text-1);
   margin-bottom: 4px;
   line-height: 1.4;
   word-wrap: break-word;
@@ -98,7 +98,7 @@
 
 .clear-menu-description {
   font-size: 0.75rem;
-  color: var(--text-secondary, #666);
+  color: var(--text-2);
   line-height: 1.4;
   word-wrap: break-word;
 }
@@ -106,24 +106,24 @@
 /* Темная тема */
 @media (prefers-color-scheme: dark) {
   .clear-menu-dropdown {
-    background: var(--bg-primary, #1e1e1e);
-    border-color: var(--border-color, #333);
+    background: var(--bg);
+    border-color: var(--border);
   }
 
   .clear-menu-item:hover {
-    background-color: var(--bg-secondary, #2a2a2a) !important;
+    background-color: var(--surface-2) !important;
   }
 
   .clear-menu-label {
-    color: var(--text-primary, #fff);
+    color: var(--text-1);
   }
 
   .clear-menu-description {
-    color: var(--text-secondary, #aaa);
+    color: var(--text-2);
   }
 
   .clear-menu-arrow {
-    color: var(--text-secondary, #aaa);
-    background: var(--bg-primary, #1e1e1e);
+    color: var(--text-2);
+    background: var(--bg);
   }
 }

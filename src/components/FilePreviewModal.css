@@ -7,9 +7,9 @@
   gap: var(--spacing-element);
   margin-bottom: var(--spacing-block);
   padding: var(--padding-element);
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   border-radius: var(--radius-medium);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
 }
 
@@ -21,13 +21,13 @@
 
 .file-preview-label {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-weight: var(--font-weight-medium);
 }
 
 .file-preview-value {
   font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-weight: var(--font-weight-semibold);
   word-break: break-word;
 }
@@ -37,8 +37,8 @@
   align-items: center;
   gap: var(--spacing-small);
   padding: var(--padding-element);
-  background: var(--color-error-light);
-  color: var(--color-error-dark);
+  background: var(--red-soft);
+  color: var(--red);
   border-radius: var(--radius-medium);
   margin-bottom: var(--spacing-block);
 }
@@ -54,13 +54,13 @@
 .file-preview-content h4 {
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   margin-bottom: var(--spacing-element);
 }
 
 .file-preview-csv {
   overflow-x: auto;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   border-radius: var(--radius-medium);
 }
 
@@ -72,9 +72,9 @@
 
 .file-preview-table td {
   padding: var(--padding-tiny) var(--padding-tiny);
-  border-bottom: 1px solid var(--color-border-light);
-  border-right: 1px solid var(--color-border-light);
-  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--border-strong);
+  border-right: 1px solid var(--border-strong);
+  color: var(--text-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -90,18 +90,18 @@
 }
 
 .file-preview-table tr:nth-child(1) {
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   font-weight: var(--font-weight-semibold);
 }
 
 .file-preview-text {
   padding: var(--padding-element);
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   border-radius: var(--radius-medium);
   font-size: var(--font-size-xs);
   font-family: 'Courier New', monospace;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   white-space: pre-wrap;
   word-wrap: break-word;
   max-height: 400px;
@@ -115,11 +115,11 @@
   justify-content: center;
   gap: var(--spacing-element);
   padding: var(--padding-section);
-  background: linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-bg-card) 100%);
-  border: 2px solid var(--color-primary);
+  background: linear-gradient(135deg, var(--surface-2) 0%, var(--surface) 100%);
+  border: 2px solid var(--accent);
   border-radius: var(--radius-medium);
   font-size: var(--font-size-base);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   box-shadow: var(--shadow-md);
   font-weight: var(--font-weight-semibold);
 }
@@ -134,7 +134,7 @@
   justify-content: center;
   gap: var(--spacing-element);
   padding: var(--padding-section);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
 }
 
 .alert-with-margin {
@@ -148,7 +148,7 @@
   justify-content: center;
   gap: var(--spacing-element);
   padding: var(--padding-section);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   margin-top: var(--spacing-block);
 }
 
@@ -159,9 +159,9 @@
 .file-preview-template-selection {
   margin-top: var(--spacing-block);
   padding: var(--padding-element);
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
   border-radius: var(--radius-medium);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
 }
 
 /* Мобильная адаптация */

@@ -82,13 +82,13 @@
 .text-justify { text-align: justify !important; }
 
 /* Text color */
-.text-primary { color: var(--color-text-primary) !important; }
-.text-secondary { color: var(--color-text-secondary) !important; }
-.text-tertiary { color: var(--color-text-tertiary) !important; }
-.text-error { color: var(--color-error) !important; }
-.text-success { color: var(--color-success) !important; }
-.text-warning { color: var(--color-warning) !important; }
-.text-info { color: var(--color-info) !important; }
+.text-primary { color: var(--text-1) !important; }
+.text-secondary { color: var(--text-2) !important; }
+.text-tertiary { color: var(--text-3) !important; }
+.text-error { color: var(--red) !important; }
+.text-success { color: var(--green) !important; }
+.text-warning { color: var(--amber) !important; }
+.text-info { color: var(--cyan) !important; }
 
 /* Text transform */
 .uppercase { text-transform: uppercase !important; }
@@ -180,12 +180,12 @@
 
 /* === BORDER === */
 
-.border { border: 1px solid var(--color-border) !important; }
+.border { border: 1px solid var(--border) !important; }
 .border-0 { border: 0 !important; }
-.border-t { border-top: 1px solid var(--color-border) !important; }
-.border-b { border-bottom: 1px solid var(--color-border) !important; }
-.border-l { border-left: 1px solid var(--color-border) !important; }
-.border-r { border-right: 1px solid var(--color-border) !important; }
+.border-t { border-top: 1px solid var(--border) !important; }
+.border-b { border-bottom: 1px solid var(--border) !important; }
+.border-l { border-left: 1px solid var(--border) !important; }
+.border-r { border-right: 1px solid var(--border) !important; }
 
 /* Border radius */
 .rounded-none { border-radius: 0 !important; }
@@ -197,10 +197,10 @@
 
 /* === BACKGROUND === */
 
-.bg-primary { background-color: var(--color-bg-primary) !important; }
-.bg-secondary { background-color: var(--color-bg-secondary) !important; }
-.bg-card { background-color: var(--color-bg-card) !important; }
-.bg-hover { background-color: var(--color-bg-hover) !important; }
+.bg-primary { background-color: var(--bg) !important; }
+.bg-secondary { background-color: var(--surface-2) !important; }
+.bg-card { background-color: var(--surface) !important; }
+.bg-hover { background-color: var(--surface-2) !important; }
 
 /* === SHADOW === */
 

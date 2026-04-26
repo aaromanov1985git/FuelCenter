@@ -94,7 +94,7 @@ const ContextMenu = ({ isOpen, x, y, items = [], onClose }) => {
 
         return (
           <Button
-            key={index}
+            key={item.label}
             variant="ghost"
             size="sm"
             onClick={() => handleItemClick(item)}

@@ -58,3 +58,12 @@ nul
 coverage/
 .nyc_output/
 *.lcov
+
+# QA artifacts — screenshots, baselines, diffs (reports kept in git)
+qa/baseline/
+qa/reference/
+qa/after/
+qa/diffs/
+!qa/reports/
+!qa/README.md
+!qa/audit.spec.js

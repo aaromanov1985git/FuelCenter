@@ -7,7 +7,7 @@
 .load-firebird-template-name {
   margin: 0 0 var(--spacing-element) 0;
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-base);
 }
 
@@ -20,6 +20,6 @@
 .load-firebird-hint {
   margin: var(--spacing-tiny) 0 0 0;
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   line-height: var(--line-height-normal);
 }

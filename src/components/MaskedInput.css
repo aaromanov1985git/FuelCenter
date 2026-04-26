@@ -1,29 +1,29 @@
 .masked-input {
   width: 100%;
-  padding: var(--padding-input);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-input);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
   font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  background: var(--color-bg-primary);
+  color: var(--text-1);
+  background: var(--bg);
   transition: all 0.2s ease;
 }
 
 .masked-input:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .masked-input:disabled {
-  background: var(--color-bg-secondary);
-  color: var(--color-text-tertiary);
+  background: var(--surface-2);
+  color: var(--text-3);
   cursor: not-allowed;
   opacity: 0.6;
 }
 
 .masked-input::placeholder {
-  color: var(--color-text-tertiary);
+  color: var(--text-3);
   opacity: 0.6;
 }
 

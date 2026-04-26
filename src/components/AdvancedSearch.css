@@ -1,7 +1,7 @@
-.advanced-search {
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-light);
+﻿.advanced-search {
+  background: var(--surface);
+  border-radius: var(--radius-medium);
+  border: 1px solid var(--border-strong);
   margin-bottom: var(--spacing-block);
   position: relative;
   z-index: 100;
@@ -13,8 +13,8 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-element);
-  background: var(--color-bg-secondary);
-  border-bottom: 1px solid var(--color-border-light);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-strong);
   overflow: visible;
 }
 
@@ -36,7 +36,7 @@
 
 .advanced-search-icon {
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  color: var(--text-3);
   transition: transform 0.2s ease;
 }
 
@@ -49,8 +49,8 @@
 }
 
 .advanced-search-badge {
-  background: var(--color-primary);
-  color: var(--color-text-on-primary);
+  background: var(--accent);
+  color: #fff;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   padding: 2px var(--padding-tiny);
@@ -60,11 +60,11 @@
 }
 
 .advanced-search-clear {
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  color: var(--color-text-primary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-1);
   padding: var(--padding-tiny) var(--padding-small);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
@@ -72,9 +72,9 @@
 }
 
 .advanced-search-clear:hover:not(:disabled) {
-  background: var(--color-error-light);
-  border-color: var(--color-error);
-  color: var(--color-error-dark);
+  background: var(--red-soft);
+  border-color: var(--red);
+  color: var(--red);
 }
 
 .advanced-search-clear:disabled {
@@ -114,7 +114,7 @@
 .advanced-search-label {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
 }
 
 /* Input и Select теперь используют стандартные компоненты из ui библиотеки */
@@ -125,9 +125,9 @@
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
   box-shadow: var(--shadow-lg);
   z-index: 10001;
   max-height: 200px;
@@ -142,16 +142,16 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--padding-tiny) var(--padding-small);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--border-strong);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
 }
 
 .advanced-search-history-clear {
   background: none;
   border: none;
-  color: var(--color-text-tertiary);
+  color: var(--text-3);
   cursor: pointer;
   font-size: 1.2rem;
   line-height: 1;
@@ -161,13 +161,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-small);
   transition: all 0.2s ease;
 }
 
 .advanced-search-history-clear:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-error);
+  background: var(--surface-2);
+  color: var(--red);
 }
 
 .advanced-search-history-items {
@@ -183,7 +183,7 @@
   background: none;
   border: none;
   text-align: left;
-  color: var(--color-text-primary);
+  color: var(--text-1);
   font-size: var(--font-size-sm);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -191,7 +191,7 @@
 }
 
 .advanced-search-history-item:hover {
-  background: var(--color-bg-hover);
+  background: var(--surface-2);
 }
 
 .advanced-search-history-icon {
@@ -201,7 +201,7 @@
 
 .advanced-search-history-text {
   flex: 1;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

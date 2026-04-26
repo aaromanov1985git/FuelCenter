@@ -13,7 +13,7 @@
 .select-label {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   display: block;
   line-height: 1.4;
 }
@@ -24,7 +24,7 @@
 }
 
 .select-required {
-  color: var(--color-error);
+  color: var(--red);
   margin-left: 4px;
   display: inline;
 }
@@ -36,40 +36,40 @@
   justify-content: space-between;
   height: 40px;
   padding: 0 var(--padding-small);
-  border: 1px solid var(--color-border-light);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-small);
-  background: var(--color-bg-card);
+  background: var(--surface);
   cursor: pointer;
   transition: all var(--duration-normal) var(--ease-in-out);
   user-select: none;
 }
 
 .select-control:hover:not(.select-disabled .select-control) {
-  border-color: var(--color-border);
+  border-color: var(--border);
 }
 
 .select-control:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .select-open {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .select-value {
   flex: 1;
   font-size: var(--font-size-base);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .select-control:not(:has(.select-option-selected)) .select-value {
-  color: var(--color-text-tertiary);
+  color: var(--text-3);
 }
 
 .select-icons {
@@ -88,7 +88,7 @@
   background: none;
   border: none;
   border-radius: 50%;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   cursor: pointer;
   font-size: 20px;
   line-height: 1;
@@ -97,13 +97,13 @@
 }
 
 .select-clear:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
+  background: var(--surface-2);
+  color: var(--text-1);
 }
 
 .select-arrow {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   transition: transform var(--duration-normal) var(--ease-in-out);
   display: inline-block;
 }
@@ -117,8 +117,8 @@
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-small);
   box-shadow: var(--shadow-lg);
   z-index: 1100; /* Выше модального окна (1050) */
@@ -146,25 +146,25 @@
 
 .select-search {
   padding: var(--spacing-small);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--border);
 }
 
 .select-search-input {
   width: 100%;
   height: 36px;
   padding: 0 var(--padding-small);
-  border: 1px solid var(--color-border-light);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-small);
   font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  background: var(--color-bg-secondary);
+  color: var(--text-1);
+  background: var(--surface-2);
   transition: all var(--duration-normal);
 }
 
 .select-search-input:focus {
   outline: none;
-  border-color: var(--color-primary);
-  background: var(--color-bg-card);
+  border-color: var(--accent);
+  background: var(--surface);
 }
 
 .select-options {
@@ -179,55 +179,55 @@
   justify-content: space-between;
   padding: var(--padding-small) var(--padding-element);
   font-size: var(--font-size-base);
-  color: var(--color-text-primary);
+  color: var(--text-1);
   cursor: pointer;
   transition: background var(--duration-fast);
 }
 
 .select-option:hover {
-  background: var(--color-bg-hover);
+  background: var(--surface-2);
 }
 
 .select-option-selected {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
+  background: var(--accent-soft);
+  color: var(--accent);
   font-weight: var(--font-weight-semibold);
 }
 
 .select-check {
   font-size: var(--font-size-lg);
-  color: var(--color-primary);
+  color: var(--accent);
 }
 
 .select-empty {
   padding: var(--padding-section);
   text-align: center;
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   font-size: var(--font-size-sm);
 }
 
 /* States */
 .select-error .select-control {
-  border-color: var(--color-error);
+  border-color: var(--red);
 }
 
 .select-error .select-control:focus,
 .select-error .select-open {
-  box-shadow: 0 0 0 3px var(--color-error-light);
+  box-shadow: 0 0 0 3px var(--red-soft);
 }
 
 .select-disabled .select-control {
   opacity: 0.6;
   cursor: not-allowed;
-  background: var(--color-bg-secondary);
+  background: var(--surface-2);
 }
 
 .select-helper {
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--text-2);
   margin-top: var(--spacing-tiny);
 }
 
 .select-helper-error {
-  color: var(--color-error-dark);
+  color: var(--red);
 }

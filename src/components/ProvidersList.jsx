@@ -463,7 +463,7 @@ const ProvidersList = () => {
           <Card.Title>Справочник провайдеров</Card.Title>
           <Card.Actions>
             <Button
-              variant={showAddModal ? "secondary" : "success"}
+              variant={showAddModal ? "secondary" : "primary"}
               icon={showAddModal ? "×" : "+"}
               onClick={() => {
                 if (showAddModal) {
@@ -488,7 +488,7 @@ const ProvidersList = () => {
 
           {/* Фильтр по организации */}
           <div style={{ marginBottom: 'var(--spacing-element)', display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--color-text-primary)' }}>
+            <label style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-1)' }}>
               Фильтр по организации:
             </label>
             <Select
@@ -649,9 +649,9 @@ const ProvidersList = () => {
                         <div className="templates-section">
                           <div className="templates-header">
                             <h4>Шаблоны провайдера</h4>
-                            <IconButton 
-                              icon="add" 
-                              variant="success" 
+                            <IconButton
+                              icon="add"
+                              variant="primary"
                               onClick={() => handleAddTemplate(provider.id)}
                               title="Добавить шаблон"
                               size="small"

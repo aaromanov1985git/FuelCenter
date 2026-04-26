@@ -83,9 +83,11 @@ describe('useSearchHistory', () => {
       result.current.addToHistory('TEST QUERY')
     })
 
+    // Хук сохраняет первую версию (по регистру) и не заменяет её повторными
+    // добавлениями того же значения в другом регистре — это ожидаемая UX-семантика.
     await waitFor(() => {
       expect(result.current.history.length).toBe(1)
-      expect(result.current.history[0]).toBe('TEST QUERY')
+      expect(result.current.history[0]).toBe('Test Query')
     })
   })
 
