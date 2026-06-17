@@ -10,8 +10,12 @@
 #    - Docker запущен, сеть gsm_network создана
 #    - Проект скопирован, рядом с docker-compose.yml лежит .env
 #
-#  Делает: docker compose up -d → ждёт healthy → pg_restore →
-#          alembic upgrade head → health-проверки.
+#  Делает: docker compose up -d → ждёт healthy → ЧИСТЫЙ restore в пустую БД
+#          (стоп backend, drop/create, pg_restore, старт backend) → проверки.
+#
+#  ВАЖНО: restore идёт в ПУСТУЮ пересозданную базу. Если лить дамп поверх
+#  уже поднятого backend, он успевает засидить дефолтные записи (напр. 1
+#  провайдера) → FK/PK-конфликты и потеря части данных (providers/templates).
 # ───────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -51,23 +55,42 @@ for i in $(seq 1 30); do
   [[ $i -eq 30 ]] && { echo "❌ PostgreSQL не поднялся за 60с. Логи: docker compose logs db"; exit 1; }
 done
 
-# 3. Восстановление дампа
+# 3. ЧИСТОЕ восстановление БД (в пустую пересозданную базу)
+echo "→ Останавливаю backend (чтобы не сидил дефолтные данные во время restore)..."
+docker stop "$BACKEND_CONTAINER" >/dev/null 2>&1 || true
+
+echo "→ Пересоздаю пустую базу ${PG_DB}..."
+docker exec "$DB_CONTAINER" psql -U "$PG_USER" -d postgres -c \
+  "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${PG_DB}' AND pid <> pg_backend_pid();" >/dev/null
+docker exec "$DB_CONTAINER" psql -U "$PG_USER" -d postgres -c "DROP DATABASE IF EXISTS ${PG_DB};"
+docker exec "$DB_CONTAINER" psql -U "$PG_USER" -d postgres -c "CREATE DATABASE ${PG_DB} OWNER ${PG_USER};"
+
 echo "→ Восстановление БД из $DUMP_FILE ..."
 docker cp "$DUMP_FILE" "${DB_CONTAINER}:/tmp/restore.dump"
-# -c --if-exists: пересоздать объекты; ошибки на отсутствующих объектах не фатальны
-docker exec "$DB_CONTAINER" pg_restore -U "$PG_USER" -d "$PG_DB" -c --if-exists --no-owner /tmp/restore.dump || \
-  echo "⚠ pg_restore завершился с предупреждениями (обычно норма при -c --if-exists)"
-docker exec "$DB_CONTAINER" rm -f /tmp/restore.dump
+if docker exec "$DB_CONTAINER" pg_restore -U "$PG_USER" -d "$PG_DB" --no-owner /tmp/restore.dump 2>/tmp/pgr.err; then
+  echo "✓ pg_restore без ошибок"
+else
+  echo "⚠ pg_restore: $(docker exec "$DB_CONTAINER" sh -c 'grep -c -i error /tmp/pgr.err' 2>/dev/null || echo '?') ошибок — проверьте: docker exec $DB_CONTAINER cat /tmp/pgr.err"
+fi
+docker exec "$DB_CONTAINER" rm -f /tmp/restore.dump /tmp/pgr.err
 
-# 4. Миграции
-echo "→ alembic upgrade head ..."
-docker exec "$BACKEND_CONTAINER" alembic upgrade head
-echo -n "  Текущая версия миграций: "
-docker exec "$BACKEND_CONTAINER" alembic current 2>/dev/null || echo "N/A"
+echo "→ Запускаю backend ..."
+docker start "$BACKEND_CONTAINER" >/dev/null 2>&1 || true
+for i in $(seq 1 15); do curl -fsS http://localhost:8000/health >/dev/null 2>&1 && break; sleep 2; done
+
+# 4. Миграции. Дамп уже несёт состояние alembic исходного сервера, поэтому
+#    обычно применять нечего. В дереве возможны НЕСКОЛЬКО heads — используем
+#    'heads' и не падаем, если упереться не во что.
+echo "→ alembic upgrade heads (толерантно) ..."
+docker exec "$BACKEND_CONTAINER" alembic upgrade heads >/dev/null 2>&1 \
+  && echo "  ✓ применено" \
+  || echo "  ⚠ пропущено (несколько heads / уже на состоянии источника) — норма для точной реплики"
+echo "  Текущее состояние alembic:"
+docker exec "$BACKEND_CONTAINER" alembic current 2>/dev/null | grep -vE '^\{' | sed 's/^/    /' || echo "    N/A"
 
 # 5. Контрольные числа
-echo "→ Контроль записей:"
-for t in transactions fuel_cards gas_stations; do
+echo "→ Контроль записей (сверьте с источником!):"
+for t in transactions fuel_cards gas_stations providers provider_templates; do
   cnt=$(docker exec "$DB_CONTAINER" psql -U "$PG_USER" -d "$PG_DB" -t -A -c "SELECT COUNT(*) FROM ${t};" 2>/dev/null || echo "N/A")
   printf '   %-16s %s\n' "$t" "$cnt"
 done
