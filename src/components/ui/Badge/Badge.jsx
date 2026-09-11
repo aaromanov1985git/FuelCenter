@@ -1,14 +1,6 @@
 import React from 'react';
 import './Badge.css';
 
-const VARIANT_ICONS = {
-  success: '✓',
-  warning: '⚠',
-  error: '✗',
-  info: 'ℹ',
-  neutral: '○'
-};
-
 const Badge = ({
   children,
   variant = 'neutral',
@@ -19,8 +11,10 @@ const Badge = ({
   className = '',
   ...props
 }) => {
-  const defaultIcon = VARIANT_ICONS[variant];
-  const displayIcon = icon !== undefined ? icon : defaultIcon;
+  // Глиф не подставляется автоматически: раньше бейдж сам дорисовывал «✓», «⚠», «○»
+  // по варианту, и эти значки расползлись по интерфейсу помимо воли авторов.
+  // Нужен значок — передайте icon явно, нужна точка состояния — dot.
+  const displayIcon = icon;
 
   const classes = [
     'badge',

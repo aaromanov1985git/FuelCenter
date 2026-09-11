@@ -4,6 +4,7 @@ import ConfirmModal from './ConfirmModal'
 import LoadFirebirdModal from './LoadFirebirdModal'
 import LoadApiModal from './LoadApiModal'
 import { Button, Card, Badge, Table, Alert, Skeleton, useToast } from './ui'
+import TemplateRowActions from './TemplateRowActions'
 import { logger } from '../utils/logger'
 import { authFetch } from '../utils/api'
 import './TemplatesList.css'
@@ -330,18 +331,60 @@ const TemplatesList = () => {
     return schedule
   }
 
+  // Источник данных определяет и набор секций редактора, и то, какая загрузка
+  // доступна, — но до сих пор нигде не показывался. Зато показывались header_row
+  // и data_start_row, осмысленные только для файловых шаблонов: на API-шаблоне
+  // они давали «0» и «1».
+  const SOURCE_LABELS = {
+    file: 'Excel',
+    firebird: 'Firebird',
+    api: 'API',
+    web: 'Веб-сервис'
+  }
+
+  const formatLastLoad = (value) => {
+    if (!value) return null
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return null
+    return d.toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
   const columns = [
-    { key: 'id', header: 'ID', width: '80px', align: 'center' },
-    { key: 'name', header: 'Название', sortable: true },
-    { key: 'description', header: 'Описание', sortable: false },
-    { key: 'header_row', header: 'Строка заголовков', width: '150px', align: 'center' },
-    { key: 'data_start_row', header: 'Строка начала данных', width: '180px', align: 'center' },
+    {
+      key: 'name',
+      header: 'Название',
+      sortable: true,
+      render: (val, row) => (
+        <div className="template-name-cell">
+          <span className="template-name">{val}</span>
+          <span className="template-name-meta">
+            id {row.id}
+            {row.description && row.description !== '—' ? ` · ${row.description}` : ''}
+          </span>
+        </div>
+      )
+    },
+    {
+      key: 'connection_type',
+      header: 'Источник',
+      width: '130px',
+      render: (val) => (
+        <Badge size="sm" variant="neutral">
+          {SOURCE_LABELS[val] || val || 'Excel'}
+        </Badge>
+      )
+    },
     {
       key: 'is_active',
       header: 'Статус',
-      width: '140px',
+      width: '130px',
       render: (val) => (
-        <Badge size="sm" variant={val ? 'success' : 'neutral'}>
+        <Badge size="sm" variant={val ? 'success' : 'neutral'} dot>
           {val ? 'Активен' : 'Неактивен'}
         </Badge>
       )
@@ -349,63 +392,46 @@ const TemplatesList = () => {
     {
       key: 'auto_load',
       header: 'Автозагрузка',
-      width: '200px',
+      width: '190px',
       render: (_, row) => {
         if (row.auto_load_enabled && row.auto_load_schedule) {
-          const scheduleText = formatSchedule(row.auto_load_schedule)
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <Badge size="sm" variant="info" style={{ alignSelf: 'flex-start' }}>
-                Включена
-              </Badge>
-              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                {scheduleText}
-              </span>
-            </div>
+            <span className="template-schedule">{formatSchedule(row.auto_load_schedule)}</span>
           )
         }
-        return <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+        return <span className="template-muted">Выключена</span>
+      }
+    },
+    {
+      key: 'last_auto_load_date',
+      header: 'Последняя загрузка',
+      width: '160px',
+      render: (val) => {
+        const formatted = formatLastLoad(val)
+        return formatted
+          ? <span className="template-last-load">{formatted}</span>
+          : <span className="template-muted">—</span>
       }
     },
     {
       key: 'actions',
-      header: 'Действия',
-      width: '260px',
+      header: '',
+      width: '96px',
+      align: 'right',
       render: (_, row) => (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {row.connection_type === 'firebird' && (
-            <Button
-              size="sm"
-              variant="success"
-              onClick={() => setLoadFirebirdModal({
-                isOpen: true,
-                templateId: row.id,
-                templateName: row.name
-              })}
-            >
-              Загрузить (Firebird)
-            </Button>
-          )}
-          {(row.connection_type === 'api' || row.connection_type === 'web') && (
-            <Button
-              size="sm"
-              variant="success"
-              onClick={() => setLoadApiModal({
-                isOpen: true,
-                templateId: row.id,
-                templateName: row.name
-              })}
-            >
-              Загрузить {row.connection_type === 'web' ? '(XML API)' : '(API)'}
-            </Button>
-          )}
-          <Button size="sm" variant="primary" onClick={() => handleEditTemplate(row)}>
-            Редактировать
-          </Button>
-          <Button size="sm" variant="error" onClick={() => handleDeleteTemplate(row.id)}>
-            Удалить
-          </Button>
-        </div>
+        <TemplateRowActions
+          template={row}
+          onEdit={handleEditTemplate}
+          onDelete={handleDeleteTemplate}
+          onLoad={(t) => {
+            const payload = { isOpen: true, templateId: t.id, templateName: t.name }
+            if (t.connection_type === 'firebird') {
+              setLoadFirebirdModal(payload)
+            } else {
+              setLoadApiModal(payload)
+            }
+          }}
+        />
       )
     }
   ]
