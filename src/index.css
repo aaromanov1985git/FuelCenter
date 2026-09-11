@@ -176,15 +176,6 @@ html.theme-transitioning .progress-bar {
   transition: none !important;
 }
 
-[data-theme="dark"] p,
-[data-theme="dark"] span,
-[data-theme="dark"] div,
-[data-theme="dark"] p,
-[data-theme="dark"] span,
-[data-theme="dark"] div {
-  color: var(--color-text-primary);
-}
-
 [data-theme="dark"] .subtitle,
 [data-theme="dark"] .subtitle {
   color: var(--color-text-secondary);
