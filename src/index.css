@@ -176,28 +176,6 @@ html.theme-transitioning .progress-bar {
   transition: none !important;
 }
 
-/* Улучшение контрастности текста на темных темах */
-[data-theme="dark"] *,
-[data-theme="dark"] * {
-  color: inherit;
-}
-
-[data-theme="dark"] h1,
-[data-theme="dark"] h2,
-[data-theme="dark"] h3,
-[data-theme="dark"] h4,
-[data-theme="dark"] h5,
-[data-theme="dark"] h6,
-[data-theme="dark"] h1,
-[data-theme="dark"] h2,
-[data-theme="dark"] h3,
-[data-theme="dark"] h4,
-[data-theme="dark"] h5,
-[data-theme="dark"] h6 {
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-bold);
-}
-
 [data-theme="dark"] p,
 [data-theme="dark"] span,
 [data-theme="dark"] div,
