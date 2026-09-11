@@ -5,6 +5,7 @@ import LoadFirebirdModal from './LoadFirebirdModal'
 import LoadApiModal from './LoadApiModal'
 import { Button, Card, Badge, Table, Alert, Skeleton, useToast } from './ui'
 import TemplateRowActions from './TemplateRowActions'
+import EmptyState from './EmptyState'
 import { logger } from '../utils/logger'
 import { authFetch } from '../utils/api'
 import './TemplatesList.css'
@@ -443,53 +444,55 @@ const TemplatesList = () => {
 
   return (
     <div className="templates-list">
-      <Card variant="elevated" padding="lg">
-        <Card.Header>
-          <Card.Title>Конструктор шаблонов</Card.Title>
-          <p className="templates-subtitle">
-            Настройте шаблоны для преобразования файлов Excel в формат ЮПМ Газпром. Выберите провайдера и создайте или отредактируйте шаблон.
-          </p>
-        </Card.Header>
+      {/* Заголовок вынесен из Card.Header: тот раскладывает детей в ряд
+          space-between, поэтому заголовок зажимался в min-content и ломался
+          на две строки при свободном месте справа. */}
+      <header className="templates-page-header">
+        <h1 className="templates-page-title">Шаблоны</h1>
+        <p className="templates-subtitle">
+          Правила разбора выгрузок поставщиков в формат ЮПМ Газпром
+        </p>
+      </header>
 
-        <Card.Body>
-          {error && (
-            <Alert variant="error" title="Операция завершена с предупреждениями">
-              {error}
+      {error && (
+        <Alert variant="error" title="Операция завершена с предупреждениями">
+          {error}
+        </Alert>
+      )}
+
+      <div className="templates-layout">
+        <aside className="providers-rail" aria-label="Провайдеры">
+          <div className="providers-rail-title">Провайдеры</div>
+          {providers.length > 0 ? (
+            providers.map((provider) => (
+              <button
+                key={provider.id}
+                type="button"
+                className={`provider-rail-item${selectedProviderId === provider.id ? ' is-selected' : ''}`}
+                aria-pressed={selectedProviderId === provider.id}
+                onClick={() => {
+                  setSelectedProviderId(provider.id)
+                  setShowTemplateEditor(false)
+                  setEditingTemplate(null)
+                }}
+              >
+                <span className="provider-rail-name">{provider.name}</span>
+                {provider.code && <span className="provider-rail-code">{provider.code}</span>}
+              </button>
+            ))
+          ) : (
+            <Alert variant="info">
+              Провайдеры не найдены. Добавьте их в разделе «Провайдеры».
             </Alert>
           )}
+        </aside>
 
-          <div className="providers-list-form">
-            {providers.length > 0 ? (
-              providers.map(provider => (
-                <Button
-                  key={provider.id}
-                  variant={selectedProviderId === provider.id ? 'primary' : 'secondary'}
-                  onClick={() => {
-                    setSelectedProviderId(provider.id)
-                    setShowTemplateEditor(false)
-                    setEditingTemplate(null)
-                  }}
-                  style={{ minWidth: 140 }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <span>{provider.name}</span>
-                    {provider.code && (
-                      <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{provider.code}</span>
-                    )}
-                  </div>
-                </Button>
-              ))
-            ) : (
-              <Alert variant="info">Провайдеры не найдены. Добавьте провайдеров в разделе "Провайдеры".</Alert>
-            )}
-          </div>
-
-          {selectedProviderId && (
-            <div style={{ marginTop: 16, marginBottom: 16, display: 'flex', justifyContent: 'flex-start' }}>
-              <Button variant="success" onClick={handleAddTemplate}>
-                Создать шаблон
-              </Button>
-            </div>
+        <section className="templates-main">
+          {!selectedProviderId && (
+            <EmptyState
+              title="Выберите провайдера"
+              description="Слева список поставщиков. Выберите одного, чтобы увидеть и настроить его шаблоны."
+            />
           )}
 
           {showTemplateEditor && selectedProviderId && (
@@ -504,42 +507,53 @@ const TemplatesList = () => {
           )}
 
           {!showTemplateEditor && selectedProviderId && (
-            <div className="templates-table-section">
-              {loading && templates.length === 0 ? (
-                <Skeleton variant="rectangular" height={200} />
-              ) : templates.length > 0 ? (
-                <Table
-                  columns={columns}
-                  data={tableData}
-                  striped
-                  hoverable
-                  stickyHeader
-                  compact
-                  defaultSortColumn="name"
-                />
-              ) : (
-                <Alert variant="info">
-                  Шаблоны не найдены для выбранного провайдера. Создайте первый шаблон.
-                </Alert>
-              )}
-            </div>
-          )}
+            <Card variant="elevated" padding="md" className="templates-card">
+              <Card.Header>
+                <Card.Title>Шаблоны · {total}</Card.Title>
+                <Button variant="primary" onClick={handleAddTemplate}>
+                  Создать шаблон
+                </Button>
+              </Card.Header>
 
-          {!selectedProviderId && (
-            <Alert variant="info">Выберите провайдера для просмотра и редактирования шаблонов.</Alert>
-          )}
+              <Card.Body>
+                {loading && templates.length === 0 ? (
+                  <Skeleton variant="rectangular" height={200} />
+                ) : templates.length > 0 ? (
+                  <Table
+                    columns={columns}
+                    data={tableData}
+                    striped
+                    hoverable
+                    stickyHeader
+                    compact
+                    defaultSortColumn="name"
+                  />
+                ) : (
+                  <EmptyState
+                    title="Шаблонов пока нет"
+                    description="Шаблон описывает, как разобрать выгрузку этого поставщика."
+                    action={
+                      <Button variant="primary" onClick={handleAddTemplate}>
+                        Создать шаблон
+                      </Button>
+                    }
+                  />
+                )}
 
-          {selectedProviderId && total > limit && (
-            <Table.Pagination
-              currentPage={currentPage}
-              totalPages={Math.ceil(total / limit)}
-              total={total}
-              pageSize={limit}
-              onPageChange={(page) => setCurrentPage(page)}
-            />
+                {total > limit && (
+                  <Table.Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(total / limit)}
+                    total={total}
+                    pageSize={limit}
+                    onPageChange={(page) => setCurrentPage(page)}
+                  />
+                )}
+              </Card.Body>
+            </Card>
           )}
-        </Card.Body>
-      </Card>
+        </section>
+      </div>
 
       <ConfirmModal
         isOpen={deleteConfirm.isOpen}
