@@ -119,8 +119,37 @@ bash migration_backup/linux/03_restore_on_new_server.sh \
 ```
 
 `COOKIE_SECURE=false` остаётся обязательным и в prod, пока доступ идёт по HTTP.
-Для HTTPS — терминировать TLS на внешнем nginx/реверс-прокси, затем выставить
-`GSM_SCHEME=https` и `COOKIE_SECURE=true`.
+
+## HTTPS
+
+TLS терминируется тем же контейнером frontend — внешний прокси не нужен.
+Надстройка применяется **вместе** с prod-файлом:
+
+```bash
+# 1. Сертификат в ./certs/{fullchain.pem,privkey.pem}.
+#    Временный самоподписанный, чтобы проверить путь целиком:
+bash migration_backup/linux/make_selfsigned_cert.sh gsm.example.com 10.0.0.10
+
+# 2. В .env И в backend/.env:
+#      GSM_SCHEME=https
+#      COOKIE_SECURE=true      (в обоих файлах!)
+#      ALLOWED_ORIGINS=https://gsm.example.com,...
+bash migration_backup/linux/00_preflight_check.sh   # раздел 8b проверит всё перечисленное
+
+# 3. Запуск
+docker compose -f docker-compose.prod.yml -f docker-compose.https.yml up -d
+```
+
+Порт 80 отдаёт 301 на HTTPS (кроме `/.well-known/acme-challenge/` — он нужен,
+если сертификат будет выпускаться Let's Encrypt по HTTP-01).
+
+Конфиг `nginx.frontend.https.conf` монтируется поверх образа, поэтому смена
+сертификата пересборки не требует: положить новые `fullchain.pem`/`privkey.pem`
+в `./certs` и выполнить `docker compose ... exec frontend nginx -s reload`.
+`server_name _` и редирект по `$host` — адрес нигде не прошит.
+
+HSTS в конфиге намеренно закомментирован: включать его с самоподписанным
+сертификатом опасно — браузер запомнит требование HTTPS для имени.
 
 ## Мониторинг
 

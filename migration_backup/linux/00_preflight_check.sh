@@ -316,6 +316,82 @@ check_port "$FRONTEND_PORT_VAL" "frontend"
 check_port "$POSTGRES_PORT_VAL" "postgres"
 check_port "$REDIS_PORT_VAL"    "redis"
 
+# ── 8b. HTTPS-режим ───────────────────────────────────────────
+if [[ "$GSM_SCHEME_VAL" == "https" ]]; then
+  echo ""
+  echo "8b. HTTPS"
+  CERT_DIR="$PROJECT_DIR/certs"
+  CERT="$CERT_DIR/fullchain.pem"
+  KEY="$CERT_DIR/privkey.pem"
+
+  if [[ ! -f "$CERT" || ! -f "$KEY" ]]; then
+    err "нет сертификата: ожидаются $CERT и $KEY"
+    echo "      → Временный самоподписанный: bash migration_backup/linux/make_selfsigned_cert.sh <имя> <IP>"
+  else
+    ok "сертификат и ключ на месте"
+
+    # Ключ должен соответствовать сертификату, иначе nginx не стартует
+    C_MOD=$(openssl x509 -noout -modulus -in "$CERT" 2>/dev/null | openssl md5 2>/dev/null)
+    K_MOD=$(openssl rsa  -noout -modulus -in "$KEY"  2>/dev/null | openssl md5 2>/dev/null)
+    if [[ -n "$C_MOD" && "$C_MOD" == "$K_MOD" ]]; then
+      ok "ключ соответствует сертификату"
+    else
+      err "ключ НЕ соответствует сертификату — nginx не запустится"
+    fi
+
+    # Срок действия
+    if openssl x509 -checkend 0 -noout -in "$CERT" >/dev/null 2>&1; then
+      NOT_AFTER=$(openssl x509 -noout -enddate -in "$CERT" 2>/dev/null | cut -d= -f2)
+      if openssl x509 -checkend 2592000 -noout -in "$CERT" >/dev/null 2>&1; then
+        ok "сертификат действителен до $NOT_AFTER"
+      else
+        warn "сертификат истекает меньше чем через 30 дней ($NOT_AFTER)"
+      fi
+    else
+      err "сертификат ПРОСРОЧЕН"
+    fi
+
+    # Самоподписанный — рабочая заглушка, но браузеры будут ругаться
+    C_ISS=$(openssl x509 -noout -issuer  -in "$CERT" 2>/dev/null | sed "s/^issuer=//")
+    C_SUB=$(openssl x509 -noout -subject -in "$CERT" 2>/dev/null | sed "s/^subject=//")
+    if [[ "$C_ISS" == "$C_SUB" ]]; then
+      warn "сертификат самоподписанный — браузеры будут предупреждать"
+    else
+      ok "сертификат выпущен центром: $C_ISS"
+    fi
+
+    # Имя сервера должно быть в SAN, иначе браузер отвергнет соединение
+    if [[ -n "$GSM_HOST_VAL" ]]; then
+      SAN=$(openssl x509 -noout -ext subjectAltName -in "$CERT" 2>/dev/null | tail -n +2)
+      if grep -q "$GSM_HOST_VAL" <<< "$SAN"; then
+        ok "GSM_HOST есть в SAN сертификата"
+      else
+        err "GSM_HOST=$GSM_HOST_VAL отсутствует в SAN сертификата"
+        echo "      → SAN: $(echo $SAN)"
+      fi
+    fi
+  fi
+
+  # COOKIE_SECURE при HTTPS должен быть true в ОБОИХ файлах
+  if [[ "$COOKIE_VAL" != "true" ]]; then
+    err "GSM_SCHEME=https, но COOKIE_SECURE=$COOKIE_VAL в .env — должно быть true"
+  else
+    ok "COOKIE_SECURE=true в .env"
+  fi
+  if [[ -f "$BACKEND_ENV" && "${B_COOKIE:-}" != "true" ]]; then
+    err "COOKIE_SECURE=${B_COOKIE:-не задан} в backend/.env — при HTTPS должно быть true"
+  fi
+
+  # CORS по https-схеме
+  if [[ -n "$ORIGINS_VAL" && "$ORIGINS_VAL" != *"https://"* ]]; then
+    err "ALLOWED_ORIGINS не содержит https:// — фронт получит ошибки CORS"
+  fi
+
+  # Порты 80/443 нужны HTTPS-надстройке
+  check_port 80  "http-редирект"
+  check_port 443 "https"
+fi
+
 # ── 9. Место на диске ─────────────────────────────────────────
 echo ""
 echo "9. Ресурсы"
