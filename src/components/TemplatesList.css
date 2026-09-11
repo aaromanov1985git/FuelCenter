@@ -103,7 +103,7 @@
 }
 
 .provider-card-selected .provider-name {
-  color: var(--color-primary-dark);
+  color: var(--color-primary-hover);
   font-weight: var(--font-weight-semibold);
 }
 

@@ -358,13 +358,13 @@ const TemplatesList = () => {
               <Badge size="sm" variant="info" style={{ alignSelf: 'flex-start' }}>
                 Включена
               </Badge>
-              <span style={{ fontSize: '12px', color: '#666' }}>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
                 {scheduleText}
               </span>
             </div>
           )
         }
-        return <span style={{ color: '#999' }}>—</span>
+        return <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
       }
     },
     {

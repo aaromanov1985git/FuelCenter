@@ -60,7 +60,7 @@
   width: 28px;
   height: 28px;
   background: var(--color-primary);
-  color: var(--color-text-on-primary);
+  color: #fff;
   border-radius: 50%;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -594,7 +594,7 @@
 .btn-load-tables {
   padding: var(--padding-small);
   background: var(--color-primary);
-  color: var(--color-text-on-primary);
+  color: #fff;
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -622,7 +622,7 @@
 .btn-load-columns {
   padding: var(--padding-small) var(--padding-section);
   background: var(--color-success);
-  color: var(--color-text-on-primary);
+  color: #fff;
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;

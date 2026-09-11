@@ -147,8 +147,6 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
     data_start_row: template?.data_start_row ?? 1,
     source_table: template?.source_table || '',
     source_query: template?.source_query || '',
-    export_start_row: template?.export_start_row ?? 0,
-    export_header_row: template?.export_header_row ?? 0,
     is_active: template?.is_active ?? true,
     field_mapping: parseFieldMapping(template?.field_mapping),
     fuel_type_mapping: parseFuelMapping(template?.fuel_type_mapping),
@@ -277,6 +275,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   const [selectedFileName, setSelectedFileName] = useState('')
   const [autoMappedFields, setAutoMappedFields] = useState({}) // Отслеживаем автоматически сопоставленные поля
   const [apiFields, setApiFields] = useState([]) // Поля из API ответа
+  const [saving, setSaving] = useState(false) // Блокирует повторную отправку формы
   const [loadingApiFields, setLoadingApiFields] = useState(false) // Загрузка полей из API
 
   // Генерация случайного API ключа
@@ -665,7 +664,9 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
     }
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (saving) return
+
     // Валидируем маппинг видов топлива (опционально)
     let fuelMappingParsed = null
     if (fuelMappingText && fuelMappingText.trim()) {
@@ -782,7 +783,12 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       saveData.auto_load_schedule = null
     }
     
-    onSave(saveData)
+    setSaving(true)
+    try {
+      await onSave(saveData)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -1955,52 +1961,6 @@ ORDER BY rg."Date" DESC`}
           </div>
         )}
 
-        {/* ШАГ 6: Параметры экспорта (только для типа file) */}
-        {formData.connection_type === 'file' && (
-          <div className="form-section export-settings-section">
-            <h4 className="section-title">
-              <span className="step-number">6</span>
-              Параметры экспорта в Excel
-            </h4>
-            <p className="section-description">
-              Настройте параметры для экспорта данных в формат ЮПМ Газпром.
-              Эти параметры определяют, как будут форматироваться выходные файлы.
-            </p>
-
-          <div className="form-row form-row-numbers">
-            <div className="form-group form-group-number">
-              <label>
-                Строка начала экспорта (отступ сверху):
-                <input
-                  type="number"
-                  value={formData.export_start_row}
-                  onChange={(e) => setFormData({ ...formData, export_start_row: parseInt(e.target.value) || 0 })}
-                  min="0"
-                  placeholder="0"
-                  className="input-number"
-                />
-                <span className="field-help">Количество пустых строк перед началом данных в экспортируемом файле</span>
-              </label>
-            </div>
-
-            <div className="form-group form-group-number">
-              <label>
-                Строка заголовков в экспорте:
-                <input
-                  type="number"
-                  value={formData.export_header_row}
-                  onChange={(e) => setFormData({ ...formData, export_header_row: parseInt(e.target.value) || 0 })}
-                  min="0"
-                  placeholder="0"
-                  className="input-number"
-                />
-                <span className="field-help">Номер строки, где будут размещены заголовки колонок</span>
-              </label>
-            </div>
-          </div>
-        </div>
-        )}
-
         {/* ШАГ 6.5: Настройки PPR API ключа */}
         <div className="form-section">
           <h4 className="section-title">
@@ -2307,9 +2267,9 @@ ORDER BY rg."Date" DESC`}
                         padding: 'var(--spacing-tiny) var(--spacing-small)',
                         fontSize: 'var(--font-size-sm)',
                         border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--border-radius)',
+                        borderRadius: 'var(--radius-medium)',
                         backgroundColor: useVisualEditor ? 'var(--color-primary)' : 'var(--color-bg)',
-                        color: useVisualEditor ? 'white' : 'var(--color-text)',
+                        color: useVisualEditor ? 'white' : 'var(--color-text-primary)',
                         cursor: 'pointer'
                       }}
                     >
@@ -2322,10 +2282,10 @@ ORDER BY rg."Date" DESC`}
                         style={{
                           padding: 'var(--spacing-tiny) var(--spacing-small)',
                           fontSize: 'var(--font-size-sm)',
-                          border: '1px solid var(--color-danger)',
-                          borderRadius: 'var(--border-radius)',
+                          border: '1px solid var(--color-error)',
+                          borderRadius: 'var(--radius-medium)',
                           backgroundColor: 'var(--color-bg)',
-                          color: 'var(--color-danger)',
+                          color: 'var(--color-error)',
                           cursor: 'pointer'
                         }}
                         title="Очистить маппинг"
@@ -2337,7 +2297,7 @@ ORDER BY rg."Date" DESC`}
                 </div>
                 
                 {useVisualEditor ? (
-                  <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--border-radius)', padding: 'var(--spacing-block)' }}>
+                  <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-medium)', padding: 'var(--spacing-block)' }}>
                     {fuelMappingEntries.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: 'var(--spacing-block)', color: 'var(--color-text-secondary)' }}>
                         Нет записей маппинга. Нажмите "Добавить" для создания новой записи.
@@ -2355,7 +2315,7 @@ ORDER BY rg."Date" DESC`}
                                 flex: 1,
                                 padding: 'var(--spacing-tiny) var(--spacing-small)',
                                 border: '1px solid var(--color-border)',
-                                borderRadius: 'var(--border-radius)',
+                                borderRadius: 'var(--radius-medium)',
                                 fontSize: 'var(--font-size-sm)'
                               }}
                             />
@@ -2368,7 +2328,7 @@ ORDER BY rg."Date" DESC`}
                                   flex: 1,
                                   padding: 'var(--spacing-tiny) var(--spacing-small)',
                                   border: '1px solid var(--color-border)',
-                                  borderRadius: 'var(--border-radius)',
+                                  borderRadius: 'var(--radius-medium)',
                                   fontSize: 'var(--font-size-sm)'
                                 }}
                               >
@@ -2388,7 +2348,7 @@ ORDER BY rg."Date" DESC`}
                                   flex: 1,
                                   padding: 'var(--spacing-tiny) var(--spacing-small)',
                                   border: '1px solid var(--color-border)',
-                                  borderRadius: 'var(--border-radius)',
+                                  borderRadius: 'var(--radius-medium)',
                                   fontSize: 'var(--font-size-sm)'
                                 }}
                               />
@@ -2398,10 +2358,10 @@ ORDER BY rg."Date" DESC`}
                               onClick={() => removeFuelMappingEntry(index)}
                               style={{
                                 padding: 'var(--spacing-tiny)',
-                                border: '1px solid var(--color-danger)',
-                                borderRadius: 'var(--border-radius)',
+                                border: '1px solid var(--color-error)',
+                                borderRadius: 'var(--radius-medium)',
                                 backgroundColor: 'var(--color-bg)',
-                                color: 'var(--color-danger)',
+                                color: 'var(--color-error)',
                                 cursor: 'pointer',
                                 minWidth: '32px'
                               }}
@@ -2420,7 +2380,7 @@ ORDER BY rg."Date" DESC`}
                         marginTop: 'var(--spacing-block)',
                         padding: 'var(--spacing-small) var(--spacing-block)',
                         border: '1px solid var(--color-primary)',
-                        borderRadius: 'var(--border-radius)',
+                        borderRadius: 'var(--radius-medium)',
                         backgroundColor: 'var(--color-bg)',
                         color: 'var(--color-primary)',
                         cursor: 'pointer',
@@ -2565,13 +2525,15 @@ ORDER BY rg."Date" DESC`}
             icon="save" 
             variant="success" 
             onClick={handleSave}
-            title={template ? 'Сохранить изменения' : 'Создать шаблон'}
+            disabled={saving}
+            title={saving ? 'Сохранение…' : (template ? 'Сохранить изменения' : 'Создать шаблон')}
             size="medium"
           />
           <IconButton 
             icon="cancel" 
             variant="secondary" 
             onClick={onCancel}
+            disabled={saving}
             title="Отмена"
             size="medium"
           />
