@@ -21,7 +21,7 @@ if (typeof L !== 'undefined' && MarkerClusterModule.default) {
   L.markerClusterGroup = MarkerClusterModule.default
 }
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 // Исправление иконок маркера Leaflet
 delete L.Icon.Default.prototype._getIconUrl

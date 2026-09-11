@@ -5,7 +5,7 @@ import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
 import './NotificationsList.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 // Inline SVG icons matching the redesign reference
 const TypeIcons = {

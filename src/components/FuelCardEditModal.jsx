@@ -6,7 +6,7 @@ import { logger } from '../utils/logger'
 import CardInfoModal from './CardInfoModal'
 import './FuelCardEditModal.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 /**
  * Модальное окно для редактирования топливной карты

@@ -53,7 +53,7 @@ import { Card, Button } from './components/ui'
 import './App.css'
 
 // Используем прокси Vite в режиме разработки или прямой URL
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 const App = () => {
   const { success, error: showError, info } = useToast()

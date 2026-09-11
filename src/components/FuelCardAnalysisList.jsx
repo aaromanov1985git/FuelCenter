@@ -10,7 +10,7 @@ import StatusBadge from './StatusBadge'
 import EmptyState from './EmptyState'
 import './FuelCardAnalysisList.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 const formatDateTime = (value) => {
   if (!value) return '—'

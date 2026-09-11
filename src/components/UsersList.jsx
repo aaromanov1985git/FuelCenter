@@ -9,7 +9,7 @@ import { authFetch } from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
 import './UsersList.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 /** Преобразует ответ API об ошибке в читаемую строку (в т.ч. 422 с массивом detail) */
 function formatApiError (detail, fallback) {

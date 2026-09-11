@@ -4,7 +4,7 @@ import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
 import './TemplateEditor.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   // Парсим field_mapping если это строка JSON

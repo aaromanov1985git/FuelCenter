@@ -5,7 +5,7 @@ import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
 import './EmailServerSettings.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 // Пресеты для популярных почтовых серверов
 const SMTP_PRESETS = {

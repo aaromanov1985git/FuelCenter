@@ -7,7 +7,7 @@ import { authFetch } from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
 import './OrganizationsList.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 // Inline SVG icons matching design reference
 const Icons = {

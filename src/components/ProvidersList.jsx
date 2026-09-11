@@ -11,7 +11,7 @@ import { Card, Button, Input, Skeleton, Alert, Modal, Checkbox, Select, Badge } 
 import { authFetch } from '../utils/api'
 import './ProvidersList.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 const ProvidersList = () => {
   const { error: showError, success, warning, info } = useToast()

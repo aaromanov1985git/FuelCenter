@@ -4,7 +4,7 @@ import { Card, Button, Input, Alert } from './ui'
 import FormField from './FormField'
 import './UploadPeriodLock.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 const UploadPeriodLock = () => {
   const [lockDate, setLockDate] = useState('')

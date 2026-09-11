@@ -15,7 +15,7 @@ import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
 import './Settings.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 const Settings = () => {
   const { success, error: showError } = useToast()

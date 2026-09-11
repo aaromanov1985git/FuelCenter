@@ -4,7 +4,7 @@ import { authFetch } from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
 import './VehiclesList.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 // License plate pill — matches redesign_vehicles.html
 // Simple monospace pill on surface-2, used inline in tables and forms.

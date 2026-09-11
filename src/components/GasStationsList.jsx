@@ -12,7 +12,7 @@ import ConfirmModal from './ConfirmModal'
 import './GasStationsList.css'
 import './ColumnSettingsModal.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 // Mapping provider names to accent colors (heuristic by common Russian provider names)
 const getProviderAccent = (name) => {
