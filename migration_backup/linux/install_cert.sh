@@ -62,6 +62,30 @@ if grep -q 'ENCRYPTED' "$WORK/privkey.pem"; then
   exit 1
 fi
 
+# Совпадение имени с SAN по правилам RFC 6125, с учётом wildcard.
+# "*.example.com" покрывает ровно одну метку слева: gsm.example.com — да,
+# a.b.example.com — нет, сам example.com — нет.
+san_matches_name() {
+  local san="$1" name="$2" entry base
+  # Разбираем "DNS:a, DNS:*.b, IP Address:1.2.3.4" в отдельные записи
+  while IFS= read -r entry; do
+    entry="$(echo "$entry" | sed -E 's/^[[:space:]]*(DNS|IP Address):[[:space:]]*//; s/[[:space:]]+$//')"
+    [[ -z "$entry" ]] && continue
+    if [[ "$entry" == "$name" ]]; then
+      return 0
+    fi
+    if [[ "$entry" == \*.* ]]; then
+      base="${entry#\*.}"
+      # имя должно оканчиваться на ".base" и не содержать точек в первой метке
+      if [[ "$name" == *."$base" ]]; then
+        local left="${name%.$base}"
+        [[ "$left" == *.* ]] || return 0
+      fi
+    fi
+  done < <(echo "$san" | tr ',' '\n')
+  return 1
+}
+
 # ── 2. Проверки ДО установки ──────────────────────────────────
 echo "→ Проверяю сертификат..."
 FAIL=0
@@ -97,9 +121,13 @@ if [[ -z "$SAN" ]]; then
   echo "  ✗ в сертификате нет SAN — современные браузеры такой отвергнут"
   FAIL=1
 fi
-if [[ -n "$EXPECT_NAME" ]] && ! grep -q "$EXPECT_NAME" <<< "$SAN"; then
-  echo "  ✗ ожидаемое имя $EXPECT_NAME отсутствует в SAN"
-  FAIL=1
+if [[ -n "$EXPECT_NAME" ]]; then
+  if san_matches_name "$SAN" "$EXPECT_NAME"; then
+    echo "  ✓ имя $EXPECT_NAME покрывается SAN"
+  else
+    echo "  ✗ имя $EXPECT_NAME не покрывается SAN"
+    FAIL=1
+  fi
 fi
 
 # Цепочка: без промежуточных сертификатов часть клиентов не построит доверие
