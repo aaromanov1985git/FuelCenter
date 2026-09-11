@@ -69,7 +69,9 @@ services:
       - ./backend/.env
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://gsm_user:gsm_password@db:5432/gsm_db}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://10.35.1.55:3002,http://10.35.1.55,http://localhost:3002}
+      # В prod фронт и /api — один origin за nginx, поэтому CORS почти не задействуется.
+      # Адрес сервера задаётся через ALLOWED_ORIGINS в .env (дефолт прошивать нельзя).
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3002}
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-52428800}
       ENABLE_RATE_LIMIT: ${ENABLE_RATE_LIMIT:-true}
       RATE_LIMIT_DEFAULT: ${RATE_LIMIT_DEFAULT:-500/minute}
@@ -99,7 +101,7 @@ services:
     container_name: gsm_frontend
     stop_grace_period: 10s
     restart: unless-stopped
-    # FRONTEND_PORT=80 → чистый URL http://10.35.1.55 ; по умолчанию 3002
+    # FRONTEND_PORT=80 → чистый URL http://$GSM_HOST без порта ; по умолчанию 3002
     ports:
       - "${FRONTEND_PORT:-3002}:80"
     depends_on:

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════
-#  GSM Converter — ЗАПУСК И ВОССТАНОВЛЕНИЕ НА НОВОМ Linux-СЕРВЕРЕ
+#  GSM Converter — ЗАПУСК И ВОССТАНОВЛЕНИЕ НА НОВОМ СЕРВЕРЕ (Ubuntu)
 # ═══════════════════════════════════════════════════════════════
 #
 #  Использование:
@@ -8,7 +8,9 @@
 #
 #  Предусловия (шаг 02 выполнен):
 #    - Docker запущен, сеть gsm_network создана
-#    - Проект скопирован, рядом с docker-compose.yml лежит .env
+#    - Проект скопирован, рядом с docker-compose.yml лежит заполненный .env
+#    - Пройдена проверка: bash 00_preflight_check.sh <backend.env.backup>
+#      (ловит несовпадение SECRET_KEY, COOKIE_SECURE=true по HTTP, CORS, порты)
 #
 #  Делает: docker compose up -d → ждёт healthy → ЧИСТЫЙ restore в пустую БД
 #          (стоп backend, drop/create, pg_restore, старт backend) → проверки.
@@ -29,6 +31,16 @@ FRONTEND_PORT="${FRONTEND_PORT:-3002}"
 # Для prod-стека заранее: export COMPOSE_FILE=docker-compose.prod.yml
 # (docker compose сам подхватит этот файл вместо docker-compose.yml)
 
+# Адрес сервера берём из .env (GSM_HOST) — в скрипт он не прошит.
+env_val() {
+  [[ -f "$PROJECT_DIR/.env" ]] || return 0
+  grep -E "^[[:space:]]*${1}=" "$PROJECT_DIR/.env" 2>/dev/null \
+    | tail -n1 \
+    | sed -E "s/^[[:space:]]*${1}=//" \
+    | tr -d '\r' \
+    | sed -E 's/[[:space:]]+$//'
+}
+
 echo "═══════════════════════════════════════════════════════════════"
 echo "  GSM — ВОССТАНОВЛЕНИЕ НА НОВОМ СЕРВЕРЕ"
 echo "═══════════════════════════════════════════════════════════════"
@@ -40,6 +52,42 @@ echo "════════════════════════�
 docker network inspect gsm_network >/dev/null 2>&1 || { echo "❌ Сеть gsm_network отсутствует. Сначала: bash 02_setup_new_server.sh"; exit 1; }
 
 cd "$PROJECT_DIR"
+
+GSM_HOST_VAL="$(env_val GSM_HOST)"
+GSM_SCHEME_VAL="$(env_val GSM_SCHEME)"; GSM_SCHEME_VAL="${GSM_SCHEME_VAL:-http}"
+FRONTEND_PORT="$(env_val FRONTEND_PORT)"; FRONTEND_PORT="${FRONTEND_PORT:-3002}"
+BASE_URL="${GSM_SCHEME_VAL}://${GSM_HOST_VAL:-localhost}"
+# FRONTEND_PORT=80 -> URL без порта
+if [[ "$FRONTEND_PORT" == "80" ]]; then
+  APP_URL="$BASE_URL"
+else
+  APP_URL="${BASE_URL}:${FRONTEND_PORT}"
+fi
+
+# Предполётная проверка: дешевле поймать ошибку конфига здесь, чем после restore.
+# SKIP_PREFLIGHT=1 — продолжить несмотря на найденные ошибки (на свой риск).
+PREFLIGHT="$(dirname "${BASH_SOURCE[0]}")/00_preflight_check.sh"
+if [[ -f "$PREFLIGHT" ]]; then
+  echo "→ Предполётная проверка .env ..."
+  PREFLIGHT_LOG="$(mktemp)"
+  if bash "$PREFLIGHT" >"$PREFLIGHT_LOG" 2>&1; then
+    echo "✓ Предполётная проверка пройдена"
+  else
+    cat "$PREFLIGHT_LOG"
+    echo ""
+    if [[ "${SKIP_PREFLIGHT:-0}" == "1" ]]; then
+      echo "⚠ SKIP_PREFLIGHT=1 — продолжаю несмотря на ошибки выше."
+    else
+      echo "❌ Восстановление прервано: исправьте .env и повторите."
+      echo "   Осознанно пропустить: SKIP_PREFLIGHT=1 bash $0 <дамп>"
+      rm -f "$PREFLIGHT_LOG"
+      exit 1
+    fi
+  fi
+  rm -f "$PREFLIGHT_LOG"
+else
+  echo "⚠ 00_preflight_check.sh не найден рядом — проверка конфига пропущена."
+fi
 
 # 1. Поднять стек
 echo "→ docker compose up -d ..."
@@ -103,5 +151,9 @@ if curl -fsS "http://localhost:${FRONTEND_PORT}/" >/dev/null 2>&1; then echo "  
 docker exec gsm_redis redis-cli ping >/dev/null 2>&1 && echo "   ✓ redis PONG" || echo "   ✗ redis"
 
 echo ""
-echo "✓ ГОТОВО. Откройте: http://10.35.1.55:3002  (вход: admin)"
-echo "  Не забудьте обновить URL сервиса в 1С и у провайдеров (ГПН/РН-Карт/ППР)."
+echo "✓ ГОТОВО. Откройте: ${APP_URL}  (вход: admin)"
+if [[ -z "$GSM_HOST_VAL" ]]; then
+  echo "  ⚠ GSM_HOST в .env не задан — адрес выше показан как localhost."
+fi
+echo "  Не забудьте обновить URL сервиса в 1С и у провайдеров (ГПН/РН-Карт/ППР)"
+echo "  на ${BASE_URL}:${BACKEND_PORT:-8000}"

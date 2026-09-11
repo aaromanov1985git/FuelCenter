@@ -1,29 +1,26 @@
-# GSM Converter — комплект миграции на 10.35.1.55 (Linux + Docker)
+# GSM Converter — комплект переноса на отдельный Ubuntu-сервер
 
-Обновлённый под **текущую** архитектуру комплект переноса. Старые файлы в
-`migration_backup/` (Windows/Docker Desktop, дамп от 30.01.2026) оставлены как
-исторические — **использовать эти, в `linux/`**.
+Комплект под **текущую** архитектуру. Старые файлы в `migration_backup/`
+(Windows + Docker Desktop, дамп от 30.01.2026) оставлены как исторические —
+**использовать эти, в `linux/`**.
 
-## Что изменилось относительно старого комплекта
-
-| Тема | Было (старый комплект) | Стало (этот комплект) |
-|------|------------------------|------------------------|
-| ОС нового сервера | Windows + Docker Desktop | Linux + Docker Engine |
-| Доступ | домен cloudpub.ru / HTTPS | `http://10.35.1.55` по IP |
-| Сеть `gsm_network` | не создавалась → падение | `02_setup` создаёт явно |
-| Frontend | `npm run build` + nginx/IIS | контейнер `gsm_frontend` (Vite), порт **3002** |
-| `COOKIE_SECURE` | true (для HTTPS) | **false** (HTTP по IP) |
-| Дамп БД | от 30.01.2026 (устар.) | свежий через `01_backup` |
+Адрес нового сервера **нигде не прошит**: задаётся один раз в `.env`
+(`GSM_HOST`), скрипты и URL считаются от него. Сменить целевой сервер =
+поменять одну строку.
 
 ## Файлы
 
 | Файл | Где запускать | Назначение |
 |------|---------------|-----------|
-| `01_backup_current_server.sh` | старый сервер | свежий `pg_dump -Fc` + копия `.env` + контрольные числа |
-| `02_setup_new_server.sh` | новый сервер (sudo) | Docker-проверки, сеть `gsm_network`, директории, firewall |
-| `03_restore_on_new_server.sh` | новый сервер | `compose up` → `pg_restore` → `alembic upgrade` → health |
-| `env.newserver.example` | новый сервер | шаблон корневого `.env` (IP, CORS, COOKIE_SECURE=false) |
+| `01_backup_current_server.sh` | старый сервер | свежий `pg_dump -Fc` + копия `.env` + контрольные числа + SHA256 |
+| `02_setup_new_server.sh` | новый сервер (sudo) | Docker-проверки, **проверка занятости портов**, сеть `gsm_network`, директории, firewall |
+| `00_preflight_check.sh` | новый сервер | валидация заполненного `.env` до запуска: `SECRET_KEY`, `COOKIE_SECURE`, CORS, `DATABASE_URL`, порты, место |
+| `03_restore_on_new_server.sh` | новый сервер | preflight → `compose up` → чистый `pg_restore` → `alembic` → health |
+| `env.newserver.example` | новый сервер | шаблон корневого `.env` (только плейсхолдеры, без секретов) |
 | `MIGRATION_CHECKLIST.md` | — | пошаговый чеклист |
+
+Дополнительно, в репозитории: `backend/scripts/rotate_secret_key.py` —
+перешифровка сохранённых секретов при смене `SECRET_KEY`.
 
 ## Быстрый путь
 
@@ -31,37 +28,55 @@
 # ── 1. СТАРЫЙ сервер ────────────────────────────────────────────
 bash migration_backup/linux/01_backup_current_server.sh
 #   → migration_backup/linux/out/{gsm_backup_<ts>.dump, backend.env.backup, db_counts_<ts>.txt}
-#   Перенести out/ + исходники проекта на новый сервер.
+#   Перенести out/ + исходники проекта на новый сервер ЗАЩИЩЁННЫМ каналом
+#   (в backend.env.backup лежат секреты в открытом виде).
 
 # ── 2. НОВЫЙ сервер: подготовка ────────────────────────────────
-sudo bash migration_backup/linux/02_setup_new_server.sh   # сеть, порты, директории
+sudo bash migration_backup/linux/02_setup_new_server.sh
+#   Если Docker не установлен — скрипт напечатает команды для Ubuntu и выйдет.
 
 # ── 3. НОВЫЙ сервер: конфиг ────────────────────────────────────
 cp migration_backup/linux/env.newserver.example .env
-#   Проверить SECRET_KEY (= из backend.env.backup), COOKIE_SECURE=false, ALLOWED_ORIGINS.
+nano .env        # заполнить ВСЕ плейсхолдеры <...>, начиная с GSM_HOST и SECRET_KEY
 
-# ── 4. НОВЫЙ сервер: запуск + восстановление ───────────────────
+# ── 4. НОВЫЙ сервер: проверка конфига ──────────────────────────
+bash migration_backup/linux/00_preflight_check.sh \
+     migration_backup/linux/out/backend.env.backup
+#   Второй аргумент включает сверку SECRET_KEY со старым сервером —
+#   это самая дорогая ошибка переноса, проверять обязательно.
+
+# ── 5. НОВЫЙ сервер: запуск + восстановление ───────────────────
 bash migration_backup/linux/03_restore_on_new_server.sh \
      migration_backup/linux/out/gsm_backup_<ts>.dump
+#   Скрипт сам прогоняет preflight и прерывается при ошибках.
+#   Осознанно пропустить: SKIP_PREFLIGHT=1
 
-# ── 5. Проверка ────────────────────────────────────────────────
-curl http://10.35.1.55:8000/health
-# Открыть http://10.35.1.55:3002, войти под admin.
+# ── 6. Проверка ────────────────────────────────────────────────
+curl http://$GSM_HOST:8000/health
+# Открыть http://$GSM_HOST:3002, войти под admin, проверить провайдеров.
 ```
 
 ## ⚠️ Критичные моменты
 
-1. **`SECRET_KEY` идентичен старому серверу.** Иначе сохранённые пароли провайдеров
-   (ГПН/РН-Карт/ППР/Firebird) не расшифруются, а старые JWT станут невалидными.
-   `ENCRYPTION_KEY` на старом сервере не задавался → шифрование идёт от `SECRET_KEY`,
-   поэтому новый `ENCRYPTION_KEY` НЕ задавать.
-2. **`gsm_network` создать ДО `compose up`** (делает шаг 02).
-3. **`COOKIE_SECURE=false`** для HTTP-доступа по IP (иначе не залогиниться).
-4. **Два режима развёртывания** (см. ниже «Dev vs Prod»). По умолчанию `docker-compose.yml`
-   поднимает Vite в dev-режиме (hot-reload, bind-mount исходников). Для боевого сервера
-   рекомендуется `docker-compose.prod.yml` — собранная статика за nginx, без watch.
-5. **Доступ по IP-литералу** Vite пропускает мимо `allowedHosts`. Если позже появится
-   DNS-имя — добавить его в `server.allowedHosts` в `vite.config.js`.
+1. **`SECRET_KEY` идентичен старому серверу.** Иначе не расшифруются пароли
+   провайдеров (ГПН/РН-Карт/ППР/Firebird), SMTP-пароль и токен Telegram, а старые
+   JWT станут невалидными. `ENCRYPTION_KEY` на старом сервере не задавался →
+   шифрование идёт от `SECRET_KEY`, поэтому новый `ENCRYPTION_KEY` **НЕ задавать**.
+   Проверяется автоматически в `00_preflight_check.sh`.
+2. **`COOKIE_SECURE=false`** для HTTP-доступа (иначе не залогиниться).
+3. **`gsm_network` создать ДО `compose up`** (делает шаг 02).
+4. **`pg_restore` только в пустую пересозданную БД.** Если лить дамп поверх
+   работающего backend, он успевает засидить дефолтные записи → FK/PK-конфликты
+   и потеря `providers`/`provider_templates`. Шаг 03 делает это правильно:
+   стоп backend → `DROP`/`CREATE` → `pg_restore` → старт backend.
+5. **Подстановки в `.env` не раскрываются.** `ALLOWED_ORIGINS=http://${GSM_HOST}:3002`
+   не сработает — Docker Compose не разворачивает переменные внутри `.env`.
+   Писать адрес строкой (preflight это ловит).
+6. **DNS-имя в dev-режиме.** IP-литералы Vite пропускает, а имя нужно перечислить
+   в `VITE_ALLOWED_HOSTS` (переменная окружения, не код). В prod-режиме
+   неактуально — статику раздаёт nginx.
+7. **Первая сборка долгая.** Образ backend тянет Firebird 4.0 и Playwright+Chromium:
+   минуты и несколько ГБ. Нужно ≥ 10 ГБ свободного места.
 
 ## Dev vs Prod
 
@@ -70,22 +85,57 @@ curl http://10.35.1.55:8000/health
 | Frontend | Vite dev-сервер, hot-reload | сборка `npm run build` → nginx |
 | Исходники | bind-mount (`./src`, `./backend/app`) | запечены в образ (иммутабельно) |
 | Backend | `uvicorn --reload` | `uvicorn` без reload |
-| Файлы | — | `Dockerfile.frontend.prod`, `nginx.frontend.conf` |
-| Порт фронта | `3002:3000` | `${FRONTEND_PORT:-3002}:80` (можно `FRONTEND_PORT=80` → чистый `http://10.35.1.55`) |
-| CORS | нужен `ALLOWED_ORIGINS` | `/api` проксируется тем же nginx → один origin |
+| Доп. файлы | — | `Dockerfile.frontend.prod`, `nginx.frontend.conf` |
+| Порт фронта | `3002:3000` | `${FRONTEND_PORT:-3002}:80` (можно `FRONTEND_PORT=80` → URL без порта) |
+| CORS | нужен корректный `ALLOWED_ORIGINS` | `/api` проксируется тем же nginx → один origin |
+| `allowedHosts` | проверяется Vite (см. `VITE_ALLOWED_HOSTS`) | не применяется |
 
-**Запуск prod** (восстановление тем же скриптом 03, просто укажите файл):
+**Для боевого сервера рекомендуется prod.** Запуск — тем же скриптом 03:
 
 ```bash
 export COMPOSE_FILE=docker-compose.prod.yml
-# при желании чистый URL без порта:
-echo 'FRONTEND_PORT=80' >> .env
+echo 'FRONTEND_PORT=80' >> .env        # опционально: чистый URL без порта
 bash migration_backup/linux/03_restore_on_new_server.sh \
      migration_backup/linux/out/gsm_backup_<ts>.dump
 ```
 
 `COOKIE_SECURE=false` остаётся обязательным и в prod, пока доступ идёт по HTTP.
-Для HTTPS — терминировать TLS на внешнем nginx/реверс-прокси и затем вернуть `COOKIE_SECURE=true`.
+Для HTTPS — терминировать TLS на внешнем nginx/реверс-прокси, затем выставить
+`GSM_SCHEME=https` и `COOKIE_SECURE=true`.
+
+## Мониторинг
+
+Стек мониторинга поднимается отдельно и подключается к той же сети `gsm_network`:
+
+```bash
+docker compose -f docker-compose.monitoring.yml up -d
+```
+
+Grafana на `:3001` — `GRAFANA_ROOT_URL` и `GRAFANA_ADMIN_PASSWORD` задаются в `.env`.
+Порты мониторинга шаг 02 наружу **не открывает**; нужно — запустить с `OPEN_INTERNAL=1`.
+
+## Ротация SECRET_KEY
+
+Старый ключ находился в отслеживаемом git-файле (`migration_backup/backend.env.backup`,
+сейчас из индекса убран, но остался в истории), поэтому ротация — разумная гигиена.
+Делать после успешного переноса и проверки работоспособности:
+
+```bash
+NEW=$(python -c "import secrets; print(secrets.token_urlsafe(64))")
+
+# 1. Бэкап БД — единственный путь отката
+# 2. Холостой прогон: убедиться, что всё расшифровывается старым ключом
+docker exec -e OLD_SECRET_KEY="$OLD" -e NEW_SECRET_KEY="$NEW" \
+  gsm_backend python -m scripts.rotate_secret_key
+# 3. Применить
+docker exec -e OLD_SECRET_KEY="$OLD" -e NEW_SECRET_KEY="$NEW" \
+  gsm_backend python -m scripts.rotate_secret_key --apply
+# 4. Заменить SECRET_KEY в .env и перезапустить backend
+docker compose up -d --force-recreate backend
+```
+
+Порядок шагов 3 и 4 менять нельзя: пока backend работает на старом ключе, данные,
+перешифрованные новым, он не прочитает.
 
 ## Откат
 

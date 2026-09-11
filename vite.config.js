@@ -63,11 +63,20 @@ export default defineConfig({
     port: parseInt(process.env.PORT || '3000'),
     open: !process.env.VITE_PROXY_TARGET, // В Docker не открывать браузер
     host: true, // Разрешить доступ с любых хостов
+    // Хосты, с которых Vite dev-сервер принимает запросы.
+    // IP-литералы Vite пропускает без настройки, а DNS-имя нового сервера
+    // нужно перечислить — задаётся через VITE_ALLOWED_HOSTS (список через запятую),
+    // чтобы смена адреса не требовала правки кода.
+    // Пример: VITE_ALLOWED_HOSTS=gsm.example.local,.example.local
+    // Актуально только для dev-режима (docker-compose.yml); в prod статику
+    // раздаёт nginx и этой проверки нет.
     allowedHosts: [
-      'defectively-nimble-rattail.cloudpub.ru',
       'localhost',
       '127.0.0.1',
-      '.cloudpub.ru' // Разрешить все поддомены cloudpub.ru
+      ...(process.env.VITE_ALLOWED_HOSTS || '')
+        .split(',')
+        .map((host) => host.trim())
+        .filter(Boolean)
     ],
     proxy: {
       '/api': {

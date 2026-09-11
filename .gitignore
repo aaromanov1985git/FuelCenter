@@ -67,3 +67,10 @@ qa/diffs/
 !qa/reports/
 !qa/README.md
 !qa/audit.spec.js
+
+# Секреты: копии .env и выгрузки скриптов миграции.
+# migration_backup/backend.env.backup был отслеживаемым и содержал реальный
+# SECRET_KEY — больше такие файлы в индекс не попадают.
+*.env.backup
+env.*.backup
+migration_backup/**/out/
