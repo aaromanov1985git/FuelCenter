@@ -459,17 +459,17 @@ h1 {
 [data-theme="dark"] h1,
 [data-theme="dark"] h1 {
   color: var(--color-text-primary);
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Подзаголовок — вторичный тир: он поясняет заголовок, а не спорит с ним.
+   Раньше стоял основным цветом, полужирным, по центру и с тенью, из-за чего
+   читался как второй заголовок. Выравнивание согласовано с h1. */
 .subtitle {
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-normal);
   margin-bottom: var(--spacing-block);
-  text-align: center;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-  font-size: 1.125rem;
-  opacity: 0.95;
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
 [data-theme="dark"] .subtitle,
