@@ -46,23 +46,57 @@ echo "→ Снимаю контрольные числа записей..."
     printf '%-16s %s\n' "$t" "$cnt"
   done
   echo "--- alembic version ---"
-  docker exec "$BACKEND_CONTAINER" alembic current 2>/dev/null || echo "alembic: N/A"
+  # grep -v отбрасывает JSON-логи приложения, которые alembic печатает в stdout
+  docker exec "$BACKEND_CONTAINER" alembic current 2>/dev/null | grep -vE '^\{' || echo "alembic: N/A"
 } | tee "$OUT_DIR/db_counts_${TS}.txt"
 
 # 3. Дамп БД в custom format
 echo "→ Создаю дамп БД (pg_dump -Fc)..."
-docker exec "$DB_CONTAINER" pg_dump -U "$PG_USER" -d "$PG_DB" -Fc -f /tmp/migration.dump
-docker cp "${DB_CONTAINER}:/tmp/migration.dump" "$DUMP"
-docker exec "$DB_CONTAINER" rm -f /tmp/migration.dump
+# Стримим дамп на stdout и пишем файл на хосте. Файл внутри контейнера не создаём:
+# под Git Bash (MSYS) аргумент вида /tmp/x переписывается в C:/.../tmp/x, из-за чего
+# pg_dump -f и последующий docker cp ломались. Поток от этого не зависит.
+docker exec "$DB_CONTAINER" pg_dump -U "$PG_USER" -d "$PG_DB" -Fc > "$DUMP"
+if [[ ! -s "$DUMP" ]]; then
+  echo "❌ Дамп пустой — проверьте: docker logs $DB_CONTAINER"
+  exit 1
+fi
 echo "✓ Дамп: $DUMP ($(du -h "$DUMP" | cut -f1))"
 
 # 4. Копия .env из контейнера backend (актуальные секреты)
 echo "→ Копирую backend/.env..."
-if docker exec "$BACKEND_CONTAINER" test -f /app/.env 2>/dev/null; then
-  docker cp "${BACKEND_CONTAINER}:/app/.env" "$OUT_DIR/backend.env.backup"
-  echo "✓ backend.env.backup сохранён"
+ENV_OUT="$OUT_DIR/backend.env.backup"
+# Переменные, которые обязаны уехать на новый сервер. SECRET_KEY — критичный:
+# им зашифрованы пароли провайдеров, при несовпадении они не расшифруются.
+ENV_KEYS='SECRET_KEY|ENCRYPTION_KEY|ENABLE_AUTH|ENVIRONMENT|COOKIE_SECURE|JWT_EXPIRE_MINUTES|ADMIN_USERNAME|ADMIN_PASSWORD|ADMIN_EMAIL'
+
+# Путь к .env передаём внутри sh -c одной строкой — иначе MSYS его тоже переписал бы
+if docker exec "$BACKEND_CONTAINER" sh -c 'test -f /app/.env' 2>/dev/null; then
+  docker exec "$BACKEND_CONTAINER" sh -c 'cat /app/.env' > "$ENV_OUT"
+  echo "✓ backend.env.backup — из /app/.env в контейнере"
+elif [[ -f "$SCRIPT_DIR/../../backend/.env" ]]; then
+  # compose отдаёт секреты через env_file, файла внутри контейнера нет
+  tr -d '\r' < "$SCRIPT_DIR/../../backend/.env" > "$ENV_OUT"
+  echo "✓ backend.env.backup — из backend/.env на хосте"
 else
-  echo "⚠ /app/.env не найден в контейнере — скопируйте backend/.env вручную со старого хоста"
+  # Последний рубеж: снимаем эффективные значения с работающего контейнера
+  echo "→ /app/.env и backend/.env не найдены, снимаю значения из окружения контейнера..."
+  docker exec "$BACKEND_CONTAINER" sh -c "printenv | grep -E '^($ENV_KEYS)='" \
+    | sort > "$ENV_OUT" || true
+  if [[ -s "$ENV_OUT" ]]; then
+    echo "✓ backend.env.backup — из окружения $BACKEND_CONTAINER"
+  else
+    echo "❌ Не удалось получить настройки. Скопируйте backend/.env вручную в $ENV_OUT —"
+    echo "   без него не сверить SECRET_KEY, и пароли провайдеров на новом сервере не расшифруются."
+  fi
+fi
+
+# Проверяем, что главное действительно попало в файл
+if [[ -s "$ENV_OUT" ]]; then
+  if grep -qE '^[[:space:]]*SECRET_KEY=.+' "$ENV_OUT"; then
+    echo "  ✓ SECRET_KEY присутствует ($(grep -cE "^[[:space:]]*($ENV_KEYS)=" "$ENV_OUT") перем.)"
+  else
+    echo "  ❌ В $ENV_OUT нет SECRET_KEY — на новом сервере не расшифруются пароли провайдеров!"
+  fi
 fi
 
 # 5. Контрольная сумма

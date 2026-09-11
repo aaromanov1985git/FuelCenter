@@ -38,6 +38,7 @@ sudo bash migration_backup/linux/02_setup_new_server.sh
 # ── 3. НОВЫЙ сервер: конфиг ────────────────────────────────────
 cp migration_backup/linux/env.newserver.example .env
 nano .env        # заполнить ВСЕ плейсхолдеры <...>, начиная с GSM_HOST и SECRET_KEY
+#   ⚠️ нужен ВТОРОЙ файл — backend/.env (см. раздел «Два файла .env» ниже)
 
 # ── 4. НОВЫЙ сервер: проверка конфига ──────────────────────────
 bash migration_backup/linux/00_preflight_check.sh \
@@ -55,6 +56,24 @@ bash migration_backup/linux/03_restore_on_new_server.sh \
 curl http://$GSM_HOST:8000/health
 # Открыть http://$GSM_HOST:3002, войти под admin, проверить провайдеров.
 ```
+
+## Два файла .env
+
+Файлов конфигурации **два**, и путать их нельзя:
+
+| Файл | Кто читает | Что в нём |
+|------|-----------|-----------|
+| `<project>/.env` | Docker Compose — подстановки `${...}` | порты, `ALLOWED_ORIGINS`, `DATABASE_URL`, `POSTGRES_*`, `GSM_HOST` |
+| `<project>/backend/.env` | **приложение** (подключён через `env_file`) | `SECRET_KEY`, `ADMIN_*`, `ENVIRONMENT`, `COOKIE_SECURE`, `ENABLE_AUTH` |
+
+`backend/.env` в репозитории отсутствует (gitignored) и **сам не создаётся**:
+
+- без него `docker compose up` падает сразу — `env_file` обязателен;
+- в блоке `environment:` сервиса backend `SECRET_KEY` намеренно отсутствует, поэтому
+  при расхождении приложение возьмёт значение **из `backend/.env`**, а не из корневого.
+
+Наполнять значениями из `migration_backup/linux/out/backend.env.backup`.
+Оба файла и их согласованность проверяет `00_preflight_check.sh`.
 
 ## ⚠️ Критичные моменты
 

@@ -89,8 +89,11 @@ port_busy() {
 
 BUSY=()
 for p in "${PORTS_REQUIRED[@]}" "${PORTS_INTERNAL[@]}"; do
-  port_busy "$p"
-  case $? in
+  # Статус снимаем через "|| rc=$?": port_busy=1 означает "порт свободен",
+  # и при set -e прямой вызов оборвал бы скрипт на первом свободном порте.
+  rc=0
+  port_busy "$p" || rc=$?
+  case $rc in
     0)
       # Порт нашего же контейнера — не конфликт, а перезапуск стека
       if docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | grep -qE "^gsm_.*:${p}->"; then
@@ -156,7 +159,10 @@ if [[ "$OPEN_FIREWALL" == "1" ]]; then
     for p in "${PORTS_TO_OPEN[@]}"; do
       ufw allow "${p}/tcp" >/dev/null && echo "  ✓ ufw allow ${p}/tcp"
     done
-    ufw status >/dev/null 2>&1 || echo "  ⚠ ufw неактивен — правила вступят в силу после 'sudo ufw enable'"
+    # 'ufw status' возвращает 0 и в неактивном состоянии, поэтому смотрим текст
+    if ufw status 2>/dev/null | grep -qi 'inactive'; then
+      echo "  ⚠ ufw неактивен — правила сохранены, вступят в силу после 'sudo ufw enable'"
+    fi
   elif command -v firewall-cmd >/dev/null 2>&1; then
     for p in "${PORTS_TO_OPEN[@]}"; do
       firewall-cmd --permanent --add-port="${p}/tcp" >/dev/null && echo "  ✓ firewalld ${p}/tcp"

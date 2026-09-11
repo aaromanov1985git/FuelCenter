@@ -141,6 +141,62 @@ else
   ok "ENCRYPTION_KEY не задан (как на старом сервере)"
 fi
 
+# ── 3b. backend/.env — источник секретов для приложения ───────
+echo ""
+echo "3b. backend/.env (env_file сервиса backend)"
+BACKEND_ENV="$PROJECT_DIR/backend/.env"
+
+# Оба compose-файла подключают его через env_file -> без файла compose падает.
+if [[ ! -f "$BACKEND_ENV" ]]; then
+  err "backend/.env отсутствует — docker compose up упадёт (env_file обязателен)"
+  echo "      → Файл не в репозитории (gitignored). Создайте его со значениями"
+  echo "        ENABLE_AUTH/SECRET_KEY/JWT_EXPIRE_MINUTES/ADMIN_*/ENVIRONMENT/COOKIE_SECURE"
+  echo "        из migration_backup/linux/out/backend.env.backup"
+else
+  ok "backend/.env найден"
+
+  if grep -qU $'\r' "$BACKEND_ENV" 2>/dev/null; then
+    err "backend/.env в формате CRLF — CR попадёт в значения переменных"
+  fi
+
+  benv_val() {
+    grep -E "^[[:space:]]*${1}=" "$BACKEND_ENV" 2>/dev/null \
+      | tail -n1 | sed -E "s/^[[:space:]]*${1}=//" | tr -d '\r' | sed -E 's/[[:space:]]+$//'
+  }
+
+  # Именно это значение получает приложение — его и сверяем со старым сервером
+  B_SECRET="$(benv_val SECRET_KEY)"
+  if [[ -z "$B_SECRET" ]]; then
+    err "в backend/.env нет SECRET_KEY — приложение не расшифрует пароли провайдеров"
+  else
+    ok "SECRET_KEY задан в backend/.env (${#B_SECRET} симв.)"
+    if [[ -n "${OLD_SECRET:-}" ]]; then
+      if [[ "$OLD_SECRET" == "$B_SECRET" ]]; then
+        ok "SECRET_KEY в backend/.env совпадает со старым сервером"
+      else
+        err "SECRET_KEY в backend/.env НЕ совпадает со старым сервером!"
+        echo "      → Это значение и попадёт в приложение (env_file), а не то, что в корневом .env."
+      fi
+    fi
+    # Расхождение между файлами — источник трудноуловимых ошибок
+    if [[ -n "$SECRET_VAL" && "$SECRET_VAL" != "$B_SECRET" ]]; then
+      err "SECRET_KEY в .env и backend/.env РАЗНЫЕ — приложение возьмёт значение из backend/.env"
+    fi
+  fi
+
+  if grep -qE "^[[:space:]]*ENCRYPTION_KEY=.+" "$BACKEND_ENV"; then
+    err "ENCRYPTION_KEY задан в backend/.env — сохранённые пароли станут нечитаемыми"
+  fi
+
+  # COOKIE_SECURE приложение тоже берёт отсюда
+  B_COOKIE="$(benv_val COOKIE_SECURE | tr '[:upper:]' '[:lower:]')"
+  if [[ "$GSM_SCHEME_VAL" == "http" && "$B_COOKIE" == "true" ]]; then
+    err "COOKIE_SECURE=true в backend/.env при доступе по HTTP — вход не сработает"
+  elif [[ -n "$B_COOKIE" ]]; then
+    ok "COOKIE_SECURE=$B_COOKIE в backend/.env"
+  fi
+fi
+
 # ── 4. COOKIE_SECURE vs схема доступа ─────────────────────────
 echo ""
 echo "4. Cookie и схема доступа"

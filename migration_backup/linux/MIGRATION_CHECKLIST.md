@@ -63,6 +63,14 @@
 - [ ] `ENCRYPTION_KEY` оставлен закомментированным
 - [ ] `COOKIE_SECURE=false` (при `GSM_SCHEME=http`), `ENVIRONMENT=production`
 - [ ] Если у сервера есть **DNS-имя** и используется dev-режим — имя добавлено в `VITE_ALLOWED_HOSTS` (в код лезть не нужно)
+- [ ] **Создан `backend/.env`** — отдельный от корневого `.env` файл, его читает
+      приложение (подключён через `env_file`, в репозитории отсутствует).
+      Без него `docker compose up` падает сразу. Значения — из `out/backend.env.backup`:
+      `ENABLE_AUTH`, `SECRET_KEY`, `JWT_EXPIRE_MINUTES`, `ADMIN_USERNAME`,
+      `ADMIN_PASSWORD`, `ADMIN_EMAIL`, `ENVIRONMENT=production`, `COOKIE_SECURE=false`
+  - [ ] `SECRET_KEY` в `backend/.env` и в корневом `.env` **совпадают**
+        (при расхождении приложение возьмёт значение из `backend/.env`)
+  - [ ] `COOKIE_SECURE=false` в **обоих** файлах
 - [ ] **Предполётная проверка пройдена без ошибок:**
       `bash migration_backup/linux/00_preflight_check.sh migration_backup/linux/out/backend.env.backup`
 
