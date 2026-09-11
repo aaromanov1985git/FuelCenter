@@ -6,6 +6,7 @@ import LoadApiModal from './LoadApiModal'
 import { Button, Card, Badge, Table, Alert, Skeleton, useToast } from './ui'
 import TemplateRowActions from './TemplateRowActions'
 import EmptyState from './EmptyState'
+import { formatSchedule } from '../utils/templateModel'
 import { logger } from '../utils/logger'
 import { authFetch } from '../utils/api'
 import './TemplatesList.css'
@@ -261,77 +262,6 @@ const TemplatesList = () => {
   }
 
   // Функция для преобразования расписания в читаемый формат
-  const formatSchedule = (schedule) => {
-    if (!schedule || !schedule.trim()) return null
-    
-    const scheduleStr = schedule.trim().toLowerCase()
-    
-    // Простые форматы
-    if (scheduleStr === 'daily' || scheduleStr === 'day') {
-      return 'один раз в сутки'
-    }
-    if (scheduleStr === 'hourly' || scheduleStr === 'hour') {
-      return 'один раз в час'
-    }
-    if (scheduleStr === 'weekly' || scheduleStr === 'week') {
-      return 'один раз в неделю'
-    }
-    
-    // Формат "every N hours/minutes"
-    if (scheduleStr.startsWith('every ')) {
-      const parts = scheduleStr.split(/\s+/)
-      if (parts.length >= 3) {
-        const interval = parts[1]
-        const unit = parts[2]
-        if (unit.includes('hour') || unit.includes('час')) {
-          if (interval === '1') {
-            return 'один раз в час'
-          }
-          return `каждые ${interval} часа`
-        }
-        if (unit.includes('minute') || unit.includes('мин')) {
-          if (interval === '1') {
-            return 'каждую минуту'
-          }
-          return `каждые ${interval} минуты`
-        }
-      }
-    }
-    
-    // Cron-формат (минута час день месяц день_недели)
-    const cronParts = scheduleStr.split(/\s+/)
-    if (cronParts.length === 5) {
-      const [minute, hour, day, month, dayOfWeek] = cronParts
-      
-      // Каждый час: "0 * * * *" или "0 */1 * * *"
-      if (minute === '0' && (hour === '*' || hour === '*/1') && day === '*' && month === '*' && dayOfWeek === '*') {
-        return 'один раз в час'
-      }
-      
-      // Каждый день в определенное время: "0 2 * * *"
-      if (minute !== '*' && hour !== '*' && day === '*' && month === '*' && dayOfWeek === '*') {
-        const h = parseInt(hour)
-        const m = parseInt(minute)
-        const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
-        return `один раз в сутки (${timeStr})`
-      }
-      
-      // Каждые N часов: "0 */6 * * *"
-      if (minute === '0' && hour.startsWith('*/') && day === '*' && month === '*' && dayOfWeek === '*') {
-        const interval = hour.substring(2)
-        if (interval === '1') {
-          return 'один раз в час'
-        }
-        return `каждые ${interval} часа`
-      }
-      
-      // Возвращаем исходное расписание, если не удалось распознать
-      return schedule
-    }
-    
-    return schedule
-  }
-
   // Источник данных определяет и набор секций редактора, и то, какая загрузка
   // доступна, — но до сих пор нигде не показывался. Зато показывались header_row
   // и data_start_row, осмысленные только для файловых шаблонов: на API-шаблоне

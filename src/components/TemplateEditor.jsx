@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import IconButton from './IconButton'
+import { SYSTEM_FIELDS, formatSchedule, parseConnectionSettings, buildConnectionSettings } from '../utils/templateModel'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
 import './TemplateEditor.css'
@@ -67,77 +68,6 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   }
 
   // Функция для преобразования расписания в читаемый формат
-  const formatSchedule = (schedule) => {
-    if (!schedule || !schedule.trim()) return null
-    
-    const scheduleStr = schedule.trim().toLowerCase()
-    
-    // Простые форматы
-    if (scheduleStr === 'daily' || scheduleStr === 'day') {
-      return 'один раз в сутки (в 2:00)'
-    }
-    if (scheduleStr === 'hourly' || scheduleStr === 'hour') {
-      return 'один раз в час'
-    }
-    if (scheduleStr === 'weekly' || scheduleStr === 'week') {
-      return 'один раз в неделю (понедельник в 2:00)'
-    }
-    
-    // Формат "every N hours/minutes"
-    if (scheduleStr.startsWith('every ')) {
-      const parts = scheduleStr.split(/\s+/)
-      if (parts.length >= 3) {
-        const interval = parts[1]
-        const unit = parts[2]
-        if (unit.includes('hour') || unit.includes('час')) {
-          if (interval === '1') {
-            return 'один раз в час'
-          }
-          return `каждые ${interval} ${interval === '1' ? 'час' : 'часа'}`
-        }
-        if (unit.includes('minute') || unit.includes('мин')) {
-          if (interval === '1') {
-            return 'каждую минуту'
-          }
-          return `каждые ${interval} ${interval === '1' ? 'минуту' : 'минуты'}`
-        }
-      }
-    }
-    
-    // Cron-формат (минута час день месяц день_недели)
-    const cronParts = scheduleStr.split(/\s+/)
-    if (cronParts.length === 5) {
-      const [minute, hour, day, month, dayOfWeek] = cronParts
-      
-      // Каждый час: "0 * * * *" или "0 */1 * * *"
-      if (minute === '0' && (hour === '*' || hour === '*/1') && day === '*' && month === '*' && dayOfWeek === '*') {
-        return 'один раз в час'
-      }
-      
-      // Каждый день в определенное время: "0 2 * * *"
-      if (minute !== '*' && hour !== '*' && day === '*' && month === '*' && dayOfWeek === '*') {
-        const h = parseInt(hour)
-        const m = parseInt(minute)
-        const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
-        return `один раз в сутки (в ${timeStr})`
-      }
-      
-      // Каждые N часов: "0 */6 * * *"
-      if (minute === '0' && hour.startsWith('*/') && day === '*' && month === '*' && dayOfWeek === '*') {
-        const interval = hour.substring(2)
-        if (interval === '1') {
-          return 'один раз в час'
-        }
-        return `каждые ${interval} часа`
-      }
-      
-      // Возвращаем исходное расписание, если не удалось распознать
-      return schedule
-    }
-    
-    return schedule
-  }
-
   const [formData, setFormData] = useState({
     name: template?.name || '',
     description: template?.description || '',
@@ -180,84 +110,6 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   const [useVisualEditor, setUseVisualEditor] = useState(false) // Переключатель между визуальным редактором и текстовым
   
   // Парсим connection_settings если это строка JSON
-  const parseConnectionSettings = (settings, connectionType) => {
-    let parsed = null
-    
-    if (!settings) {
-      if (connectionType === 'api') {
-        return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB', api_key: '' }
-      }
-      if (connectionType === 'web') {
-        return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: '', key: '', signature: '', salt: '', cod_azs: 1000001, api_key: '' }
-      }
-      // Для типа 'file' возвращаем объект с пустым api_key для PPR API
-      if (connectionType === 'file') {
-        return { api_key: '' }
-      }
-      return { host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8', api_key: '' }
-    }
-    
-    if (typeof settings === 'string') {
-      try {
-        parsed = JSON.parse(settings)
-      } catch {
-        if (connectionType === 'api') {
-          // Определяем тип провайдера из существующих настроек или используем PetrolPlus по умолчанию
-          const parsed = typeof settings === 'string' ? (() => { try { return JSON.parse(settings) } catch { return {} } })() : (settings || {})
-          if (parsed.provider_type === 'rncard') {
-            return { provider_type: 'rncard', base_url: 'https://lkapi.rn-card.ru', login: '', password: '', contract: '', currency: 'RUB', use_md5_hash: true, api_key: '', ppr_api_key: '' }
-          }
-          if (parsed.provider_type === 'gpn' || parsed.provider_type === 'gazprom-neft' || parsed.provider_type === 'gazpromneft') {
-            return { provider_type: 'gpn', base_url: 'https://api.opti-24.ru', api_key: '', ppr_api_key: '', login: '', password: '', currency: 'RUB' }
-          }
-          return { provider_type: 'petrolplus', base_url: 'https://online.petrolplus.ru/api', api_token: '', currency: 'RUB', api_key: '', ppr_api_key: '' }
-        }
-        if (connectionType === 'web') {
-          return { base_url: '', username: '', password: '', currency: 'RUB', certificate: '', pos_code: '', key: '', signature: '', salt: '', cod_azs: 1000001, api_key: '', ppr_api_key: '' }
-        }
-        return { host: 'localhost', database: '', user: 'SYSDBA', password: '', port: 3050, charset: 'UTF8', api_key: '', ppr_api_key: '' }
-      }
-    } else {
-      parsed = settings
-    }
-    
-    // Убеждаемся, что api_key и ppr_api_key присутствуют в настройках
-    if (parsed && typeof parsed === 'object') {
-      // Для типа 'file' извлекаем PPR API ключ (приоритет ppr_api_key)
-      if (connectionType === 'file') {
-        const pprKey = parsed.ppr_api_key || parsed.pprApiKey || parsed.api_key || parsed.apiKey || parsed.КлючАвторизации || ''
-        return { 
-          ppr_api_key: pprKey,
-          api_key: pprKey  // Для обратной совместимости
-        }
-      }
-      
-      // Для других типов сохраняем ppr_api_key отдельно от api_key
-      // PPR API ключ (приоритет ppr_api_key, fallback на api_key для обратной совместимости)
-      if (!parsed.ppr_api_key && !parsed.pprApiKey) {
-        parsed.ppr_api_key = parsed.api_key || parsed.apiKey || parsed.КлючАвторизации || ''
-      }
-      
-      // Для GPN api_key используется для самого API, поэтому не перезаписываем его
-      // Для других типов сохраняем api_key, если он есть в любом из вариантов названий
-      if (parsed.provider_type !== 'gpn') {
-        if (!parsed.api_key && (parsed.apiKey || parsed.КлючАвторизации || parsed.authorization_key || parsed.key)) {
-          parsed.api_key = parsed.apiKey || parsed.КлючАвторизации || parsed.authorization_key || parsed.key
-        }
-        // Если api_key отсутствует, добавляем пустое поле
-        if (!parsed.api_key && !parsed.apiKey && !parsed.КлючАвторизации) {
-          parsed.api_key = ''
-        }
-      }
-      
-      // Убеждаемся, что ppr_api_key присутствует
-      if (!parsed.ppr_api_key && !parsed.pprApiKey) {
-        parsed.ppr_api_key = ''
-      }
-    }
-    
-    return parsed || settings
-  }
   
   const [connectionSettings, setConnectionSettings] = useState(
     parseConnectionSettings(template?.connection_settings, template?.connection_type || formData.connection_type)
@@ -400,16 +252,6 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   }
 
   // Стандартные поля системы
-  const systemFields = [
-    { key: 'user', label: 'Пользователь / ТС', required: false },
-    { key: 'card', label: 'Номер карты', required: false },
-    { key: 'kazs', label: 'КАЗС / АЗС', required: false },
-    { key: 'date', label: 'Дата и время', required: true },
-    { key: 'quantity', label: 'Количество', required: true },
-    { key: 'fuel', label: 'Вид топлива', required: true },
-    { key: 'organization', label: 'Организация', required: false }
-  ]
-
   const handleFileUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -721,7 +563,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       }
     }
     
-    const missingFields = systemFields
+    const missingFields = SYSTEM_FIELDS
       .filter(f => f.required && !formData.field_mapping[f.key])
       .map(f => f.label)
     
@@ -756,32 +598,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       auto_load_date_to_offset: formData.auto_load_date_to_offset ?? -1
     }
     
-    // Добавляем настройки подключения для Firebird, API или Web
-    if (formData.connection_type === 'firebird' || formData.connection_type === 'api' || formData.connection_type === 'web') {
-      saveData.connection_settings = connectionSettings
-    } else {
-      // Для типа 'file' сохраняем только PPR API ключ, если он указан
-      // Остальные настройки подключения не нужны для типа 'file'
-      const pprApiKey = connectionSettings?.ppr_api_key || connectionSettings?.pprApiKey || connectionSettings?.api_key || connectionSettings?.apiKey || connectionSettings?.КлючАвторизации || ''
-      if (pprApiKey && pprApiKey.trim()) {
-        // Сохраняем PPR API ключ (приоритет ppr_api_key, fallback на api_key для обратной совместимости)
-        saveData.connection_settings = {
-          ppr_api_key: pprApiKey.trim(),
-          // Сохраняем также в api_key для обратной совместимости с существующим кодом
-          api_key: pprApiKey.trim()
-        }
-      } else {
-        // Если ключ пустой, сохраняем null (или пустой объект, если нужно сохранить структуру)
-        // Но лучше сохранить пустой объект, чтобы структура была сохранена
-        saveData.connection_settings = null
-      }
-      // Очищаем поля Firebird для других типов подключения
-      saveData.source_table = null
-      saveData.source_query = null
-      // Очищаем настройки автозагрузки для типа file
-      saveData.auto_load_enabled = false
-      saveData.auto_load_schedule = null
-    }
+    saveData.connection_settings = buildConnectionSettings(formData.connection_type, connectionSettings)
     
     setSaving(true)
     try {
@@ -854,7 +671,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                 </div>
                 {Object.keys(autoMappedFields).length > 0 && (
                   <div className="auto-mapping-info">
-                    Автоматически сопоставлено полей: {Object.keys(autoMappedFields).length} из {systemFields.length}
+                    Автоматически сопоставлено полей: {Object.keys(autoMappedFields).length} из {SYSTEM_FIELDS.length}
                   </div>
                 )}
               </div>
@@ -2131,7 +1948,7 @@ ORDER BY rg."Date" DESC`}
                   </tr>
                 </thead>
                 <tbody>
-                  {systemFields.map(field => {
+                  {SYSTEM_FIELDS.map(field => {
                     const isMapped = !!formData.field_mapping[field.key]
                     const isAutoMapped = !!autoMappedFields[field.key]
                     const isRequired = field.required
