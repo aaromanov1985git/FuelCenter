@@ -1941,7 +1941,12 @@ h1 {
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  /* Горизонтальная прокрутка обязательна: таблица ниже объявлена шириной не
+     менее 1100px, а контентная область при открытом сайдбаре уже этого на
+     распространённых ноутбучных ширинах. overflow: hidden обрезал правые
+     колонки без возможности до них добраться. */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .tx-root .table-wrapper::after { display: none; }
 
