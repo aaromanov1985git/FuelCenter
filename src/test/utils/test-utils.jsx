@@ -1,31 +1,22 @@
 /**
  * Утилиты для тестирования React компонентов
  */
-import React from 'react'
 import { render } from '@testing-library/react'
-import { BrowserRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 
 /**
- * Обёртка для рендеринга компонентов с провайдерами
+ * Обёртка для рендеринга компонентов с провайдерами.
+ *
+ * Провайдеров пока ни одного: роутера в приложении нет, экраны переключаются
+ * состоянием. Функция остаётся точкой, куда провайдер добавляют, когда он
+ * появляется, — тесты уже зовут её и переписывать их не придётся.
+ *
  * @param {React.Component} ui - Компонент для рендеринга
- * @param {Object} options - Опции рендеринга
+ * @param {Object} options - Опции рендеринга @testing-library/react
  * @returns {Object} Результат рендеринга
  */
 export function renderWithProviders(ui, options = {}) {
-  const { route = '/', ...renderOptions } = options
-
-  // Обёртка с роутером
-  const Wrapper = ({ children }) => {
-    window.history.pushState({}, 'Test page', route)
-    return (
-      <BrowserRouter>
-        {children}
-      </BrowserRouter>
-    )
-  }
-
-  return render(ui, { wrapper: Wrapper, ...renderOptions })
+  return render(ui, options)
 }
 
 /**
