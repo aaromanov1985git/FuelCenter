@@ -912,11 +912,16 @@ const OrganizationsList = () => {
   const activeCount = organizations.filter(o => o.is_active).length
   const selectedOrg = organizations.find(o => o.id === selectedOrgId) || organizations[0] || null
 
+  // Поле color убрано: цвет числа и риски приходил инлайном из JS и перебивал
+  // токены. Отдельно бессмысленный случай — акцентом был покрашен счётчик
+  // «На странице», то есть пагинация, где тон не может ничего кодировать.
+  // Цвет числа теперь .org-kpi-value (var(--text-1)), риска — .org-kpi-accent
+  // (var(--border-strong)); см. OrganizationsList.css.
   const kpis = [
-    { label: 'Всего организаций', value: total, color: 'var(--text-1)' },
-    { label: 'Активных', value: activeCount, color: 'var(--green)' },
-    { label: 'Неактивных', value: organizations.length - activeCount, color: 'var(--text-3)' },
-    { label: 'На странице', value: organizations.length, color: 'var(--accent)' },
+    { label: 'Всего организаций', value: total },
+    { label: 'Активных', value: activeCount },
+    { label: 'Неактивных', value: organizations.length - activeCount },
+    { label: 'На странице', value: organizations.length },
   ]
 
   return (
@@ -925,10 +930,10 @@ const OrganizationsList = () => {
       <div className="org-kpi-grid">
         {kpis.map((k, i) => (
           <div key={k.label} className="org-kpi-card" data-testid={`org-kpi-${i}`}>
-            <div className="org-kpi-accent" style={{ background: k.color }} />
+            <div className="org-kpi-accent" />
             <div className="org-kpi-body">
               <div className="t-label">{k.label}</div>
-              <div className="org-kpi-value" style={{ color: k.color }}>{k.value}</div>
+              <div className="org-kpi-value">{k.value}</div>
             </div>
           </div>
         ))}

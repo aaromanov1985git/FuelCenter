@@ -1,0 +1,1601 @@
+{
+  "byRule": {
+    "A1": 4550,
+    "A2": 622,
+    "A5": 60,
+    "B3": 36,
+    "C1": 164,
+    "C2": 1602,
+    "D4": 92,
+    "D1": 60,
+    "D3": 60,
+    "E2": 2814,
+    "F2": 354,
+    "G10": 7324,
+    "G4": 706,
+    "G8": 60,
+    "H2": 36,
+    "H1": 36,
+    "B1": 49,
+    "B4": 10,
+    "B6": 4,
+    "A4": 24,
+    "D2": 544,
+    "A3": 12,
+    "G7": 24,
+    "G2": 48
+  },
+  "runs": [
+    {
+      "key": "dashboard-dark-1440",
+      "page": "dashboard",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A1": 32,
+        "A2": 16,
+        "A5": 1,
+        "B3": 4,
+        "C1": 4,
+        "C2": 10,
+        "D4": 8,
+        "D1": 1,
+        "D3": 1,
+        "E2": 58,
+        "F2": 3,
+        "G10": 56,
+        "G4": 10,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 1138,
+        "after": 838,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "transactions-dark-1440",
+      "page": "transactions",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A1": 20,
+        "A2": 3,
+        "A5": 1,
+        "B1": 11,
+        "B3": 2,
+        "B4": 1,
+        "B6": 1,
+        "C1": 3,
+        "C2": 101,
+        "D1": 1,
+        "D3": 1,
+        "E2": 124,
+        "F2": 12,
+        "G10": 1218,
+        "G4": 1,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "table-wrapper",
+        "before": 480,
+        "after": 480,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "vehicles-dark-1440",
+      "page": "vehicles",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A1": 96,
+        "A4": 1,
+        "A5": 1,
+        "C1": 2,
+        "C2": 7,
+        "D4": 4,
+        "D1": 1,
+        "D3": 1,
+        "E2": 18,
+        "F2": 47,
+        "G10": 57,
+        "G4": 6,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 336,
+        "after": 36,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "cards-dark-1440",
+      "page": "cards",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A1": 424,
+        "A2": 65,
+        "A5": 1,
+        "C1": 2,
+        "C2": 126,
+        "D2": 60,
+        "D1": 1,
+        "D3": 1,
+        "E2": 71,
+        "F2": 3,
+        "G10": 69,
+        "G4": 66,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "fuel-card-analysis-dark-1440",
+      "page": "fuel-card-analysis",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A1": 424,
+        "A2": 65,
+        "A5": 1,
+        "C1": 2,
+        "C2": 126,
+        "D2": 60,
+        "D1": 1,
+        "D3": 1,
+        "E2": 71,
+        "F2": 3,
+        "G10": 69,
+        "G4": 66,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "gas-stations-dark-1440",
+      "page": "gas-stations",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A1": 24,
+        "A4": 1,
+        "A5": 1,
+        "C1": 2,
+        "C2": 7,
+        "D1": 1,
+        "D3": 1,
+        "E2": 6,
+        "F2": 7,
+        "G10": 100,
+        "G4": 6,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 326,
+        "after": 26,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "fuel-types-dark-1440",
+      "page": "fuel-types",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A4": 1,
+        "A5": 1,
+        "C1": 1,
+        "C2": 6,
+        "D1": 1,
+        "D3": 1,
+        "E2": 6,
+        "G10": 24,
+        "G4": 5,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 280,
+        "after": 280,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "providers-dark-1440",
+      "page": "providers",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A4": 1,
+        "A5": 1,
+        "B3": 1,
+        "C1": 2,
+        "D1": 1,
+        "D3": 1,
+        "E2": 3,
+        "G10": 13,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 254,
+        "after": 254,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "provider-analysis-dark-1440",
+      "page": "provider-analysis",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A2": 6,
+        "A3": 2,
+        "A5": 1,
+        "B3": 2,
+        "C1": 6,
+        "C2": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 3,
+        "F2": 3,
+        "G10": 87,
+        "G4": 1,
+        "G7": 5,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 1566,
+        "after": 1266,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "templates-dark-1440",
+      "page": "templates",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A3": 1,
+        "A5": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 10,
+        "G10": 3,
+        "G7": 1,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "organizations-dark-1440",
+      "page": "organizations",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A1": 9,
+        "A5": 1,
+        "C1": 3,
+        "C2": 7,
+        "D2": 16,
+        "D1": 1,
+        "D3": 1,
+        "E2": 17,
+        "F2": 1,
+        "G10": 8,
+        "G4": 8,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "users-dark-1440",
+      "page": "users",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A1": 8,
+        "A4": 1,
+        "A5": 1,
+        "C1": 1,
+        "C2": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 6,
+        "G10": 25,
+        "G2": 4,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 213,
+        "after": 213,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "upload-events-dark-1440",
+      "page": "upload-events",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A1": 62,
+        "A4": 1,
+        "A5": 1,
+        "C1": 2,
+        "C2": 8,
+        "D4": 7,
+        "D1": 1,
+        "D3": 1,
+        "E2": 50,
+        "G10": 82,
+        "G4": 7,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 447,
+        "after": 147,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "notifications-dark-1440",
+      "page": "notifications",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A1": 30,
+        "A5": 1,
+        "C1": 3,
+        "D4": 4,
+        "D1": 1,
+        "D3": 1,
+        "E2": 12,
+        "F2": 14,
+        "G10": 10,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "settings-dark-1440",
+      "page": "settings",
+      "theme": "dark",
+      "width": 1440,
+      "counts": {
+        "A1": 14,
+        "A5": 1,
+        "C1": 8,
+        "C2": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 11,
+        "G10": 10,
+        "G4": 1,
+        "G2": 8,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "dashboard-light-1440",
+      "page": "dashboard",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A1": 30,
+        "A2": 16,
+        "A5": 1,
+        "B3": 4,
+        "C1": 4,
+        "C2": 10,
+        "D4": 8,
+        "D1": 1,
+        "D3": 1,
+        "E2": 54,
+        "F2": 3,
+        "G10": 56,
+        "G4": 10,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 1138,
+        "after": 838,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "transactions-light-1440",
+      "page": "transactions",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A2": 3,
+        "A5": 1,
+        "B1": 11,
+        "B3": 2,
+        "B6": 1,
+        "C1": 3,
+        "C2": 100,
+        "D1": 1,
+        "D3": 1,
+        "E2": 128,
+        "F2": 3,
+        "G10": 1218,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "table-wrapper",
+        "before": 480,
+        "after": 480,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "vehicles-light-1440",
+      "page": "vehicles",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A1": 94,
+        "A4": 1,
+        "A5": 1,
+        "C1": 2,
+        "C2": 7,
+        "D4": 4,
+        "D1": 1,
+        "D3": 1,
+        "E2": 54,
+        "F2": 47,
+        "G10": 57,
+        "G4": 6,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 336,
+        "after": 36,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "cards-light-1440",
+      "page": "cards",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A1": 424,
+        "A2": 65,
+        "A5": 1,
+        "C1": 2,
+        "C2": 126,
+        "D2": 60,
+        "D1": 1,
+        "D3": 1,
+        "E2": 243,
+        "F2": 3,
+        "G10": 69,
+        "G4": 66,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "fuel-card-analysis-light-1440",
+      "page": "fuel-card-analysis",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A1": 424,
+        "A2": 65,
+        "A5": 1,
+        "C1": 2,
+        "C2": 126,
+        "D2": 60,
+        "D1": 1,
+        "D3": 1,
+        "E2": 243,
+        "F2": 3,
+        "G10": 69,
+        "G4": 66,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "gas-stations-light-1440",
+      "page": "gas-stations",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A1": 24,
+        "A4": 1,
+        "A5": 1,
+        "C1": 2,
+        "C2": 7,
+        "D1": 1,
+        "D3": 1,
+        "E2": 45,
+        "F2": 7,
+        "G10": 100,
+        "G4": 6,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 326,
+        "after": 26,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "fuel-types-light-1440",
+      "page": "fuel-types",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A4": 1,
+        "A5": 1,
+        "C1": 1,
+        "C2": 6,
+        "D1": 1,
+        "D3": 1,
+        "E2": 9,
+        "G10": 24,
+        "G4": 5,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 280,
+        "after": 280,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "providers-light-1440",
+      "page": "providers",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A4": 1,
+        "A5": 1,
+        "B3": 1,
+        "C1": 2,
+        "D1": 1,
+        "D3": 1,
+        "E2": 9,
+        "G10": 13,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 254,
+        "after": 254,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "provider-analysis-light-1440",
+      "page": "provider-analysis",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A2": 6,
+        "A3": 2,
+        "A5": 1,
+        "B3": 2,
+        "C1": 6,
+        "C2": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 7,
+        "F2": 3,
+        "G10": 87,
+        "G4": 1,
+        "G7": 5,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 1566,
+        "after": 1266,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "templates-light-1440",
+      "page": "templates",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A3": 1,
+        "A5": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 9,
+        "G10": 3,
+        "G7": 1,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "organizations-light-1440",
+      "page": "organizations",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A1": 9,
+        "A5": 1,
+        "C1": 3,
+        "C2": 7,
+        "D2": 16,
+        "D1": 1,
+        "D3": 1,
+        "E2": 15,
+        "F2": 1,
+        "G10": 8,
+        "G4": 8,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "users-light-1440",
+      "page": "users",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A1": 8,
+        "A4": 1,
+        "A5": 1,
+        "C1": 1,
+        "C2": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 12,
+        "G10": 25,
+        "G2": 4,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 213,
+        "after": 213,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "upload-events-light-1440",
+      "page": "upload-events",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A1": 62,
+        "A4": 1,
+        "A5": 1,
+        "C1": 2,
+        "C2": 8,
+        "D4": 7,
+        "D1": 1,
+        "D3": 1,
+        "E2": 49,
+        "G10": 82,
+        "G4": 7,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 447,
+        "after": 147,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "notifications-light-1440",
+      "page": "notifications",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A1": 30,
+        "A5": 1,
+        "C1": 3,
+        "D4": 4,
+        "D1": 1,
+        "D3": 1,
+        "E2": 9,
+        "F2": 14,
+        "G10": 10,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "settings-light-1440",
+      "page": "settings",
+      "theme": "light",
+      "width": 1440,
+      "counts": {
+        "A1": 14,
+        "A5": 1,
+        "C1": 8,
+        "C2": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 17,
+        "G10": 10,
+        "G4": 1,
+        "G2": 8,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "dashboard-dark-1024",
+      "page": "dashboard",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 32,
+        "A2": 16,
+        "A5": 1,
+        "B3": 4,
+        "C1": 4,
+        "C2": 10,
+        "D4": 8,
+        "D1": 1,
+        "D3": 1,
+        "E2": 58,
+        "F2": 3,
+        "G10": 56,
+        "G4": 10,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 1702,
+        "after": 1402,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "transactions-dark-1024",
+      "page": "transactions",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 20,
+        "A2": 3,
+        "A5": 1,
+        "B1": 11,
+        "B3": 2,
+        "B4": 1,
+        "B6": 1,
+        "C1": 3,
+        "C2": 101,
+        "D1": 1,
+        "D3": 1,
+        "E2": 124,
+        "F2": 12,
+        "G10": 1218,
+        "G4": 1,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "table-wrapper",
+        "before": 509,
+        "after": 509,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "vehicles-dark-1024",
+      "page": "vehicles",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 96,
+        "A4": 1,
+        "A5": 1,
+        "B4": 1,
+        "C1": 2,
+        "C2": 7,
+        "D4": 4,
+        "D1": 1,
+        "D3": 1,
+        "E2": 18,
+        "F2": 47,
+        "G10": 57,
+        "G4": 6,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 428,
+        "after": 128,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "cards-dark-1024",
+      "page": "cards",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 426,
+        "A2": 65,
+        "A5": 1,
+        "C1": 2,
+        "C2": 126,
+        "D2": 60,
+        "D1": 1,
+        "D3": 1,
+        "E2": 77,
+        "F2": 3,
+        "G10": 69,
+        "G4": 66,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "fuel-card-analysis-dark-1024",
+      "page": "fuel-card-analysis",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 426,
+        "A2": 65,
+        "A5": 1,
+        "C1": 2,
+        "C2": 126,
+        "D2": 60,
+        "D1": 1,
+        "D3": 1,
+        "E2": 77,
+        "F2": 3,
+        "G10": 69,
+        "G4": 66,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "gas-stations-dark-1024",
+      "page": "gas-stations",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 26,
+        "A4": 1,
+        "A5": 1,
+        "B4": 1,
+        "C1": 2,
+        "C2": 7,
+        "D1": 1,
+        "D3": 1,
+        "E2": 12,
+        "F2": 7,
+        "G10": 100,
+        "G4": 6,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 452,
+        "after": 152,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "fuel-types-dark-1024",
+      "page": "fuel-types",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 2,
+        "A4": 1,
+        "A5": 1,
+        "B4": 1,
+        "C1": 1,
+        "C2": 6,
+        "D1": 1,
+        "D3": 1,
+        "E2": 12,
+        "G10": 24,
+        "G4": 5,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 318,
+        "after": 318,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "providers-dark-1024",
+      "page": "providers",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 2,
+        "A4": 1,
+        "A5": 1,
+        "B3": 1,
+        "C1": 2,
+        "D1": 1,
+        "D3": 1,
+        "E2": 9,
+        "G10": 13,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 254,
+        "after": 226,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "provider-analysis-dark-1024",
+      "page": "provider-analysis",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 2,
+        "A2": 7,
+        "A3": 2,
+        "A5": 1,
+        "B1": 5,
+        "B3": 2,
+        "C1": 6,
+        "C2": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 9,
+        "F2": 3,
+        "G10": 87,
+        "G4": 1,
+        "G7": 5,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 1976,
+        "after": 1676,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "templates-dark-1024",
+      "page": "templates",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 2,
+        "A3": 1,
+        "A5": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 16,
+        "G10": 3,
+        "G7": 1,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "organizations-dark-1024",
+      "page": "organizations",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 11,
+        "A5": 1,
+        "C1": 3,
+        "C2": 7,
+        "D2": 16,
+        "D1": 1,
+        "D3": 1,
+        "E2": 23,
+        "F2": 1,
+        "G10": 8,
+        "G4": 8,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "users-dark-1024",
+      "page": "users",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 10,
+        "A4": 1,
+        "A5": 1,
+        "B4": 1,
+        "C1": 1,
+        "C2": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 12,
+        "G10": 25,
+        "G2": 4,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 213,
+        "after": 213,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "upload-events-dark-1024",
+      "page": "upload-events",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 64,
+        "A4": 1,
+        "A5": 1,
+        "B4": 1,
+        "C1": 2,
+        "C2": 8,
+        "D4": 7,
+        "D1": 1,
+        "D3": 1,
+        "E2": 56,
+        "G10": 82,
+        "G4": 7,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 605,
+        "after": 305,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "notifications-dark-1024",
+      "page": "notifications",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 32,
+        "A5": 1,
+        "C1": 3,
+        "D4": 4,
+        "D1": 1,
+        "D3": 1,
+        "E2": 18,
+        "F2": 14,
+        "G10": 10,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "settings-dark-1024",
+      "page": "settings",
+      "theme": "dark",
+      "width": 1024,
+      "counts": {
+        "A1": 16,
+        "A5": 1,
+        "C1": 8,
+        "C2": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 17,
+        "G10": 10,
+        "G4": 1,
+        "G2": 8,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "dashboard-light-1024",
+      "page": "dashboard",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A1": 32,
+        "A2": 16,
+        "A5": 1,
+        "B3": 4,
+        "C1": 4,
+        "C2": 10,
+        "D4": 8,
+        "D1": 1,
+        "D3": 1,
+        "E2": 58,
+        "F2": 3,
+        "G10": 56,
+        "G4": 10,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 1702,
+        "after": 1402,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "transactions-light-1024",
+      "page": "transactions",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A2": 3,
+        "A5": 1,
+        "B1": 11,
+        "B3": 2,
+        "B4": 1,
+        "B6": 1,
+        "C1": 3,
+        "C2": 100,
+        "D1": 1,
+        "D3": 1,
+        "E2": 128,
+        "F2": 3,
+        "G10": 1218,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "table-wrapper",
+        "before": 480,
+        "after": 480,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "vehicles-light-1024",
+      "page": "vehicles",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A1": 94,
+        "A4": 1,
+        "A5": 1,
+        "C1": 2,
+        "C2": 7,
+        "D4": 4,
+        "D1": 1,
+        "D3": 1,
+        "E2": 54,
+        "F2": 47,
+        "G10": 57,
+        "G4": 6,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 428,
+        "after": 128,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "cards-light-1024",
+      "page": "cards",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A1": 424,
+        "A2": 65,
+        "A5": 1,
+        "C1": 2,
+        "C2": 126,
+        "D2": 60,
+        "D1": 1,
+        "D3": 1,
+        "E2": 243,
+        "F2": 3,
+        "G10": 69,
+        "G4": 66,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "fuel-card-analysis-light-1024",
+      "page": "fuel-card-analysis",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A1": 424,
+        "A2": 65,
+        "A5": 1,
+        "C1": 2,
+        "C2": 126,
+        "D2": 60,
+        "D1": 1,
+        "D3": 1,
+        "E2": 243,
+        "F2": 3,
+        "G10": 69,
+        "G4": 66,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "gas-stations-light-1024",
+      "page": "gas-stations",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A1": 24,
+        "A4": 1,
+        "A5": 1,
+        "B4": 1,
+        "C1": 2,
+        "C2": 7,
+        "D1": 1,
+        "D3": 1,
+        "E2": 45,
+        "F2": 7,
+        "G10": 100,
+        "G4": 6,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 452,
+        "after": 152,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "fuel-types-light-1024",
+      "page": "fuel-types",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A4": 1,
+        "A5": 1,
+        "C1": 1,
+        "C2": 6,
+        "D1": 1,
+        "D3": 1,
+        "E2": 9,
+        "G10": 24,
+        "G4": 5,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 280,
+        "after": 280,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "providers-light-1024",
+      "page": "providers",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A4": 1,
+        "A5": 1,
+        "B3": 1,
+        "C1": 2,
+        "D1": 1,
+        "D3": 1,
+        "E2": 9,
+        "G10": 13,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 254,
+        "after": 226,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "provider-analysis-light-1024",
+      "page": "provider-analysis",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A2": 7,
+        "A3": 2,
+        "A5": 1,
+        "B3": 2,
+        "C1": 6,
+        "C2": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 7,
+        "F2": 3,
+        "G10": 87,
+        "G4": 1,
+        "G7": 5,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 1976,
+        "after": 1676,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "templates-light-1024",
+      "page": "templates",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A3": 1,
+        "A5": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 9,
+        "G10": 3,
+        "G7": 1,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "organizations-light-1024",
+      "page": "organizations",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A1": 9,
+        "A5": 1,
+        "C1": 3,
+        "C2": 7,
+        "D2": 16,
+        "D1": 1,
+        "D3": 1,
+        "E2": 15,
+        "F2": 1,
+        "G10": 8,
+        "G4": 8,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "users-light-1024",
+      "page": "users",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A1": 8,
+        "A4": 1,
+        "A5": 1,
+        "B4": 1,
+        "C1": 1,
+        "C2": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 12,
+        "G10": 25,
+        "G2": 4,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 213,
+        "after": 213,
+        "sticks": true
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "upload-events-light-1024",
+      "page": "upload-events",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A1": 62,
+        "A4": 1,
+        "A5": 1,
+        "C1": 2,
+        "C2": 8,
+        "D4": 7,
+        "D1": 1,
+        "D3": 1,
+        "E2": 49,
+        "G10": 82,
+        "G4": 7,
+        "G8": 1,
+        "H2": 1,
+        "H1": 1
+      },
+      "sticky": {
+        "container": "page",
+        "before": 533,
+        "after": 233,
+        "sticks": false
+      },
+      "consoleErrors": 0
+    },
+    {
+      "key": "notifications-light-1024",
+      "page": "notifications",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A1": 30,
+        "A5": 1,
+        "C1": 3,
+        "D4": 4,
+        "D1": 1,
+        "D3": 1,
+        "E2": 9,
+        "F2": 14,
+        "G10": 10,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    },
+    {
+      "key": "settings-light-1024",
+      "page": "settings",
+      "theme": "light",
+      "width": 1024,
+      "counts": {
+        "A1": 14,
+        "A5": 1,
+        "C1": 8,
+        "C2": 1,
+        "D1": 1,
+        "D3": 1,
+        "E2": 17,
+        "G10": 10,
+        "G4": 1,
+        "G2": 8,
+        "G8": 1
+      },
+      "sticky": null,
+      "consoleErrors": 0
+    }
+  ]
+}

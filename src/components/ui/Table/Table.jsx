@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Icon from '../Icon';
+import useEdgeScroll from './useEdgeScroll';
 import './Table.css';
 
 const Table = ({
@@ -20,6 +21,8 @@ const Table = ({
   className = '',
   ...props
 }) => {
+  // Указатель горизонтальной прокрутки: измеряем сам контейнер, рисует CSS.
+  const { ref: scrollRef, hasStart, hasEnd } = useEdgeScroll();
   const [sortColumn, setSortColumn] = useState(defaultSortColumn);
   const [sortOrder, setSortOrder] = useState(defaultSortOrder);
   const [selectedRows, setSelectedRows] = useState(new Set());
@@ -159,116 +162,125 @@ const Table = ({
   }
 
   return (
-    // Липкой шапке нужен ограниченный по высоте контейнер прокрутки: сама
-    // обёртка по вертикали не прокручивается, и без max-height шапка уезжала
-    // вместе со страницей, сколько бы раз ни был передан stickyHeader.
-    <div
-      className={['ui-table-wrapper', stickyHeader && 'ui-table-wrapper-sticky']
-        .filter(Boolean).join(' ')}
-      {...props}
-    >
-      <table className={tableClasses}>
-        <thead className="ui-table-header">
-          <tr>
-            {selectable && (
-              <th className="ui-table-cell ui-table-cell-checkbox">
-                <input
-                  type="checkbox"
-                  checked={selectedRows.size === data.length}
-                  onChange={handleSelectAll}
-                  aria-label="Выбрать все"
-                />
-              </th>
-            )}
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                className={[
-                  'ui-table-cell',
-                  'ui-table-header-cell',
-                  sortable && column.sortable !== false && 'ui-table-sortable',
-                  sortColumn === column.key && 'ui-table-sorted',
-                  column.align && `ui-table-align-${column.align}`,
-                  column.sticky && `ui-table-cell-sticky-${column.sticky}`,
-                  column.headerClassName
-                ].filter(Boolean).join(' ')}
-                onClick={() => handleHeaderClick(column)}
-                style={{ width: column.width }}
-                role={sortable && column.sortable === true ? 'columnheader button' : 'columnheader'}
-                aria-sort={
-                  sortColumn === column.key
-                    ? sortOrder === 'asc'
-                      ? 'ascending'
-                      : 'descending'
-                    : 'none'
-                }
-                tabIndex={sortable && column.sortable === true ? 0 : undefined}
-                onKeyDown={(e) => {
-                  if (!sortable || column.sortable !== true) return;
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleHeaderClick(column);
-                  }
-                }}
-              >
-                <div className="ui-table-header-content">
-                  {column.header || column.label}
-                  {getSortIcon(column)}
-                </div>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="ui-table-body">
-          {sortedData.map((row, rowIndex) => (
-            <tr
-              key={row.id || rowIndex}
-              className={[
-                'ui-table-row',
-                selectedRows.has(rowIndex) && 'ui-table-row-selected',
-                onRowClick && 'ui-table-row-clickable',
-                row.className
-              ].filter(Boolean).join(' ')}
-              onClick={() => onRowClick && onRowClick(row, rowIndex)}
-              role={onRowClick ? 'button' : undefined}
-              tabIndex={onRowClick ? 0 : undefined}
-            >
+    /* Две обёртки, а не одна: внутренняя — контейнер прокрутки (липкой шапке
+       нужен ограниченный по высоте scrollport, иначе она уезжает вместе со
+       страницей), внешняя — неподвижный якорь для указателей прокрутки. */
+    <div className="ui-table-scroll">
+      <div
+        ref={scrollRef}
+        className={['ui-table-wrapper', stickyHeader && 'ui-table-wrapper-sticky']
+          .filter(Boolean).join(' ')}
+        data-scroll-start={hasStart ? 'true' : undefined}
+        data-scroll-end={hasEnd ? 'true' : undefined}
+        {...props}
+      >
+        <table className={tableClasses}>
+          <thead className="ui-table-header">
+            <tr>
               {selectable && (
-                <td className="ui-table-cell ui-table-cell-checkbox">
+                <th className="ui-table-cell ui-table-cell-checkbox">
                   <input
                     type="checkbox"
-                    checked={selectedRows.has(rowIndex)}
-                    onChange={() => handleSelectRow(rowIndex)}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label={`Выбрать строку ${rowIndex + 1}`}
+                    checked={selectedRows.size === data.length}
+                    onChange={handleSelectAll}
+                    aria-label="Выбрать все"
                   />
-                </td>
+                </th>
               )}
-              {columns.map((column) => {
-                const cellValue = row[column.key];
-                const displayValue = column.render
-                  ? column.render(cellValue, row, rowIndex)
-                  : cellValue;
-
-                return (
-                  <td
-                    key={column.key}
-                    className={[
-                      'ui-table-cell',
-                      column.align && `ui-table-align-${column.align}`,
-                      column.sticky && `ui-table-cell-sticky-${column.sticky}`,
-                      column.cellClassName
-                    ].filter(Boolean).join(' ')}
-                    data-label={column.header || column.label}
-                  >
-                    {displayValue}
-                  </td>
-                );
-              })}
+              {columns.map((column) => (
+                <th
+                  key={column.key}
+                  className={[
+                    'ui-table-cell',
+                    'ui-table-header-cell',
+                    sortable && column.sortable !== false && 'ui-table-sortable',
+                    sortColumn === column.key && 'ui-table-sorted',
+                    column.align && `ui-table-align-${column.align}`,
+                    column.sticky && `ui-table-cell-sticky-${column.sticky}`,
+                    column.headerClassName
+                  ].filter(Boolean).join(' ')}
+                  onClick={() => handleHeaderClick(column)}
+                  style={{ width: column.width }}
+                  role={sortable && column.sortable === true ? 'columnheader button' : 'columnheader'}
+                  aria-sort={
+                    sortColumn === column.key
+                      ? sortOrder === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none'
+                  }
+                  tabIndex={sortable && column.sortable === true ? 0 : undefined}
+                  onKeyDown={(e) => {
+                    if (!sortable || column.sortable !== true) return;
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleHeaderClick(column);
+                    }
+                  }}
+                >
+                  <div className="ui-table-header-content">
+                    {column.header || column.label}
+                    {getSortIcon(column)}
+                  </div>
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="ui-table-body">
+            {sortedData.map((row, rowIndex) => (
+              <tr
+                key={row.id || rowIndex}
+                className={[
+                  'ui-table-row',
+                  selectedRows.has(rowIndex) && 'ui-table-row-selected',
+                  onRowClick && 'ui-table-row-clickable',
+                  row.className
+                ].filter(Boolean).join(' ')}
+                onClick={() => onRowClick && onRowClick(row, rowIndex)}
+                role={onRowClick ? 'button' : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+              >
+                {selectable && (
+                  <td className="ui-table-cell ui-table-cell-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.has(rowIndex)}
+                      onChange={() => handleSelectRow(rowIndex)}
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`Выбрать строку ${rowIndex + 1}`}
+                    />
+                  </td>
+                )}
+                {columns.map((column) => {
+                  const cellValue = row[column.key];
+                  const displayValue = column.render
+                    ? column.render(cellValue, row, rowIndex)
+                    : cellValue;
+
+                  return (
+                    <td
+                      key={column.key}
+                      className={[
+                        'ui-table-cell',
+                        column.align && `ui-table-align-${column.align}`,
+                        column.sticky && `ui-table-cell-sticky-${column.sticky}`,
+                        column.cellClassName
+                      ].filter(Boolean).join(' ')}
+                      data-label={column.header || column.label}
+                    >
+                      {displayValue}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {/* Указатели скрытого содержимого. Лежат вне контейнера прокрутки —
+          внутри него они уезжали бы вместе с таблицей. */}
+      {hasStart && <span className="ui-table-edge ui-table-edge-start" aria-hidden="true" />}
+      {hasEnd && <span className="ui-table-edge ui-table-edge-end" aria-hidden="true" />}
     </div>
   );
 };

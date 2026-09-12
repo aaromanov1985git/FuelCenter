@@ -65,7 +65,7 @@
 
 .notif-root .notif-pill.is-active {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .notif-root .notif-pill-count {
@@ -84,8 +84,8 @@
 }
 
 .notif-root .notif-pill.is-active .notif-pill-count {
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
 }
 
 .notif-root .notif-filter-extras {
@@ -137,8 +137,8 @@
   height: 20px;
   padding: 0 7px;
   border-radius: 10px;
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
@@ -198,10 +198,10 @@
   flex-shrink: 0;
 }
 
-.notif-root .notif-item.notif-type-error   .notif-item-icon { background: var(--red-soft);   color: var(--red); }
-.notif-root .notif-item.notif-type-warning .notif-item-icon { background: var(--amber-soft); color: var(--amber); }
-.notif-root .notif-item.notif-type-success .notif-item-icon { background: var(--green-soft); color: var(--green); }
-.notif-root .notif-item.notif-type-info    .notif-item-icon { background: var(--cyan-soft);  color: var(--cyan); }
+.notif-root .notif-item.notif-type-error   .notif-item-icon { background: var(--red-soft);   color: var(--red-ink); }
+.notif-root .notif-item.notif-type-warning .notif-item-icon { background: var(--amber-soft); color: var(--amber-ink); }
+.notif-root .notif-item.notif-type-success .notif-item-icon { background: var(--green-soft); color: var(--green-ink); }
+.notif-root .notif-item.notif-type-info    .notif-item-icon { background: var(--cyan-soft);  color: var(--cyan-ink); }
 
 /* ---------- Item body ---------- */
 .notif-root .notif-item-body {
@@ -258,14 +258,14 @@
   white-space: nowrap;
 }
 
-.notif-root .notif-chip.notif-type-error   { background: var(--red-soft);   color: var(--red); }
-.notif-root .notif-chip.notif-type-warning { background: var(--amber-soft); color: var(--amber); }
-.notif-root .notif-chip.notif-type-success { background: var(--green-soft); color: var(--green); }
-.notif-root .notif-chip.notif-type-info    { background: var(--cyan-soft);  color: var(--cyan); }
+.notif-root .notif-chip.notif-type-error   { background: var(--red-soft);   color: var(--red-ink); }
+.notif-root .notif-chip.notif-type-warning { background: var(--amber-soft); color: var(--amber-ink); }
+.notif-root .notif-chip.notif-type-success { background: var(--green-soft); color: var(--green-ink); }
+.notif-root .notif-chip.notif-type-info    { background: var(--cyan-soft);  color: var(--cyan-ink); }
 
 .notif-root .notif-chip.notif-chip-new {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* ---------- Item actions ---------- */
@@ -293,7 +293,7 @@
 .notif-root .notif-btn-mark:hover {
   background: var(--accent-soft);
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .notif-root .notif-btn-mark:focus-visible {
@@ -320,7 +320,7 @@
 
 .notif-root .notif-btn-remove:hover {
   background: var(--red-soft);
-  color: var(--red);
+  color: var(--red-ink);
 }
 
 .notif-root .notif-btn-remove:focus-visible {

@@ -38,8 +38,8 @@
   padding: var(--padding-element) var(--padding-small);
   border: none;
   border-radius: var(--radius-medium);
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
   cursor: pointer;
   font-weight: var(--font-weight-semibold);
 }
@@ -81,9 +81,9 @@
 }
 
 .users-save {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
+  border-color: var(--accent-solid);
 }
 
 .users-cancel {
@@ -164,13 +164,13 @@
 .users-toggle.on {
   background: var(--green-soft);
   border-color: var(--green);
-  color: var(--green);
+  color: var(--green-ink);
 }
 
 .users-toggle.off {
   background: var(--red-soft);
   border-color: var(--red);
-  color: var(--red);
+  color: var(--red-ink);
 }
 
 .users-empty {
@@ -255,9 +255,9 @@
 }
 
 .users-pagination-btn:hover:not(:disabled) {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
+  border-color: var(--accent-solid);
 }
 
 .users-pagination-btn:disabled {

@@ -144,10 +144,16 @@
   text-align: center;
 }
 
+/* Худший случай окраски ради окраски во всём приложении: ПЯТЬ чисел по 32px
+   («100», «10 730,00 л», «0,00 ₽», «0,00 ₽», «0») были залиты ОДНИМ
+   var(--accent), то есть цвет заведомо ничего не кодировал, и это самый крупный
+   кегль в продукте. Роль здесь — чернила, а не «текст акцентом», поэтому
+   --text-1, а не --accent-text: 6.08 -> 17.97:1 в светлой, 4.20 -> 15.02:1 в
+   тёмной. */
 .kpi-value {
   font-size: 2rem;
   font-weight: bold;
-  color: var(--accent);
+  color: var(--text-1);
   margin-bottom: var(--spacing-tiny);
 }
 
@@ -327,7 +333,8 @@
 
 .bar-item {
   display: grid;
-  grid-template-columns: 200px 1fr 120px;
+  /* Четвёртая колонка — вынесенная из полосы подпись значения (см. .bar-value) */
+  grid-template-columns: 200px 1fr auto 120px;
   gap: var(--spacing-element);
   align-items: center;
 }
@@ -359,11 +366,19 @@
   transition: width 0.3s ease;
 }
 
+/* Подпись вынесена ИЗ полосы наружу (была внутри .bar, сидящей на градиенте
+   var(--accent) -> var(--cyan)): белая подпись давала 6.08:1 на левом стопе и
+   2.43:1 на правом в светлой теме, 4.35 и 1.77 в тёмной — то есть контраст
+   зависел от длины полосы. text-shadow снят: по WCAG он не учитывается, а на
+   деле давал грязный контур. Снаружи --text-1 даёт 17.97:1 и 15.02:1 независимо
+   от значения. */
 .bar-value {
-  color: white;
+  color: var(--text-1);
   font-size: 0.85rem;
   font-weight: 600;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .bar-count {
@@ -381,7 +396,8 @@
 
 .fuel-type-item {
   display: grid;
-  grid-template-columns: 150px 1fr 200px;
+  /* Четвёртая колонка — вынесенная из полосы подпись процента (.fuel-type-value) */
+  grid-template-columns: 150px 1fr auto 200px;
   gap: var(--spacing-element);
   align-items: center;
 }
@@ -411,11 +427,22 @@
   transition: width 0.3s ease;
 }
 
+/* Подпись вынесена ИЗ полосы наружу (была внутри .fuel-type-bar на градиенте
+   var(--green) -> var(--amber)): белая подпись 13px давала 2.54:1 на зелёном
+   стопе и 2.15:1 на янтарном — вдвое ниже порога 4.5 в ЛЮБОЙ точке полосы, а
+   единственной страховкой был text-shadow, который по WCAG не учитывается.
+   Снаружи --text-1 даёт 17.97:1 в светлой и 15.02:1 в тёмной и не зависит от
+   длины полосы (при percentage < 10 подпись внутрь всё равно не влезала).
+   Вариант «оставить внутри» был посчитан: --ink-on-bright дал бы 7.09 на
+   зелёном и 8.37 на янтарном в светлой, но в тёмной те же стопы светлые и
+   подпись поехала бы в другую сторону. */
 .fuel-type-value {
-  color: white;
+  color: var(--text-1);
   font-size: 0.8rem;
   font-weight: 600;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
 }
 
 .fuel-type-details {
@@ -520,6 +547,6 @@
 
 .sortable-header-active .sort-icon {
   opacity: 1;
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: bold;
 }

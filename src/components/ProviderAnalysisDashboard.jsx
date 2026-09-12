@@ -1690,10 +1690,12 @@ const ProviderAnalysisDashboard = () => {
                           className="bar"
                           style={{ width: `${widthPercent}%` }}
                           title={`${formatLiters(gs.volume)}, ${gs.count} заправок`}
-                        >
-                          <span className="bar-value">{formatLiters(gs.volume)}</span>
-                        </div>
+                        />
                       </div>
+                      {/* Подпись живёт СНАРУЖИ полосы: внутри она лежала на
+                          градиенте accent->cyan и её контраст зависел от длины
+                          полосы (6.08:1 слева, 2.43:1 справа). См. .bar-value. */}
+                      <span className="bar-value">{formatLiters(gs.volume)}</span>
                       <div className="bar-count">{gs.count} заправок</div>
                     </div>
                   )
@@ -1730,10 +1732,12 @@ const ProviderAnalysisDashboard = () => {
                           <div
                             className="fuel-type-bar"
                             style={{ width: `${percentage}%` }}
-                          >
-                            <span className="fuel-type-value">{percentage.toFixed(1)}%</span>
-                          </div>
+                          />
                         </div>
+                        {/* Подпись живёт СНАРУЖИ полосы: внутри белый текст
+                            лежал на градиенте green->amber (2.54:1 / 2.15:1 при
+                            пороге 4.5). См. .fuel-type-value. */}
+                        <span className="fuel-type-value">{percentage.toFixed(1)}%</span>
                         <div className="fuel-type-details">
                           {formatLiters(data.volume)} ({data.count} заправок)
                         </div>

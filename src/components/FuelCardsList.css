@@ -42,18 +42,19 @@
   box-shadow: var(--shadow-md);
 }
 
+/* Риска — структура, а не тон (см. tokens.css: сплошной тон живёт в бейдже).
+   Было четыре сплошные полоски S=72-100% на одной строке плиток, плюс
+   .fc-stat-bar-neutral, покрашенная чернилами --text-1 (17.97:1 — полоска была
+   темнее подписи рядом). Вес линии из шкалы бордеров: 1.43:1 в светлой,
+   1.42:1 в тёмной. Модификаторы -green/-red/-amber/-accent/-neutral оставлены
+   пустышками: чистка классов в JSX — отдельным проходом. */
 .fc-root .fc-stat-bar {
   width: 4px;
   height: 28px;
   border-radius: 2px;
   flex-shrink: 0;
+  background: var(--border-strong);
 }
-
-.fc-root .fc-stat-bar-neutral { background: var(--text-1); }
-.fc-root .fc-stat-bar-green   { background: var(--green); }
-.fc-root .fc-stat-bar-red     { background: var(--red); }
-.fc-root .fc-stat-bar-amber   { background: var(--amber); }
-.fc-root .fc-stat-bar-accent  { background: var(--accent); }
 
 .fc-root .fc-stat-label {
   font-size: 11px;
@@ -72,10 +73,12 @@
   line-height: 1.1;
 }
 
-.fc-root .fc-stat-value-green  { color: var(--green); }
-.fc-root .fc-stat-value-red    { color: var(--red); }
-.fc-root .fc-stat-value-amber  { color: var(--amber); }
-.fc-root .fc-stat-value-accent { color: var(--accent); }
+/* Сплошной тон на числах 20px снят: .fc-stat-value уже объявляет
+   color: var(--text-1), и эти четыре правила существовали только чтобы его
+   перебить. Было green 2.54:1 и amber 2.15:1 на --surface при пороге 3 для
+   крупного текста, стало 17.97:1 в светлой и 15.02:1 в тёмной. На этой странице
+   четыре разных насыщенных тона стояли в одной строке плиток, причём часть
+   значений — нули. */
 
 .fc-root .fc-stat-sub {
   font-size: 11px;
@@ -352,21 +355,25 @@
   opacity: .85;
 }
 
+/* Чип статуса — ровно та роль, под которую тон и предназначен: 11px текст на
+   подложке --*-soft. Самый частый цветной элемент страницы (240 измерений
+   .fc-chip-green в одном прогоне): было 2.54:1 на --surface и 2.31:1 на
+   подложке, стало 5.48 / 4.99. Заливка и рамка не тронуты. */
 .fc-root .fc-chip-green {
   background: var(--green-soft);
-  color: var(--green);
+  color: var(--green-ink);
   border-color: rgba(34, 211, 167, .25);
 }
 
 .fc-root .fc-chip-red {
   background: var(--red-soft);
-  color: var(--red);
+  color: var(--red-ink);
   border-color: rgba(255, 107, 107, .25);
 }
 
 .fc-root .fc-chip-amber {
   background: var(--amber-soft);
-  color: var(--amber);
+  color: var(--amber-ink);
   border-color: rgba(255, 181, 71, .25);
 }
 
@@ -411,7 +418,7 @@
 }
 
 .fc-root .fc-cell-number {
-  color: var(--accent);
+  color: var(--accent-text);
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;

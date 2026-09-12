@@ -1,4 +1,43 @@
-﻿/* Table Container */
+﻿/* Внешняя обёртка — только якорь для указателя прокрутки. Сама прокрутка,
+   фон, радиус и скроллбар остались на .ui-table-wrapper: указатель обязан
+   стоять НЕПОДВИЖНО у края области, а всё, что лежит внутри контейнера
+   прокрутки, уезжает вместе с содержимым. Своей геометрии у обёртки нет —
+   для родителя она ведёт себя как прежняя .ui-table-wrapper.
+   overflow здесь НЕ ставим: выпадающие списки внутри ячеек обрезались бы. */
+.ui-table-scroll {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Признак горизонтальной прокрутки В ПОКОЕ (B4). Раньше его не было вовсе:
+   на 1024 у АЗС за краем оставалось 520px из 1262 (41% таблицы), у
+   пользователей 217 из 919 (24%), и единственной подсказкой был обрубок
+   заголовка, который читается как замысел. Появляется, пока с этой стороны
+   есть скрытое содержимое, и лежит ПОД липкими ячейками (z-index 0 против 9),
+   чтобы не спорить с их фоном. */
+.ui-table-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.ui-table-edge-end {
+  right: 0;
+  border-radius: 0 var(--radius-large) var(--radius-large) 0;
+  background: linear-gradient(to right, transparent, var(--surface));
+}
+
+.ui-table-edge-start {
+  left: 0;
+  border-radius: var(--radius-large) 0 0 var(--radius-large);
+  background: linear-gradient(to left, transparent, var(--surface));
+}
+
+/* Table Container */
 .ui-table-wrapper {
   width: 100%;
   overflow-x: auto;
@@ -91,12 +130,23 @@
 }
 
 /* Header */
+/* Шкала линий разведена: под шапкой 2px --border-strong (она отделяет шапку от
+   данных сильнее, чем строки друг от друга), между строками 1px --border,
+   внешняя рамка панели — --border-strong. Раньше линия под шапкой брала тот же
+   --border, что и разделитель строк, а разделитель строк — --border-strong, то
+   есть шкала стояла наоборот. */
 .ui-table-header {
   background: var(--surface-2);
-  border-bottom: 2px solid var(--border);
+  border-bottom: 2px solid var(--border-strong);
 }
 
+/* Шапка — подпись, а не данные: тир --text-3 (4.74:1 на --surface-2 в тёмной,
+   4.67 в светлой при пороге 4.5 для 12px/600 — qa/_frame-contrast.mjs), как уже
+   сделано в .tx-root .data-table th и .dash-table th. Раньше ячейка шапки
+   наследовала --text-1 от .ui-table, и одна роль шла двумя тирами на девяти
+   таблицах. */
 .ui-table-header-cell {
+  color: var(--text-3);
   font-weight: var(--font-weight-semibold);
   text-align: left;
   white-space: nowrap;
@@ -150,17 +200,51 @@
 }
 
 /* Cells */
+/* Высота строки задана ЗДЕСЬ и берётся из --table-row-height (src/index.css) —
+   одно число на все таблицы проекта. До этого высота была производной от самого
+   высокого органа внутри ячейки, поэтому при одном кегле 12px медианы шли
+   34 / 38 / 45 / 49 / 53 / 54 / 57px (замеры A4).
+   height на td работает как нижняя граница, поэтому содержимое выше 20px
+   (полноразмерный Select в колонке «Роль», кнопки «Отключить»/«Включить»,
+   двустрочные даты) строку по-прежнему растягивает — это отдельный шаг,
+   ограничение размеров органов в ячейке, и он не в этом участке.
+   Разделитель строк — --border (внутренняя линия), см. шкалу выше. */
 .ui-table-cell {
-  padding: var(--spacing-element);
-  border-bottom: 1px solid var(--border-strong);
+  height: var(--table-row-height);
+  /* 8px — тот же отступ ячейки, что у эталонной .tx-root .data-table. Боковой
+     сведён к нему сознательно: 16px (прежнее значение без compact) на восьми
+     колонках забирали лишние 128px ширины, а таблицы и так уезжают за край
+     (на 1024 у АЗС скрыто 520px из 1262). */
+  padding: var(--padding-tiny);
+  line-height: var(--table-cell-line-height);
+  border-bottom: 1px solid var(--border);
   vertical-align: middle;
   min-width: 0;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
 
-.ui-table-compact .ui-table-cell {
-  padding: var(--spacing-small);
+/* Правило `.ui-table-compact .ui-table-cell { padding: var(--spacing-small) }`
+   снято: оно и создавало парадокс — страницы С модификатором compact выходили
+   ВЫШЕ страниц без него, потому что padding он резал (16 -> 8), а высоту
+   содержимого ячейки не трогал. Высота строки теперь одна, и compact её не
+   меняет; класс в разметке оставлен, чтобы не править девять страниц ради
+   удаления пропса. */
+
+/* Геометрию строки приходится повторить селектором (0,2,0). Снятое
+   `.ui-table-compact .ui-table-cell` имело ровно такую специфичность и держало
+   отступ ячейки на страницах, которые объявляют свой `td`: `.upl-card td` и
+   `.veh-card td` — это (0,1,1), то есть выше одиночного класса `.ui-table-cell`
+   (0,1,0). Без этого правила отступ на них перескочил с 8px на `12px 14px`, и
+   замеры показали ровно обратное задуманному: «События загрузок» 773 -> 869px
+   по ширине при обёртке 742 (B4) и медиана строки 54 -> 67px, «Транспорт»
+   743 -> 827px и 45 -> 53px (A4). Три свойства повторены здесь, остальные
+   (vertical-align, перенос слов) страницам оставлены: их они задавали и до
+   этого прохода. */
+.ui-table .ui-table-cell {
+  height: var(--table-row-height);
+  padding: var(--padding-tiny);
+  line-height: var(--table-cell-line-height);
 }
 
 /* Alignment */
@@ -238,7 +322,7 @@
   right: 0;
   bottom: 0;
   height: 2px;
-  background: var(--border);
+  background: var(--border-strong);
   pointer-events: none;
 }
 
@@ -275,6 +359,16 @@
 
 .ui-table-cell-sticky-right::after {
   left: 0;
+}
+
+/* Липкая колонка «Действия» непрозрачна и стоит ровно у правого края, поэтому
+   градиент .ui-table-edge-end остаётся ПОД ней и там не виден. Признаком в этом
+   случае служит собственный край колонки: пока справа есть скрытое содержимое,
+   волосяная линия превращается в полосу 6px того же токена. Это линия, а не
+   тень (тени на плоскостях страницы не используются). */
+.ui-table-wrapper[data-scroll-end="true"] .ui-table-cell-sticky-right::after {
+  width: 6px;
+  background: linear-gradient(to right, var(--border-strong), transparent);
 }
 
 .ui-table-cell-sticky-left::after {
@@ -447,10 +541,13 @@
   transition: all var(--duration-fast) var(--ease-in-out);
 }
 
+/* Заливка под подписью — роль --accent-solid, подпись — --ink-on-accent вместо
+   литерала white: #ffffff на --accent даёт 4.35:1 при пороге 4.5, на
+   --accent-solid — 5.49 в тёмной и 6.08 в светлой (qa/_frame-contrast.mjs). */
 .ui-table-pagination-button:hover:not(:disabled) {
-  background: var(--accent);
-  color: white;
-  border-color: var(--accent);
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
+  border-color: var(--accent-solid);
 }
 
 .ui-table-pagination-button:focus {
@@ -496,19 +593,24 @@
     display: none;
   }
 
+  /* Та же шкала: внешняя рамка карточки строки — --border-strong, внутренние
+     разделители ячеек — --border. Раньше стояло наоборот. */
   .ui-table-row {
     display: block;
     margin-bottom: var(--spacing-element);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-strong);
     border-radius: var(--radius-medium);
     background: var(--surface);
   }
 
-  .ui-table-cell {
+  /* Селектор (0,2,0), как у настольного правила геометрии выше, иначе высота
+     36px и отступ 8px перебили бы карточную раскладку телефона. */
+  .ui-table .ui-table-cell {
     display: flex;
     justify-content: space-between;
+    height: auto;
     padding: var(--spacing-small) var(--spacing-element);
-    border-bottom: 1px solid var(--border-strong);
+    border-bottom: 1px solid var(--border);
   }
 
   .ui-table-cell:last-child {

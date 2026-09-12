@@ -7,6 +7,7 @@ import Pagination from './Pagination'
 import Highlight from './Highlight'
 import { SkeletonTable } from './Skeleton'
 import { Icon } from './ui'
+import { useEdgeScroll } from './ui/Table'
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard'
 import { useToast } from './ToastContainer'
 import './TransactionTable.css'
@@ -27,11 +28,13 @@ const rowsToCsv = (rows, headers) => {
 
 // Моноширинный — только там, где цифры стоят в колонку и их сравнивают по вертикали.
 // В остальных колонках (провайдер, ТС, товар, валюта) текст остаётся в Golos Text.
+// «АЗС» из набора убрана: в этой колонке не цифры, а имена станций («АЗС ДНС-1»,
+// «010539_PPCN6X1E»), и моноширинный в ней спорил с самим сигналом «моно = число».
+// Правило D2 этого не видело: оно освобождает всё содержимое td/th.
 const NUMERIC_HEADERS = new Set([
   'ID',
   'Дата и время',
   '№ карты',
-  'АЗС',
   'Кол-во',
   'Курс конвертации',
 ])
@@ -78,6 +81,8 @@ const TransactionTable = ({
   onPageSizeChange,
 }) => {
   const { copy } = useCopyToClipboard()
+  // Указатель горизонтальной прокрутки: измеряем контейнер, рисует CSS.
+  const { ref: scrollRef, hasStart, hasEnd } = useEdgeScroll()
   const { success, error: showError } = useToast()
 
   const handleCopyAll = async () => {
@@ -145,127 +150,138 @@ const TransactionTable = ({
         </div>
       </div>
 
-      <div className="table-wrapper">
-        {loading && data.length === 0 ? (
-          <SkeletonTable rows={10} columns={displayHeaders.length} />
-        ) : data.length === 0 ? (
-          <EmptyState
-            title="Нет данных"
-            message="Транзакции не найдены. Попробуйте изменить фильтры или загрузить новый файл."
-            icon={<Icon name="chart" size={32} />}
-            variant="large"
-          />
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                {displayHeaders.map((h) => {
-                  const field = headerFieldMap[h]
-                  const isSortable = !!field
-                  const isActive = sortConfig.field === field
-                  const isAsc = isActive && sortConfig.order === 'asc'
+      {/* Внешняя обёртка — неподвижный якорь для указателей прокрутки: внутри
+          контейнера прокрутки они уезжали бы вместе с таблицей. */}
+      <div className="tx-table-scroll">
+        <div
+          ref={scrollRef}
+          className="table-wrapper"
+          data-scroll-start={hasStart ? 'true' : undefined}
+          data-scroll-end={hasEnd ? 'true' : undefined}
+        >
+          {loading && data.length === 0 ? (
+            <SkeletonTable rows={10} columns={displayHeaders.length} />
+          ) : data.length === 0 ? (
+            <EmptyState
+              title="Нет данных"
+              message="Транзакции не найдены. Попробуйте изменить фильтры или загрузить новый файл."
+              icon={<Icon name="chart" size={32} />}
+              variant="large"
+            />
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  {displayHeaders.map((h) => {
+                    const field = headerFieldMap[h]
+                    const isSortable = !!field
+                    const isActive = sortConfig.field === field
+                    const isAsc = isActive && sortConfig.order === 'asc'
 
+                    return (
+                      <th
+                        key={h}
+                        className={[
+                          isSortable && 'sortable',
+                          RIGHT_ALIGNED_HEADERS.has(h) && 'tx-cell-right',
+                        ].filter(Boolean).join(' ')}
+                        onClick={() => isSortable && onSort(field)}
+                        style={{ cursor: isSortable ? 'pointer' : 'default' }}
+                        data-label={h}
+                        title={HEADER_LABELS[h] ? h : undefined}
+                        role={isSortable ? 'columnheader button' : 'columnheader'}
+                        aria-sort={isSortable ? (isActive ? (sortConfig.order === 'asc' ? 'ascending' : 'descending') : 'none') : undefined}
+                        tabIndex={isSortable ? 0 : undefined}
+                        onKeyDown={(e) => {
+                          if (isSortable && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault()
+                            onSort(field)
+                          }
+                        }}
+                      >
+                        <span className="th-content">
+                          {HEADER_LABELS[h] || h}
+                          {isSortable && (
+                            /* В наборе иконок нет chevron-up, поэтому направление
+                               «по возрастанию» — тот же chevron, повёрнутый в CSS. */
+                            <span className={`tx-sort ${isActive ? 'is-active' : ''} ${isAsc ? 'is-asc' : ''}`}>
+                              <Icon name="chevron-down" size={16} />
+                            </span>
+                          )}
+                        </span>
+                      </th>
+                    )
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((row, idx) => {
+                  const rowKey = row.ID != null ? `${row.ID}-${idx}` : `row-${idx}`
                   return (
-                    <th
-                      key={h}
-                      className={[
-                        isSortable && 'sortable',
-                        RIGHT_ALIGNED_HEADERS.has(h) && 'tx-cell-right',
-                      ].filter(Boolean).join(' ')}
-                      onClick={() => isSortable && onSort(field)}
-                      style={{ cursor: isSortable ? 'pointer' : 'default' }}
-                      data-label={h}
-                      title={HEADER_LABELS[h] ? h : undefined}
-                      role={isSortable ? 'columnheader button' : 'columnheader'}
-                      aria-sort={isSortable ? (isActive ? (sortConfig.order === 'asc' ? 'ascending' : 'descending') : 'none') : undefined}
-                      tabIndex={isSortable ? 0 : undefined}
-                      onKeyDown={(e) => {
-                        if (isSortable && (e.key === 'Enter' || e.key === ' ')) {
-                          e.preventDefault()
-                          onSort(field)
-                        }
+                    <tr
+                      key={rowKey}
+                      className={row._hasErrors ? 'row-with-errors' : ''}
+                      onContextMenu={(e) => {
+                        e.preventDefault()
+                        onContextMenu({
+                          isOpen: true,
+                          x: e.clientX,
+                          y: e.clientY,
+                          rowIndex: idx,
+                        })
                       }}
                     >
-                      <span className="th-content">
-                        {HEADER_LABELS[h] || h}
-                        {isSortable && (
-                          /* В наборе иконок нет chevron-up, поэтому направление
-                             «по возрастанию» — тот же chevron, повёрнутый в CSS. */
-                          <span className={`tx-sort ${isActive ? 'is-active' : ''} ${isAsc ? 'is-asc' : ''}`}>
-                            <Icon name="chevron-down" size={16} />
-                          </span>
-                        )}
-                      </span>
-                    </th>
+                      {displayHeaders.map((h) => {
+                        const searchTerms = [
+                          debouncedCardNumber,
+                          debouncedAzsNumber,
+                          debouncedProduct,
+                        ].filter(Boolean)
+                        const cellValue = row[h] || ''
+
+                        return (
+                          <td
+                            key={h}
+                            data-label={h}
+                            className={cellClasses(h)}
+                            title="Двойной клик для копирования"
+                            onDoubleClick={async () => {
+                              if (cellValue) {
+                                const copied = await copy(String(cellValue))
+                                if (copied) {
+                                  success(`Скопировано: ${cellValue}`)
+                                }
+                              }
+                            }}
+                          >
+                            {h === 'Закреплена за' && row._hasErrors ? (
+                              <span className="error-highlight" title="Требуется проверка данных ТС">
+                                <Icon name="alert" size={16} className="tx-cell-alert" />
+                                {searchTerms.length > 0 ? (
+                                  <Highlight text={cellValue} searchTerm={searchTerms} />
+                                ) : (
+                                  cellValue
+                                )}
+                              </span>
+                            ) : h === OPERATION_TYPE_HEADER && cellValue ? (
+                              <span className="tx-op-badge">{cellValue}</span>
+                            ) : searchTerms.length > 0 ? (
+                              <Highlight text={cellValue} searchTerm={searchTerms} />
+                            ) : (
+                              cellValue
+                            )}
+                          </td>
+                        )
+                      })}
+                    </tr>
                   )
                 })}
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row, idx) => {
-                const rowKey = row.ID != null ? `${row.ID}-${idx}` : `row-${idx}`
-                return (
-                  <tr
-                    key={rowKey}
-                    className={row._hasErrors ? 'row-with-errors' : ''}
-                    onContextMenu={(e) => {
-                      e.preventDefault()
-                      onContextMenu({
-                        isOpen: true,
-                        x: e.clientX,
-                        y: e.clientY,
-                        rowIndex: idx,
-                      })
-                    }}
-                  >
-                    {displayHeaders.map((h) => {
-                      const searchTerms = [
-                        debouncedCardNumber,
-                        debouncedAzsNumber,
-                        debouncedProduct,
-                      ].filter(Boolean)
-                      const cellValue = row[h] || ''
-
-                      return (
-                        <td
-                          key={h}
-                          data-label={h}
-                          className={cellClasses(h)}
-                          title="Двойной клик для копирования"
-                          onDoubleClick={async () => {
-                            if (cellValue) {
-                              const copied = await copy(String(cellValue))
-                              if (copied) {
-                                success(`Скопировано: ${cellValue}`)
-                              }
-                            }
-                          }}
-                        >
-                          {h === 'Закреплена за' && row._hasErrors ? (
-                            <span className="error-highlight" title="Требуется проверка данных ТС">
-                              <Icon name="alert" size={16} className="tx-cell-alert" />
-                              {searchTerms.length > 0 ? (
-                                <Highlight text={cellValue} searchTerm={searchTerms} />
-                              ) : (
-                                cellValue
-                              )}
-                            </span>
-                          ) : h === OPERATION_TYPE_HEADER && cellValue ? (
-                            <span className="tx-op-badge">{cellValue}</span>
-                          ) : searchTerms.length > 0 ? (
-                            <Highlight text={cellValue} searchTerm={searchTerms} />
-                          ) : (
-                            cellValue
-                          )}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
+              </tbody>
+            </table>
+          )}
+        </div>
+        {hasStart && <span className="tx-table-edge tx-table-edge-start" aria-hidden="true" />}
+        {hasEnd && <span className="tx-table-edge tx-table-edge-end" aria-hidden="true" />}
       </div>
 
       <div className="table-footer">
