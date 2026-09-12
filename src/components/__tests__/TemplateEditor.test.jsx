@@ -16,6 +16,13 @@ vi.mock('../../utils/api', () => ({
   authFetch: (...args) => mockAuthFetch(...args)
 }))
 
+// Секция ключа PPR показывает подтверждение копирования через тост приложения,
+// а useToast без ToastProvider бросает исключение.
+const mockToastSuccess = vi.fn()
+vi.mock('../ToastContainer', () => ({
+  useToast: () => ({ success: mockToastSuccess, error: vi.fn() })
+}))
+
 /**
  * Рендер с ожиданием загрузки видов топлива: без act состояние доезжает после
  * проверок и React ругается предупреждением.
@@ -164,5 +171,82 @@ describe('TemplateEditor: источник данных Firebird', () => {
 
     expect(tableInput()).toHaveValue('dcCards')
     expect(loadColumnsButton()).toBeEnabled()
+  })
+})
+
+/**
+ * Ключ PPR API живёт под пятью историческими именами. Кнопка копирования
+ * проверяла только три из них (api_key, apiKey, КлючАвторизации) и не видела
+ * ppr_api_key с pprApiKey, тогда как само поле и обработчик копирования читали
+ * всю цепочку. У Газпром-нефти это проявлялось в полный рост: там api_key занят
+ * ключом самого API провайдера, поэтому ключ PPR ложится только в ppr_api_key —
+ * и скопировать его было нельзя.
+ */
+describe('TemplateEditor: ключ PPR API', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAuthFetch.mockResolvedValue({ ok: true, json: async () => ({ items: [] }) })
+  })
+
+  const keyInput = () => screen.getByPlaceholderText('Введите API ключ для PPR API')
+  const copyButton = () => screen.getByTitle('Скопировать ключ в буфер обмена')
+  const generateButton = () => screen.getByTitle('Сгенерировать новый случайный ключ')
+
+  it('ключ только в ppr_api_key: поле показывает его, копирование доступно', async () => {
+    await renderEditor({
+      connection_type: 'api',
+      connection_settings: JSON.stringify({
+        provider_type: 'gpn',
+        base_url: 'https://api.opti-24.ru',
+        api_key: 'GPN-OWN-API-KEY',
+        ppr_api_key: 'PPR-ONLY-KEY'
+      })
+    })
+
+    expect(keyInput()).toHaveValue('PPR-ONLY-KEY')
+    expect(copyButton()).toBeEnabled()
+  })
+
+  it('без ключа копирование заперто', async () => {
+    await renderEditor({
+      connection_type: 'api',
+      connection_settings: JSON.stringify({ provider_type: 'gpn', base_url: 'https://api.opti-24.ru' })
+    })
+
+    expect(keyInput()).toHaveValue('')
+    expect(copyButton()).toBeDisabled()
+  })
+
+  it('созданный ключ попадает в поле и отпирает копирование', async () => {
+    await renderEditor({
+      connection_type: 'api',
+      connection_settings: JSON.stringify({ provider_type: 'gpn', base_url: 'https://api.opti-24.ru' })
+    })
+
+    await act(async () => {
+      fireEvent.click(generateButton())
+    })
+
+    expect(keyInput().value).toHaveLength(32)
+    expect(copyButton()).toBeEnabled()
+  })
+
+  it('ключ ГПН для самого API не подменяется ключом PPR', async () => {
+    await renderEditor({
+      connection_type: 'api',
+      connection_settings: JSON.stringify({
+        provider_type: 'gpn',
+        base_url: 'https://api.opti-24.ru',
+        api_key: 'GPN-OWN-API-KEY',
+        ppr_api_key: 'PPR-ONLY-KEY'
+      })
+    })
+
+    await act(async () => {
+      fireEvent.click(generateButton())
+    })
+
+    // Поле ключа ГПН стоит в секции подключения и должно сохранить своё значение.
+    expect(screen.getByPlaceholderText(/^GPN\./)).toHaveValue('GPN-OWN-API-KEY')
   })
 })

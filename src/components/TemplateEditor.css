@@ -566,6 +566,91 @@
   margin-top: var(--spacing-small);
 }
 
+/* Ключ PPR API: поле и две кнопки в один ряд */
+.ppr-key-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--spacing-small);
+}
+
+.ppr-key-row > input {
+  flex: 1;
+}
+
+.btn-generate-key,
+.btn-copy-key {
+  padding: var(--padding-tiny) var(--padding-element);
+  color: var(--color-bg-card);
+  border: none;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  transition: background-color 0.2s;
+}
+
+.btn-generate-key {
+  background: var(--color-primary);
+}
+
+.btn-generate-key:hover {
+  background: var(--color-primary-hover);
+}
+
+.btn-copy-key {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-tiny);
+  background: var(--color-success);
+}
+
+.btn-copy-key:hover:not(:disabled) {
+  background: var(--color-success-dark);
+}
+
+.btn-copy-key:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Пояснительная плашка внутри секции */
+.info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-small);
+  margin-top: var(--spacing-element);
+  padding: var(--padding-small);
+  background: var(--color-info-light);
+  border: 1px solid var(--color-info);
+  border-radius: var(--radius-small);
+}
+
+.info-box-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  color: var(--color-info);
+}
+
+.info-box-body {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  overflow-wrap: break-word;
+}
+
+.info-box-body ul {
+  margin: var(--spacing-small) 0 0 var(--spacing-block);
+  padding: 0;
+}
+
+.info-box-body li {
+  margin-bottom: var(--spacing-tiny);
+}
+
 /* Ряд кнопок проверки подключения: на узком экране переносится */
 .connection-actions {
   display: flex;

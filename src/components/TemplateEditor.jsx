@@ -3,6 +3,7 @@ import IconButton from './IconButton'
 import ApiConnection from './TemplateEditor/ApiConnection'
 import WebConnection from './TemplateEditor/WebConnection'
 import FirebirdConnection from './TemplateEditor/FirebirdConnection'
+import PprApiKey from './TemplateEditor/PprApiKey'
 import { SYSTEM_FIELDS, formatSchedule, parseConnectionSettings, buildConnectionSettings, stepNumbers } from '../utils/templateModel'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
@@ -92,39 +93,6 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   const [autoMappedFields, setAutoMappedFields] = useState({}) // Отслеживаем автоматически сопоставленные поля
   const [apiFields, setApiFields] = useState([]) // Поля из API ответа
   const [saving, setSaving] = useState(false) // Блокирует повторную отправку формы
-
-  // Генерация случайного API ключа
-  const generateApiKey = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-    const length = 32
-    let result = ''
-    for (let i = 0; i < length; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
-    return result
-  }
-
-  // Копирование API ключа в буфер обмена
-  const copyApiKeyToClipboard = async () => {
-    const apiKey = connectionSettings.ppr_api_key || connectionSettings.pprApiKey || connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации || ''
-    if (!apiKey) {
-      setError('Нет ключа для копирования')
-      return
-    }
-    try {
-      await navigator.clipboard.writeText(apiKey)
-      // Показываем временное сообщение об успехе
-      const successMsg = document.createElement('div')
-      successMsg.textContent = 'Ключ скопирован в буфер обмена'
-      successMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #10b981; color: white; padding: 12px 20px; border-radius: 4px; z-index: 10000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'
-      document.body.appendChild(successMsg)
-      setTimeout(() => {
-        document.body.removeChild(successMsg)
-      }, 2000)
-    } catch (err) {
-      setError('Не удалось скопировать ключ: ' + err.message)
-    }
-  }
 
   // Загрузка списка видов топлива
   useEffect(() => {
@@ -652,138 +620,12 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         )}
 
         {/* Настройки PPR API ключа */}
-        <div className="form-section">
-          <h4 className="section-title">
-            <span className="step-number">{step['ppr-key']}</span>
-            Настройки PPR API ключа
-          </h4>
-          <p className="section-description">
-            API ключ для доступа к эмулированному PPR API. Этот ключ используется для аутентификации при запросах к PPR API и определяет, какие транзакции будут доступны (только транзакции данного провайдера).
-          </p>
-          
-          <div className="form-group">
-            <label>
-              API ключ для PPR API:
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
-                <input
-                  type="text"
-                  value={connectionSettings.ppr_api_key || connectionSettings.pprApiKey || connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации || ''}
-                  onChange={(e) => setConnectionSettings({ 
-                    ...connectionSettings, 
-                    ppr_api_key: e.target.value,
-                    pprApiKey: e.target.value,
-                    // Сохраняем обратную совместимость: если ppr_api_key не задан, используем api_key
-                    // Но только если это не GPN провайдер (для GPN api_key используется для самого API)
-                    ...(connectionSettings.provider_type !== 'gpn' ? { api_key: e.target.value } : {})
-                  })}
-                  placeholder="Введите API ключ для PPR API"
-                  style={{ flex: 1 }}
-                  className="input-full-width"
-                  autoComplete="off"
-                  id="ppr-api-key-input"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newKey = generateApiKey()
-                    setConnectionSettings({ 
-                      ...connectionSettings, 
-                      ppr_api_key: newKey,
-                      pprApiKey: newKey,
-                      // Сохраняем обратную совместимость: если ppr_api_key не задан, используем api_key
-                      // Но только если это не GPN провайдер (для GPN api_key используется для самого API)
-                      ...(connectionSettings.provider_type !== 'gpn' ? { api_key: newKey, apiKey: newKey, КлючАвторизации: newKey } : {})
-                    })
-                    // Фокусируемся на поле ввода после генерации
-                    setTimeout(() => {
-                      const input = document.getElementById('ppr-api-key-input')
-                      if (input) {
-                        input.focus()
-                        input.select()
-                      }
-                    }, 100)
-                  }}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#6366f1',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    whiteSpace: 'nowrap',
-                    transition: 'background-color 0.2s'
-                  }}
-                  onMouseOver={(e) => e.target.style.backgroundColor = '#4f46e5'}
-                  onMouseOut={(e) => e.target.style.backgroundColor = '#6366f1'}
-                  title="Сгенерировать новый случайный ключ"
-                >
-                  Создать ключ
-                </button>
-                <button
-                  type="button"
-                  onClick={copyApiKeyToClipboard}
-                  disabled={!connectionSettings.api_key && !connectionSettings.apiKey && !connectionSettings.КлючАвторизации}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации ? '#10b981' : '#9ca3af',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации ? 'pointer' : 'not-allowed',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    whiteSpace: 'nowrap',
-                    transition: 'background-color 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                  onMouseOver={(e) => {
-                    if (connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации) {
-                      e.target.style.backgroundColor = '#059669'
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации) {
-                      e.target.style.backgroundColor = '#10b981'
-                    }
-                  }}
-                  title="Скопировать ключ в буфер обмена"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '16px', height: '16px' }} viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-                    <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
-                  </svg>
-                  Копировать
-                </button>
-              </div>
-              <span className="field-help">
-                Уникальный ключ для доступа к PPR API. При запросе с этим ключом будут возвращены только транзакции данного провайдера.
-                <br />
-                <strong>Важно:</strong> Каждый провайдер должен иметь свой уникальный ключ.
-              </span>
-            </label>
-          </div>
-          
-          <div className="info-box" style={{ marginTop: '15px', padding: '12px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '4px' }}>
-            <div style={{ display: 'flex', alignItems: 'start', gap: '10px' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '20px', height: '20px', marginTop: '2px', flexShrink: 0, color: '#0284c7' }} viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-              <div style={{ fontSize: '14px', lineHeight: '1.5', flex: 1, minWidth: 0 }}>
-                <strong>Как это работает:</strong>
-                <ul style={{ margin: '8px 0 0 20px', padding: 0, wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                  <li style={{ marginBottom: '4px' }}>API ключ хранится в настройках шаблона провайдера</li>
-                  <li style={{ marginBottom: '4px' }}>При запросе к PPR API с этим ключом система определяет провайдера</li>
-                  <li style={{ marginBottom: '4px' }}>Возвращаются только транзакции этого провайдера</li>
-                  <li style={{ marginBottom: '4px' }}>Если ключ не указан, PPR API будет недоступен для этого провайдера</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
+        <PprApiKey
+          stepNumber={step['ppr-key']}
+          connectionSettings={connectionSettings}
+          setConnectionSettings={setConnectionSettings}
+          onError={setError}
+        />
 
         {/* Сопоставление полей */}
         {((formData.connection_type === 'file' && fileColumns.length > 0) || formData.connection_type === 'firebird' || formData.connection_type === 'api' || formData.connection_type === 'web') && (
