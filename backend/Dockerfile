@@ -84,6 +84,11 @@ COPY ./app /app/app
 COPY ./alembic /app/alembic
 COPY ./alembic.ini /app/alembic.ini
 
+# Служебные скрипты (ротация SECRET_KEY, бэкап БД, сброс пароля пользователя).
+# В dev они приезжают bind-mount'ом из docker-compose.yml, а в prod-стеке монтирования
+# исходников нет — без этой копии `python -m scripts.<имя>` в контейнере недоступен.
+COPY ./scripts /app/scripts
+
 # Создание директории для временных файлов
 RUN mkdir -p /app/tmp
 

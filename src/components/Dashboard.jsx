@@ -236,9 +236,10 @@ const Dashboard = () => {
       return { kind: 'provider', periods, providersList, providerColorMap, periodTotals, maxQuantity }
     }
     // Базовый случай — без разреза
-    const quantities = stats.period_data.map(d => Number(d.quantity) || 0)
+    const periodData = stats.period_data || []
+    const quantities = periodData.map(d => Number(d.quantity) || 0)
     const maxQuantity = quantities.length > 0 ? Math.max(...quantities, 1) : 1
-    return { kind: 'simple', data: stats.period_data, maxQuantity }
+    return { kind: 'simple', data: periodData, maxQuantity }
   }, [stats, hiddenProviders])
 
   const yAxisValues = useMemo(() => {
@@ -609,7 +610,7 @@ const Dashboard = () => {
               size="sm"
               className="dash-export-btn"
               onClick={() => {
-                const sortedData = [...stats.leaders_by_quantity].sort((a, b) => {
+                const sortedData = [...(stats.leaders_by_quantity || [])].sort((a, b) => {
                   if (!sortConfigQuantity.field) return 0
                   const aVal = sortConfigQuantity.field === 'quantity' ? a.quantity :
                               sortConfigQuantity.field === 'count' ? a.count :
@@ -686,7 +687,7 @@ const Dashboard = () => {
               </thead>
               <tbody>
                 {(() => {
-                  const sortedData = [...stats.leaders_by_quantity].sort((a, b) => {
+                  const sortedData = [...(stats.leaders_by_quantity || [])].sort((a, b) => {
                     if (!sortConfigQuantity.field) return 0
                     const aVal = sortConfigQuantity.field === 'quantity' ? a.quantity :
                                 sortConfigQuantity.field === 'count' ? a.count :
@@ -731,7 +732,7 @@ const Dashboard = () => {
               size="sm"
               className="dash-export-btn"
               onClick={() => {
-                const sortedData = [...stats.leaders_by_count].sort((a, b) => {
+                const sortedData = [...(stats.leaders_by_count || [])].sort((a, b) => {
                   if (!sortConfigCount.field) return 0
                   const aVal = sortConfigCount.field === 'quantity' ? a.quantity :
                               sortConfigCount.field === 'count' ? a.count :
@@ -808,7 +809,7 @@ const Dashboard = () => {
               </thead>
               <tbody>
                 {(() => {
-                  const sortedData = [...stats.leaders_by_count].sort((a, b) => {
+                  const sortedData = [...(stats.leaders_by_count || [])].sort((a, b) => {
                     if (!sortConfigCount.field) return 0
                     const aVal = sortConfigCount.field === 'quantity' ? a.quantity :
                                 sortConfigCount.field === 'count' ? a.count :

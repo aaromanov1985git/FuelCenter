@@ -1,8 +1,115 @@
-﻿.templates-list {
-  background: var(--surface);
-  border-radius: var(--radius-medium);
-  padding: var(--padding-card);
-  box-shadow: var(--shadow-md);
+/* Страница, а не карточка. Раньше .templates-list рисовал фон, радиус, паддинг
+   и тень, а внутри лежал ещё один Card со своими фоном и тенью — отсюда двойное
+   обрамление. Отступ страницы даёт .main-content (20px), дублировать не нужно. */
+.templates-list {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: var(--spacing-block);
+  align-content: start;
+}
+
+.templates-page-header {
+  display: grid;
+  gap: 4px;
+}
+
+.templates-page-title {
+  margin: 0;
+  /* Голое правило h1 в App.css центрирует заголовки во всём приложении
+     и вешает на них text-shadow. Снимается в этапе 3; до тех пор
+     переопределяем локально, чтобы страница была корректна уже сейчас. */
+  text-align: left;
+  text-shadow: none;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-1);
+  line-height: 1.2;
+}
+
+/* Две колонки: рельс провайдеров фиксированной ширины и основная область.
+   Сетка 4x2 из кнопок не показывала, какой провайдер выбран, без сравнения
+   заливок и занимала всю ширину ради восьми пунктов. */
+.templates-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: var(--spacing-block);
+  align-items: start;
+}
+
+.providers-rail {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+}
+
+.providers-rail-title {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 0 var(--spacing-small) var(--spacing-small);
+}
+
+.provider-rail-item {
+  display: grid;
+  gap: 1px;
+  justify-items: start;
+  text-align: left;
+  width: 100%;
+  padding: 8px var(--spacing-small);
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: var(--radius-small, 4px);
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  font: inherit;
+}
+
+.provider-rail-item:hover {
+  background: var(--surface-2);
+  color: var(--text-1);
+}
+
+.provider-rail-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Выбор обозначается полосой и цветом текста, а не заливкой во всю кнопку:
+   заливка акцентом — язык основного действия, а не состояния. */
+.provider-rail-item.is-selected {
+  border-left-color: var(--accent);
+  background: var(--surface-2);
+  color: var(--text-1);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.provider-rail-name {
+  line-height: 1.3;
+}
+
+.provider-rail-code {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.templates-main {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .templates-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .providers-rail {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(140px, auto);
+    overflow-x: auto;
+  }
+  .providers-rail-title {
+    display: none;
+  }
 }
 
 .templates-header {
@@ -434,4 +541,51 @@
     min-height: 44px;
     padding: var(--padding-small) var(--padding-element);
   }
+}
+
+/* ── Ячейки таблицы шаблонов (этап 1) ──────────────────────────
+   Высота строки задаётся содержимым фиксированной структуры, а не
+   количеством кнопок в ячейке действий: раньше перенос трёх кнопок
+   растягивал строку примерно до 112px вместо 44 и сбивал выравнивание
+   соседних ячеек, у которых vertical-align: middle. */
+.templates-list .template-name-cell {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.templates-list .template-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.templates-list .template-name-meta {
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.templates-list .template-schedule,
+.templates-list .template-last-load {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.templates-list .template-last-load {
+  font-variant-numeric: tabular-nums;
+}
+
+.templates-list .template-muted {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* Ячейка действий не переносится ни при каком типе подключения */
+.templates-list .ui-table-cell:last-child {
+  white-space: nowrap;
 }

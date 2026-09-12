@@ -25,8 +25,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://gsm_user:gsm_password@localhost:5432/gsm_db"
     
     # CORS настройки (строка с разделителем запятая)
-    # Включает localhost для разработки и внешний домен для production
-    allowed_origins: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173,http://defectively-nimble-rattail.cloudpub.ru,https://defectively-nimble-rattail.cloudpub.ru"
+    # Дефолт — только локальная разработка. Адреса production-сервера задаются
+    # переменной ALLOWED_ORIGINS в .env (см. migration_backup/linux/env.newserver.example),
+    # чтобы смена хоста не требовала правки кода.
+    allowed_origins: str = "http://localhost:3000,http://localhost:3002,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:3002,http://127.0.0.1:5173"
     
     # Настройки приложения
     debug: bool = False

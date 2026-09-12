@@ -17,6 +17,15 @@
 *.bsl text eol=lf
 *.txt text eol=lf
 
+# Файлы, уезжающие на Linux-сервер: CRLF недопустим.
+# Критично для env.*.example -> .env: Docker Compose включил бы CR в значение
+# переменной, т.е. SECRET_KEY прочитался бы с хвостовым CR и расшифровка упала.
+*.example text eol=lf
+*.conf text eol=lf
+Dockerfile* text eol=lf
+.gitignore text eol=lf
+.dockerignore text eol=lf
+
 # Denote all files that are truly binary and should not be modified.
 *.png binary
 *.jpg binary

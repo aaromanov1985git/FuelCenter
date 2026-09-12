@@ -1,0 +1,10 @@
+/* Действия в строке таблицы шаблонов.
+   nowrap и отсутствие переноса — принципиально: именно перенос кнопок
+   растягивал строку и ломал выравнивание соседних ячеек. */
+.template-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-tiny, 4px);
+  white-space: nowrap;
+}

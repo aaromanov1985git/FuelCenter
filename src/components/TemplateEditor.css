@@ -1,4 +1,4 @@
-﻿.template-editor {
+.template-editor {
   background: var(--surface);
   border-radius: var(--radius-medium);
   padding: var(--padding-card);
@@ -71,6 +71,19 @@
   color: var(--text-2);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-normal);
+}
+
+/* Заголовок подгруппы полей внутри секции — тиром ниже .section-title */
+.subgroup-title {
+  margin: 0 0 var(--spacing-small) 0;
+  color: var(--text-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Подгруппа параметров XML API внутри секции веб-сервиса */
+.xml-api-params {
+  margin-top: var(--spacing-element);
 }
 
 .file-upload-section {
@@ -522,6 +535,160 @@
   gap: var(--spacing-small);
 }
 
+/* Выбор таблицы Firebird: список, ручной ввод, загрузка таблиц и колонок */
+.source-table-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--spacing-small);
+}
+
+.source-table-controls {
+  display: flex;
+  width: 100%;
+  flex: 1 1 auto;
+  gap: var(--spacing-small);
+}
+
+.source-table-controls > select,
+.source-table-controls > input {
+  flex: 1;
+}
+
+/* Поле SQL-запроса: моноширинный текст */
+.sql-editor {
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+
+.sql-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: var(--spacing-small);
+}
+
+/* Ключ PPR API: поле и две кнопки в один ряд */
+.ppr-key-row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--spacing-small);
+}
+
+.ppr-key-row > input {
+  flex: 1;
+}
+
+.btn-generate-key,
+.btn-copy-key {
+  padding: var(--padding-tiny) var(--padding-element);
+  color: var(--surface);
+  border: none;
+  border-radius: var(--radius-small);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  transition: background-color 0.2s;
+}
+
+.btn-generate-key {
+  background: var(--accent);
+}
+
+.btn-generate-key:hover {
+  background: var(--accent);
+}
+
+.btn-copy-key {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-tiny);
+  background: var(--green);
+}
+
+.btn-copy-key:hover:not(:disabled) {
+  background: var(--green);
+}
+
+.btn-copy-key:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Пояснительная плашка внутри секции */
+.info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-small);
+  margin-top: var(--spacing-element);
+  padding: var(--padding-small);
+  background: var(--cyan-soft);
+  border: 1px solid var(--cyan);
+  border-radius: var(--radius-small);
+}
+
+.info-box-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  color: var(--cyan);
+}
+
+.info-box-body {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  overflow-wrap: break-word;
+}
+
+/* Плашка с текущим расписанием автозагрузки */
+.auto-load-info {
+  margin-bottom: var(--spacing-element);
+  padding: var(--padding-small) var(--padding-element);
+  background: var(--cyan-soft);
+  border: 1px solid var(--cyan);
+  border-radius: var(--radius-small);
+}
+
+.auto-load-schedule {
+  margin-top: var(--spacing-small);
+  font-size: var(--font-size-sm);
+}
+
+/* Два поля смещения даты в один ряд */
+.form-row-offsets {
+  flex-direction: row;
+  gap: var(--spacing-element);
+}
+
+.form-row-offsets > label {
+  flex: 1;
+}
+
+.offsets-help {
+  display: block;
+  margin-bottom: var(--spacing-element);
+}
+
+.info-box-body ul {
+  margin: var(--spacing-small) 0 0 var(--spacing-block);
+  padding: 0;
+}
+
+.info-box-body li {
+  margin-bottom: var(--spacing-tiny);
+}
+
+/* Ряд кнопок проверки подключения: на узком экране переносится */
+.connection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-small);
+}
+
 .btn-test-connection {
   padding: var(--padding-small) var(--padding-section);
   background: var(--accent);
@@ -590,6 +757,126 @@
 }
 
 /* Старые стили .mapping-input удалены - используются специфичные стили для таблицы выше */
+
+/* Ячейка сопоставления: список полей источника и ручной ввод рядом */
+.mapping-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+}
+
+.mapping-cell > * {
+  flex: 1;
+}
+
+.mapping-fields-loaded {
+  margin-bottom: var(--spacing-element);
+}
+
+/* Маппинг видов топлива */
+.fuel-mapping-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-small);
+}
+
+.fuel-mapping-actions {
+  display: flex;
+  gap: var(--spacing-small);
+}
+
+.btn-toggle-editor,
+.btn-clear-mapping,
+.btn-add-entry,
+.btn-remove-entry {
+  border-radius: var(--radius-medium);
+  background: var(--bg);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.btn-toggle-editor,
+.btn-clear-mapping {
+  padding: var(--spacing-tiny) var(--spacing-small);
+}
+
+.btn-toggle-editor {
+  border: 1px solid var(--border);
+  color: var(--text-1);
+}
+
+.btn-toggle-editor.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--surface);
+}
+
+.btn-clear-mapping {
+  border: 1px solid var(--red);
+  color: var(--red);
+}
+
+.fuel-mapping-entries {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
+  padding: var(--spacing-block);
+}
+
+.fuel-mapping-empty {
+  padding: var(--spacing-block);
+  text-align: center;
+  color: var(--text-2);
+}
+
+.fuel-mapping-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-small);
+}
+
+.fuel-mapping-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+}
+
+.fuel-mapping-input {
+  flex: 1;
+  padding: var(--spacing-tiny) var(--spacing-small);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
+  font-size: var(--font-size-sm);
+}
+
+.fuel-mapping-arrow {
+  color: var(--text-2);
+}
+
+.fuel-mapping-target {
+  display: flex;
+  flex: 1;
+  gap: var(--spacing-tiny);
+}
+
+.btn-remove-entry {
+  min-width: 32px;
+  padding: var(--spacing-tiny);
+  border: 1px solid var(--red);
+  color: var(--red);
+}
+
+.btn-add-entry {
+  width: 100%;
+  margin-top: var(--spacing-block);
+  padding: var(--spacing-small) var(--spacing-block);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+
+.fuel-mapping-json {
+  font-family: monospace;
+}
 
 /* Стили для загрузки таблиц Firebird */
 .btn-load-tables {
