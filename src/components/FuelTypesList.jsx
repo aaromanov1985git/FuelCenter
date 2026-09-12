@@ -10,7 +10,7 @@ import ConfirmModal from './ConfirmModal'
 import './FuelTypesList.css'
 import './ColumnSettingsModal.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 const FuelTypesList = () => {
   const { error: showError, success } = useToast()

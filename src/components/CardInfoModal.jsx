@@ -3,7 +3,7 @@ import { Modal, Button, Alert, Skeleton } from './ui'
 import { authFetch } from '../utils/api'
 import './CardInfoModal.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 /**
  * Модальное окно для отображения информации по карте из Web API

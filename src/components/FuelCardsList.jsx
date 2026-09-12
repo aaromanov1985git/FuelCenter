@@ -9,7 +9,7 @@ import { authFetch } from '../utils/api'
 import { Card, Table, Skeleton, Alert } from './ui'
 import './FuelCardsList.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 // Градиенты для провайдеров (соответствуют redesign_fuel_cards.html)
 const PROVIDER_STYLES = {

@@ -1,7 +1,7 @@
 import { authFetch } from './api'
 import { logger } from './logger'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 export const loadApiTemplates = async () => {
   const response = await authFetch(`${API_URL}/api/v1/templates`)

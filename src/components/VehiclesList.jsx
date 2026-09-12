@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { logger } from '../utils/logger'
 import './VehiclesList.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 // Russian license plate component — styled to match redesign_vehicles.html
 // White background, black border, bold letters, country flag block on the right

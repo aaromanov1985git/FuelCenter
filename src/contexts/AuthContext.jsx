@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { logger } from '../utils/logger'
 import { authFetch, setLogoutHandler, resetLogoutFlag } from '../utils/api'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 const AuthContext = createContext(null)
 
