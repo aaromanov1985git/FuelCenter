@@ -3,7 +3,7 @@ import { useToast } from '../components/ToastContainer'
 import { logger } from '../utils/logger'
 import { authFetch } from '../utils/api'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 const PROCESSING_TIMEOUT = 10 * 60 * 1000
 export const MAX_FILE_SIZE = 50 * 1024 * 1024
 

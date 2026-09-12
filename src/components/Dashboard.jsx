@@ -7,7 +7,7 @@ import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
 import './Dashboard.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 // Палитра серий для графика и провайдеров — фиксированные цвета из дизайн-системы
 const SERIES_COLORS = [

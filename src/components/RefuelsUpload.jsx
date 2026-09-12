@@ -4,7 +4,7 @@ import { authFetch } from '../utils/api'
 import { useToast } from './ToastContainer'
 import './RefuelsUpload.css'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 const makeEmptyRefuel = (uid) => ({
   _uid: uid,

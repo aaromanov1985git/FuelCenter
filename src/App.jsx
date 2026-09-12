@@ -28,7 +28,7 @@ import { authFetch } from './utils/api'
 import './App.css'
 
 // Используем прокси Vite в режиме разработки или прямой URL
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 // Вкладки, у которых собственный `<h1>` рендерится внутри страницы
 const TABS_WITH_OWN_H1 = new Set(['transactions', 'settings', 'provider-analysis'])

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
 
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'development' ? '' : 'http://localhost:8000')
+const API_URL = import.meta.env.VITE_API_URL || ''
 const REQUEST_TIMEOUT_MS = 3000
 const FALLBACK_TIMEOUT_MS = 10000
 
