@@ -250,3 +250,74 @@ describe('TemplateEditor: ключ PPR API', () => {
     expect(screen.getByPlaceholderText(/^GPN\./)).toHaveValue('GPN-OWN-API-KEY')
   })
 })
+
+/**
+ * Смещения дат автозагрузки. У начальной даты обработчик был
+ * `parseInt(value) || -7`, а ноль ложный — поэтому 0 отскакивал на -7, хотя
+ * max="0" его разрешает, а подсказка под полями объясняет, что 0 значит текущую
+ * дату. У конечной даты ноль обрабатывался правильно.
+ */
+describe('TemplateEditor: смещения дат автозагрузки', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAuthFetch.mockResolvedValue({ ok: true, json: async () => ({ items: [] }) })
+  })
+
+  const enabledTemplate = {
+    connection_type: 'firebird',
+    auto_load_enabled: true,
+    auto_load_schedule: '0 2 * * *'
+  }
+
+  const fromOffset = () => screen.getByLabelText(/Смещение начальной даты/)
+  const toOffset = () => screen.getByLabelText(/Смещение конечной даты/)
+
+  it('ноль в смещении начальной даты сохраняется', async () => {
+    await renderEditor(enabledTemplate)
+
+    await act(async () => {
+      fireEvent.change(fromOffset(), { target: { value: '0' } })
+    })
+
+    expect(fromOffset()).toHaveValue(0)
+  })
+
+  it('ноль в смещении конечной даты сохраняется', async () => {
+    await renderEditor(enabledTemplate)
+
+    await act(async () => {
+      fireEvent.change(toOffset(), { target: { value: '0' } })
+    })
+
+    expect(toOffset()).toHaveValue(0)
+  })
+
+  it('пустое поле возвращает значение по умолчанию для своего смещения', async () => {
+    await renderEditor(enabledTemplate)
+
+    await act(async () => {
+      fireEvent.change(fromOffset(), { target: { value: '' } })
+      fireEvent.change(toOffset(), { target: { value: '' } })
+    })
+
+    expect(fromOffset()).toHaveValue(-7)
+    expect(toOffset()).toHaveValue(-1)
+  })
+
+  it('отрицательное смещение сохраняется как введено', async () => {
+    await renderEditor(enabledTemplate)
+
+    await act(async () => {
+      fireEvent.change(fromOffset(), { target: { value: '-30' } })
+    })
+
+    expect(fromOffset()).toHaveValue(-30)
+  })
+
+  it('расписание показано человеческим текстом', async () => {
+    await renderEditor(enabledTemplate)
+
+    expect(screen.getByText(/Автоматическая загрузка включена/)).toBeInTheDocument()
+    expect(screen.getByText(/один раз в сутки/)).toBeInTheDocument()
+  })
+})

@@ -4,7 +4,9 @@ import ApiConnection from './TemplateEditor/ApiConnection'
 import WebConnection from './TemplateEditor/WebConnection'
 import FirebirdConnection from './TemplateEditor/FirebirdConnection'
 import PprApiKey from './TemplateEditor/PprApiKey'
-import { SYSTEM_FIELDS, formatSchedule, parseConnectionSettings, buildConnectionSettings, stepNumbers } from '../utils/templateModel'
+import Activation from './TemplateEditor/Activation'
+import AutoLoad from './TemplateEditor/AutoLoad'
+import { SYSTEM_FIELDS, parseConnectionSettings, buildConnectionSettings, stepNumbers } from '../utils/templateModel'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
 import './TemplateEditor.css'
@@ -946,117 +948,22 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         )}
 
         {/* Активация шаблона */}
-        <div className="form-section">
-          <h4 className="section-title">
-            <span className="step-number">{step['activation']}</span>
-            Активация шаблона
-          </h4>
-          <div className="form-group checkbox-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={formData.is_active}
-                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-              />
-              Шаблон активен
-            </label>
-            <span className="field-help">Активные шаблоны доступны для использования при загрузке файлов</span>
-          </div>
-        </div>
+        <Activation
+          stepNumber={step['activation']}
+          isActive={formData.is_active}
+          onChange={(patch) => setFormData(prev => ({ ...prev, ...patch }))}
+        />
 
-        {/* Настройки автоматической загрузки (только для Firebird, API и Web) */}
+        {/* Автозагрузка — только для подключений, которые забирают данные сами */}
         {(formData.connection_type === 'firebird' || formData.connection_type === 'api' || formData.connection_type === 'web') && (
-          <div className="form-section">
-            <h4 className="section-title">
-              <span className="step-number">{step['auto-load']}</span>
-              Настройки автоматической загрузки
-            </h4>
-            <div className="form-group checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.auto_load_enabled}
-                  onChange={(e) => setFormData({ ...formData, auto_load_enabled: e.target.checked })}
-                />
-                Включить автоматическую загрузку
-              </label>
-              <span className="field-help">
-                При включении шаблон будет автоматически загружать данные по расписанию
-              </span>
-            </div>
-
-            {formData.auto_load_enabled && (
-              <>
-                {/* Информационное сообщение о статусе автозагрузки */}
-                {formData.auto_load_schedule && (
-                  <div className="auto-load-info" style={{
-                    padding: '12px 16px',
-                    marginBottom: '15px',
-                    backgroundColor: '#e3f2fd',
-                    border: '1px solid #90caf9',
-                    borderRadius: '4px',
-                    color: '#1565c0'
-                  }}>
-                    <strong>Автоматическая загрузка включена</strong>
-                    <div style={{ marginTop: '8px', fontSize: '14px' }}>
-                      Расписание: <strong>{formatSchedule(formData.auto_load_schedule)}</strong>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="form-group">
-                  <label className="form-label">
-                    Расписание (cron-выражение):
-                    <input
-                      type="text"
-                      value={formData.auto_load_schedule}
-                      onChange={(e) => setFormData({ ...formData, auto_load_schedule: e.target.value })}
-                      placeholder='Например: "0 2 * * *" (каждый день в 2:00) или "hourly" (каждый час)'
-                      className="input-full-width"
-                    />
-                  </label>
-                  <span className="field-help">
-                    Формат cron: минута час день месяц день_недели. Примеры: "0 2 * * *" - каждый день в 2:00,
-                    "0 */6 * * *" - каждые 6 часов, "0 0 * * 1" - каждый понедельник в полночь.
-                    Также поддерживаются простые форматы: "hourly" (каждый час), "daily" (каждый день в 2:00), "weekly" (каждую неделю)
-                  </span>
-                </div>
-
-                <div className="form-group" style={{ display: 'flex', gap: '15px' }}>
-                  <label className="form-label" style={{ flex: 1 }}>
-                    Смещение начальной даты (дни):
-                    <input
-                      type="number"
-                      value={formData.auto_load_date_from_offset}
-                      onChange={(e) => setFormData({ ...formData, auto_load_date_from_offset: parseInt(e.target.value) || -7 })}
-                      className="input-full-width"
-                      min="-365"
-                      max="0"
-                    />
-                  </label>
-                  <label className="form-label" style={{ flex: 1 }}>
-                    Смещение конечной даты (дни):
-                    <input
-                      type="number"
-                      value={formData.auto_load_date_to_offset}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? -1 : parseInt(e.target.value);
-                        setFormData({ ...formData, auto_load_date_to_offset: isNaN(value) ? -1 : value });
-                      }}
-                      className="input-full-width"
-                      min="-365"
-                      max="0"
-                    />
-                  </label>
-                </div>
-                <span className="field-help" style={{ marginTop: '-10px', marginBottom: '15px', display: 'block' }}>
-                  Отрицательные значения означают дни назад от текущей даты. 
-                  Например: -7 для начала означает неделю назад, -1 для конца означает вчера.
-                  Значение 0 для конечной даты означает текущую дату и текущее время.
-                </span>
-              </>
-            )}
-          </div>
+          <AutoLoad
+            stepNumber={step['auto-load']}
+            enabled={formData.auto_load_enabled}
+            schedule={formData.auto_load_schedule}
+            dateFromOffset={formData.auto_load_date_from_offset}
+            dateToOffset={formData.auto_load_date_to_offset}
+            onChange={(patch) => setFormData(prev => ({ ...prev, ...patch }))}
+          />
         )}
 
         <div className="form-actions">
