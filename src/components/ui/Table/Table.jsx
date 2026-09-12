@@ -159,7 +159,14 @@ const Table = ({
   }
 
   return (
-    <div className="ui-table-wrapper" {...props}>
+    // Липкой шапке нужен ограниченный по высоте контейнер прокрутки: сама
+    // обёртка по вертикали не прокручивается, и без max-height шапка уезжала
+    // вместе со страницей, сколько бы раз ни был передан stickyHeader.
+    <div
+      className={['ui-table-wrapper', stickyHeader && 'ui-table-wrapper-sticky']
+        .filter(Boolean).join(' ')}
+      {...props}
+    >
       <table className={tableClasses}>
         <thead className="ui-table-header">
           <tr>
@@ -182,6 +189,7 @@ const Table = ({
                   sortable && column.sortable !== false && 'ui-table-sortable',
                   sortColumn === column.key && 'ui-table-sorted',
                   column.align && `ui-table-align-${column.align}`,
+                  column.sticky && `ui-table-cell-sticky-${column.sticky}`,
                   column.headerClassName
                 ].filter(Boolean).join(' ')}
                 onClick={() => handleHeaderClick(column)}
@@ -248,6 +256,7 @@ const Table = ({
                     className={[
                       'ui-table-cell',
                       column.align && `ui-table-align-${column.align}`,
+                      column.sticky && `ui-table-cell-sticky-${column.sticky}`,
                       column.cellClassName
                     ].filter(Boolean).join(' ')}
                     data-label={column.header || column.label}

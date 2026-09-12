@@ -1,29 +1,96 @@
-﻿.advanced-search {
+﻿/* Панель расширенного поиска.
+ *
+ * Отступ снизу приведён к шагу страницы (16px вместо 24px), а на странице
+ * транзакций снят совсем: там панель лежит во flex-колонке с gap 16px, и
+ * margin складывался с ним в зазор 40px там, где все соседние — 16.
+ * Насовсем убрать его нельзя: на «Топливных картах» и в анализе карт эта же
+ * панель стоит внутри Card.Body, у которого gap нет, и её отступ — единственное,
+ * что отделяет фильтры от данных.
+ *
+ * Уровни поверхностей те же, что у панели таблицы: панель — фон surface, бордер,
+ * радиус; строка-переключатель — зона (фон surface-2, СВОЕГО бордера нет). */
+.advanced-search {
   background: var(--surface);
   border-radius: var(--radius-medium);
   border: 1px solid var(--border-strong);
-  margin-bottom: var(--spacing-block);
+  /* Радиус внутренних полос — на толщину бордера меньше панельного. */
+  --as-inner-radius: calc(var(--radius-medium) - 1px);
+  margin-bottom: var(--spacing-element);
   position: relative;
   z-index: 100;
   isolation: isolate;
 }
 
+/* Ритм внутри .tx-root задаёт только gap родителя. */
+.tx-root .advanced-search {
+  margin-bottom: 0;
+}
+
+/* Внутри карточки эта панель — уже не панель, а зона: фон surface + бордер +
+   радиус внутри точно такой же карточки давали панель в панели (замер C1:
+   `div.card.card-default >> div.advanced-search` на «Топливных картах» и в
+   анализе карт, 8 срезов). Своё обрамление снимается, признаком блока остаётся
+   подложка surface-2 у строки-переключателя. */
+.card .advanced-search {
+  background: none;
+  border: none;
+  border-radius: 0;
+  --as-inner-radius: var(--radius-medium);
+}
+
+/* Свёрнутая панель — ровно один орган управления в высоту: 36px (размер md по
+   шкале кнопок) плюс два бордера панели = 38px. Раньше это были padding 16
+   сверху и снизу вокруг той же кнопки 36px, то есть 71px на строку с одной
+   подписью — вдвое больше содержимого.
+   Разделитель перенесён на .advanced-search-content: как border-bottom шапки он
+   в свёрнутом состоянии рисовался второй линией прямо над бордером панели. */
 .advanced-search-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-element);
+  gap: var(--spacing-small);
+  min-height: 36px;
+  padding: 0 var(--padding-element);
   background: var(--surface-2);
-  border-bottom: 1px solid var(--border-strong);
+  /* Радиус на 1px меньше панельного — на толщину её бордера. Скруглены только
+     верхние углы: снизу к полосе примыкает раскрытое содержимое.
+     Панель НЕ обрезает содержимое (overflow: visible + z-index), иначе
+     выпадающие списки фильтров уходили бы под её край, поэтому углы гасит не
+     обрезка, а сам радиус. */
+  border-radius: var(--as-inner-radius) var(--as-inner-radius) 0 0;
   overflow: visible;
 }
 
-.advanced-search-toggle-button {
+/* Свёрнутая панель — это одна полоса, и её нижние углы тоже скруглены. Признак
+   свёрнутости в разметке — отсутствие .advanced-search-content. */
+.advanced-search:not(:has(.advanced-search-content)) .advanced-search-header {
+  border-radius: var(--as-inner-radius);
+}
+
+/* Переключатель занимает всю строку, поэтому своей плашки у него нет: вариант
+   secondary рисовал фон surface-2 и бордер внутри такой же зоны surface-2 —
+   рамка в рамке. Специфичность (0,2,0) намеренно выше, чем у .btn-secondary. */
+.advanced-search .advanced-search-toggle-button {
   display: flex;
   align-items: center;
   gap: var(--spacing-small);
   justify-content: space-between;
   width: 100%;
+  height: 100%;
+  min-height: 36px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  color: var(--text-1);
+}
+
+/* Наведение несёт вся строка (это одна большая цель), поэтому подложка
+   меняется тем же приёмом, что у .btn-secondary:hover — подмешиванием подписи
+   в заливку зоны. */
+.advanced-search .advanced-search-toggle-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--text-1));
+  color: var(--text-1);
 }
 
 .advanced-search-toggle-content {
@@ -48,9 +115,12 @@
   flex: 1;
 }
 
+/* Заливка — accent-solid, подпись — её токен-подпись: на --accent белый текст
+   давал 4.35:1 при пороге 4.5, а #fff был здесь единственным цветовым
+   литералом в файле. */
 .advanced-search-badge {
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   padding: 2px var(--padding-tiny);
@@ -83,7 +153,9 @@
 }
 
 .advanced-search-content {
-  padding: var(--spacing-block);
+  padding: var(--padding-element);
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--as-inner-radius) var(--as-inner-radius);
   animation: slideDown 0.2s ease-out;
   overflow: visible;
 }

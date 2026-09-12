@@ -113,7 +113,10 @@
   font-size: var(--font-size-sm);
 }
 
-.table-wrapper {
+/* Скоуп обязателен: .table-wrapper — общий класс, он же у панели транзакций и
+   у таблиц provider-analysis. Без корня страницы этот margin-top уезжал внутрь
+   карточки транзакций и давал там полосу пустого фона в 32px. */
+.user-action-logs-list .table-wrapper {
   overflow-x: auto;
   overflow-y: clip;
   border: 1px solid var(--border);

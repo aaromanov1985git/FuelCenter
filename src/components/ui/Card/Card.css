@@ -1,7 +1,11 @@
+/* Карточка — панель уровня 1: фон surface, радиус, бордер у варианта default.
+   Перехода у неё больше нет: `transition: all 0.3s` стоял на КАЖДОЙ карточке
+   независимо от того, меняется у неё хоть что-то по наведению, и заставлял
+   доезжать заодно размеры и положение при любой перерисовке списка. Переход
+   объявлен там, где есть что анимировать, — у .card-hoverable. */
 .card {
   background: var(--surface);
   border-radius: var(--radius-medium);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Variants */
@@ -30,7 +34,12 @@
   padding: var(--padding-card);
 }
 
-/* Hoverable */
+/* Hoverable — только для карточек, которые реально являются целью нажатия. */
+.card-hoverable {
+  transition: transform var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
 .card-hoverable:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);

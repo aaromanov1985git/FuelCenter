@@ -34,14 +34,14 @@
   height: 56px;
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 var(--spacing-medium);
   border-bottom: 1px solid var(--border);
 }
 
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--spacing-small);
   min-width: 0;
 }
 
@@ -60,11 +60,12 @@
   justify-content: center;
 }
 
+/* Две строки логотипа — одна типографическая пара, зазор им задаёт
+   line-height, а не gap в один пиксель. */
 .sidebar-logo-text {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
 }
 
 .sidebar-logo-title {
@@ -124,14 +125,14 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 10px 8px;
+  gap: var(--spacing-medium);
+  padding: var(--spacing-small);
 }
 
 .sidebar-nav-group {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--spacing-tiny);
 }
 
 .sidebar-nav-title {
@@ -142,9 +143,11 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--spacing-small);
   min-height: 32px;
-  padding: 6px 8px;
+  /* 4px, а не 6px: высоту строки всё равно держит min-height 32px, поэтому
+     вертикальный padding вне шкалы 4px ничего не давал. */
+  padding: var(--spacing-tiny) var(--spacing-small);
   background: transparent;
   border: none;
   border-radius: var(--radius-small);
@@ -185,7 +188,7 @@
 .nav-item-active,
 .nav-item-active:hover {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: var(--font-weight-medium);
 }
 
@@ -194,7 +197,7 @@
   flex: 0 0 auto;
   min-width: 18px;
   height: 18px;
-  padding: 0 5px;
+  padding: 0 var(--spacing-tiny);
   border-radius: 9px;
   background: var(--accent);
   color: var(--sidebar);
@@ -210,32 +213,37 @@
   flex: 0 0 auto;
   max-height: 38%;
   overflow-y: auto;
-  margin: 0 8px 8px;
-  padding: 10px;
+  margin: 0 var(--spacing-small) var(--spacing-small);
+  padding: var(--spacing-small);
   background: var(--surface-2);
   border-radius: var(--radius-medium);
 }
 
 .sidebar-filter-title {
-  padding-bottom: 6px;
+  padding-bottom: var(--spacing-tiny);
 }
 
+/* Тот же шаг между строками, что и в группе пунктов навигации. */
 .sidebar-filter-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--spacing-tiny);
 }
 
 /* Вид переключателя, а не пункта меню: радио-маркер слева, у активного
    меняется только цвет текста и маркер — подложки accent-soft здесь нет,
    иначе строка читалась бы как активный раздел навигации. */
+/* Габарит и отступы — ровно как у .nav-item: это тоже строка-переключатель на
+   всю ширину рельса. Было 26px высоты и padding 3px 2px, то есть 8 однотипных
+   строк шли с шагом 26px при пороге цели нажатия 32×32 — промах по вертикали
+   молча переключал фильтр на соседнего провайдера. */
 .sidebar-filter-option {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-small);
   width: 100%;
-  min-height: 26px;
-  padding: 3px 2px;
+  min-height: 32px;
+  padding: var(--spacing-tiny) var(--spacing-small);
   background: transparent;
   border: none;
   font-family: inherit;
@@ -274,8 +282,11 @@
   border-radius: var(--radius-small);
 }
 
+/* Подпись акцентом — через --accent-text: сам --accent на подложке surface-2
+   даёт 3.79:1 при пороге 4.5. Маркер остаётся на --accent: для рамки и точки
+   порог 3:1, он выполняется. */
 .sidebar-filter-option-active {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .sidebar-filter-option-active .sidebar-filter-marker {
@@ -290,15 +301,14 @@
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: var(--spacing-small);
+  padding: var(--spacing-small) var(--spacing-medium);
   border-top: 1px solid var(--border);
 }
 
 .sidebar-user {
   display: flex;
   flex-direction: column;
-  gap: 1px;
   min-width: 0;
 }
 
@@ -325,15 +335,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--spacing-small);
 }
 
 .sidebar-logout {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--spacing-small);
   height: 32px;
-  padding: 0 10px;
+  padding: 0 var(--spacing-small);
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-small);
@@ -375,8 +385,10 @@
     left: calc((var(--sidebar-width-rail) - 32px) / 2);
   }
 
+  /* Рельс 64px: пункт 36px по центру — (64 - 36) / 2 = 14px по бокам.
+     Значение держит центровку, а не ритм отступов, поэтому оно и не из шкалы. */
   .sidebar-hidden .sidebar-nav {
-    padding: 10px 14px;
+    padding: var(--spacing-small) 14px;
   }
 
   .sidebar-hidden .sidebar-nav-title {
@@ -385,7 +397,7 @@
 
   .sidebar-hidden .sidebar-nav-group + .sidebar-nav-group {
     border-top: 1px solid var(--border);
-    padding-top: 10px;
+    padding-top: var(--spacing-small);
   }
 
   .sidebar-hidden .nav-item {
@@ -419,7 +431,7 @@
 
   .sidebar-hidden .sidebar-footer {
     align-items: center;
-    padding: 10px 14px;
+    padding: var(--spacing-small);
   }
 
   .sidebar-hidden .sidebar-user {
@@ -428,7 +440,7 @@
 
   .sidebar-hidden .sidebar-footer-actions {
     flex-direction: column;
-    gap: 6px;
+    gap: var(--spacing-small);
   }
 
   .sidebar-hidden .sidebar-logout {
@@ -446,7 +458,7 @@
      36px — иначе две кнопки по 40px не влезают в 64px. */
   .sidebar-hidden .theme-toggle-buttons {
     flex-direction: column;
-    gap: 6px;
+    gap: var(--spacing-small);
   }
 
   .sidebar-hidden .theme-toggle-button {

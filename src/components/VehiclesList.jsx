@@ -400,6 +400,7 @@ const VehiclesList = () => {
             striped
             hoverable
             compact
+            stickyHeader
             defaultSortColumn="license_plate"
           />
 

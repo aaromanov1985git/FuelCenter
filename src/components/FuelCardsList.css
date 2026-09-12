@@ -383,13 +383,13 @@
   color: var(--text-1);
 }
 
+/* Кегль и вес заголовка колонки приходят от общего компонента
+   (.ui-table 12px / .ui-table-header-cell 600): th — орган сортировки, и 10px
+   были ниже порога для интерактивного элемента. Капслок и разрядка сняты:
+   регистр заголовка колонки в проекте один — обычный. */
 .fc-root .fc-table-wrap th {
   background: var(--surface-2) !important;
   color: var(--text-3) !important;
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  text-transform: uppercase;
-  letter-spacing: .4px;
   border-bottom: 1px solid var(--border) !important;
   padding: 10px 14px !important;
 }

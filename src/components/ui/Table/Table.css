@@ -204,11 +204,100 @@
 }
 
 /* Sticky Header */
+/* Прилипать шапке можно только к контейнеру прокрутки с ограниченной высотой:
+   у .ui-table-wrapper по вертикали overflow: clip, её scrollport равен высоте
+   содержимого, и шапка уезжала вместе со страницей. Тот же приём и те же 70vh,
+   что у панели транзакций, где липкая шапка работает. */
+.ui-table-wrapper-sticky {
+  max-height: 70vh;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .ui-table-sticky .ui-table-header {
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
-  box-shadow: var(--shadow-sm);
+}
+
+/* При border-collapse: collapse браузер не рисует фон и границу прилипшей
+   строки — и то, и другое задаём на самих ячейках, иначе сквозь шапку
+   просвечивают уезжающие под неё строки. */
+.ui-table-sticky .ui-table-header-cell {
+  background: var(--surface-2);
+  position: relative;
+}
+
+/* Разделитель под шапкой — отдельный слой в 2px, а не тень: тень у покоящегося
+   элемента запрещена (C2), а border-bottom у прилипшей строки при
+   border-collapse: collapse браузер не рисует. */
+.ui-table-sticky .ui-table-header-cell::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--border);
+  pointer-events: none;
+}
+
+/* Липкая колонка (column.sticky: 'right' | 'left').
+   Нужна там, где таблица шире области: колонка «Действия» — единственный вход в
+   редактирование строки, и при горизонтальной прокрутке она уходила за край.
+   Фон непрозрачный: сквозь колонку не должно быть видно уезжающих ячеек. */
+.ui-table-cell-sticky-right,
+.ui-table-cell-sticky-left {
+  position: sticky;
+  z-index: 9;
+  background: var(--surface);
+}
+
+.ui-table-cell-sticky-right {
+  right: 0;
+}
+
+.ui-table-cell-sticky-left {
+  left: 0;
+}
+
+/* Полоса края липкой колонки — тоже слой, а не тень (C2). */
+.ui-table-cell-sticky-right::after,
+.ui-table-cell-sticky-left::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+  pointer-events: none;
+}
+
+.ui-table-cell-sticky-right::after {
+  left: 0;
+}
+
+.ui-table-cell-sticky-left::after {
+  right: 0;
+}
+
+/* Полосатость и наведение должны доходить и до липкой колонки, иначе строка
+   разрывается по вертикали на два разных цвета. */
+.ui-table-striped .ui-table-row:nth-child(even) .ui-table-cell-sticky-right,
+.ui-table-striped .ui-table-row:nth-child(even) .ui-table-cell-sticky-left,
+.ui-table-hoverable .ui-table-row:hover .ui-table-cell-sticky-right,
+.ui-table-hoverable .ui-table-row:hover .ui-table-cell-sticky-left {
+  background: var(--surface-2);
+}
+
+/* Угловая ячейка липнет сразу к двум краям, поэтому лежит выше остальных.
+   position здесь переобъявлен намеренно: правило шапки выше имеет ту же
+   специфичность и иначе перебило бы sticky на relative. */
+.ui-table-header-cell.ui-table-cell-sticky-right,
+.ui-table-header-cell.ui-table-cell-sticky-left {
+  position: sticky;
+  z-index: 11;
+  background: var(--surface-2);
 }
 
 /* Checkbox Column */
@@ -380,6 +469,22 @@
     overflow-x: auto;
     overflow-y: clip;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* В карточной раскладке строка идёт в столбик: липнуть нечему и незачем,
+     а вложенная прокрутка на телефоне только мешает. */
+  .ui-table-wrapper-sticky {
+    max-height: none;
+  }
+
+  .ui-table-cell-sticky-right,
+  .ui-table-cell-sticky-left {
+    position: static;
+  }
+
+  .ui-table-cell-sticky-right::after,
+  .ui-table-cell-sticky-left::after {
+    display: none;
   }
 
   /* Card-style layout for mobile */

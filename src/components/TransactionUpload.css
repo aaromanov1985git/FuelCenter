@@ -76,7 +76,9 @@
   font-family: inherit;
   font-size: var(--font-size-caption);
   font-weight: var(--font-weight-medium);
-  color: var(--accent);
+  /* Подпись — --accent-text: сам --accent на этой подложке даёт ~4.3:1 при
+     пороге 4.5. Заливка и рамка остаются на --accent: у них порог 3:1. */
+  color: var(--accent-text);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   cursor: pointer;
@@ -102,7 +104,10 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-small) var(--spacing-section);
-  padding: var(--padding-small) var(--padding-element);
+  /* 8/16 — ровно как у двух других зон страницы, .tx-table-head и
+     .table-footer. Было 12/16, и три полосы одного уровня шли с разным
+     внутренним отступом. */
+  padding: var(--padding-tiny) var(--padding-element);
   background: var(--surface-2);
   border-radius: var(--radius-medium);
 }
