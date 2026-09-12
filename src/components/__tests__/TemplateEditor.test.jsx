@@ -321,3 +321,109 @@ describe('TemplateEditor: смещения дат автозагрузки', () 
     expect(screen.getByText(/один раз в сутки/)).toBeInTheDocument()
   })
 })
+
+describe('TemplateEditor: сопоставление полей', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAuthFetch.mockResolvedValue({ ok: true, json: async () => ({ items: [] }) })
+  })
+
+  it('у файла источник выбирается только списком, без ручного ввода', async () => {
+    await renderEditor({
+      connection_type: 'file',
+      field_mapping: { card_number: 'Номер карты' }
+    })
+
+    expect(screen.getByText('Сопоставление полей')).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Или введите имя поля')).not.toBeInTheDocument()
+  })
+
+  it('у остальных типов рядом со списком есть ручной ввод для каждого поля', async () => {
+    await renderEditor({ connection_type: 'firebird' })
+
+    const manualInputs = screen.getAllByPlaceholderText('Или введите имя поля')
+    const rows = document.querySelectorAll('.mapping-table tbody tr')
+
+    // По одному полю ручного ввода на каждую строку таблицы сопоставления.
+    expect(manualInputs).toHaveLength(rows.length)
+  })
+
+  it('заголовок колонки источника зависит от типа подключения', async () => {
+    await renderEditor({ connection_type: 'firebird' })
+    expect(screen.getByText('Поле из БД Firebird')).toBeInTheDocument()
+  })
+})
+
+/**
+ * Визуальный редактор маппинга видов топлива. Он пересобирал список пар из
+ * текста при каждом изменении текста, а неполные пары в текст не попадают:
+ * при пустом маппинге «+ Добавить запись» добавляла строку, текст становился
+ * «{}», эффект срабатывал и строку стирал.
+ */
+describe('TemplateEditor: маппинг видов топлива', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAuthFetch.mockResolvedValue({ ok: true, json: async () => ({ items: [] }) })
+  })
+
+  const toggleButton = () => screen.getByText(/Визуальный редактор/)
+  const addButton = () => screen.getByText(/Добавить запись/)
+  const keyInputs = () => screen.queryAllByPlaceholderText('Исходное название (из БД)')
+
+  it('на пустом маппинге добавленная запись остаётся на экране', async () => {
+    await renderEditor({ connection_type: 'firebird' })
+
+    await act(async () => {
+      fireEvent.click(toggleButton())
+    })
+    expect(keyInputs()).toHaveLength(0)
+
+    await act(async () => {
+      fireEvent.click(addButton())
+    })
+
+    expect(keyInputs()).toHaveLength(1)
+  })
+
+  it('запись переживает ввод одного только ключа', async () => {
+    await renderEditor({ connection_type: 'firebird' })
+
+    await act(async () => {
+      fireEvent.click(toggleButton())
+    })
+    await act(async () => {
+      fireEvent.click(addButton())
+    })
+    await act(async () => {
+      fireEvent.change(keyInputs()[0], { target: { value: 'Дизельное топливо' } })
+    })
+
+    expect(keyInputs()).toHaveLength(1)
+    expect(keyInputs()[0]).toHaveValue('Дизельное топливо')
+  })
+
+  it('маппинг из шаблона показывается в визуальном редакторе', async () => {
+    await renderEditor({
+      connection_type: 'firebird',
+      fuel_type_mapping: { 'Дизельное топливо': 'ДТ', 'Бензин': 'АИ-92' }
+    })
+
+    await act(async () => {
+      fireEvent.click(toggleButton())
+    })
+
+    expect(keyInputs()).toHaveLength(2)
+  })
+
+  it('текстовый редактор показывает маппинг шаблона как JSON', async () => {
+    await renderEditor({
+      connection_type: 'firebird',
+      fuel_type_mapping: { 'Дизельное топливо': 'ДТ' }
+    })
+
+    expect(screen.getByText(/Маппинг видов топлива/)).toBeInTheDocument()
+    expect(document.querySelector('.fuel-mapping-json')).toHaveValue(
+      JSON.stringify({ 'Дизельное топливо': 'ДТ' }, null, 2)
+    )
+  })
+})

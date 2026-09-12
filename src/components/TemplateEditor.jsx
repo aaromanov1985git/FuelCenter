@@ -6,6 +6,7 @@ import FirebirdConnection from './TemplateEditor/FirebirdConnection'
 import PprApiKey from './TemplateEditor/PprApiKey'
 import Activation from './TemplateEditor/Activation'
 import AutoLoad from './TemplateEditor/AutoLoad'
+import FieldMapping from './TemplateEditor/FieldMapping'
 import { SYSTEM_FIELDS, parseConnectionSettings, buildConnectionSettings, stepNumbers } from '../utils/templateModel'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
@@ -70,18 +71,6 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         })()
       : ''
   )
-  const [fuelTypes, setFuelTypes] = useState([])
-  const [loadingFuelTypes, setLoadingFuelTypes] = useState(false)
-  const [fuelMappingEntries, setFuelMappingEntries] = useState(() => {
-    // Инициализируем из существующего маппинга
-    const parsed = parseFuelMapping(template?.fuel_type_mapping)
-    if (parsed && typeof parsed === 'object') {
-      return Object.entries(parsed).map(([key, value]) => ({ key, value }))
-    }
-    return []
-  })
-  const [useVisualEditor, setUseVisualEditor] = useState(false) // Переключатель между визуальным редактором и текстовым
-  
   // Парсим connection_settings если это строка JSON
   
   const [connectionSettings, setConnectionSettings] = useState(
@@ -96,28 +85,6 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   const [apiFields, setApiFields] = useState([]) // Поля из API ответа
   const [saving, setSaving] = useState(false) // Блокирует повторную отправку формы
 
-  // Загрузка списка видов топлива
-  useEffect(() => {
-    const loadFuelTypes = async () => {
-      setLoadingFuelTypes(true)
-      try {
-        const response = await authFetch(`${API_URL}/api/v1/fuel-types?limit=1000`)
-        if (response.ok) {
-          const result = await response.json()
-          setFuelTypes(result.items || [])
-        }
-      } catch (err) {
-        // Не показываем ошибку при 401 - это обрабатывается централизованно
-        if (!err.isUnauthorized) {
-          logger.error('Ошибка загрузки видов топлива:', err)
-        }
-      } finally {
-        setLoadingFuelTypes(false)
-      }
-    }
-    loadFuelTypes()
-  }, [])
-
   // При загрузке существующего шаблона, если есть field_mapping, пытаемся восстановить колонки
   useEffect(() => {
     if (template && template.field_mapping && Object.keys(parseFieldMapping(template.field_mapping)).length > 0) {
@@ -130,59 +97,6 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       }
     }
   }, [template])
-
-  // Синхронизация визуального редактора с текстовым полем
-  useEffect(() => {
-    if (useVisualEditor) {
-      // Обновляем визуальный редактор при изменении текста
-      try {
-        const parsed = fuelMappingText ? JSON.parse(fuelMappingText) : {}
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          setFuelMappingEntries(Object.entries(parsed).map(([key, value]) => ({ key, value })))
-        } else {
-          setFuelMappingEntries([])
-        }
-      } catch {
-        // Игнорируем ошибки парсинга
-      }
-    }
-  }, [fuelMappingText, useVisualEditor])
-
-  // Обновление текстового поля при изменении визуального редактора
-  const updateFuelMappingFromEntries = (entries) => {
-    const mapping = {}
-    entries.forEach(({ key, value }) => {
-      if (key && value) {
-        mapping[key] = value
-      }
-    })
-    setFuelMappingText(JSON.stringify(mapping, null, 2))
-  }
-
-  const addFuelMappingEntry = () => {
-    const newEntries = [...fuelMappingEntries, { key: '', value: '' }]
-    setFuelMappingEntries(newEntries)
-    updateFuelMappingFromEntries(newEntries)
-  }
-
-  const removeFuelMappingEntry = (index) => {
-    const newEntries = fuelMappingEntries.filter((_, i) => i !== index)
-    setFuelMappingEntries(newEntries)
-    updateFuelMappingFromEntries(newEntries)
-  }
-
-  const updateFuelMappingEntry = (index, field, value) => {
-    const newEntries = [...fuelMappingEntries]
-    newEntries[index] = { ...newEntries[index], [field]: value }
-    setFuelMappingEntries(newEntries)
-    updateFuelMappingFromEntries(newEntries)
-  }
-
-  const clearFuelMapping = () => {
-    setFuelMappingText('')
-    setFuelMappingEntries([])
-    setError('')
-  }
 
   // Стандартные поля системы
   const handleFileUpload = async (e) => {
@@ -357,6 +271,14 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
     }),
     [formData.connection_type, fileColumns.length]
   )
+
+  // Откуда секция сопоставления берёт список полей источника: из разобранного
+  // примера файла, из ответа API или из выбранной таблицы Firebird.
+  const mappingColumns = formData.connection_type === 'file'
+    ? fileColumns
+    : formData.connection_type === 'firebird'
+      ? selectedTableColumns
+      : apiFields
 
   return (
     <div className="template-editor">
@@ -631,320 +553,24 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
 
         {/* Сопоставление полей */}
         {((formData.connection_type === 'file' && fileColumns.length > 0) || formData.connection_type === 'firebird' || formData.connection_type === 'api' || formData.connection_type === 'web') && (
-          <div className="form-section mapping-section">
-            <h4 className="section-title">
-              <span className="step-number">{step['field-mapping']}</span>
-              Сопоставление полей
-            </h4>
-            <p className="section-description">
-              {formData.connection_type === 'file' 
-                ? 'Система автоматически сопоставила поля, где это было возможно. Проверьте и при необходимости исправьте сопоставление вручную.'
-                : formData.connection_type === 'firebird'
-                ? 'Укажите соответствие полей из базы данных Firebird полям системы.'
-                : formData.connection_type === 'web'
-                ? 'Для веб-сервиса укажите соответствие полей из API ответа полям системы. Используйте стандартные названия полей или введите вручную.'
-                : 'Для API подключения используйте кнопку "Загрузить поля из API" для получения списка доступных полей из API ответа. Затем выберите соответствующие поля из выпадающего списка или введите вручную.'}
-              Поля, отмеченные <span className="required-mark">*</span>, обязательны для заполнения.
-            </p>
-            {(formData.connection_type === 'api' || formData.connection_type === 'web') && apiFields.length > 0 && (
-              <div className="success-badge" style={{ marginBottom: '15px' }}>
-                <svg xmlns="http://www.w3.org/2000/svg" className="icon-small" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                Загружено полей из API: {apiFields.length}
-              </div>
-            )}
-
-            <div className="mapping-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Поле системы</th>
-                    <th>{formData.connection_type === 'file' ? 'Колонка из файла' : formData.connection_type === 'api' || formData.connection_type === 'web' ? 'Поле из API ответа' : 'Поле из БД Firebird'}</th>
-                    <th>Статус</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {SYSTEM_FIELDS.map(field => {
-                    const isMapped = !!formData.field_mapping[field.key]
-                    const isAutoMapped = !!autoMappedFields[field.key]
-                    const isRequired = field.required
-                    
-                    return (
-                      <tr 
-                        key={field.key} 
-                        className={`${isRequired ? 'required' : ''} ${isAutoMapped ? 'auto-mapped' : ''} ${isRequired && !isMapped ? 'missing-required' : ''}`}
-                      >
-                        <td data-label="Поле системы">
-                          <span className="field-label">
-                            {field.label}
-                            {isRequired && <span className="required-mark"> *</span>}
-                          </span>
-                        </td>
-                        <td data-label={formData.connection_type === 'file' ? 'Колонка из файла' : formData.connection_type === 'api' || formData.connection_type === 'web' ? 'Поле из API ответа' : 'Поле из БД Firebird'}>
-                          {formData.connection_type === 'file' ? (
-                            <select
-                              value={formData.field_mapping[field.key] || ''}
-                              onChange={(e) => {
-                                handleFieldMapping(field.key, e.target.value)
-                                // Убираем из автоматически сопоставленных, если пользователь изменил вручную
-                                if (e.target.value && autoMappedFields[field.key]) {
-                                  setAutoMappedFields(prev => {
-                                    const newAuto = { ...prev }
-                                    delete newAuto[field.key]
-                                    return newAuto
-                                  })
-                                }
-                              }}
-                              className={`mapping-select ${isAutoMapped ? 'auto-mapped-select' : ''} ${isRequired && !isMapped ? 'missing-required-select' : ''}`}
-                            >
-                              <option value="">-- Не выбрано --</option>
-                              {fileColumns.map((col, idx) => (
-                                <option key={idx} value={col}>
-                                  {col}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (formData.connection_type === 'api' || formData.connection_type === 'web') ? (
-                            // Для API показываем выпадающий список с полями из API или поле ввода
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <select
-                                value={formData.field_mapping[field.key] || ''}
-                                onChange={(e) => handleFieldMapping(field.key, e.target.value)}
-                                className={`mapping-select ${isRequired && !isMapped ? 'missing-required-select' : ''}`}
-                                style={{ flex: 1 }}
-                              >
-                                <option value="">-- Не выбрано --</option>
-                                {apiFields.map((fieldName, idx) => (
-                                  <option key={idx} value={fieldName}>
-                                    {fieldName}
-                                  </option>
-                                ))}
-                              </select>
-                              <input
-                                type="text"
-                                value={formData.field_mapping[field.key] || ''}
-                                onChange={(e) => handleFieldMapping(field.key, e.target.value)}
-                                placeholder="Или введите имя поля"
-                                className={`mapping-input ${isRequired && !isMapped ? 'missing-required-select' : ''}`}
-                                style={{ flex: 1 }}
-                              />
-                            </div>
-                          ) : (
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <select
-                                value={formData.field_mapping[field.key] || ''}
-                                onChange={(e) => handleFieldMapping(field.key, e.target.value)}
-                                className={`mapping-select ${isRequired && !isMapped ? 'missing-required-select' : ''}`}
-                                style={{ flex: 1 }}
-                              >
-                                <option value="">-- Не выбрано --</option>
-                                {selectedTableColumns.map((col, idx) => (
-                                  <option key={idx} value={col}>
-                                    {col}
-                                  </option>
-                                ))}
-                              </select>
-                              <input
-                                type="text"
-                                value={formData.field_mapping[field.key] || ''}
-                                onChange={(e) => handleFieldMapping(field.key, e.target.value)}
-                                placeholder="Или введите имя поля"
-                                className={`mapping-input ${isRequired && !isMapped ? 'missing-required-select' : ''}`}
-                                style={{ flex: 1 }}
-                              />
-                            </div>
-                          )}
-                        </td>
-                        <td className="mapping-status-cell" data-label="Статус">
-                          {isMapped ? (
-                            <span className={`status-badge ${isAutoMapped ? 'status-auto' : 'status-manual'}`}>
-                              {isAutoMapped ? (
-                                <>
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="icon-tiny" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                  </svg>
-                                  Авто
-                                </>
-                              ) : (
-                                <>
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="icon-tiny" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                                    <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
-                                  </svg>
-                                  Вручную
-                                </>
-                              )}
-                            </span>
-                          ) : (
-                            <span className="status-badge status-empty">
-                              Не выбрано
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="form-group fuel-mapping-group">
-              <label>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-small)' }}>
-                  <span>Маппинг видов топлива (опционально)</span>
-                  <div style={{ display: 'flex', gap: 'var(--spacing-small)' }}>
-                    <button
-                      type="button"
-                      onClick={() => setUseVisualEditor(!useVisualEditor)}
-                      style={{
-                        padding: 'var(--spacing-tiny) var(--spacing-small)',
-                        fontSize: 'var(--font-size-sm)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius-medium)',
-                        backgroundColor: useVisualEditor ? 'var(--color-primary)' : 'var(--color-bg)',
-                        color: useVisualEditor ? 'white' : 'var(--color-text-primary)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {useVisualEditor ? '📝 Текстовый редактор' : '🎨 Визуальный редактор'}
-                    </button>
-                    {fuelMappingText && (
-                      <button
-                        type="button"
-                        onClick={clearFuelMapping}
-                        style={{
-                          padding: 'var(--spacing-tiny) var(--spacing-small)',
-                          fontSize: 'var(--font-size-sm)',
-                          border: '1px solid var(--color-error)',
-                          borderRadius: 'var(--radius-medium)',
-                          backgroundColor: 'var(--color-bg)',
-                          color: 'var(--color-error)',
-                          cursor: 'pointer'
-                        }}
-                        title="Очистить маппинг"
-                      >
-                        🗑️ Очистить
-                      </button>
-                    )}
-                  </div>
-                </div>
-                
-                {useVisualEditor ? (
-                  <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-medium)', padding: 'var(--spacing-block)' }}>
-                    {fuelMappingEntries.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: 'var(--spacing-block)', color: 'var(--color-text-secondary)' }}>
-                        Нет записей маппинга. Нажмите "Добавить" для создания новой записи.
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-small)' }}>
-                        {fuelMappingEntries.map((entry, index) => (
-                          <div key={index} style={{ display: 'flex', gap: 'var(--spacing-small)', alignItems: 'center' }}>
-                            <input
-                              type="text"
-                              value={entry.key}
-                              onChange={(e) => updateFuelMappingEntry(index, 'key', e.target.value)}
-                              placeholder="Исходное название (из БД)"
-                              style={{
-                                flex: 1,
-                                padding: 'var(--spacing-tiny) var(--spacing-small)',
-                                border: '1px solid var(--color-border)',
-                                borderRadius: 'var(--radius-medium)',
-                                fontSize: 'var(--font-size-sm)'
-                              }}
-                            />
-                            <span style={{ color: 'var(--color-text-secondary)' }}>→</span>
-                            <div style={{ flex: 1, display: 'flex', gap: 'var(--spacing-tiny)' }}>
-                              <select
-                                value={entry.value}
-                                onChange={(e) => updateFuelMappingEntry(index, 'value', e.target.value)}
-                                style={{
-                                  flex: 1,
-                                  padding: 'var(--spacing-tiny) var(--spacing-small)',
-                                  border: '1px solid var(--color-border)',
-                                  borderRadius: 'var(--radius-medium)',
-                                  fontSize: 'var(--font-size-sm)'
-                                }}
-                              >
-                                <option value="">Выберите или введите</option>
-                                {fuelTypes.map((ft) => (
-                                  <option key={ft.id} value={ft.normalized_name || ft.original_name}>
-                                    {ft.normalized_name || ft.original_name}
-                                  </option>
-                                ))}
-                              </select>
-                              <input
-                                type="text"
-                                value={entry.value}
-                                onChange={(e) => updateFuelMappingEntry(index, 'value', e.target.value)}
-                                placeholder="Введите вручную"
-                                style={{
-                                  flex: 1,
-                                  padding: 'var(--spacing-tiny) var(--spacing-small)',
-                                  border: '1px solid var(--color-border)',
-                                  borderRadius: 'var(--radius-medium)',
-                                  fontSize: 'var(--font-size-sm)'
-                                }}
-                              />
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeFuelMappingEntry(index)}
-                              style={{
-                                padding: 'var(--spacing-tiny)',
-                                border: '1px solid var(--color-error)',
-                                borderRadius: 'var(--radius-medium)',
-                                backgroundColor: 'var(--color-bg)',
-                                color: 'var(--color-error)',
-                                cursor: 'pointer',
-                                minWidth: '32px'
-                              }}
-                              title="Удалить запись"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={addFuelMappingEntry}
-                      style={{
-                        marginTop: 'var(--spacing-block)',
-                        padding: 'var(--spacing-small) var(--spacing-block)',
-                        border: '1px solid var(--color-primary)',
-                        borderRadius: 'var(--radius-medium)',
-                        backgroundColor: 'var(--color-bg)',
-                        color: 'var(--color-primary)',
-                        cursor: 'pointer',
-                        width: '100%'
-                      }}
-                    >
-                      + Добавить запись
-                    </button>
-                  </div>
-                ) : (
-                  <textarea
-                    value={fuelMappingText}
-                    onChange={(e) => {
-                      setFuelMappingText(e.target.value)
-                      setError('')
-                    }}
-                    placeholder={`{\n  "Дизельное топливо": "ДТ",\n  "Бензин": "АИ-92",\n  "Бензин АИ-95": "АИ-95"\n}`}
-                    className="input-full-width"
-                    rows={6}
-                    style={{ fontFamily: 'monospace' }}
-                  />
-                )}
-                <span className="field-help">
-                  <strong>Важно:</strong> Ключ — исходное название топлива из базы данных (например, "Дизельное топливо"), 
-                  значение — нормализованное название для системы (например, "ДТ"). 
-                  Формат JSON объекта. Можно оставить пустым.
-                </span>
-              </label>
-            </div>
-          </div>
+          <FieldMapping
+            stepNumber={step['field-mapping']}
+            connectionType={formData.connection_type}
+            columns={mappingColumns}
+            fieldMapping={formData.field_mapping}
+            onFieldMapping={handleFieldMapping}
+            autoMappedFields={autoMappedFields}
+            onManualOverride={(fieldKey) => setAutoMappedFields(prev => {
+              const next = { ...prev }
+              delete next[fieldKey]
+              return next
+            })}
+            fuelMappingText={fuelMappingText}
+            onFuelMappingChange={(text) => {
+              setFuelMappingText(text)
+              setError('')
+            }}
+          />
         )}
 
         {/* Активация шаблона */}

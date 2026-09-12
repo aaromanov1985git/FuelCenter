@@ -757,6 +757,126 @@
 
 /* Старые стили .mapping-input удалены - используются специфичные стили для таблицы выше */
 
+/* Ячейка сопоставления: список полей источника и ручной ввод рядом */
+.mapping-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+}
+
+.mapping-cell > * {
+  flex: 1;
+}
+
+.mapping-fields-loaded {
+  margin-bottom: var(--spacing-element);
+}
+
+/* Маппинг видов топлива */
+.fuel-mapping-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-small);
+}
+
+.fuel-mapping-actions {
+  display: flex;
+  gap: var(--spacing-small);
+}
+
+.btn-toggle-editor,
+.btn-clear-mapping,
+.btn-add-entry,
+.btn-remove-entry {
+  border-radius: var(--radius-medium);
+  background: var(--color-bg);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.btn-toggle-editor,
+.btn-clear-mapping {
+  padding: var(--spacing-tiny) var(--spacing-small);
+}
+
+.btn-toggle-editor {
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.btn-toggle-editor.is-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-bg-card);
+}
+
+.btn-clear-mapping {
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+}
+
+.fuel-mapping-entries {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  padding: var(--spacing-block);
+}
+
+.fuel-mapping-empty {
+  padding: var(--spacing-block);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.fuel-mapping-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-small);
+}
+
+.fuel-mapping-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+}
+
+.fuel-mapping-input {
+  flex: 1;
+  padding: var(--spacing-tiny) var(--spacing-small);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  font-size: var(--font-size-sm);
+}
+
+.fuel-mapping-arrow {
+  color: var(--color-text-secondary);
+}
+
+.fuel-mapping-target {
+  display: flex;
+  flex: 1;
+  gap: var(--spacing-tiny);
+}
+
+.btn-remove-entry {
+  min-width: 32px;
+  padding: var(--spacing-tiny);
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+}
+
+.btn-add-entry {
+  width: 100%;
+  margin-top: var(--spacing-block);
+  padding: var(--spacing-small) var(--spacing-block);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+}
+
+.fuel-mapping-json {
+  font-family: monospace;
+}
+
 /* Стили для загрузки таблиц Firebird */
 .btn-load-tables {
   padding: var(--padding-small);
