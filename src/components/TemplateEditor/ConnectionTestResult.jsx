@@ -3,8 +3,11 @@
  *
  * Разметка была дословно продублирована в секциях API и веб-сервиса, вместе с
  * обоими SVG. Пока результата нет, ничего не рисуется.
+ *
+ * children показываются только при успехе — у Firebird это число найденных
+ * таблиц, у остальных подключений добавки нет.
  */
-const ConnectionTestResult = ({ result }) => {
+const ConnectionTestResult = ({ result, children }) => {
   if (!result) {
     return null
   }
@@ -21,6 +24,7 @@ const ConnectionTestResult = ({ result }) => {
         </svg>
       )}
       {result.message}
+      {result.success && children}
     </div>
   )
 }

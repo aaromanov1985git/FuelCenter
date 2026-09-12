@@ -534,6 +534,38 @@
   gap: var(--spacing-small);
 }
 
+/* Выбор таблицы Firebird: список, ручной ввод, загрузка таблиц и колонок */
+.source-table-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--spacing-small);
+}
+
+.source-table-controls {
+  display: flex;
+  width: 100%;
+  flex: 1 1 auto;
+  gap: var(--spacing-small);
+}
+
+.source-table-controls > select,
+.source-table-controls > input {
+  flex: 1;
+}
+
+/* Поле SQL-запроса: моноширинный текст */
+.sql-editor {
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.9rem;
+}
+
+.sql-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: var(--spacing-small);
+}
+
 /* Ряд кнопок проверки подключения: на узком экране переносится */
 .connection-actions {
   display: flex;
