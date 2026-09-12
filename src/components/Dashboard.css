@@ -542,9 +542,13 @@
 .dash-th-num .dash-th-content { justify-content: flex-end; width: 100%; }
 
 .dash-sort-icon {
+  display: inline-flex;
+  align-items: center;
   color: var(--accent);
-  font-weight: 700;
-  font-size: 11px;
+}
+
+.dash-sort-icon-asc {
+  transform: rotate(180deg);
 }
 
 .dash-table td {

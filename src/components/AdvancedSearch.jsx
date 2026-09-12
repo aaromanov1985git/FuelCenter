@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { Button, Input, Select, Badge } from './ui'
+import Icon from './ui/Icon'
 import { logger } from '../utils/logger'
 import './AdvancedSearch.css'
 
@@ -66,7 +67,7 @@ const AdvancedSearch = ({
           className="advanced-search-toggle-button"
         >
           <span className="advanced-search-toggle-content">
-            <span>{isExpanded ? '▼' : '▶'}</span>
+            <Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={16} />
             <span>Расширенный поиск</span>
             {activeFiltersCount > 0 && (
               <Badge variant="primary" size="sm">{activeFiltersCount}</Badge>

@@ -1,4 +1,5 @@
 import React from 'react'
+import Icon from './ui/Icon'
 import './StatusBadge.css'
 
 /**
@@ -10,49 +11,50 @@ import './StatusBadge.css'
  * @param {string} className - Дополнительные CSS классы
  */
 const StatusBadge = ({ status, text, size = 'medium', className = '' }) => {
+  // icon — имя глифа из примитива Icon, а не эмодзи: значок наследует цвет токена статуса.
   const statusConfig = {
     valid: {
-      icon: '✅',
+      icon: 'check',
       defaultText: 'Валидно',
       class: 'status-valid'
     },
     invalid: {
-      icon: '❌',
+      icon: 'alert',
       defaultText: 'Ошибки',
       class: 'status-invalid'
     },
     pending: {
-      icon: '⚠️',
+      icon: 'clock',
       defaultText: 'Требует проверки',
       class: 'status-pending'
     },
     active: {
-      icon: '✅',
+      icon: 'check',
       defaultText: 'Активен',
       class: 'status-active'
     },
     inactive: {
-      icon: '⏸️',
+      icon: 'pause',
       defaultText: 'Неактивен',
       class: 'status-inactive'
     },
     locked: {
-      icon: '🔒',
+      icon: 'lock',
       defaultText: 'Заблокировано',
       class: 'status-locked'
     },
     success: {
-      icon: '✅',
+      icon: 'check',
       defaultText: 'Успешно',
       class: 'status-success'
     },
     failed: {
-      icon: '❌',
+      icon: 'close',
       defaultText: 'Ошибка',
       class: 'status-failed'
     },
     partial: {
-      icon: '⚠️',
+      icon: 'alert',
       defaultText: 'Частично',
       class: 'status-partial'
     }
@@ -63,7 +65,7 @@ const StatusBadge = ({ status, text, size = 'medium', className = '' }) => {
 
   return (
     <span className={`status-badge status-badge-${size} ${config.class} ${className}`}>
-      <span className="status-badge-icon">{config.icon}</span>
+      <span className="status-badge-icon"><Icon name={config.icon} size={16} /></span>
       <span className="status-badge-text">{displayText}</span>
     </span>
   )

@@ -1,6 +1,7 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from './ui'
+import Icon from './ui/Icon'
 import { useScrollLock } from '../hooks/useScrollLock'
 import './ConfirmModal.css'
 
@@ -80,6 +81,11 @@ const ConfirmModal = ({
       <div className={`confirm-modal-content variant-${variant}`}>
         <div className="confirm-modal-header">
           <h3 id="confirm-modal-title" className="confirm-modal-title">
+            {variant === 'success' && (
+              <span className="confirm-modal-title-mark" aria-hidden="true">
+                <Icon name="check" size={16} strokeWidth={2.2} />
+              </span>
+            )}
             {title}
           </h3>
         </div>

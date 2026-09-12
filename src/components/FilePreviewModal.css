@@ -100,7 +100,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-medium);
   font-size: var(--font-size-xs);
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   color: var(--text-1);
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -125,7 +125,8 @@
 }
 
 .file-preview-icon {
-  font-size: 2rem;
+  display: inline-flex;
+  color: var(--text-2);
 }
 
 .file-preview-loading {

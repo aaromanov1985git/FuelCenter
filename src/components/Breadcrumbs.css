@@ -60,22 +60,27 @@
 }
 
 .breadcrumbs-text {
+  display: inline-flex;
+  align-items: center;
   color: var(--text-2);
   font-size: var(--font-size-sm);
 }
 
 .breadcrumbs-current {
+  display: inline-flex;
+  align-items: center;
   color: var(--text-1);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   padding: var(--spacing-tiny) var(--padding-tiny);
 }
 
-/* Иконка дома для первого элемента */
-.breadcrumbs-item:first-child .breadcrumbs-link::before {
-  content: '🏠';
-  margin-right: 6px;
-  font-size: 0.875rem;
+/* Значок первого элемента рисуется в JSX через примитив Icon,
+   а не подставляется псевдоэлементом — иначе это был бы эмодзи.
+   Зазор между значком и текстом задают сами обёртки (gap ниже). */
+.breadcrumbs-text,
+.breadcrumbs-current {
+  gap: 6px;
 }
 
 /* Мобильная адаптация */

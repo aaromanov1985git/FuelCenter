@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Card, Button, Input, Table, Modal, Select, Badge, Skeleton, Checkbox } from './ui'
 import ConfirmModal from './ConfirmModal'
 import StatusBadge from './StatusBadge'
+import Icon from './ui/Icon'
 import IconButton from './IconButton'
 import { useToast } from './ToastContainer'
 import { useFormValidation } from '../hooks/useFormValidation'
@@ -436,7 +437,7 @@ const UsersList = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && loadUsers()}
-              icon="🔍"
+              icon={<Icon name="search" size={16} />}
               iconPosition="left"
               style={{ minWidth: '240px' }}
             />

@@ -7,6 +7,7 @@ import { useToast } from './ToastContainer'
 import { useDebounce } from '../hooks/useDebounce'
 import { exportToCSV } from '../utils/exportUtils'
 import { logger } from '../utils/logger'
+import Icon from './ui/Icon'
 import EmptyState from './EmptyState'
 import Pagination from './Pagination'
 import 'leaflet/dist/leaflet.css'
@@ -155,7 +156,7 @@ function createCustomIcon(transactionCount, maxCount) {
       font-weight: bold;
       font-size: ${size * 0.4}px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    ">⛽</div>`,
+    "><svg width="${size * 0.5}" height="${size * 0.5}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.4c0 0 4.6 5 4.6 8.1a4.6 4.6 0 11-9.2 0C3.4 6.4 8 1.4 8 1.4z"/></svg></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   })
@@ -861,9 +862,8 @@ const ProviderAnalysisDashboard = () => {
   // Компонент для сортируемого заголовка
   const SortableHeader = ({ field, label, currentSort }) => {
     const isActive = currentSort.field === field
-    const sortIcon = isActive 
-      ? (currentSort.order === 'asc' ? '↑' : '↓')
-      : '⇅'
+    // Направление показывает поворот шеврона: глифов «вверх/вниз» в наборе Icon нет.
+    const isAsc = isActive && currentSort.order === 'asc'
     
     return (
       <th 
@@ -891,12 +891,14 @@ const ProviderAnalysisDashboard = () => {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span>{label}</span>
-          <span style={{ 
-            fontSize: '14px', 
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
             color: isActive ? 'var(--accent)' : 'var(--text-2)',
-            fontWeight: isActive ? 'bold' : 'normal'
+            opacity: isActive ? 1 : 0.5,
+            transform: isAsc ? 'rotate(180deg)' : undefined
           }}>
-            {sortIcon}
+            <Icon name="chevron-down" size={16} />
           </span>
         </div>
       </th>
@@ -1281,8 +1283,9 @@ const ProviderAnalysisDashboard = () => {
                 size="sm"
                 onClick={() => setIsMapFullscreen(!isMapFullscreen)}
                 style={{ minWidth: 'auto', padding: '6px 12px' }}
+                icon={<Icon name={isMapFullscreen ? 'close' : 'eye'} size={16} />}
               >
-                {isMapFullscreen ? '✕ Свернуть' : '⛶ Развернуть'}
+                {isMapFullscreen ? 'Свернуть' : 'Развернуть'}
               </Button>
             </div>
             {gasStationsWithCoords.length > 0 ? (
@@ -1475,7 +1478,15 @@ const ProviderAnalysisDashboard = () => {
                             >
                               Дата и время
                               {sortConfig.field === 'transaction_date' && (
-                                <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    marginLeft: '4px',
+                                    transform: sortConfig.order === 'asc' ? 'rotate(180deg)' : undefined
+                                  }}
+                                >
+                                  <Icon name="chevron-down" size={16} />
+                                </span>
                               )}
                             </th>
                             <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border)' }}>АЗС</th>
@@ -1485,7 +1496,15 @@ const ProviderAnalysisDashboard = () => {
                             >
                               Тип топлива
                               {sortConfig.field === 'product' && (
-                                <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    marginLeft: '4px',
+                                    transform: sortConfig.order === 'asc' ? 'rotate(180deg)' : undefined
+                                  }}
+                                >
+                                  <Icon name="chevron-down" size={16} />
+                                </span>
                               )}
                             </th>
                             <th 
@@ -1494,7 +1513,15 @@ const ProviderAnalysisDashboard = () => {
                             >
                               Объём (л)
                               {sortConfig.field === 'quantity' && (
-                                <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    marginLeft: '4px',
+                                    transform: sortConfig.order === 'asc' ? 'rotate(180deg)' : undefined
+                                  }}
+                                >
+                                  <Icon name="chevron-down" size={16} />
+                                </span>
                               )}
                             </th>
                             <th 
@@ -1503,7 +1530,15 @@ const ProviderAnalysisDashboard = () => {
                             >
                               Сумма (₽)
                               {sortConfig.field === 'amount' && (
-                                <span style={{ marginLeft: '4px' }}>{sortConfig.order === 'asc' ? ' ↑' : ' ↓'}</span>
+                                <span
+                                  style={{
+                                    display: 'inline-flex',
+                                    marginLeft: '4px',
+                                    transform: sortConfig.order === 'asc' ? 'rotate(180deg)' : undefined
+                                  }}
+                                >
+                                  <Icon name="chevron-down" size={16} />
+                                </span>
                               )}
                             </th>
                           </tr>
@@ -1558,8 +1593,9 @@ const ProviderAnalysisDashboard = () => {
                 size="sm"
                 onClick={() => setIsMapFullscreen(false)}
                 style={{ minWidth: 'auto', padding: '6px 12px' }}
+                icon={<Icon name="close" size={16} />}
               >
-                ✕ Свернуть
+                Свернуть
               </Button>
             </div>
             {gasStationsWithCoords.length > 0 ? (

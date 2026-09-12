@@ -58,35 +58,19 @@ html {
   border: 1px solid var(--border);
   border-radius: var(--radius-tiny);
   padding: 2px 6px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
   color: var(--text-1);
 }
 
+/* Ширина сайдбара и ширина свёрнутого рельса объявлены здесь, а не в
+   AppSidebar.css: от них зависит отступ .main-content, а контент — сосед
+   сайдбара, не его часть. Сами стили сайдбара — в src/components/AppSidebar.css. */
 .app-layout {
   display: flex;
   min-height: 100vh;
-}
-
-.sidebar {
-  width: 244px;
-  background: var(--sidebar);
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  overflow-y: auto;
-  border-right: 1px solid var(--border);
-  transition: transform 0.3s ease;
-  z-index: 100;
-  -webkit-overflow-scrolling: touch; /* Плавная прокрутка на iOS */
-}
-
-.sidebar-hidden {
-  transform: translateX(-100%);
+  --sidebar-width: 240px;
+  --sidebar-width-rail: 64px;
 }
 
 /* Overlay для мобильного меню */
@@ -108,237 +92,8 @@ html {
   opacity: 1;
 }
 
-.sidebar > *:last-child {
-  margin-top: auto;
-}
-
-/* Кнопка переключения сайдбара */
-.sidebar-toggle {
-  position: fixed;
-  top: 20px;
-  left: 220px;
-  width: 40px;
-  height: 40px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 101;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-.sidebar-toggle:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-  transform: scale(1.05);
-}
-
-.sidebar-toggle:hover .icon {
-  color: #ffffff;
-}
-
-.sidebar-toggle .icon {
-  width: 20px;
-  height: 20px;
-  color: var(--text-1);
-}
-
-/* Когда сайдбар скрыт, кнопка сдвигается влево до границы экрана */
-.sidebar-toggle.sidebar-hidden-toggle {
-  left: 20px;
-}
-
-.sidebar-header {
-  padding: 14px 14px;
-  border-bottom: 1px solid var(--border);
-}
-
-.sidebar-header h2 {
-  margin: 0;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-1);
-}
-
-.sidebar-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.sidebar-logo-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), #b16cff);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px var(--accent-glow);
-}
-
-.sidebar-logo-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-}
-
-.sidebar-logo-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-1);
-}
-
-.sidebar-logo-sub {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: .6px;
-}
-
-.sidebar-user {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
-.sidebar-user-info {
-  margin-bottom: 12px;
-}
-
-.sidebar-user-name {
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-1);
-  margin-bottom: 2px;
-  font-size: var(--font-size-xs);
-  line-height: 1.3;
-}
-
-.sidebar-user-role {
-  font-size: var(--font-size-xs);
-  color: var(--text-2);
-  text-transform: capitalize;
-  line-height: 1.2;
-}
-
-.sidebar-footer {
-  margin-top: auto;
-  padding: var(--padding-small);
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-tiny);
-}
-
-.sidebar-footer-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.sidebar-footer-combined {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--spacing-element);
-  position: relative;
-}
-
-.sidebar-user-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-small);
-  flex: 1;
-}
-
-.sidebar-theme-section {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  margin-top: 0;
-}
-
-.sidebar-user-compact {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.sidebar-user-name {
-  font-size: var(--font-size-xs);
-  line-height: 1.3;
-}
-
-.sidebar-user-role {
-  font-size: var(--font-size-xs);
-  line-height: 1.2;
-}
-
-.sidebar-register-button,
-.sidebar-logout-button {
-  width: 100%;
-  padding: 8px 12px;
-  margin-top: 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-medium);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.sidebar-register-button {
-  background: var(--accent);
-  color: white;
-}
-
-.sidebar-register-button:hover {
-  background: var(--accent);
-}
-
-.sidebar-logout-button {
-  background: var(--bg);
-  color: var(--text-1);
-}
-
-.sidebar-logout-button:hover {
-  background: var(--surface-2);
-}
-
-.sidebar-logout-button.compact {
-  width: auto;
-  margin-top: 0;
-  padding: 8px 12px;
-}
-
-.sidebar-logout-link {
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--accent);
-  font-size: var(--font-size-xs);
-  text-align: left;
-  cursor: pointer;
-  white-space: nowrap;
-  align-self: flex-start;
-}
-
-.sidebar-logout-link:hover {
-  text-decoration: underline;
-}
+/* Шапка, логотип, кнопка сворачивания, блок пользователя и подвал сайдбара
+   переехали в src/components/AppSidebar.css. */
 
 .theme-row {
   justify-content: flex-start;
@@ -389,148 +144,16 @@ html {
   color: var(--text-1);
 }
 
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 6px 10px;
-}
-
-.sidebar-nav-section {
-  margin-top: 14px;
-  padding: 0 10px 4px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-}
-
-.sidebar-nav-section:first-child {
-  margin-top: 4px;
-}
-
-.nav-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  background: transparent;
-  border: none;
-  text-align: left;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-2);
-  cursor: pointer;
-  transition: background .15s ease, color .15s ease;
-  border-radius: 7px;
-  line-height: 1.2;
-}
-
-.nav-item-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  color: currentColor;
-  flex-shrink: 0;
-}
-
-.nav-item-label {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.nav-item:hover {
-  background: var(--surface-2);
-  color: var(--text-1);
-}
-
-.nav-item.active {
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 2px;
-  border-radius: 0 2px 2px 0;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent-glow);
-}
-
-.provider-tabs {
-  margin-top: auto;
-  border-top: 1px solid var(--border);
-  padding: var(--padding-small);
-}
-
-.provider-tabs-header {
-  margin-bottom: var(--spacing-tiny);
-}
-
-.provider-tabs-header h3 {
-  margin: 0;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.provider-tabs-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.provider-tab {
-  padding: var(--padding-tiny) var(--padding-small);
-  background: transparent;
-  border: none;
-  text-align: left;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--text-2);
-  cursor: pointer;
-  transition: all 0.2s;
-  border-radius: var(--radius-small);
-  border-left: 2px solid transparent;
-  line-height: 1.4;
-}
-
-.provider-tab:hover {
-  background: var(--surface-2);
-  color: var(--accent);
-}
-
-.provider-tab.active {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-left-color: var(--accent);
-  font-weight: var(--font-weight-semibold);
-}
+/* Навигация (.sidebar-nav*, .nav-item*) и список провайдеров (бывшие
+   .provider-tabs* — теперь .sidebar-filter*) живут в
+   src/components/AppSidebar.css. */
 
 .main-content {
   flex: 1;
-  margin-left: 244px;
+  min-width: 0;
+  margin-left: var(--sidebar-width);
   padding: 20px;
-  transition: margin-left 0.3s ease;
-}
-
-/* Когда сайдбар скрыт, увеличиваем ширину контента на 30% */
-.sidebar-hidden ~ .main-content {
-  margin-left: 0;
+  transition: margin-left 0.2s ease;
 }
 
 .container {
@@ -539,9 +162,18 @@ html {
   transition: max-width 0.3s ease;
 }
 
-/* Когда сайдбар скрыт, увеличиваем ширину контейнера на 30% */
-.sidebar-hidden ~ .main-content .container {
-  max-width: 1820px; /* 1400px * 1.3 = 1820px */
+/* Свёрнутый сайдбар — рельс 64px, а не уезд за экран: контент сдвигается
+   на ширину рельса и забирает освободившиеся 176px.
+   Правила намеренно в min-width: на мобильных сайдбар лежит поверх контента,
+   и по специфичности они перебили бы мобильный сброс margin-left. */
+@media (min-width: 769px) {
+  .sidebar-hidden ~ .main-content {
+    margin-left: var(--sidebar-width-rail);
+  }
+
+  .sidebar-hidden ~ .main-content .container {
+    max-width: 1576px; /* 1400px + освободившиеся 176px */
+  }
 }
 
 /* Голое h1 больше не центрирует и не рисует тень: выравнивание — решение
@@ -567,20 +199,9 @@ h1 {
   line-height: 1.5;
 }
 
-.upload-section {
-  background: var(--surface);
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  padding: 12px;
-  margin-bottom: 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  transition: all 0.3s ease;
-  border: 2px dashed transparent;
-  animation: fadeIn 0.3s ease-in;
-}
+/* Здесь стояли .upload-section и .drag-drop-*: постоянно раскрытый прямоугольник
+   «Перетащите файл сюда». Он убран — приём файла всплывает оверлеем только пока
+   файл тащат над окном (src/components/TransactionUpload.css). */
 
 @keyframes fadeIn {
   from {
@@ -593,16 +214,6 @@ h1 {
   }
 }
 
-.upload-section.drag-active {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.drag-drop-area {
-  width: 100%;
-  position: relative;
-}
-
 .file-input {
   position: absolute;
   width: 0;
@@ -612,84 +223,11 @@ h1 {
   z-index: -1;
 }
 
-.drag-drop-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 10px;
-  border: 2px dashed var(--border-strong);
-  border-radius: 12px;
-  background: var(--surface-2);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  min-height: 70px;
-  width: 100%;
-  position: relative;
-}
-
-.drag-drop-label::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border: 2px dashed transparent;
-  border-radius: 12px;
-  pointer-events: none;
-  transition: all 0.3s ease;
-}
-
-.drag-drop-label:hover {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.drag-drop-label:hover::before {
-  border-color: var(--accent);
-  border-style: dashed;
-  border-width: 2px;
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
-}
-
-.upload-section.drag-active .drag-drop-label {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  transform: scale(1.02);
-}
-
 .icon-large {
   width: 36px;
   height: 36px;
   color: var(--accent);
   margin-bottom: 12px;
-}
-
-.drag-drop-text {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.drag-drop-title {
-  font-size: 1rem;
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-1);
-}
-
-.drag-drop-subtitle {
-  font-size: 0.8125rem;
-  color: var(--text-2);
-}
-
-.drag-drop-hint {
-  font-size: 0.875rem;
-  color: var(--text-2);
-  margin-top: 4px;
-  font-weight: var(--font-weight-medium);
-  opacity: 0.85;
 }
 
 .file-info {
@@ -1262,25 +800,10 @@ h1 {
   color: var(--text-1);
 }
 
-[data-theme="dark"] .nav-item,
-[data-theme="dark"] .nav-item {
-  color: var(--text-2);
-}
-
-[data-theme="dark"] .nav-item.active,
-[data-theme="dark"] .nav-item.active {
-  color: var(--surface);
-}
-
-[data-theme="dark"] .provider-tab,
-[data-theme="dark"] .provider-tab {
-  color: var(--text-2);
-}
-
-[data-theme="dark"] .provider-tab.active,
-[data-theme="dark"] .provider-tab.active {
-  color: var(--accent);
-}
+/* Перекрытий для тёмной темы у сайдбара больше нет: и пункт меню, и фильтр
+   провайдеров берут цвет из токенов, которые тема переопределяет сама.
+   Убрано в том числе [data-theme="dark"] .nav-item.active { color: var(--surface) } —
+   активный пункт в тёмной теме терял акцентный цвет. */
 
 /* Улучшение кнопок на темных темах */
 [data-theme="dark"] .download-button,
@@ -1329,15 +852,8 @@ h1 {
   position: relative;
 }
 
-.data-table tbody tr.row-with-errors::before {
-  content: '⚠️';
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 1rem;
-  opacity: 0.7;
-}
+/* Эмодзи-маркер проблемной строки убран: сигнал несут цветная подложка и
+   левая полоса, а предупреждение в ячейке рисует <Icon name="alert" />. */
 
 .data-table tbody tr.row-with-errors:hover {
   background: var(--red-soft);
@@ -1349,10 +865,7 @@ h1 {
   position: relative;
 }
 
-.error-highlight::after {
-  content: ' ⚠️';
-  font-size: 0.875rem;
-}
+/* Значок предупреждения рисует <Icon name="alert" /> в разметке, не ::after. */
 
 .data-table tbody tr:last-child td {
   border-bottom: none;
@@ -1373,37 +886,9 @@ h1 {
     flex-direction: column;
   }
 
-  .sidebar {
-    width: 280px;
-    max-width: 85vw;
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    transform: translateX(-100%);
-    border-right: 1px solid var(--border);
-    z-index: 100;
-  }
-
-  .sidebar:not(.sidebar-hidden) {
-    transform: translateX(0);
-  }
-
+  /* Мобильное поведение сайдбара и его кнопки — в AppSidebar.css. */
   .sidebar-overlay {
     display: block;
-  }
-
-  .sidebar-toggle {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    z-index: 1001;
-    background: var(--surface);
-    box-shadow: var(--shadow-lg);
-  }
-
-  .sidebar-toggle.sidebar-hidden-toggle {
-    left: 10px;
   }
 
   .main-content {
@@ -1427,32 +912,10 @@ h1 {
     margin-bottom: var(--spacing-element);
   }
 
-  .upload-section {
-    padding: var(--padding-element);
-    margin-bottom: var(--spacing-element);
-  }
-
-  .drag-drop-label {
-    padding: var(--padding-element);
-    min-height: 100px;
-  }
-
   .icon-large {
     width: 32px;
     height: 32px;
     margin-bottom: var(--spacing-small);
-  }
-
-  .drag-drop-title {
-    font-size: var(--font-size-base);
-  }
-
-  .drag-drop-subtitle {
-    font-size: var(--font-size-xs);
-  }
-
-  .drag-drop-hint {
-    font-size: 0.625rem;
   }
 
   .upload-dashboard {
@@ -1531,14 +994,9 @@ h1 {
     display: none; /* Скрываем на мобильных, так как нет клавиатуры */
   }
 
-  .provider-tabs {
-    display: none; /* Скрываем на мобильных, можно добавить отдельное мобильное меню */
-  }
-
-  /* Touch-friendly размеры для мобильных */
+  /* Touch-friendly размеры для мобильных.
+     .nav-item и строки фильтра провайдеров получают их в AppSidebar.css. */
   button,
-  .nav-item,
-  .provider-tab,
   .theme-toggle-button {
     min-height: 44px; /* Минимальный размер для touch */
     min-width: 44px;
@@ -1558,12 +1016,6 @@ h1 {
     padding: 10px 14px;
     touch-action: manipulation;
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
-  }
-
-  /* Улучшенная навигация для touch */
-  .sidebar {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    will-change: transform;
   }
 
   /* Увеличенные области для кликабельных элементов */
@@ -1636,14 +1088,6 @@ h1 {
 
 /* Планшеты */
 @media (min-width: 769px) and (max-width: 1024px) {
-  .sidebar {
-    width: 240px;
-  }
-
-  .main-content {
-    margin-left: 240px;
-  }
-
   .container {
     max-width: 1200px;
   }
@@ -1655,23 +1099,6 @@ h1 {
 
 /* Мобильные устройства (маленькие экраны) */
 @media (max-width: 480px) {
-  .sidebar-header {
-    padding: var(--padding-small);
-  }
-
-  .sidebar-header h2 {
-    font-size: var(--font-size-base);
-  }
-
-  .nav-item {
-    padding: var(--padding-small) var(--padding-element);
-    font-size: var(--font-size-sm);
-  }
-
-  .upload-section {
-    padding: var(--padding-small);
-  }
-
   .upload-dashboard-title {
     font-size: var(--font-size-base);
   }
@@ -1926,121 +1353,56 @@ h1 {
 }
 
 /* =========================================================
-   Transactions page — scoped refinements matching
-   redesign_transactions.html. Uses global tokens only.
+   Транзакции ГСМ — страница транзакций.
+
+   Три уровня поверхностей, вложение одноимённых запрещено:
+     1 панель  (.tx-table-card)  — фон surface, бордер, радиус 8px, тени НЕТ;
+     2 зона    (.tx-table-head, .table-footer, .tx-summary) — фон surface-2,
+               бордера нет, иначе выходит «карточка в карточке»;
+     3 секция  — ни фона, ни бордера, только заголовок.
+   Сама страница карточкой не оборачивается.
+
+   Новые классы шапки, сводки, бейджей и оверлея объявлены рядом с компонентами
+   (TransactionUpload.css, TransactionTable.css). Здесь — только геометрия
+   таблицы и перекрытия глобальных классов: App.css в графе импортов идёт после
+   CSS компонентов, поэтому перекрывать глобальные правила нужно отсюда.
    ========================================================= */
 .tx-root {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--spacing-element);
   animation: fadeUp .4s ease;
   color: var(--text-1);
 }
 
-/* KPI tiles: more compact, side-bar accent like reference */
-.tx-root .upload-dashboard {
-  padding: 14px 16px;
-  border-radius: 10px;
+/* Кегль page-title теперь приходит классом .t-page-title прямо из разметки
+   (src/App.jsx), а не правилом с :has — раньше роль экрана транзакций не могла
+   править App.jsx и дотягивалась до чужого заголовка селектором. Здесь остались
+   только отступы: заголовок и подзаголовок этой страницы стоят вплотную. */
+.tx-page-title {
   margin-bottom: 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-}
-.tx-root .upload-dashboard-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-}
-.tx-root .upload-dashboard-grid {
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 12px;
-}
-.tx-root .upload-dashboard-card {
-  position: relative;
-  padding: 12px 14px 12px 18px;
-  border-radius: 8px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  gap: 2px;
-}
-.tx-root .upload-dashboard-card.stat-primary,
-.tx-root .upload-dashboard-card.stat-success,
-.tx-root .upload-dashboard-card.stat-secondary {
-  border-left: none;
-}
-.tx-root .upload-dashboard-card.stat-primary::before,
-.tx-root .upload-dashboard-card.stat-success::before,
-.tx-root .upload-dashboard-card.stat-secondary::before {
-  content: '';
-  position: absolute;
-  left: 6px;
-  top: 14px;
-  bottom: 14px;
-  width: 4px;
-  border-radius: 2px;
-}
-.tx-root .upload-dashboard-card.stat-primary::before  { background: var(--cyan); }
-.tx-root .upload-dashboard-card.stat-success::before  { background: var(--green); }
-.tx-root .upload-dashboard-card.stat-secondary::before{ background: var(--text-3); }
-.tx-root .upload-dashboard-label {
-  font-size: 11px;
-  color: var(--text-3);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .4px;
-}
-.tx-root .upload-dashboard-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-1);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -.3px;
-  line-height: 1.1;
-  margin-top: 2px;
-}
-/* Окрашиваем число в цвет accent-полоски слева — как в эталоне
-   redesign_transactions.html: значение выделяется тем же цветом, что и
-   вертикальный бар. */
-.tx-root .upload-dashboard-card.stat-primary .upload-dashboard-value  { color: var(--cyan); }
-.tx-root .upload-dashboard-card.stat-success .upload-dashboard-value  { color: var(--green); }
-.tx-root .upload-dashboard-card.stat-secondary .upload-dashboard-value { color: var(--text-1); }
-
-/* Upload dropzone: soften to match new surface */
-.tx-root .upload-section {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: var(--shadow-sm);
 }
 
-/* Result header — more compact, uppercase label */
-.tx-root .result-header {
-  padding: 10px 2px 4px;
-  margin-bottom: 0;
-  align-items: center;
-}
-.tx-root .result-header h2 {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: .5px;
+.tx-page-subtitle {
+  font-size: var(--font-size-body);
+  margin-bottom: var(--spacing-small);
 }
 
-/* Карточка таблицы. Рамку, скругление и тень несёт она, а не прокручиваемая
-   обёртка: подвал с подписью и пагинацией лежит под областью прокрутки, а не
-   внутри неё, иначе до пагинации пришлось бы прокручивать сотню строк. */
+/* ---------- Панель таблицы ---------- */
+/* Рамку, скругление и обрезку углов несёт панель, а не прокручиваемая обёртка:
+   подвал с подписью и пагинацией лежит под областью прокрутки, а не внутри неё,
+   иначе до пагинации пришлось бы прокручивать сотню строк.
+   Тени нет намеренно — карточка держится на бордере. */
 .tx-root .tx-table-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: var(--shadow-sm);
-  overflow: hidden; /* скругление обрезает углы таблицы */
+  border-radius: var(--radius-medium);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.tx-root .tx-table-card .header-actions {
+  gap: var(--spacing-small);
 }
 
 /* Собственная область прокрутки таблицы.
@@ -2049,90 +1411,143 @@ h1 {
    не ограничивалась, её scrollport равен высоте содержимого. Прокручивалась
    страница целиком, унося и шапку, и колонку ID.
    По горизонтали: таблица ниже объявлена шириной не менее 1100px, а прежний
-   overflow: hidden обрезал правые колонки без возможности до них добраться —
-   в том числе на планшете и телефоне, где прокрутка объявлена отдельными
-   правилами, проигрывающими этому по специфичности. */
+   overflow: hidden обрезал правые колонки без возможности до них добраться.
+   Фон, рамка, радиус и тень сняты: их несёт панель, иначе выходит двойное
+   обрамление. */
 .tx-root .table-wrapper {
   overflow: auto;
   max-height: 70vh;
   -webkit-overflow-scrolling: touch;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 .tx-root .table-wrapper::after { display: none; }
 
-/* Table header — 10px uppercase matching reference */
 .tx-root .data-table {
   min-width: 1100px;
 }
+
+/* ---------- Шапка колонок: caption-стиль ---------- */
+/* Шапка остаётся на месте, пока прокручивается тело таблицы. Фон и разделитель
+   заданы на самой ячейке: при border-collapse: collapse браузер не рисует их у
+   прилипшей строки, и сквозь шапку просвечивали бы строки таблицы. */
 .tx-root .data-table thead {
   background: var(--surface-2);
 }
 .tx-root .data-table th {
-  padding: 10px 14px;
-  font-size: 10px;
-  font-weight: 700;
+  padding: var(--padding-tiny) var(--padding-small);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
   color: var(--text-3);
   text-transform: uppercase;
-  letter-spacing: .4px;
-  border-bottom: 1px solid var(--border);
+  letter-spacing: var(--letter-spacing-caption);
+  background: var(--surface-2);
+  border-bottom: none;
+  box-shadow: inset 0 -1px 0 var(--border);
 }
+/* Липкая колонка ID: её край отмечен внутренней линией, а не внешней тенью —
+   тени на плоскостях страницы не используются, и линия не «плавает» поверх
+   соседней ячейки при горизонтальной прокрутке. */
 .tx-root .data-table th:first-child,
 .tx-root .data-table td:first-child {
   background: var(--surface-2);
-  box-shadow: none;
-}
-
-/* Шапка остаётся на месте, пока прокручивается тело таблицы.
-   Фон и разделитель заданы на самой ячейке: при border-collapse: collapse
-   браузер не рисует их у прилипшей строки, и сквозь шапку просвечивали бы
-   строки таблицы. */
-.tx-root .data-table th {
-  background: var(--surface-2);
-  box-shadow: inset 0 -1px 0 var(--border);
+  box-shadow: inset -1px 0 0 var(--border);
 }
 
 /* Угловая ячейка липнет сразу к двум краям, поэтому лежит выше остальных */
 .tx-root .data-table th:first-child {
   z-index: 11;
-  box-shadow: inset 0 -1px 0 var(--border);
+  box-shadow: inset -1px 0 0 var(--border), inset 0 -1px 0 var(--border);
 }
+
+/* Индикатор сортировки. В наборе иконок нет chevron-up, поэтому направление
+   «по возрастанию» — тот же chevron, повёрнутый на 180°. */
+.tx-root .data-table th .tx-sort {
+  display: inline-flex;
+  color: var(--text-3);
+  opacity: .45;
+  transition: opacity var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+.tx-root .data-table th .tx-sort.is-asc {
+  transform: rotate(180deg);
+}
+.tx-root .data-table th .tx-sort.is-active {
+  opacity: 1;
+  color: var(--accent);
+}
+.tx-root .data-table th.sortable:hover .tx-sort {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* ---------- Тело таблицы ---------- */
 .tx-root .data-table tbody tr {
   transition: background .1s ease;
 }
 .tx-root .data-table tbody tr td {
-  padding: 11px 14px;
-  font-size: 12px;
+  padding: var(--padding-tiny) var(--padding-small);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-normal);
   color: var(--text-2);
   border-bottom: 1px solid var(--border);
-  font-variant-numeric: tabular-nums;
 }
 .tx-root .data-table tbody tr:hover td {
   background: var(--surface-2);
 }
+/* Колонка ID — идентификатор: моноширинный приходит классом .t-numeric из
+   разметки, здесь только цвет и вес. */
 .tx-root .data-table tbody tr td:first-child {
   color: var(--accent);
-  font-family: 'SF Mono', Menlo, Consolas, monospace;
-  font-weight: 600;
-  font-size: 11px;
-  letter-spacing: .5px;
+  font-weight: var(--font-weight-medium);
 }
 .tx-root .data-table tbody tr.row-with-errors td:first-child {
   background: var(--red-soft);
   color: var(--red);
 }
 
-.tx-root .table-footer {
-  padding: 10px 16px;
-  background: var(--surface);
-  color: var(--text-3);
-  font-size: 11px;
-  border-top: 1px solid var(--border);
+/* Числовые колонки выравниваем по правому краю вместе с их заголовками */
+.tx-root .data-table th.tx-cell-right,
+.tx-root .data-table td.tx-cell-right {
+  text-align: right;
+}
+.tx-root .data-table th.tx-cell-right .th-content {
+  justify-content: flex-end;
 }
 
-/* Телефон: карточный вид строк. Мобильные правила объявлены выше по файлу и при
-   равной специфичности проигрывают секции .tx-root, поэтому перекрытия для неё
-   стоят здесь, а не в общем мобильном блоке — иначе карточки растягивало на
-   объявленные таблице 1100px в экране шириной 360px. Ограничение высоты тоже
-   снимается: вложенная прокрутка на телефоне лишняя. */
+/* ---------- Зона: подвал панели ---------- */
+.tx-root .table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-small);
+  padding: var(--padding-tiny) var(--padding-element);
+  text-align: left;
+  background: var(--surface-2);
+  color: var(--text-3);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  border-top: none;
+}
+
+/* Пагинация внутри подвала — не отдельная карточка: свой фон, бордер и отступы
+   она снимает, иначе получается «карточка в карточке». */
+.tx-root .table-footer .pagination-wrapper {
+  margin-top: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  flex: 0 1 auto;
+}
+
+/* Телефон: мобильные правила объявлены выше по файлу и при равной специфичности
+   проигрывают секции .tx-root, поэтому перекрытия для неё стоят здесь, а не в
+   общем мобильном блоке — иначе таблицу растягивало на объявленные 1100px в
+   экране шириной 360px. Ограничение высоты тоже снимается: вложенная прокрутка
+   на телефоне лишняя. */
 @media (max-width: 480px) {
   .tx-root .data-table {
     min-width: unset;
@@ -2141,8 +1556,15 @@ h1 {
   .tx-root .table-wrapper {
     max-height: none;
   }
+
+  /* В карточном виде подпись колонки рисуется через ::before на месте левой
+     половины ячейки, и ей нужно отданное выше padding-left: 50% */
+  .tx-root .data-table tbody tr td {
+    padding-left: 50%;
+  }
+
+  /* Липкой колонки на телефоне нет — её метка-линия не нужна */
+  .tx-root .data-table td:first-child {
+    box-shadow: none;
+  }
 }
-
-
-
-

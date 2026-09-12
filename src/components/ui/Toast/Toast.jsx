@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import Icon from '../Icon';
 import './Toast.css';
 
 const Toast = ({
@@ -39,14 +40,17 @@ const Toast = ({
     }, 300); // Длительность анимации выхода
   };
 
-  const defaultIcons = {
-    success: '✓',
-    error: '✕',
-    warning: '⚠',
-    info: 'ℹ'
+  const defaultIconNames = {
+    success: 'check',
+    error: 'close',
+    warning: 'alert',
+    info: 'info'
   };
 
-  const toastIcon = icon || defaultIcons[variant];
+  // icon от вызывающего кода может быть готовым узлом — подставляем свой только при его отсутствии.
+  const toastIcon = icon || (defaultIconNames[variant]
+    ? <Icon name={defaultIconNames[variant]} size={16} />
+    : null);
 
   return (
     <div

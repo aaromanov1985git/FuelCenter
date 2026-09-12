@@ -3,6 +3,7 @@ import { SkeletonCard } from './Skeleton'
 import { useToast } from './ToastContainer'
 import Tooltip from './Tooltip'
 import { Button } from './ui'
+import Icon from './ui/Icon'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
 import './Dashboard.css'
@@ -649,7 +650,13 @@ const Dashboard = () => {
                     <span className="dash-th-content">
                       Карта
                       {sortConfigQuantity.field === 'card_number' && (
-                        <span className="dash-sort-icon">{sortConfigQuantity.order === 'asc' ? '↑' : '↓'}</span>
+                        <span
+                          className={`dash-sort-icon${
+                            sortConfigQuantity.order === 'asc' ? ' dash-sort-icon-asc' : ''
+                          }`}
+                        >
+                          <Icon name="chevron-down" size={16} />
+                        </span>
                       )}
                     </span>
                   </th>
@@ -659,7 +666,13 @@ const Dashboard = () => {
                     <span className="dash-th-content">
                       ТС
                       {sortConfigQuantity.field === 'vehicle' && (
-                        <span className="dash-sort-icon">{sortConfigQuantity.order === 'asc' ? '↑' : '↓'}</span>
+                        <span
+                          className={`dash-sort-icon${
+                            sortConfigQuantity.order === 'asc' ? ' dash-sort-icon-asc' : ''
+                          }`}
+                        >
+                          <Icon name="chevron-down" size={16} />
+                        </span>
                       )}
                     </span>
                   </th>
@@ -669,7 +682,13 @@ const Dashboard = () => {
                     <span className="dash-th-content">
                       Литры
                       {sortConfigQuantity.field === 'quantity' && (
-                        <span className="dash-sort-icon">{sortConfigQuantity.order === 'asc' ? '↑' : '↓'}</span>
+                        <span
+                          className={`dash-sort-icon${
+                            sortConfigQuantity.order === 'asc' ? ' dash-sort-icon-asc' : ''
+                          }`}
+                        >
+                          <Icon name="chevron-down" size={16} />
+                        </span>
                       )}
                     </span>
                   </th>
@@ -679,7 +698,13 @@ const Dashboard = () => {
                     <span className="dash-th-content">
                       Транз.
                       {sortConfigQuantity.field === 'count' && (
-                        <span className="dash-sort-icon">{sortConfigQuantity.order === 'asc' ? '↑' : '↓'}</span>
+                        <span
+                          className={`dash-sort-icon${
+                            sortConfigQuantity.order === 'asc' ? ' dash-sort-icon-asc' : ''
+                          }`}
+                        >
+                          <Icon name="chevron-down" size={16} />
+                        </span>
                       )}
                     </span>
                   </th>
@@ -771,7 +796,13 @@ const Dashboard = () => {
                     <span className="dash-th-content">
                       Карта
                       {sortConfigCount.field === 'card_number' && (
-                        <span className="dash-sort-icon">{sortConfigCount.order === 'asc' ? '↑' : '↓'}</span>
+                        <span
+                          className={`dash-sort-icon${
+                            sortConfigCount.order === 'asc' ? ' dash-sort-icon-asc' : ''
+                          }`}
+                        >
+                          <Icon name="chevron-down" size={16} />
+                        </span>
                       )}
                     </span>
                   </th>
@@ -781,7 +812,13 @@ const Dashboard = () => {
                     <span className="dash-th-content">
                       ТС
                       {sortConfigCount.field === 'vehicle' && (
-                        <span className="dash-sort-icon">{sortConfigCount.order === 'asc' ? '↑' : '↓'}</span>
+                        <span
+                          className={`dash-sort-icon${
+                            sortConfigCount.order === 'asc' ? ' dash-sort-icon-asc' : ''
+                          }`}
+                        >
+                          <Icon name="chevron-down" size={16} />
+                        </span>
                       )}
                     </span>
                   </th>
@@ -791,7 +828,13 @@ const Dashboard = () => {
                     <span className="dash-th-content">
                       Транз.
                       {sortConfigCount.field === 'count' && (
-                        <span className="dash-sort-icon">{sortConfigCount.order === 'asc' ? '↑' : '↓'}</span>
+                        <span
+                          className={`dash-sort-icon${
+                            sortConfigCount.order === 'asc' ? ' dash-sort-icon-asc' : ''
+                          }`}
+                        >
+                          <Icon name="chevron-down" size={16} />
+                        </span>
                       )}
                     </span>
                   </th>
@@ -801,7 +844,13 @@ const Dashboard = () => {
                     <span className="dash-th-content">
                       Литры
                       {sortConfigCount.field === 'quantity' && (
-                        <span className="dash-sort-icon">{sortConfigCount.order === 'asc' ? '↑' : '↓'}</span>
+                        <span
+                          className={`dash-sort-icon${
+                            sortConfigCount.order === 'asc' ? ' dash-sort-icon-asc' : ''
+                          }`}
+                        >
+                          <Icon name="chevron-down" size={16} />
+                        </span>
                       )}
                     </span>
                   </th>

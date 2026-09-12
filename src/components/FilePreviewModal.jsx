@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, Button, Alert, Skeleton, Select } from './ui'
+import Icon from './ui/Icon'
 import { logger } from '../utils/logger'
 import './FilePreviewModal.css'
 import './FormField.css'
@@ -309,12 +310,12 @@ const FilePreviewModal = ({ isOpen, file, onConfirm, onCancel, onCheckTemplate, 
               <div className="file-preview-message">
                 {previewContent.type === 'excel' ? (
                   <>
-                    <span className="file-preview-icon">📊</span>
+                    <span className="file-preview-icon"><Icon name="chart" size={16} /></span>
                     <span>{previewContent.message}</span>
                   </>
                 ) : (
                   <>
-                    <span className="file-preview-icon">📄</span>
+                    <span className="file-preview-icon"><Icon name="file" size={16} /></span>
                     <span>{previewContent.message}</span>
                   </>
                 )}

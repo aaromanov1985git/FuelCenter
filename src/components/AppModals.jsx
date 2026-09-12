@@ -5,6 +5,7 @@ import ClearProviderModal from './ClearProviderModal'
 import TemplateSelectModal from './TemplateSelectModal'
 import FilePreviewModal from './FilePreviewModal'
 import ContextMenu from './ContextMenu'
+import Icon from './ui/Icon'
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard'
 
 const Register = lazy(() => import('./Register'))
@@ -163,7 +164,7 @@ const AppModals = ({
           items={[
             {
               label: 'Копировать строку',
-              icon: '📋',
+              icon: <Icon name="copy" size={16} />,
               onClick: async () => {
                 const row = contextMenu.data[contextMenu.state.rowIndex]
                 const rowData = contextMenu.displayHeaders.map(h => `${h}: ${row[h] || ''}`).join('\n')
@@ -175,7 +176,7 @@ const AppModals = ({
             },
             {
               label: 'Копировать все данные',
-              icon: '📄',
+              icon: <Icon name="rows" size={16} />,
               onClick: async () => {
                 const csvHeaders = contextMenu.displayHeaders.join(',')
                 const csvRows = contextMenu.data.map(r =>
@@ -197,12 +198,12 @@ const AppModals = ({
             { divider: true },
             {
               label: 'Экспорт в Excel',
-              icon: '📥',
+              icon: <Icon name="download" size={16} />,
               onClick: contextMenu.onExport
             },
             {
               label: 'Обновить данные',
-              icon: '🔄',
+              icon: <Icon name="refresh" size={16} />,
               onClick: contextMenu.onRefresh
             }
           ]}

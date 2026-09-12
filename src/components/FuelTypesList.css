@@ -203,9 +203,9 @@
 }
 
 .column-settings-item-handle {
+  display: inline-flex;
   cursor: grab;
   color: var(--text-3);
-  font-size: 14px;
 }
 
 .column-settings-item-handle:active {

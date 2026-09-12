@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ConnectionTestResult from './ConnectionTestResult'
+import Icon from '../ui/Icon'
 import { authFetch } from '../../utils/api'
 import { logger } from '../../utils/logger'
 
@@ -360,7 +361,7 @@ const FirebirdConnection = ({
                   disabled={loadingTables || !connectionSettings.database}
                   title={!connectionSettings.database ? 'Сначала укажите путь к базе данных' : 'Загрузить список таблиц из базы данных'}
                 >
-                  {loadingTables ? '⏳' : '📋'}
+                  <Icon name={loadingTables ? 'clock' : 'rows'} size={16} />
                 </button>
               </div>
               <button
@@ -370,12 +371,13 @@ const FirebirdConnection = ({
                 disabled={!sourceTable || loadingColumns}
                 title="Загрузить колонки выбранной таблицы"
               >
-                {loadingColumns ? '⏳ Загрузка...' : '🔍 Загрузить колонки'}
+                <Icon name={loadingColumns ? 'clock' : 'search'} size={16} />
+                {loadingColumns ? 'Загрузка...' : 'Загрузить колонки'}
               </button>
             </div>
             <span className="field-help">
               Выберите таблицу из списка (после загрузки) или введите имя вручную (например, rgAmountRests).
-              Нажмите на иконку 📋 для загрузки списка таблиц из базы данных.
+              Нажмите кнопку со списком справа, чтобы загрузить перечень таблиц из базы данных.
               После выбора таблицы нажмите "Загрузить колонки" для получения списка полей.
             </span>
           </label>
@@ -424,7 +426,8 @@ const FirebirdConnection = ({
                 disabled={!sourceQuery || loadingColumns}
                 title="Получить список колонок из SQL запроса"
               >
-                {loadingColumns ? '⏳ Загрузка...' : '🔍 Получить колонки из SQL запроса'}
+                <Icon name={loadingColumns ? 'clock' : 'search'} size={16} />
+                {loadingColumns ? 'Загрузка...' : 'Получить колонки из SQL запроса'}
               </button>
             </div>
             <span className="field-help">

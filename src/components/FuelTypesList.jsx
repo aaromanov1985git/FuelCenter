@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import IconButton from './IconButton'
 import StatusBadge from './StatusBadge'
+import Icon from './ui/Icon'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
@@ -336,7 +337,7 @@ const FuelTypesList = () => {
         ),
         transactions_count: fuelType.transactions_count !== undefined && fuelType.transactions_count !== null 
           ? (
-              <span style={{ fontFamily: 'monospace' }}>
+              <span className="t-numeric">
                 {fuelType.transactions_count.toLocaleString('ru-RU')}
               </span>
             )
@@ -437,8 +438,9 @@ const FuelTypesList = () => {
                   size="sm"
                   onClick={() => setShowColumnSettings(true)}
                   title="Настроить поля"
+                  icon={<Icon name="columns" size={16} />}
                 >
-                  ⚙️ Настроить поля
+                  Настроить поля
                 </Button>
                 <div className="filter-buttons-container">
                   <Button
@@ -519,7 +521,7 @@ const FuelTypesList = () => {
           <div className="fuel-type-edit-form">
             {/* Основная информация */}
             <div className="form-section">
-              <h4 className="form-section-title">📝 Основная информация</h4>
+              <h4 className="form-section-title">Основная информация</h4>
               
               <div className="form-row">
                 <Input
@@ -690,7 +692,7 @@ const FuelTypesList = () => {
                       }}
                       onDragEnd={() => setDraggedColumn(null)}
                     >
-                      <span className="column-settings-item-handle">☰</span>
+                      <span className="column-settings-item-handle" aria-hidden="true"><Icon name="rows" size={16} /></span>
                       <input
                         type="checkbox"
                         className="column-settings-item-checkbox"

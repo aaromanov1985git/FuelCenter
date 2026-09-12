@@ -14,6 +14,7 @@ import {
   useToast,
   Skeleton
 } from './ui';
+import Icon from './ui/Icon';
 import './ComponentsDemo.css';
 
 const ComponentsDemo = () => {
@@ -71,7 +72,7 @@ const ComponentsDemo = () => {
                 <Button variant="primary">Кнопка с подсказкой</Button>
               </Tooltip>
               <Tooltip content="Введите ваш email адрес для регистрации">
-                <Input placeholder="Email" icon="📧" />
+                <Input placeholder="Email" icon={<Icon name="link" size={16} />} />
               </Tooltip>
               <Tooltip content="Статус: всё в порядке">
                 <Badge variant="success">Активен</Badge>
@@ -153,8 +154,8 @@ const ComponentsDemo = () => {
 
             <h3>С иконками и состояниями</h3>
             <div className="demo-row">
-              <Button icon="🔄" iconPosition="left">С иконкой</Button>
-              <Button icon="→" iconPosition="right">Вперед</Button>
+              <Button icon={<Icon name="refresh" size={16} />} iconPosition="left">С иконкой</Button>
+              <Button icon={<Icon name="chevron-right" size={16} />} iconPosition="right">Вперед</Button>
               <Button loading={loading} onClick={handleLoadingDemo}>
                 {loading ? 'Загрузка...' : 'Загрузить'}
               </Button>
@@ -200,7 +201,7 @@ const ComponentsDemo = () => {
 
               <Input
                 label="С иконкой"
-                icon="🔍"
+                icon={<Icon name="search" size={16} />}
                 placeholder="Поиск..."
                 fullWidth
               />
@@ -338,7 +339,7 @@ const ComponentsDemo = () => {
                 </Card.Header>
                 <Card.Body>Карточка с тенью и hover эффектом</Card.Body>
                 <Card.Footer>
-                  <Button size="sm" variant="ghost">Подробнее →</Button>
+                  <Button size="sm" variant="ghost" icon={<Icon name="chevron-right" size={16} />} iconPosition="right">Подробнее</Button>
                 </Card.Footer>
               </Card>
 

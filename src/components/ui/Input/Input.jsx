@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Icon from '../Icon';
 import './Input.css';
 
 const Input = ({
@@ -88,7 +89,7 @@ const Input = ({
             tabIndex={-1}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
-            {showPassword ? '👁️' : '👁️‍🗨️'}
+            <Icon name={showPassword ? "eye-off" : "eye"} size={16} />
           </button>
         )}
 
@@ -99,7 +100,8 @@ const Input = ({
 
       {error && (
         <div id={`${name}-error`} className="input-helper input-helper-error" role="alert">
-          {error}
+          <Icon name="alert" size={16} />
+          <span>{error}</span>
         </div>
       )}
       {helperText && !error && (

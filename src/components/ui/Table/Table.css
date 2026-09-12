@@ -129,10 +129,15 @@
 }
 
 .ui-table-sort-icon {
+  display: inline-flex;
+  align-items: center;
   color: var(--text-2);
-  font-size: var(--font-size-sm);
   opacity: 0.5;
   transition: opacity var(--duration-fast) var(--ease-in-out);
+}
+
+.ui-table-sort-icon-asc {
+  transform: rotate(180deg);
 }
 
 .ui-table-sort-icon.active {
@@ -233,7 +238,9 @@
 }
 
 .ui-table-empty-icon {
-  font-size: 4rem;
+  display: flex;
+  justify-content: center;
+  color: var(--text-2);
   margin-bottom: var(--spacing-element);
   opacity: 0.5;
 }

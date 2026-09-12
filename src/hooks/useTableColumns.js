@@ -40,7 +40,7 @@ const loadVisibility = () => {
   }
 }
 
-export const useTableColumns = (sortConfig) => {
+export const useTableColumns = () => {
   const [visibleColumns, setVisibleColumns] = useState(loadVisibility)
 
   const displayHeaders = useMemo(
@@ -64,12 +64,6 @@ export const useTableColumns = (sortConfig) => {
     localStorage.removeItem(STORAGE_KEY)
   }, [])
 
-  const getSortIcon = useCallback((header) => {
-    const field = HEADER_FIELD_MAP[header]
-    if (!field || sortConfig.field !== field) return '⇅'
-    return sortConfig.order === 'asc' ? '↑' : '↓'
-  }, [sortConfig])
-
   return {
     allHeaders: ALL_HEADERS,
     headerFieldMap: HEADER_FIELD_MAP,
@@ -77,7 +71,6 @@ export const useTableColumns = (sortConfig) => {
     visibleColumns,
     toggleColumnVisibility,
     resetColumnVisibility,
-    getSortIcon,
   }
 }
 

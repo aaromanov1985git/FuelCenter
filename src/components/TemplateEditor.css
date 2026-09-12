@@ -557,7 +557,7 @@
 
 /* Поле SQL-запроса: моноширинный текст */
 .sql-editor {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.9rem;
 }
 
@@ -689,6 +689,15 @@
   gap: var(--spacing-small);
 }
 
+/* Содержимое кнопок панели подключения — иконка и текст по центру с зазором */
+.connection-actions > .btn,
+.connection-actions > .btn-test-connection {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--padding-tiny);
+}
+
 .btn-test-connection {
   padding: var(--padding-small) var(--padding-section);
   background: var(--accent);
@@ -798,6 +807,10 @@
 
 .btn-toggle-editor,
 .btn-clear-mapping {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-tiny);
   padding: var(--spacing-tiny) var(--spacing-small);
 }
 
@@ -850,6 +863,7 @@
 }
 
 .fuel-mapping-arrow {
+  display: inline-flex;
   color: var(--text-2);
 }
 
@@ -875,7 +889,7 @@
 }
 
 .fuel-mapping-json {
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 /* Стили для загрузки таблиц Firebird */
@@ -886,7 +900,6 @@
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
-  font-size: var(--font-size-lg);
   min-width: 40px;
   height: 38px;
   display: flex;
@@ -961,7 +974,7 @@
   color: var(--accent);
   border-radius: var(--radius-small);
   font-size: var(--font-size-xs);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .error-message {

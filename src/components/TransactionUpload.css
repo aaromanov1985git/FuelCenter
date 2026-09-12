@@ -1,0 +1,193 @@
+/* Транзакции ГСМ — шапка действий, строка сводки и оверлей приёма файла.
+ *
+ * Раньше здесь стояли раскрытая зона перетаскивания и дашборд из четырёх крупных
+ * плиток: вместе они отодвигали первую строку таблицы примерно на 250px, и на
+ * экране 1080p данные уходили ниже сгиба. Загрузка стала действием (кнопка плюс
+ * приём файла по всей странице), сводка — одной строкой уровня «зона».
+ *
+ * Только токены из src/styles/tokens.css и src/index.css, новых цветовых
+ * литералов нет: полупрозрачные оттенки берутся через color-mix от токена.
+ */
+
+/* Поле выбора файла скрыто, но остаётся в DOM: по нему работает сброс значения
+   из useFileUpload и клик из кнопки «Загрузить файл». */
+.tx-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+/* Уровень «страница»: ни фона, ни бордера, ни тени — это просто строка действий */
+.tx-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-small);
+  flex-wrap: wrap;
+}
+
+.tx-toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+.tx-toolbar-hint {
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-normal);
+  color: var(--text-3);
+}
+
+.tx-file-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-tiny);
+  min-width: 0;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-normal);
+  color: var(--text-2);
+}
+
+.tx-file-status-name {
+  max-width: 24ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--font-weight-medium);
+  color: var(--text-1);
+}
+
+.tx-file-status-dim {
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Чип активного фильтра по поставщику. Формула бейджа: текст — сплошной токен,
+   бордер тот же цвет 30%, фон — 10%. */
+.tx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-tiny);
+  height: 32px;
+  padding: 0 var(--padding-small);
+  border-radius: var(--radius-small);
+  font-family: inherit;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.tx-chip:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.tx-chip-text {
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Уровень «зона»: приглушённая подложка, бордера нет — иначе получилась бы
+   «карточка в карточке». Цифры сводки остаются в Golos Text: моноширинный
+   оправдан только там, где числа стоят в колонку. */
+.tx-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-small) var(--spacing-section);
+  padding: var(--padding-small) var(--padding-element);
+  background: var(--surface-2);
+  border-radius: var(--radius-medium);
+}
+
+.tx-summary-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-small);
+  min-width: 0;
+}
+
+.tx-summary-label {
+  white-space: nowrap;
+}
+
+.tx-summary-value {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-title);
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Оверлей приёма файла: виден только пока файл тащат над окном.
+   pointer-events: none — события ловит window, а сам оверлей не должен
+   участвовать в подсчёте вложенности dragenter/dragleave. */
+.tx-dropzone {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-section);
+  background: var(--overlay);
+  backdrop-filter: var(--overlay-backdrop-blur);
+  pointer-events: none;
+}
+
+.tx-dropzone-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--spacing-small);
+  max-width: 420px;
+  padding: var(--spacing-section);
+  border-radius: var(--radius-medium);
+  background: var(--surface);
+  /* Пунктир и тень здесь уместны: это не панель страницы, а всплывающая цель
+     перетаскивания, и она обязана читаться поверх содержимого. */
+  border: 2px dashed var(--accent);
+  box-shadow: var(--shadow-md);
+}
+
+.tx-dropzone-icon {
+  color: var(--accent);
+}
+
+.tx-dropzone-title {
+  font-size: var(--font-size-section-title);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-1);
+}
+
+.tx-dropzone-hint {
+  font-size: var(--font-size-caption);
+  color: var(--text-3);
+}
+
+@media (max-width: 768px) {
+  .tx-toolbar-hint {
+    display: none;
+  }
+
+  .tx-summary {
+    gap: var(--spacing-small) var(--spacing-element);
+  }
+
+  .tx-summary-item {
+    flex: 1 1 40%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+  }
+}

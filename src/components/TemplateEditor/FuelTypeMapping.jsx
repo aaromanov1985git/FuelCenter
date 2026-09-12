@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import Icon from '../ui/Icon'
 import { authFetch } from '../../utils/api'
 import { logger } from '../../utils/logger'
 
@@ -125,7 +126,8 @@ const FuelTypeMapping = ({ text, onTextChange }) => {
               className={`btn-toggle-editor ${useVisualEditor ? 'is-active' : ''}`}
               onClick={toggleEditor}
             >
-              {useVisualEditor ? '📝 Текстовый редактор' : '🎨 Визуальный редактор'}
+              <Icon name={useVisualEditor ? 'edit' : 'grid'} size={16} />
+              {useVisualEditor ? 'Текстовый редактор' : 'Визуальный редактор'}
             </button>
             {text && (
               <button
@@ -134,7 +136,8 @@ const FuelTypeMapping = ({ text, onTextChange }) => {
                 onClick={clearMapping}
                 title="Очистить маппинг"
               >
-                🗑️ Очистить
+                <Icon name="trash" size={16} />
+                Очистить
               </button>
             )}
           </div>
@@ -157,7 +160,9 @@ const FuelTypeMapping = ({ text, onTextChange }) => {
                       placeholder="Исходное название (из БД)"
                       className="fuel-mapping-input"
                     />
-                    <span className="fuel-mapping-arrow">→</span>
+                    <span className="fuel-mapping-arrow" aria-hidden="true">
+                      <Icon name="chevron-right" size={16} />
+                    </span>
                     <div className="fuel-mapping-target">
                       <select
                         value={entry.value}

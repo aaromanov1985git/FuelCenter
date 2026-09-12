@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { authFetch } from '../utils/api'
+// logger вызывался в catch, но не был импортирован: любая сетевая ошибка
+// (не 401) давала ReferenceError вместо тихого нуля. Сайдбар опрашивает
+// счётчик каждые 30 с, поэтому путь вызова стал горячим.
+import { logger } from '../utils/logger'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import IconButton from './IconButton'
 import { Button } from './ui'
+import Icon from './ui/Icon'
 import { logger } from '../utils/logger'
 import { exportToCSV, exportToJSON, exportToTXT, exportToPDF } from '../utils/exportUtils'
 import './ExportMenu.css'
@@ -68,31 +69,31 @@ const ExportMenu = ({ data, headers, onExportExcel, filename = 'transactions' })
     {
       id: 'excel',
       label: 'Excel (.xlsx)',
-      icon: '📊',
+      icon: 'chart',
       available: !!onExportExcel
     },
     {
       id: 'csv',
       label: 'CSV (.csv)',
-      icon: '📄',
+      icon: 'rows',
       available: true
     },
     {
       id: 'json',
       label: 'JSON (.json)',
-      icon: '📋',
+      icon: 'box',
       available: true
     },
     {
       id: 'txt',
       label: 'Текст (.txt)',
-      icon: '📝',
+      icon: 'file',
       available: true
     },
     {
       id: 'pdf',
       label: 'PDF (.pdf)',
-      icon: '📑',
+      icon: 'layers',
       available: true
     }
   ]
@@ -106,7 +107,7 @@ const ExportMenu = ({ data, headers, onExportExcel, filename = 'transactions' })
           icon="export"
           variant="primary"
           onClick={() => setIsOpen(!isOpen)}
-          title="⬇️ Экспорт данных (Excel, CSV, JSON, TXT, PDF)"
+          title="Экспорт данных (Excel, CSV, JSON, TXT, PDF)"
           size="medium"
           className="export-menu-icon-button"
         />
@@ -130,7 +131,7 @@ const ExportMenu = ({ data, headers, onExportExcel, filename = 'transactions' })
                 padding: 'var(--padding-small) var(--padding-element)'
               }}
             >
-              <span className="export-menu-icon">{option.icon}</span>
+              <span className="export-menu-icon"><Icon name={option.icon} size={16} /></span>
               <span className="export-menu-label">{option.label}</span>
             </Button>
           ))}

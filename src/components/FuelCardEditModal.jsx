@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, Input, Select, Button, Checkbox, Alert } from './ui'
+import Icon from './ui/Icon'
 import FormField from './FormField'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
@@ -251,9 +252,8 @@ const FuelCardEditModal = ({
                     disabled={loading || !originalOwnerName}
                     title="Нормализовать"
                     style={{ flexShrink: 0, minWidth: 'auto', padding: '0.5rem 1rem' }}
-                  >
-                    ⚡
-                  </Button>
+                    icon={<Icon name="refresh" size={16} />}
+                  />
                 )}
               </div>
             </div>

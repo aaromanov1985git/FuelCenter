@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import IconButton from './IconButton'
 import { Button } from './ui'
+import Icon from './ui/Icon'
 import './ClearMenu.css'
 
 /**
@@ -42,14 +43,14 @@ const ClearMenu = ({ onClearAll, onClearByProvider, disabled = false }) => {
       id: 'all',
       label: 'Очистить всю БД',
       description: 'Удалить все транзакции',
-      icon: '🗑️',
+      icon: 'trash',
       onClick: handleClearAll
     },
     {
       id: 'provider',
       label: 'Очистить по провайдеру',
       description: 'Удалить транзакции выбранного провайдера',
-      icon: '🔍',
+      icon: 'filter',
       onClick: handleClearByProvider
     }
   ]
@@ -62,7 +63,7 @@ const ClearMenu = ({ onClearAll, onClearByProvider, disabled = false }) => {
           variant="error"
           onClick={() => setIsOpen(!isOpen)}
           disabled={disabled}
-          title="🗑️ Удалить транзакции (все или по провайдеру)"
+          title="Удалить транзакции (все или по провайдеру)"
           size="medium"
           className="clear-menu-icon-button"
         />
@@ -91,7 +92,7 @@ const ClearMenu = ({ onClearAll, onClearByProvider, disabled = false }) => {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', width: '100%', minHeight: '100%' }}>
-                <span className="clear-menu-icon" style={{ flexShrink: 0, marginTop: '2px' }}>{option.icon}</span>
+                <span className="clear-menu-icon" style={{ flexShrink: 0, marginTop: '2px' }}><Icon name={option.icon} size={16} /></span>
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
                   <span className="clear-menu-label">{option.label}</span>
                   <span className="clear-menu-description">{option.description}</span>

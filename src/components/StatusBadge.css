@@ -38,10 +38,9 @@
 }
 
 .status-badge-icon {
-  font-size: 1.1em;
-  line-height: 1;
   display: inline-flex;
   align-items: center;
+  line-height: 1;
 }
 
 .status-badge-text {
@@ -138,10 +137,6 @@
   .status-badge {
     padding: 2px var(--padding-tiny);
     font-size: var(--font-size-xs);
-  }
-
-  .status-badge-icon {
-    font-size: 1.1em;
   }
 }
 

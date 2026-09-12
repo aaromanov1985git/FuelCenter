@@ -39,17 +39,23 @@
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
-.theme-toggle-button.active::after {
-  content: '✓';
+.theme-toggle-mark {
   position: absolute;
+  display: inline-flex;
   bottom: 2px;
   right: 2px;
-  font-size: var(--font-size-xs);
   color: var(--accent);
-  font-weight: var(--font-weight-bold);
+}
+
+/* Отметка активной темы — не значок действия, а мелкая пометка в углу кнопки.
+   Селектор нарочно специфичнее, чем `.btn svg { 16px }` из базового класса
+   кнопки, иначе галочка раздулась бы до размера самой иконки. */
+.theme-toggle-button .theme-toggle-mark svg {
+  width: 10px;
+  height: 10px;
 }
 
 .theme-toggle-icon {
-  font-size: 1.125rem;
+  display: inline-flex;
   line-height: 1;
 }

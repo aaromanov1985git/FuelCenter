@@ -21,7 +21,7 @@
   padding: var(--spacing-small);
   background: var(--surface);
   border-radius: var(--radius-small);
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--font-size-sm);
   color: var(--text-1);
   border: 1px solid var(--border-strong);

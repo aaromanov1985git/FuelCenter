@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ConnectionTestResult from './ConnectionTestResult'
+import Icon from '../ui/Icon'
 import { authFetch } from '../../utils/api'
 import { logger } from '../../utils/logger'
 
@@ -248,7 +249,8 @@ const WebConnection = ({
               disabled={testing || Boolean(missing)}
               title="Проверить подключение к веб-сервису"
             >
-              {testing ? '⏳ Проверка...' : '🔍 Проверить подключение'}
+              <Icon name={testing ? 'clock' : 'search'} size={16} />
+              {testing ? 'Проверка...' : 'Проверить подключение'}
             </button>
             <button
               type="button"
@@ -257,7 +259,8 @@ const WebConnection = ({
               disabled={loadingFields || Boolean(missing)}
               title="Загрузить список полей из веб-сервиса"
             >
-              {loadingFields ? '⏳ Загрузка...' : '🔍 Загрузить поля из веб-сервиса'}
+              <Icon name={loadingFields ? 'clock' : 'search'} size={16} />
+              {loadingFields ? 'Загрузка...' : 'Загрузить поля из веб-сервиса'}
             </button>
           </div>
           <ConnectionTestResult result={testResult} />

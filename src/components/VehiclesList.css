@@ -409,7 +409,7 @@
 
 /* ---------- Monospace cell (для гаражного номера и подобных кодов) ---------- */
 .veh-cell--mono {
-  font-family: 'JetBrains Mono', 'SF Mono', Consolas, Monaco, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-2);
   font-variant-numeric: tabular-nums;
