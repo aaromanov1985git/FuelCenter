@@ -350,7 +350,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         }
         } else {
           // Для нового шаблона тестируем подключение напрямую
-          const response = await fetch(`${API_URL}/api/v1/templates/test-firebird-connection`, {
+          const response = await authFetch(`${API_URL}/api/v1/templates/test-firebird-connection`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -427,7 +427,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         }
         logger.debug('Запрос колонок (без шаблона):', { url, requestBody })
         
-        const response = await fetch(url, {
+        const response = await authFetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -476,7 +476,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       }
       logger.debug('Запрос колонок из SQL запроса:', { url, requestBody })
       
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1074,7 +1074,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                     try {
                       let response
                       if (template?.id) {
-                        response = await fetch(`${API_URL}/api/v1/templates/${template.id}/api-fields`, {
+                        response = await authFetch(`${API_URL}/api/v1/templates/${template.id}/api-fields`, {
                           method: 'POST'
                         })
                       } else {
@@ -1290,7 +1290,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                   try {
                     let response
                     if (template?.id) {
-                      response = await fetch(`${API_URL}/api/v1/templates/${template.id}/test-api-connection`, {
+                      response = await authFetch(`${API_URL}/api/v1/templates/${template.id}/test-api-connection`, {
                         method: 'POST'
                       })
                     } else {
@@ -1378,7 +1378,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                   try {
                     let response
                     if (template?.id) {
-                      response = await fetch(`${API_URL}/api/v1/templates/${template.id}/api-fields`, {
+                      response = await authFetch(`${API_URL}/api/v1/templates/${template.id}/api-fields`, {
                         method: 'POST'
                       })
                     } else {
