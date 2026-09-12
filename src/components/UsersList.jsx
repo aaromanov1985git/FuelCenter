@@ -310,11 +310,13 @@ const UsersList = () => {
   const tableColumns = [
     { key: 'username', header: 'Имя', sortable: true },
     { key: 'email', header: 'Email', sortable: true },
-    { key: 'role', header: 'Роль', sortable: true },
+    { key: 'role', header: 'Роль', sortable: true, cellClassName: 'users-role-cell' },
     { key: 'organizations', header: 'Организации', sortable: false },
     { key: 'status', header: 'Статус', sortable: true },
     { key: 'last_login', header: 'Последний вход', sortable: true },
-    { key: 'actions', header: 'Действия', sortable: false }
+    // Липкая справа: таблица шире области, а «Действия» — единственный вход в
+    // редактирование пользователя.
+    { key: 'actions', header: 'Действия', sortable: false, sticky: 'right' }
   ]
 
   const tableData = users.map((u) => ({
@@ -330,6 +332,7 @@ const UsersList = () => {
     email: u.email,
     role: (
       <Select
+        className="users-role-select"
         value={u.role}
         onChange={(value) => handleRoleChange(u.id, value)}
         options={[
@@ -470,6 +473,7 @@ const UsersList = () => {
             striped
             hoverable
             compact
+            stickyHeader
           />
         )}
 

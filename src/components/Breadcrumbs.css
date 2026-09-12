@@ -1,9 +1,11 @@
-﻿.breadcrumbs {
-  margin-bottom: var(--spacing-block);
-  padding: var(--spacing-element) var(--spacing-block);
-  background: var(--surface);
-  border-radius: var(--radius-medium);
-  border: 1px solid var(--border-strong);
+﻿/* Крошки — текстовая строка навигации, а не панель.
+   Фон, бордер, радиус и padding 16/24 сняты: получалась карточка, которая на
+   каждой из 15 страниц занимала 63px + 24px отступа = 87px первого экрана и при
+   этом повторяла и подсвеченный пункт меню, и заголовок страницы прямо под
+   собой. Осталась строка 32px (высота ссылки-кнопки) и общий для страницы шаг
+   16px до заголовка. Минус 42px на страницу. */
+.breadcrumbs {
+  margin-bottom: var(--spacing-element);
 }
 
 /* Когда сайдбар скрыт, кнопка меню на left: 20px, нужен отступ для breadcrumbs */
@@ -27,11 +29,12 @@
   gap: var(--spacing-small);
 }
 
+/* Зазор вокруг разделителя задаёт gap строки (8px), своих margin у него нет:
+   вместе они давали 8px до разделителя и 12px после. */
 .breadcrumbs-separator {
   color: var(--text-3);
   font-size: var(--font-size-sm);
   user-select: none;
-  margin: 0 var(--spacing-tiny);
 }
 
 .breadcrumbs-link {
@@ -39,19 +42,20 @@
   border: none;
   padding: var(--spacing-tiny) var(--padding-tiny);
   margin: calc(-1 * var(--spacing-tiny)) calc(-1 * var(--padding-tiny));
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   text-decoration: none;
   border-radius: var(--radius-small);
-  transition: all 0.2s ease;
+  transition: background var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
   display: inline-block;
 }
 
 .breadcrumbs-link:hover {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: underline;
 }
 
@@ -66,13 +70,15 @@
   font-size: var(--font-size-sm);
 }
 
+/* Текущий раздел — не кнопка, поэтому padding ему не нужен. С ним его подпись
+   стояла на 8px правее, чем подписи ссылок (те гасят свой padding
+   отрицательными margin), и зазор после разделителя выходил 16 против 8. */
 .breadcrumbs-current {
   display: inline-flex;
   align-items: center;
   color: var(--text-1);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
-  padding: var(--spacing-tiny) var(--padding-tiny);
 }
 
 /* Значок первого элемента рисуется в JSX через примитив Icon,
@@ -80,13 +86,12 @@
    Зазор между значком и текстом задают сами обёртки (gap ниже). */
 .breadcrumbs-text,
 .breadcrumbs-current {
-  gap: 6px;
+  gap: var(--spacing-small);
 }
 
 /* Мобильная адаптация */
 @media (max-width: 768px) {
   .breadcrumbs {
-    padding: var(--spacing-element);
     overflow-x: auto;
     overflow-y: clip;
     -webkit-overflow-scrolling: touch;

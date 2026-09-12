@@ -562,7 +562,10 @@ const GasStationsList = () => {
       { key: 'coordinates', header: 'Координаты', sortable: false },
       { key: 'status', header: 'Статус', sortable: true },
       { key: 'errors', header: 'Ошибки', sortable: false },
-      { key: 'actions', header: 'Действия', sortable: false }
+      // Липкая справа: таблица шире области (1262px против 742 при 1024), а
+      // «Действия» — единственный вход в редактирование строки, и при
+      // горизонтальной прокрутке он уезжал за правый край.
+      { key: 'actions', header: 'Действия', sortable: false, sticky: 'right' }
     ]
     return allColumns
       .filter(col => {
@@ -862,6 +865,7 @@ const GasStationsList = () => {
             data={tableData}
             emptyMessage="Нет данных для отображения"
             compact
+            stickyHeader
             sortable={true}
             onSort={handleSort}
             defaultSortColumn={sortBy}

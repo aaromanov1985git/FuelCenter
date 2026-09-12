@@ -282,7 +282,9 @@ const FuelTypesList = () => {
       { key: 'status', header: 'Статус' },
       { key: 'errors', header: 'Ошибки' },
       { key: 'transactions_count', header: 'Транзакций' },
-      { key: 'actions', header: 'Действия' }
+      // Липкая справа: при 1024 таблица на 108px шире области, а «Действия» —
+      // единственный вход в редактирование строки.
+      { key: 'actions', header: 'Действия', sticky: 'right' }
     ]
 
     // Фильтруем и сортируем колонки согласно настройкам
@@ -491,6 +493,7 @@ const FuelTypesList = () => {
               data={tableData}
               emptyMessage="Нет данных для отображения"
               compact
+              stickyHeader
             >
                 {total > limit && (
                   <Table.Pagination

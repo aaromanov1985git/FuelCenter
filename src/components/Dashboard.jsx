@@ -400,7 +400,7 @@ const Dashboard = () => {
           <div className="dash-autoload-grid">
             <div className="dash-autoload-metric">
               <div className="t-label">Транзакций</div>
-              <div className="t-value-sm">{autoLoadStats.total_transactions.toLocaleString('ru-RU')}</div>
+              <div className="t-value-sm">{(autoLoadStats.total_transactions || 0).toLocaleString('ru-RU')}</div>
             </div>
             <div className="dash-autoload-metric">
               <div className="t-label">Литров</div>

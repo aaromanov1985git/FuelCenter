@@ -413,6 +413,7 @@ const UploadEventsList = () => {
                 striped
                 hoverable
                 compact
+                stickyHeader
               />
               {total > limit && (
                 <Table.Pagination

@@ -57,7 +57,7 @@ html {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-tiny);
-  padding: 2px 6px;
+  padding: 0 var(--spacing-tiny);
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   color: var(--text-1);
@@ -176,13 +176,25 @@ html {
   }
 }
 
-/* Голое h1 больше не центрирует и не рисует тень: выравнивание — решение
-   страницы, а не типа элемента, а тень под текстом имитировала проработку. */
+/* ============ ШАПКА СТРАНИЦЫ ============
+ * Заголовок и подзаголовок — прямые дети .container, вне любой карточки, и их
+ * вертикальный ритм задан ЗДЕСЬ один раз на все страницы. Раньше каждая
+ * страница расставляла его сама, поэтому верх заголовка стоял на 107 / 111 /
+ * 135 / 139 px (замеры qa/report), а зазор «подзаголовок → контент» был 8px на
+ * транзакциях против 24px по умолчанию.
+ *
+ * Шаг один и тот же на всех уровнях страницы:
+ *   крошки → заголовок        16px  (Breadcrumbs.css)
+ *   заголовок → подзаголовок   4px  (одна типографическая пара)
+ *   подзаголовок → контент    16px  (тот же шаг, что gap внутри .tx-root)
+ *
+ * Голое h1 не центрирует и не рисует тень: выравнивание — решение страницы,
+ * а не типа элемента, а тень под текстом имитировала проработку. */
 h1 {
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
   color: var(--text-1);
-  margin-bottom: var(--spacing-small);
+  margin-bottom: var(--spacing-tiny);
   /* text-align не задаём — по умолчанию left, как в редизайне.
      Login осознанно центрирует свой <h1 class="login-title"> локально
      (см. src/components/Login.css). */
@@ -190,13 +202,15 @@ h1 {
 
 /* Подзаголовок — вторичный тир: он поясняет заголовок, а не спорит с ним.
    Раньше стоял основным цветом, полужирным, по центру и с тенью, из-за чего
-   читался как второй заголовок. Выравнивание согласовано с h1. */
+   читался как второй заголовок. Выравнивание согласовано с h1.
+   Кегль — body из шкалы (14px): прежний 1rem был единственным местом, где
+   16px стоял литералом, и давал лишний тир в счёте кеглей страницы. */
 .subtitle {
   color: var(--text-2);
   font-weight: var(--font-weight-normal);
-  margin-bottom: var(--spacing-block);
-  font-size: 1rem;
-  line-height: 1.5;
+  margin-bottom: var(--spacing-element);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-normal);
 }
 
 /* Здесь стояли .upload-section и .drag-drop-*: постоянно раскрытый прямоугольник
@@ -697,18 +711,23 @@ h1 {
   background: var(--surface-2);
 }
 
+/* Липкая колонка непрозрачна и на строке с ошибкой: --red-soft это alpha .10-.12,
+   через неё просвечивали бы ячейки, уезжающие под неё при прокрутке (B6). */
 .data-table tbody tr.row-with-errors td:first-child {
-  background: var(--red-soft);
+  background: color-mix(in srgb, var(--red) 12%, var(--surface));
 }
 
+/* Регистр обычный: капслок с разрядкой расширял подписи примерно на четверть и
+   ломал заголовки на две строки (B1), а в остальных таблицах проекта
+   (.ui-table, .templates-table, .logs-table) шапка и так в обычном регистре.
+   Правило .tx-root .data-table th ниже задаёт кегль и отступы, но регистр
+   приходил отсюда — здесь его и снимаем. */
 .data-table th {
   padding: var(--padding-small) var(--padding-element);
   text-align: left;
   font-size: 0.75rem;
   font-weight: var(--font-weight-semibold);
   color: var(--text-1);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   border-bottom: 2px solid var(--border-strong);
   user-select: none;
 }
@@ -891,9 +910,11 @@ h1 {
     display: block;
   }
 
+  /* 16px, а не 10: боковой отступ страницы не должен быть меньше 16px,
+     и это тот же шаг, что у вертикального ритма страницы. */
   .main-content {
     margin-left: 0;
-    padding: 10px;
+    padding: var(--spacing-element);
     width: 100%;
   }
 
@@ -1013,7 +1034,7 @@ h1 {
   .btn, .icon-button {
     min-height: 44px;
     min-width: 44px;
-    padding: 10px 14px;
+    padding: 0 var(--padding-small);
     touch-action: manipulation;
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
   }
@@ -1027,7 +1048,7 @@ h1 {
   /* Улучшенные модальные окна на мобильных */
   .modal-content {
     max-height: 90vh;
-    margin: 10px;
+    margin: var(--spacing-small);
     border-radius: var(--radius-large);
   }
 
@@ -1221,11 +1242,13 @@ h1 {
   }
 }
 
+/* Шапка, тело и подвал модального окна — три зоны одного уровня, поэтому
+   внутренний отступ у них один: было 10/14, 10/14 и 8/14. */
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
+  padding: var(--padding-small) var(--padding-element);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -1260,68 +1283,51 @@ h1 {
 }
 
 .modal-body {
-  padding: 10px 14px;
+  padding: var(--padding-small) var(--padding-element);
   overflow-y: auto;
   flex: 1;
 }
 
 .modal-footer {
   display: flex;
-  gap: 6px;
+  gap: var(--spacing-small);
   justify-content: flex-end;
-  padding: 8px 14px;
+  padding: var(--padding-small) var(--padding-element);
   border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
 
-.btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: var(--radius-small);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  transition: all 0.2s;
-  min-width: 100px;
-}
+/* Здесь лежал второй набор правил .btn / .btn-sm / .btn-primary / .btn-secondary,
+   оставшийся с тех пор, когда кнопка жила в App.css. App.css в графе импортов
+   идёт ПОСЛЕ компонентных стилей, поэтому этот набор перебивал
+   src/components/ui/Button/Button.css во всём приложении:
+     · `.btn-primary { color: var(--surface) }` давал измеренные 4.2:1 при пороге
+       4.5 (#11151e на #7c5cff — подпись «Загрузить файл», qa/report);
+     · `.btn { padding: 10px 20px; min-width: 100px }` ломал размерную шкалу
+       компонента (sm 32 / md 36 / lg 40) и сводил на нет `.btn-icon-only`:
+       квадратная иконочная кнопка растягивалась минимальной шириной до 100px.
+   Правила сняты — кнопка целиком приходит из компонента.
 
-.btn-sm {
-  padding: 6px 12px;
-  font-size: var(--font-size-sm);
-  min-width: auto;
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: var(--surface);
-}
-
-.btn-primary:hover {
-  background: var(--accent);
-}
-
-.btn-secondary {
-  background: var(--surface-2);
-  color: var(--text-1);
-  border: 1px solid var(--border);
-}
-
-.btn-secondary:hover {
-  background: var(--surface-2);
-  border-color: var(--border-strong);
+   Осталась одна подпорка: разметка вида class="btn btn-secondary" БЕЗ класса
+   размера (src/components/TemplateEditor/WebConnection.jsx:247,257). У такой
+   кнопки нет ни высоты, ни отступов, потому что их в компоненте несут классы
+   размера. Даём ей габарит размера md. */
+.btn:not(.btn-sm):not(.btn-md):not(.btn-lg) {
+  min-height: 36px;
+  padding: 0 var(--padding-element);
 }
 
 .column-settings-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 3px;
+  gap: var(--spacing-tiny);
 }
 
 .column-settings-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
+  gap: var(--spacing-small);
+  padding: var(--spacing-tiny) var(--spacing-small);
   border-radius: var(--radius-tiny);
   cursor: pointer;
   transition: background 0.15s;
@@ -1375,18 +1381,15 @@ h1 {
   color: var(--text-1);
 }
 
-/* Кегль page-title теперь приходит классом .t-page-title прямо из разметки
+/* Кегль page-title приходит классом .t-page-title прямо из разметки
    (src/App.jsx), а не правилом с :has — раньше роль экрана транзакций не могла
-   править App.jsx и дотягивалась до чужого заголовка селектором. Здесь остались
-   только отступы: заголовок и подзаголовок этой страницы стоят вплотную. */
-.tx-page-title {
-  margin-bottom: 0;
-}
+   править App.jsx и дотягивалась до чужого заголовка селектором.
 
-.tx-page-subtitle {
-  font-size: var(--font-size-body);
-  margin-bottom: var(--spacing-small);
-}
+   Собственных отступов у заголовка и подзаголовка этой страницы больше нет:
+   зазоры 4px и 16px пришли в общий блок шапки страницы (секция «ШАПКА
+   СТРАНИЦЫ» выше), и классы .tx-page-title / .tx-page-subtitle остались в
+   разметке только как опора для тестов и возможных частных правок. Пока они
+   ничего не переопределяют — правила для них намеренно нет. */
 
 /* ---------- Панель таблицы ---------- */
 /* Рамку, скругление и обрезку углов несёт панель, а не прокручиваемая обёртка:
@@ -1425,24 +1428,33 @@ h1 {
 }
 .tx-root .table-wrapper::after { display: none; }
 
+/* Нижняя граница ширины оставлена запасом на случай, когда в настройке колонок
+   включены все 11: сами колонки после укорачивания ярлыков и padding 8px
+   укладываются примерно в 1000px, поэтому при сайдбаре по умолчанию (240px)
+   таблица на 1440 помещается целиком и горизонтальной прокрутки нет. */
 .tx-root .data-table {
-  min-width: 1100px;
+  min-width: 1000px;
 }
 
-/* ---------- Шапка колонок: caption-стиль ---------- */
+/* ---------- Шапка колонок ---------- */
 /* Шапка остаётся на месте, пока прокручивается тело таблицы. Фон и разделитель
    заданы на самой ячейке: при border-collapse: collapse браузер не рисует их у
    прилипшей строки, и сквозь шапку просвечивали бы строки таблицы. */
 .tx-root .data-table thead {
   background: var(--surface-2);
 }
+/* Заголовок колонки — одна строка (B1) и тот же кегль/вес, что у общего
+   компонента .ui-table-header-cell: 12px / 600. Прежние 11.52px были ниже
+   порога D4, а сама ячейка — орган сортировки (tabIndex, Enter/Space).
+   Капслок и разрядка 0.08em сняты: они расширяли подпись примерно на четверть
+   и вместе с длинными ярлыками ломали все 11 заголовков на две строки.
+   Обычный регистр — то же, что у .ui-table и таблиц provider-analysis. */
 .tx-root .data-table th {
-  padding: var(--padding-tiny) var(--padding-small);
-  font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-medium);
+  padding: var(--padding-tiny);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-semibold);
   color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-caption);
+  white-space: nowrap;
   background: var(--surface-2);
   border-bottom: none;
   box-shadow: inset 0 -1px 0 var(--border);
@@ -1486,9 +1498,13 @@ h1 {
 .tx-root .data-table tbody tr {
   transition: background .1s ease;
 }
+/* Ячейка данных — тот же кегль 12px, что и в .ui-table / .dash-table: она
+   кликабельна (двойной клик копирует значение), то есть это орган управления,
+   и 11.52px были ниже порога D4. Боковой отступ сведён к 8px: на 11 колонках
+   прежние 12px забирали 264px — почти четверть ширины таблицы. */
 .tx-root .data-table tbody tr td {
-  padding: var(--padding-tiny) var(--padding-small);
-  font-size: var(--font-size-caption);
+  padding: var(--padding-tiny);
+  font-size: 0.75rem;
   font-weight: var(--font-weight-normal);
   color: var(--text-2);
   border-bottom: 1px solid var(--border);
@@ -1502,8 +1518,12 @@ h1 {
   color: var(--accent);
   font-weight: var(--font-weight-medium);
 }
+/* Липкая колонка ID на строке с ошибкой: подложка должна быть НЕПРОЗРАЧНОЙ,
+   иначе при горизонтальной прокрутке сквозь неё видно уезжающие ячейки
+   (--red-soft это alpha .10-.12). Тот же оттенок собран из токенов сплошным
+   цветом; линию края сохраняем — её задаёт правило td:first-child выше. */
 .tx-root .data-table tbody tr.row-with-errors td:first-child {
-  background: var(--red-soft);
+  background: color-mix(in srgb, var(--red) 12%, var(--surface));
   color: var(--red);
 }
 

@@ -39,6 +39,19 @@ const NUMERIC_HEADERS = new Set([
 // Чистые числа выравниваем по правому краю вместе с их заголовками
 const RIGHT_ALIGNED_HEADERS = new Set(['Кол-во', 'Курс конвертации'])
 
+// Ярлык в шапке — ТОЛЬКО подпись. Ключ колонки не меняется: он же имя поля в
+// данных (row[h]), ключ карты сортировки, ключ видимости в localStorage,
+// подпись в настройке колонок и заголовок в выгрузке CSV/Excel.
+// Полные названия колонок при капслоке не влезали в свои колонки: все 11
+// заголовков ломались на две строки, а последний обрывался на «КОН…».
+// Полное имя остаётся доступным в title ячейки шапки.
+const HEADER_LABELS = {
+  'Закреплена за': 'Транспорт',
+  'Товар / услуга': 'Товар',
+  'Валюта транзакции': 'Валюта',
+  'Курс конвертации': 'Курс',
+}
+
 const OPERATION_TYPE_HEADER = 'Тип'
 
 const TransactionTable = ({
@@ -162,6 +175,7 @@ const TransactionTable = ({
                       onClick={() => isSortable && onSort(field)}
                       style={{ cursor: isSortable ? 'pointer' : 'default' }}
                       data-label={h}
+                      title={HEADER_LABELS[h] ? h : undefined}
                       role={isSortable ? 'columnheader button' : 'columnheader'}
                       aria-sort={isSortable ? (isActive ? (sortConfig.order === 'asc' ? 'ascending' : 'descending') : 'none') : undefined}
                       tabIndex={isSortable ? 0 : undefined}
@@ -173,7 +187,7 @@ const TransactionTable = ({
                       }}
                     >
                       <span className="th-content">
-                        {h}
+                        {HEADER_LABELS[h] || h}
                         {isSortable && (
                           /* В наборе иконок нет chevron-up, поэтому направление
                              «по возрастанию» — тот же chevron, повёрнутый в CSS. */

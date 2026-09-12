@@ -859,17 +859,19 @@ const ProviderAnalysisDashboard = () => {
     setCardsSummaryCurrentPage(1)
   }
   
-  // Компонент для сортируемого заголовка
-  const SortableHeader = ({ field, label, currentSort }) => {
+  // Компонент для сортируемого заголовка.
+  // align: 'right' — для числовых колонок, вместе с tabular-nums в ячейках.
+  const SortableHeader = ({ field, label, currentSort, align = 'left' }) => {
     const isActive = currentSort.field === field
     // Направление показывает поворот шеврона: глифов «вверх/вниз» в наборе Icon нет.
     const isAsc = isActive && currentSort.order === 'asc'
-    
+
     return (
       <th 
         style={{ 
           padding: '12px', 
-          textAlign: 'left', 
+          textAlign: align, 
+          whiteSpace: 'nowrap',
           borderBottom: '2px solid var(--border)',
           cursor: 'pointer',
           userSelect: 'none',
@@ -889,7 +891,12 @@ const ProviderAnalysisDashboard = () => {
           }
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          justifyContent: align === 'right' ? 'flex-end' : 'flex-start'
+        }}>
           <span>{label}</span>
           <span style={{
             display: 'inline-flex',
@@ -1374,21 +1381,25 @@ const ProviderAnalysisDashboard = () => {
                             currentSort={cardsSummarySortConfig}
                           />
                           <SortableHeader 
+                            align="right"
                             field="count" 
                             label="Количество операций" 
                             currentSort={cardsSummarySortConfig}
                           />
                           <SortableHeader 
+                            align="right"
                             field="totalVolume" 
                             label="Общий объём (л)" 
                             currentSort={cardsSummarySortConfig}
                           />
                           <SortableHeader 
+                            align="right"
                             field="totalAmount" 
                             label="Общая сумма (₽)" 
                             currentSort={cardsSummarySortConfig}
                           />
                           <SortableHeader 
+                            align="right"
                             field="averageCheck" 
                             label="Средний чек (₽)" 
                             currentSort={cardsSummarySortConfig}
@@ -1422,10 +1433,10 @@ const ProviderAnalysisDashboard = () => {
                             <td style={{ padding: '12px', fontWeight: selectedCardForDetails === cardData.cardNumber ? '600' : 'normal' }}>
                               {cardData.cardNumber}
                             </td>
-                            <td style={{ padding: '12px' }}>{cardData.count}</td>
-                            <td style={{ padding: '12px' }}>{formatLiters(cardData.totalVolume)}</td>
-                            <td style={{ padding: '12px' }}>{formatCurrency(cardData.totalAmount)}</td>
-                            <td style={{ padding: '12px' }}>{formatCurrency(cardData.count > 0 ? cardData.totalAmount / cardData.count : 0)}</td>
+                            <td className="t-numeric" style={{ padding: '12px', textAlign: 'right' }}>{cardData.count}</td>
+                            <td className="t-numeric" style={{ padding: '12px', textAlign: 'right' }}>{formatLiters(cardData.totalVolume)}</td>
+                            <td className="t-numeric" style={{ padding: '12px', textAlign: 'right' }}>{formatCurrency(cardData.totalAmount)}</td>
+                            <td className="t-numeric" style={{ padding: '12px', textAlign: 'right' }}>{formatCurrency(cardData.count > 0 ? cardData.totalAmount / cardData.count : 0)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1474,7 +1485,7 @@ const ProviderAnalysisDashboard = () => {
                           <tr>
                             <th 
                               onClick={() => handleSort('transaction_date')}
-                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border)' }}
+                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '2px solid var(--border)' }}
                             >
                               Дата и время
                               {sortConfig.field === 'transaction_date' && (
@@ -1489,10 +1500,10 @@ const ProviderAnalysisDashboard = () => {
                                 </span>
                               )}
                             </th>
-                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border)' }}>АЗС</th>
+                            <th style={{ padding: '12px', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '2px solid var(--border)' }}>АЗС</th>
                             <th 
                               onClick={() => handleSort('product')}
-                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border)' }}
+                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', whiteSpace: 'nowrap', borderBottom: '2px solid var(--border)' }}
                             >
                               Тип топлива
                               {sortConfig.field === 'product' && (
@@ -1509,7 +1520,7 @@ const ProviderAnalysisDashboard = () => {
                             </th>
                             <th 
                               onClick={() => handleSort('quantity')}
-                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border)' }}
+                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'right', whiteSpace: 'nowrap', borderBottom: '2px solid var(--border)' }}
                             >
                               Объём (л)
                               {sortConfig.field === 'quantity' && (
@@ -1526,7 +1537,7 @@ const ProviderAnalysisDashboard = () => {
                             </th>
                             <th 
                               onClick={() => handleSort('amount')}
-                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'left', borderBottom: '2px solid var(--border)' }}
+                              style={{ cursor: 'pointer', userSelect: 'none', padding: '12px', textAlign: 'right', whiteSpace: 'nowrap', borderBottom: '2px solid var(--border)' }}
                             >
                               Сумма (₽)
                               {sortConfig.field === 'amount' && (
@@ -1551,8 +1562,8 @@ const ProviderAnalysisDashboard = () => {
                               <td style={{ padding: '12px' }}>{formatDateTime(t.transaction_date)}</td>
                               <td style={{ padding: '12px' }}>{t.gasStationName}</td>
                               <td style={{ padding: '12px' }}>{t.product || '—'}</td>
-                              <td style={{ padding: '12px' }}>{formatLiters(t.quantity)}</td>
-                              <td style={{ padding: '12px' }}>{formatCurrency(t.amount_with_discount || t.amount)}</td>
+                              <td className="t-numeric" style={{ padding: '12px', textAlign: 'right' }}>{formatLiters(t.quantity)}</td>
+                              <td className="t-numeric" style={{ padding: '12px', textAlign: 'right' }}>{formatCurrency(t.amount_with_discount || t.amount)}</td>
                             </tr>
                           ))}
                         </tbody>

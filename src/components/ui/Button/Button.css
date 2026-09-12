@@ -1,3 +1,14 @@
+/* Кнопка дизайн-системы.
+ *
+ * Цвет подписи задаётся токеном роли (--ink-on-accent / --ink-on-bright), а не
+ * словом white: в тёмной теме --green/--amber/--red — светлые тона, и белая
+ * подпись на них давала 1.92 / 1.76 / 2.78:1 при пороге 4.5.
+ *
+ * Тени у кнопок нет ни в покое, ни на наведении: тень в этом проекте — признак
+ * всплывающего слоя (модал, тултип, цель перетаскивания), а кнопка лежит в
+ * плоскости страницы. Состояние наведения несёт сама заливка, поэтому
+ * hover/active различимы без подъёма элемента.
+ */
 .btn {
   position: relative;
   display: inline-flex;
@@ -8,10 +19,20 @@
   border-radius: var(--radius-small);
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Переход по конкретным свойствам, а не all: при `all` вместе с цветом
+     доезжали ширина, высота и transform. */
+  transition: background var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
   overflow: hidden;
   white-space: nowrap;
   font-family: inherit;
+}
+
+/* Видимый фокус — тем же приёмом, что у пунктов сайдбара. */
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Размеры по шкале дизайн-системы:
@@ -44,20 +65,33 @@
 .btn-icon-only.btn-md { width: 36px; }
 .btn-icon-only.btn-lg { width: 40px; }
 
-/* Variants */
+/* Variants.
+   Заливка плоская. Раньше у всех четырёх цветных вариантов стоял
+   linear-gradient на 135deg, у которого ОБА стопа — один и тот же токен:
+   визуально это ровная плашка, но фон считается background-image, из-за чего
+   backgroundColor остаётся прозрачным и любая проверка контраста мерит не тот
+   фон. Заодно ушли жёстко прошитые
+   rgba(79,70,229,…) — это старый индиго, он не совпадал с --accent ни в одной
+   теме.
+   Наведение и нажатие сдвигают заливку ОТ цвета подписи, а не к нему: у
+   primary подпись белая, поэтому заливка темнеет; у success/warning/error
+   подпись тёмная, поэтому заливка светлеет. Сдвиг в обратную сторону выглядел
+   бы так же, но отнимал бы контраст ровно в тот момент, когда курсор уже над
+   кнопкой (посчитано: тёмная подпись на затемнённом --red давала 3.80:1 на
+   наведении и 3.08:1 на нажатии при пороге 4.5). */
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent) 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
 }
 
+/* Наведение ЗАТЕМНЯЕТ заливку, а не осветляет: с белой подписью светлеющая
+   заливка отнимает контраст ровно там, где курсор уже над кнопкой. */
 .btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+  background: color-mix(in srgb, var(--accent-solid) 88%, var(--ink-on-bright));
 }
 
 .btn-primary:active:not(:disabled) {
-  transform: translateY(0);
+  background: color-mix(in srgb, var(--accent-solid) 76%, var(--ink-on-bright));
 }
 
 .btn-secondary {
@@ -67,46 +101,56 @@
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--text-1));
   border-color: var(--border-strong);
 }
 
+.btn-secondary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-2) 78%, var(--text-1));
+}
+
 .btn-success {
-  background: linear-gradient(135deg, var(--green) 0%, var(--green) 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  background: var(--green);
+  color: var(--ink-on-bright);
 }
 
 .btn-success:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  background: color-mix(in srgb, var(--green) 88%, var(--ink-on-accent));
+}
+
+.btn-success:active:not(:disabled) {
+  background: color-mix(in srgb, var(--green) 76%, var(--ink-on-accent));
 }
 
 .btn-error {
-  background: linear-gradient(135deg, var(--red) 0%, var(--red) 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  background: var(--red);
+  color: var(--ink-on-bright);
 }
 
 .btn-error:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  background: color-mix(in srgb, var(--red) 88%, var(--ink-on-accent));
+}
+
+.btn-error:active:not(:disabled) {
+  background: color-mix(in srgb, var(--red) 76%, var(--ink-on-accent));
 }
 
 .btn-warning {
-  background: linear-gradient(135deg, var(--amber) 0%, var(--amber) 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  background: var(--amber);
+  color: var(--ink-on-bright);
 }
 
 .btn-warning:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  background: color-mix(in srgb, var(--amber) 88%, var(--ink-on-accent));
+}
+
+.btn-warning:active:not(:disabled) {
+  background: color-mix(in srgb, var(--amber) 76%, var(--ink-on-accent));
 }
 
 .btn-ghost {
   background: transparent;
-  color: var(--accent);
+  color: var(--accent-text);
   border: none;
 }
 
@@ -114,11 +158,15 @@
   background: var(--accent-soft);
 }
 
-/* States */
+.btn-ghost:active:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* States. `transform: none !important` снят вместе с подъёмом на наведении:
+   отменять больше нечего. */
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none !important;
 }
 
 .btn-full-width {

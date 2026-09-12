@@ -318,13 +318,14 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* Кегль и вес заголовка колонки приходят от общего компонента
+   (.ui-table 12px / .ui-table-header-cell 600): th здесь — орган сортировки,
+   и 10px были ниже порога для интерактивного элемента, мельче собственных
+   данных в той же колонке. Капслок и разрядка сняты: регистр заголовка колонки
+   в проекте один — обычный. */
 .veh-card th {
   padding: 10px 14px;
   text-align: left;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
   color: var(--text-3);
   white-space: nowrap;
 }
