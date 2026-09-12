@@ -52,7 +52,10 @@ const FileUpload = ({
           )}
         </span>
       </label>
-      {columnCount > 0 && (
+      {/* Итог разбора показываем, только если файл действительно разбирали в
+          этом сеансе. У сохранённого шаблона колонки восстановлены из самого
+          сопоставления, и сообщать о разборе было бы неправдой. */}
+      {fileName && columnCount > 0 && (
         <div className="analysis-result">
           <div className="success-badge">
             <svg xmlns="http://www.w3.org/2000/svg" className="icon-small" viewBox="0 0 20 20" fill="currentColor">

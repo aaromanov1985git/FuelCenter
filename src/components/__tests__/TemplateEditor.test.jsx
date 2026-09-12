@@ -474,3 +474,107 @@ describe('TemplateEditor: смена типа подключения', () => {
     expect(after).toEqual(after.map((_, i) => String(i + 1)))
   })
 })
+
+/**
+ * Что редактор говорит о сохранённом сопоставлении. Колонки источника у
+ * сохранённого шаблона восстанавливаются из самого сопоставления, и раньше этот
+ * набор подавался как результат свежего разбора файла.
+ */
+describe('TemplateEditor: сохранённое сопоставление', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAuthFetch.mockResolvedValue({ ok: true, json: async () => ({ items: [] }) })
+  })
+
+  const savedMapping = { date: 'Дата', quantity: 'Литры', fuel: 'Топливо' }
+
+  it('сохранённое сопоставление помечено как сделанное вручную, а не автоматически', async () => {
+    await renderEditor({ connection_type: 'firebird', field_mapping: savedMapping })
+
+    expect(screen.queryAllByText('Авто')).toHaveLength(0)
+    expect(screen.getAllByText('Вручную')).toHaveLength(Object.keys(savedMapping).length)
+  })
+
+  it('у файлового шаблона не сообщается о разборе файла, которого не было', async () => {
+    await renderEditor({ connection_type: 'file', field_mapping: savedMapping })
+
+    expect(screen.queryByText(/Файл проанализирован/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Автоматически сопоставлено полей/)).not.toBeInTheDocument()
+  })
+
+  it('сохранённое сопоставление всё равно видно в таблице', async () => {
+    await renderEditor({ connection_type: 'firebird', field_mapping: savedMapping })
+
+    const selects = document.querySelectorAll('.mapping-table select')
+    const values = Array.from(selects).map(el => el.value).filter(Boolean)
+    expect(values.sort()).toEqual(['Дата', 'Литры', 'Топливо'])
+  })
+})
+
+/**
+ * Положительный путь отметки «Авто»: она ставится по итогам разбора примера
+ * файла — и только по нему.
+ */
+describe('TemplateEditor: разбор примера файла', () => {
+  const ANALYSIS = {
+    columns: ['Дата', 'Литры', 'Топливо'],
+    field_mapping: { date: 'Дата', quantity: 'Литры' },
+    header_row: 2,
+    data_start_row: 3
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAuthFetch.mockImplementation((url) => {
+      if (String(url).includes('/templates/analyze')) {
+        return Promise.resolve({ ok: true, json: async () => ANALYSIS })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ items: [] }) })
+    })
+  })
+
+  const uploadSample = async () => {
+    const input = document.querySelector('input[type="file"]')
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [new File(['x'], 'sample.xlsx')] } })
+    })
+  }
+
+  it('после разбора сообщается о разборе и о числе сопоставленных полей', async () => {
+    await renderEditor({ connection_type: 'file' })
+    await uploadSample()
+
+    expect(screen.getByText(/Файл проанализирован: найдено 3 колонок/)).toBeInTheDocument()
+    expect(screen.getByText(/Автоматически сопоставлено полей: 2 из 7/)).toBeInTheDocument()
+  })
+
+  it('сопоставленные разбором поля помечены «Авто», остальные пусты', async () => {
+    await renderEditor({ connection_type: 'file' })
+    await uploadSample()
+
+    expect(screen.getAllByText('Авто')).toHaveLength(2)
+    expect(screen.queryAllByText('Вручную')).toHaveLength(0)
+  })
+
+  it('правка поля вручную снимает с него отметку «Авто»', async () => {
+    await renderEditor({ connection_type: 'file' })
+    await uploadSample()
+
+    const selects = document.querySelectorAll('.mapping-table select')
+    const mapped = Array.from(selects).find(el => el.value === 'Дата')
+    await act(async () => {
+      fireEvent.change(mapped, { target: { value: 'Топливо' } })
+    })
+
+    expect(screen.getAllByText('Авто')).toHaveLength(1)
+    expect(screen.getAllByText('Вручную')).toHaveLength(1)
+  })
+
+  it('строки заголовков и данных берутся из разбора', async () => {
+    await renderEditor({ connection_type: 'file' })
+    await uploadSample()
+
+    expect(screen.getByLabelText(/Строка заголовков/)).toHaveValue(2)
+    expect(screen.getByLabelText(/Строка начала данных/)).toHaveValue(3)
+  })
+})

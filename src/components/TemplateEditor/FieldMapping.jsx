@@ -138,6 +138,13 @@ const FieldMapping = ({
                         className={selectClass}
                       >
                         <option value="">-- Не выбрано --</option>
+                        {/* Сохранённое сопоставление может ссылаться на колонку,
+                            которой в загруженном списке нет: таблицу Firebird или
+                            поля API ещё не запрашивали. Без своей опции список
+                            показывал бы «Не выбрано» рядом с заполненным полем. */}
+                        {value && !columns.includes(value) && (
+                          <option value={value}>{value}</option>
+                        )}
                         {columns.map((col, idx) => (
                           <option key={idx} value={col}>{col}</option>
                         ))}

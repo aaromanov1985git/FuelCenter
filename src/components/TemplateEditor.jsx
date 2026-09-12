@@ -89,15 +89,19 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   const [apiFields, setApiFields] = useState([]) // Поля из API ответа
   const [saving, setSaving] = useState(false) // Блокирует повторную отправку формы
 
-  // При загрузке существующего шаблона, если есть field_mapping, пытаемся восстановить колонки
+  // У сохранённого шаблона списка колонок источника нет — примера файла нам не
+  // дали, таблицу Firebird и поля API ещё не загружали. Восстанавливаем набор
+  // колонок из самого сопоставления, чтобы в списках было из чего выбирать.
+  //
+  // Отметка «сопоставлено автоматически» при этом НЕ ставится: сохранённое
+  // сопоставление — решение человека, а не догадка системы. Раньше ставилась, и
+  // у сохранённого шаблона каждое поле подписывалось «Авто».
   useEffect(() => {
     if (template && template.field_mapping && Object.keys(parseFieldMapping(template.field_mapping)).length > 0) {
-      // Если есть маппинг, но нет колонок, создаем список из значений маппинга
       const mapping = parseFieldMapping(template.field_mapping)
       const columnsFromMapping = Object.values(mapping).filter(Boolean)
       if (columnsFromMapping.length > 0 && fileColumns.length === 0) {
         setFileColumns(columnsFromMapping)
-        setAutoMappedFields(mapping)
       }
     }
   }, [template])
