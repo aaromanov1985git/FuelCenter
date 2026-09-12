@@ -542,11 +542,15 @@ const GasStationsList = () => {
     const validCount = stats?.valid ?? 0
     const pendingCount = stats?.pending ?? 0
     const invalidCount = stats?.invalid ?? 0
+    // Поле accent убрано: цвет KPI-числа и риски приходил инлайном из JS,
+    // перебивал любые токены по специфичности и делал плитку неуправляемой из
+    // CSS. Цвет числа теперь .gsl-kpi-value (var(--text-1)), риска —
+    // .gsl-kpi-accent (var(--border-strong)); см. GasStationsList.css.
     return [
-      { label: 'Всего АЗС', value: totalCount, accent: 'var(--text-1)' },
-      { label: 'Валидные', value: validCount, accent: 'var(--green)' },
-      { label: 'Требуют проверки', value: pendingCount, accent: 'var(--amber)' },
-      { label: 'С ошибками', value: invalidCount, accent: 'var(--red)' },
+      { label: 'Всего АЗС', value: totalCount },
+      { label: 'Валидные', value: validCount },
+      { label: 'Требуют проверки', value: pendingCount },
+      { label: 'С ошибками', value: invalidCount },
     ]
   }, [stats])
 
@@ -709,10 +713,10 @@ const GasStationsList = () => {
       <div className="gsl-kpi-grid">
         {kpiCards.map((k) => (
           <div key={k.label} className="gsl-kpi-card">
-            <div className="gsl-kpi-accent" style={{ background: k.accent }}/>
+            <div className="gsl-kpi-accent" />
             <div className="gsl-kpi-body">
               <div className="gsl-kpi-label t-label">{k.label}</div>
-              <div className="gsl-kpi-value" style={{ color: k.accent }}>
+              <div className="gsl-kpi-value">
                 {statsLoading ? '—' : (k.value ?? 0).toLocaleString('ru')}
               </div>
             </div>

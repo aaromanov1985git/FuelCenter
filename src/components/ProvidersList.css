@@ -23,7 +23,7 @@
 
 /* Обозначение обязательных полей */
 .required-mark {
-  color: var(--red);
+  color: var(--red-ink);
   font-weight: var(--font-weight-bold);
   margin-left: 2px;
 }
@@ -47,7 +47,7 @@
 .btn-add {
   padding: var(--padding-small) var(--padding-section);
   background: var(--green);
-  color: var(--surface);
+  color: var(--ink-on-bright);
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -126,8 +126,8 @@
 
 .btn-save {
   padding: var(--padding-tiny) var(--padding-element);
-  background: var(--accent);
-  color: var(--surface);
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -137,7 +137,7 @@
 }
 
 .btn-save:hover {
-  background: var(--accent);
+  background: var(--accent-solid);
 }
 
 .btn-cancel {
@@ -222,12 +222,12 @@
 
 .status-active {
   background: var(--green-soft);
-  color: var(--green);
+  color: var(--green-ink);
 }
 
 .status-inactive {
   background: var(--red-soft);
-  color: var(--red);
+  color: var(--red-ink);
 }
 
 .action-buttons {
@@ -239,8 +239,8 @@
 
 .btn-edit {
   padding: var(--spacing-tiny) var(--padding-small);
-  background: var(--accent);
-  color: var(--surface);
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -250,13 +250,13 @@
 }
 
 .btn-edit:hover {
-  background: var(--accent);
+  background: var(--accent-solid);
 }
 
 .btn-delete {
   padding: var(--spacing-tiny) var(--padding-small);
   background: var(--red);
-  color: var(--surface);
+  color: var(--ink-on-bright);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -272,7 +272,7 @@
 .btn-save-small {
   padding: var(--spacing-tiny) var(--padding-small);
   background: var(--green);
-  color: var(--surface);
+  color: var(--ink-on-bright);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -303,7 +303,7 @@
 
 .error-message {
   background: var(--red-soft);
-  color: var(--red);
+  color: var(--red-ink);
   padding: var(--padding-small);
   border-radius: var(--radius-small);
   margin-bottom: var(--spacing-block);
@@ -357,8 +357,8 @@
 
 .btn-templates {
   padding: var(--spacing-tiny) var(--padding-small);
-  background: var(--accent);
-  color: var(--surface);
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -368,7 +368,7 @@
 }
 
 .btn-templates:hover {
-  background: var(--accent);
+  background: var(--accent-solid);
 }
 
 .templates-cell,
@@ -398,7 +398,7 @@
 .btn-add-small {
   padding: var(--spacing-tiny) var(--padding-small);
   background: var(--green);
-  color: var(--surface);
+  color: var(--ink-on-bright);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -456,12 +456,12 @@
 
 .template-status.active {
   background: var(--green-soft);
-  color: var(--green);
+  color: var(--green-ink);
 }
 
 .template-status.inactive {
   background: var(--red-soft);
-  color: var(--red);
+  color: var(--red-ink);
 }
 
 .template-actions {
@@ -471,8 +471,8 @@
 
 .btn-edit-small {
   padding: var(--spacing-tiny) var(--padding-tiny);
-  background: var(--accent);
-  color: var(--surface);
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;
@@ -482,13 +482,13 @@
 }
 
 .btn-edit-small:hover {
-  background: var(--accent);
+  background: var(--accent-solid);
 }
 
 .btn-delete-small {
   padding: var(--spacing-tiny) var(--padding-tiny);
   background: var(--red);
-  color: var(--surface);
+  color: var(--ink-on-bright);
   border: none;
   border-radius: var(--radius-tiny);
   cursor: pointer;

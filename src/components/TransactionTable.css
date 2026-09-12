@@ -39,8 +39,47 @@
   color: var(--text-3);
 }
 
-/* Бейдж типа операции: текст — сплошной цвет токена, бордер тот же цвет 30%,
-   фон — он же 10%. Новых цветовых литералов нет: оттенки берутся color-mix. */
+/* Признак горизонтальной прокрутки В ПОКОЕ (B4). На 1024 за правым краем
+   таблицы транзакций оставалось 297px из 1039 (29%), и единственной подсказкой
+   был обрубок заголовка — он читается как замысел, а не как «есть куда
+   прокрутить». Прежний `.table-wrapper::after` (App.css) не показывал ничего:
+   position: sticky не меняет display, инлайновый бокс с content: '' игнорирует
+   width/height, и на транзакциях он к тому же был погашен display: none.
+
+   Указатель лежит ВНЕ контейнера прокрутки (иначе уезжает вместе с таблицей) и
+   ПОД липкими ячейками по z-index, чтобы не спорить с их фоном. Появляется
+   только пока с этой стороны есть скрытое содержимое — измеряет useEdgeScroll. */
+.tx-table-scroll {
+  position: relative;
+  min-width: 0;
+}
+
+.tx-table-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.tx-table-edge-end {
+  right: 0;
+  background: linear-gradient(to right, transparent, var(--surface));
+}
+
+.tx-table-edge-start {
+  left: 0;
+  background: linear-gradient(to left, transparent, var(--surface));
+}
+
+/* Бейдж типа операции, формула 10/30/100: фон — цвет 10%, бордер — он же 30%,
+   текст — роль 100, то есть --green-ink (не --green: в светлой теме тот давал
+   2.54:1 на --surface при пороге 4.5 и это 200 измерений на одном экране —
+   четвёртая по кратности группа E2 всего прогона; --green-ink даёт 5.48).
+   В тёмной теме значения --green-ink и --green совпадают, там изменений нет.
+   Заливка и бордер по-прежнему считаются от --green: у них порог 3:1.
+   Новых цветовых литералов нет: оттенки берутся color-mix. */
 .tx-op-badge {
   display: inline-flex;
   align-items: center;
@@ -50,7 +89,7 @@
   font-weight: var(--font-weight-medium);
   line-height: 1.5;
   white-space: nowrap;
-  color: var(--green);
+  color: var(--green-ink);
   background: color-mix(in srgb, var(--green) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
 }

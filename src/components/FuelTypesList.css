@@ -37,18 +37,18 @@
   box-shadow: var(--shadow-md);
 }
 
+/* Риска — структура, а не тон. Крайний случай во всём прогоне: правило G5
+   фиксировало здесь цветную полоску на ЧЕТЫРЁХ карточках из четырёх (все 4
+   среза), при том что сами значения не отрендерены — краска существовала
+   отдельно от данных. Вес линии из шкалы бордеров: 1.43:1 в светлой, 1.42:1 в
+   тёмной. */
 .ft-root .ft-kpi-bar {
   width: 4px;
   height: 28px;
   border-radius: 2px;
   flex-shrink: 0;
-  background: var(--text-3);
+  background: var(--border-strong);
 }
-
-.ft-root .ft-kpi-error   .ft-kpi-bar { background: var(--red); }
-.ft-root .ft-kpi-warning .ft-kpi-bar { background: var(--amber); }
-.ft-root .ft-kpi-success .ft-kpi-bar { background: var(--green); }
-.ft-root .ft-kpi-neutral .ft-kpi-bar { background: var(--accent); }
 
 .ft-root .ft-kpi-value {
   font-size: 20px;
@@ -60,9 +60,9 @@
   letter-spacing: -.3px;
 }
 
-.ft-root .ft-kpi-value-error   { color: var(--red); }
-.ft-root .ft-kpi-value-warning { color: var(--amber); }
-.ft-root .ft-kpi-value-success { color: var(--green); }
+/* Сплошной тон на числах 20px снят: .ft-kpi-value выше уже объявляет
+   color: var(--text-1). Правило I2 эти узлы не видело (оно требует текстовый
+   узел, а значения пусты) — но покрашенная пустая ячейка нарушает то же самое. */
 
 /* ---------- Card wrapper ---------- */
 .ft-root .fuel-types-list {
@@ -138,7 +138,8 @@
 }
 
 .ft-root .error-text {
-  color: var(--red);
+  /* текст 12px: 3.76:1 --red -> 5.74:1 --red-ink на --surface */
+  color: var(--red-ink);
   font-size: 12px;
 }
 

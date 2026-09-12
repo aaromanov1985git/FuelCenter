@@ -72,20 +72,18 @@
   transform: translateY(-1px);
 }
 
+/* Риска — структура, а не тон. Это был единственный экран приложения с ПЯТЬЮ
+   насыщенными тонами одновременно (I3 = 5 при пороге 3): пять полосок и пять
+   чисел в accent/green/amber/red/cyan, при том что все пять значений — нули,
+   то есть тон кодировал позицию плитки, а не данные. Вес линии из шкалы
+   бордеров: 1.43:1 в светлой, 1.42:1 в тёмной. */
 .upl-stat__bar {
   width: 4px;
   height: 28px;
   border-radius: 2px;
-  background: var(--text-1);
+  background: var(--border-strong);
   flex: 0 0 4px;
 }
-
-.upl-stat[data-tone="accent"]  .upl-stat__bar { background: var(--accent); }
-.upl-stat[data-tone="green"]   .upl-stat__bar { background: var(--green); }
-.upl-stat[data-tone="amber"]   .upl-stat__bar { background: var(--amber); }
-.upl-stat[data-tone="red"]     .upl-stat__bar { background: var(--red); }
-.upl-stat[data-tone="cyan"]    .upl-stat__bar { background: var(--cyan); }
-.upl-stat[data-tone="neutral"] .upl-stat__bar { background: var(--text-3); }
 
 .upl-stat__body {
   display: flex;
@@ -94,11 +92,9 @@
   min-width: 0;
 }
 
-.upl-stat[data-tone="accent"]  .upl-stat__value { color: var(--accent); }
-.upl-stat[data-tone="green"]   .upl-stat__value { color: var(--green); }
-.upl-stat[data-tone="amber"]   .upl-stat__value { color: var(--amber); }
-.upl-stat[data-tone="red"]     .upl-stat__value { color: var(--red); }
-.upl-stat[data-tone="cyan"]    .upl-stat__value { color: var(--cyan); }
+/* Сплошной тон на числах 18px снят: значение висит на .t-value-sm, которая уже
+   даёт color: var(--text-1). Было cyan 2.43:1 на --surface, стало 17.97:1 в
+   светлой и 15.02:1 в тёмной. */
 
 /* ---------- Filters panel ---------- */
 .upl-filters {
@@ -230,7 +226,7 @@
 .event-message-expand-btn:hover {
   background: var(--accent-soft);
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .event-message-full {

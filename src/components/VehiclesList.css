@@ -40,18 +40,20 @@
   transform: translateY(-1px);
 }
 
+/* Риска — структура, а не тон. Раньше она была залита сплошным --amber/--red
+   (S=84-100%) и дублировала цвет числа рядом: один признак кодировался дважды,
+   причём тон был прибит к позиции плитки, а не к данным (на четырёх из шести
+   страниц с таким шаблоном значения нули, а краска стоит). Вес линии взят из
+   шкалы бордеров: --border-strong даёт 1.43:1 к --surface в светлой и 1.42:1 в
+   тёмной — ровно вес внешней рамки панели. Геометрия не меняется, поэтому
+   выравнивание подписи и значения остаётся прежним. */
 .veh-stat__bar {
   width: 4px;
   height: 28px;
   border-radius: 2px;
-  background: var(--text-1);
+  background: var(--border-strong);
   flex: 0 0 4px;
 }
-
-.veh-stat[data-tone="green"]   .veh-stat__bar { background: var(--green); }
-.veh-stat[data-tone="amber"]   .veh-stat__bar { background: var(--amber); }
-.veh-stat[data-tone="red"]     .veh-stat__bar { background: var(--red); }
-.veh-stat[data-tone="neutral"] .veh-stat__bar { background: var(--text-3); }
 
 .veh-stat__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
@@ -70,9 +72,10 @@
   font-variant-numeric: tabular-nums;
 }
 
-.veh-stat[data-tone="green"]   .veh-stat__value { color: var(--green); }
-.veh-stat[data-tone="amber"]   .veh-stat__value { color: var(--amber); }
-.veh-stat[data-tone="red"]     .veh-stat__value { color: var(--red); }
+/* Сплошной тон на числе 28px снят: это чернила, а не статус. Значение остаётся
+   на color: var(--text-1) выше — 17.97:1 в светлой теме, 15.02:1 в тёмной,
+   вместо amber 2.15:1 и green 2.54:1. Статус уже назван словами в
+   .veh-stat__label. */
 
 /* ---------- Toolbar: search + filter chips ---------- */
 .veh-toolbar {
@@ -342,7 +345,8 @@
 .veh-card tbody tr:last-child td { border-bottom: none; }
 
 .vehicle-error-text {
-  color: var(--red);
+  /* текст в ячейке: 3.76:1 --red -> 5.74:1 --red-ink на --surface */
+  color: var(--red-ink);
   font-weight: 500;
   display: inline-block;
   max-width: 320px;
@@ -373,9 +377,14 @@
   background: currentColor;
 }
 
-.veh-status--green { color: var(--green); }
-.veh-status--amber { color: var(--amber); }
-.veh-status--red   { color: var(--red); }
+/* Текстовая роль тона (100 из формулы 10/30/100): 11px, порог 4.5:1.
+   Самый частый цветной элемент страницы — 42 бейджа «Требует проверки» в
+   столбик; --amber давал там 2.15:1 на --surface и 1.98:1 на --surface-2,
+   --amber-ink даёт 5.63 / 5.20. Точка .veh-status__dot наследует currentColor,
+   то есть тоже приглушается. */
+.veh-status--green { color: var(--green-ink); }
+.veh-status--amber { color: var(--amber-ink); }
+.veh-status--red   { color: var(--red-ink); }
 
 /* ---------- Row action: kebab (⋯) icon button ----------
    Заменяет полноразмерную кнопку «Редактировать». Соответствует ⋯ menu

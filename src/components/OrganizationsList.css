@@ -36,11 +36,15 @@
   border-color: var(--border-strong);
 }
 
+/* Риска — структура, а не тон. Заливка приходила инлайном из
+   OrganizationsList.jsx. Вес линии из шкалы бордеров: 1.43:1 в светлой,
+   1.42:1 в тёмной. */
 .org-root .org-kpi-accent {
   width: 4px;
   height: 28px;
   border-radius: 2px;
   flex-shrink: 0;
+  background: var(--border-strong);
 }
 
 .org-root .org-kpi-body {
@@ -52,6 +56,9 @@
 .org-root .org-kpi-value {
   font-size: 20px;
   font-weight: 700;
+  /* Цвет объявлен здесь впервые: раньше приходил только инлайном из JS
+     (green 2.54:1, accent). --text-1 даёт 17.97:1 / 15.02:1. */
+  color: var(--text-1);
   font-variant-numeric: tabular-nums;
   margin-top: 3px;
   line-height: 1.1;
@@ -129,11 +136,15 @@
   cursor: not-allowed;
 }
 
+/* Роль «сплошная заливка под подписью» — это --accent-solid, а не --accent:
+   белая подпись 13px на #7c5cff давала 4.35:1 при пороге 4.5, на #6a4aee даёт
+   5.49:1 (в светлой теме роли совпадают по значению, там было и осталось 6.08).
+   Литерал #fff заменён на --ink-on-accent. box-shadow с --accent-glow снят:
+   glow под кнопкой в списке — четвёртый тир тени вне шкалы. */
 .org-root .org-btn-primary {
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  color: #fff;
-  box-shadow: 0 6px 18px var(--accent-glow);
+  background: var(--accent-solid);
+  border: 1px solid var(--accent-solid);
+  color: var(--ink-on-accent);
 }
 
 .org-root .org-btn-primary:hover:not(:disabled) {
@@ -245,7 +256,7 @@
 
 .org-root .org-list-item-tile-active {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .org-root .org-list-item-main {
@@ -293,7 +304,7 @@
 
 .org-root .org-chip-green {
   background: var(--green-soft);
-  color: var(--green);
+  color: var(--green-ink);
   border: 1px solid var(--green-soft);
 }
 
@@ -331,7 +342,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--ink-on-accent);
   flex-shrink: 0;
   background: var(--surface-2);
 }
@@ -426,7 +437,7 @@
   font-family: var(--font-mono);
 }
 
-.org-root .org-field-value-green { color: var(--green); }
+.org-root .org-field-value-green { color: var(--green-ink); }
 .org-root .org-field-value-muted { color: var(--text-3); }
 
 /* Pagination */
@@ -578,14 +589,14 @@
 }
 
 .org-form .form-group label .required {
-  color: var(--red);
+  color: var(--red-ink);
   font-weight: 700;
   margin-left: 2px;
 }
 
 .org-form .form-group.has-error label,
 .org-form .form-group.required-empty label {
-  color: var(--red);
+  color: var(--red-ink);
 }
 
 .org-form .form-group.has-error :global(.input-field),
@@ -637,7 +648,7 @@
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: var(--red);
+  color: var(--red-ink);
 }
 
 .org-form .error-icon {
@@ -689,7 +700,7 @@
   border: 1px solid var(--red);
   border-radius: 8px;
   font-size: 12px;
-  color: var(--red);
+  color: var(--red-ink);
   max-height: 160px;
   overflow-y: auto;
 }

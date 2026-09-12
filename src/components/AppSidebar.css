@@ -45,13 +45,19 @@
   min-width: 0;
 }
 
+/* Заливка под подписью — роль --accent-solid, подпись — --ink-on-accent.
+   Было `background: var(--accent); color: var(--sidebar)`: тон подложки в роли
+   чернил давал 4.35:1 при пороге 4.5 для 11.5px/700, и этот знак присутствует на
+   КАЖДОМ тёмном срезе прогона (единственная находка со 100% покрытием темы).
+   После правки 5.49:1 в тёмной и 6.08:1 в светлой (qa/_frame-contrast.mjs).
+   Роли акцента разведены в tokens.css:26-33 ровно под этот случай. */
 .sidebar-logo-mark {
   flex: 0 0 auto;
   width: 32px;
   height: 32px;
   border-radius: var(--radius-medium);
-  background: var(--accent);
-  color: var(--sidebar);
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
   font-size: var(--font-size-caption);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-caption);
@@ -192,15 +198,18 @@
   font-weight: var(--font-weight-medium);
 }
 
-/* Счётчик уведомлений живёт внутри своего пункта, справа. */
+/* Счётчик уведомлений живёт внутри своего пункта, справа.
+   Та же роль-подмена, что была у знака логотипа: заливка --accent под подписью
+   цветом --sidebar давала те же 4.35:1 при пороге 4.5 (кегль 11.5px/600).
+   Переведён на ту же пару --accent-solid / --ink-on-accent — 5.49 / 6.08. */
 .nav-item-count {
   flex: 0 0 auto;
   min-width: 18px;
   height: 18px;
   padding: 0 var(--spacing-tiny);
   border-radius: 9px;
-  background: var(--accent);
-  color: var(--sidebar);
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
   font-size: var(--font-size-caption);
   font-weight: var(--font-weight-semibold);
   line-height: 18px;

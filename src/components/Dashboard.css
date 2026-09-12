@@ -157,10 +157,13 @@
   border: 1px solid transparent;
 }
 
-.dash-chip-green { color: var(--green); background: var(--green-soft); border-color: var(--green-soft); }
-.dash-chip-red   { color: var(--red);   background: var(--red-soft);   border-color: var(--red-soft); }
-.dash-chip-amber { color: var(--amber); background: var(--amber-soft); border-color: var(--amber-soft); }
-.dash-chip-cyan  { color: var(--cyan);  background: var(--cyan-soft);  border-color: var(--cyan-soft); }
+/* Текст чипа 11px — роль 100 формулы 10/30/100, порог 4.5:1. В светлой теме
+   --green давал 2.54:1 на --surface, --cyan 2.43:1; --*-ink даёт 5.48 и 5.72.
+   Заливки --*-soft не тронуты. */
+.dash-chip-green { color: var(--green-ink); background: var(--green-soft); border-color: var(--green-soft); }
+.dash-chip-red   { color: var(--red-ink);   background: var(--red-soft);   border-color: var(--red-soft); }
+.dash-chip-amber { color: var(--amber-ink); background: var(--amber-soft); border-color: var(--amber-soft); }
+.dash-chip-cyan  { color: var(--cyan-ink);  background: var(--cyan-soft);  border-color: var(--cyan-soft); }
 
 /* ============ Auto-load card ============ */
 .dash-autoload-card { padding: 20px; }
@@ -544,7 +547,9 @@
 .dash-sort-icon {
   display: inline-flex;
   align-items: center;
-  color: var(--accent);
+  /* иконка-индикатор: --accent даёт 3.79:1 на --surface-2 в тёмной теме (порог
+     3:1 для графического объекта взят, но с запасом 0.79), --accent-text — 4.92 */
+  color: var(--accent-text);
 }
 
 .dash-sort-icon-asc {
@@ -624,7 +629,7 @@
 
 .dash-error {
   background: var(--red-soft);
-  color: var(--red);
+  color: var(--red-ink);
   padding: 24px;
   border-radius: 12px;
   text-align: center;

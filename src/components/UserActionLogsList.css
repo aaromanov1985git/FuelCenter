@@ -100,7 +100,7 @@
 }
 
 .detail-value.error-message {
-  color: var(--red);
+  color: var(--red-ink);
   background: var(--red-soft);
   border-color: var(--red);
 }

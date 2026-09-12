@@ -37,11 +37,16 @@
   border-color: var(--border-strong);
 }
 
+/* Риска — структура, а не тон. Заливка приходила инлайном из
+   GasStationsList.jsx (var(--green)/var(--amber)/var(--red), а на первой плитке
+   var(--text-1) — то есть риска красилась чернилами). Вес линии из шкалы
+   бордеров: 1.43:1 в светлой, 1.42:1 в тёмной. */
 .gsl-root .gsl-kpi-accent {
   width: 4px;
   height: 28px;
   border-radius: 2px;
   flex-shrink: 0;
+  background: var(--border-strong);
 }
 
 .gsl-root .gsl-kpi-body {
@@ -62,6 +67,10 @@
 .gsl-root .gsl-kpi-value {
   font-size: 20px;
   font-weight: 700;
+  /* Цвет объявлен здесь впервые: раньше он приходил только инлайном из JS
+     (green 2.54:1, amber 2.15:1 на --surface). --text-1 даёт 17.97:1 в светлой
+     и 15.02:1 в тёмной. */
+  color: var(--text-1);
   font-variant-numeric: tabular-nums;
   margin-top: 3px;
   line-height: 1.1;
@@ -242,7 +251,7 @@
 }
 
 .gsl-root .gsl-btn-secondary:hover:not(:disabled) .gsl-btn-icon {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* ---------- Alert ---------- */
@@ -250,7 +259,7 @@
   padding: 12px 14px;
   background: var(--red-soft);
   border: 1px solid var(--red);
-  color: var(--red);
+  color: var(--red-ink);
   border-radius: 8px;
   font-size: 13px;
 }
@@ -463,13 +472,13 @@
 
 .gsl-root .gsl-icon-btn:hover:not(:disabled) {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--accent-soft);
 }
 
 .gsl-root .gsl-icon-btn-danger:hover:not(:disabled) {
   border-color: var(--red);
-  color: var(--red);
+  color: var(--red-ink);
   background: var(--red-soft);
 }
 
@@ -506,7 +515,7 @@
 }
 
 .gsl-root .error-text {
-  color: var(--red);
+  color: var(--red-ink);
   font-size: 12px;
   display: block;
   overflow: clip;
