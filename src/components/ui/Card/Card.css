@@ -23,11 +23,11 @@
 }
 
 .card-padding-md {
-  padding: var(--padding-card);
+  padding: var(--padding-section);
 }
 
 .card-padding-lg {
-  padding: var(--padding-section);
+  padding: var(--padding-card);
 }
 
 /* Hoverable */

@@ -4,6 +4,9 @@ import ConfirmModal from './ConfirmModal'
 import LoadFirebirdModal from './LoadFirebirdModal'
 import LoadApiModal from './LoadApiModal'
 import { Button, Card, Badge, Table, Alert, Skeleton, useToast } from './ui'
+import TemplateRowActions from './TemplateRowActions'
+import EmptyState from './EmptyState'
+import { formatSchedule } from '../utils/templateModel'
 import { logger } from '../utils/logger'
 import { authFetch } from '../utils/api'
 import './TemplatesList.css'
@@ -259,89 +262,60 @@ const TemplatesList = () => {
   }
 
   // Функция для преобразования расписания в читаемый формат
-  const formatSchedule = (schedule) => {
-    if (!schedule || !schedule.trim()) return null
-    
-    const scheduleStr = schedule.trim().toLowerCase()
-    
-    // Простые форматы
-    if (scheduleStr === 'daily' || scheduleStr === 'day') {
-      return 'один раз в сутки'
-    }
-    if (scheduleStr === 'hourly' || scheduleStr === 'hour') {
-      return 'один раз в час'
-    }
-    if (scheduleStr === 'weekly' || scheduleStr === 'week') {
-      return 'один раз в неделю'
-    }
-    
-    // Формат "every N hours/minutes"
-    if (scheduleStr.startsWith('every ')) {
-      const parts = scheduleStr.split(/\s+/)
-      if (parts.length >= 3) {
-        const interval = parts[1]
-        const unit = parts[2]
-        if (unit.includes('hour') || unit.includes('час')) {
-          if (interval === '1') {
-            return 'один раз в час'
-          }
-          return `каждые ${interval} часа`
-        }
-        if (unit.includes('minute') || unit.includes('мин')) {
-          if (interval === '1') {
-            return 'каждую минуту'
-          }
-          return `каждые ${interval} минуты`
-        }
-      }
-    }
-    
-    // Cron-формат (минута час день месяц день_недели)
-    const cronParts = scheduleStr.split(/\s+/)
-    if (cronParts.length === 5) {
-      const [minute, hour, day, month, dayOfWeek] = cronParts
-      
-      // Каждый час: "0 * * * *" или "0 */1 * * *"
-      if (minute === '0' && (hour === '*' || hour === '*/1') && day === '*' && month === '*' && dayOfWeek === '*') {
-        return 'один раз в час'
-      }
-      
-      // Каждый день в определенное время: "0 2 * * *"
-      if (minute !== '*' && hour !== '*' && day === '*' && month === '*' && dayOfWeek === '*') {
-        const h = parseInt(hour)
-        const m = parseInt(minute)
-        const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
-        return `один раз в сутки (${timeStr})`
-      }
-      
-      // Каждые N часов: "0 */6 * * *"
-      if (minute === '0' && hour.startsWith('*/') && day === '*' && month === '*' && dayOfWeek === '*') {
-        const interval = hour.substring(2)
-        if (interval === '1') {
-          return 'один раз в час'
-        }
-        return `каждые ${interval} часа`
-      }
-      
-      // Возвращаем исходное расписание, если не удалось распознать
-      return schedule
-    }
-    
-    return schedule
+  // Источник данных определяет и набор секций редактора, и то, какая загрузка
+  // доступна, — но до сих пор нигде не показывался. Зато показывались header_row
+  // и data_start_row, осмысленные только для файловых шаблонов: на API-шаблоне
+  // они давали «0» и «1».
+  const SOURCE_LABELS = {
+    file: 'Excel',
+    firebird: 'Firebird',
+    api: 'API',
+    web: 'Веб-сервис'
+  }
+
+  const formatLastLoad = (value) => {
+    if (!value) return null
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return null
+    return d.toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   const columns = [
-    { key: 'id', header: 'ID', width: '80px', align: 'center' },
-    { key: 'name', header: 'Название', sortable: true },
-    { key: 'description', header: 'Описание', sortable: false },
-    { key: 'header_row', header: 'Строка заголовков', width: '150px', align: 'center' },
-    { key: 'data_start_row', header: 'Строка начала данных', width: '180px', align: 'center' },
+    {
+      key: 'name',
+      header: 'Название',
+      sortable: true,
+      render: (val, row) => (
+        <div className="template-name-cell">
+          <span className="template-name">{val}</span>
+          <span className="template-name-meta">
+            id {row.id}
+            {row.description && row.description !== '—' ? ` · ${row.description}` : ''}
+          </span>
+        </div>
+      )
+    },
+    {
+      key: 'connection_type',
+      header: 'Источник',
+      width: '130px',
+      render: (val) => (
+        <Badge size="sm" variant="neutral">
+          {SOURCE_LABELS[val] || val || 'Excel'}
+        </Badge>
+      )
+    },
     {
       key: 'is_active',
       header: 'Статус',
-      width: '140px',
+      width: '130px',
       render: (val) => (
-        <Badge size="sm" variant={val ? 'success' : 'neutral'}>
+        <Badge size="sm" variant={val ? 'success' : 'neutral'} dot>
           {val ? 'Активен' : 'Неактивен'}
         </Badge>
       )
@@ -349,63 +323,46 @@ const TemplatesList = () => {
     {
       key: 'auto_load',
       header: 'Автозагрузка',
-      width: '200px',
+      width: '190px',
       render: (_, row) => {
         if (row.auto_load_enabled && row.auto_load_schedule) {
-          const scheduleText = formatSchedule(row.auto_load_schedule)
           return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <Badge size="sm" variant="info" style={{ alignSelf: 'flex-start' }}>
-                Включена
-              </Badge>
-              <span style={{ fontSize: '12px', color: '#666' }}>
-                {scheduleText}
-              </span>
-            </div>
+            <span className="template-schedule">{formatSchedule(row.auto_load_schedule)}</span>
           )
         }
-        return <span style={{ color: '#999' }}>—</span>
+        return <span className="template-muted">Выключена</span>
+      }
+    },
+    {
+      key: 'last_auto_load_date',
+      header: 'Последняя загрузка',
+      width: '160px',
+      render: (val) => {
+        const formatted = formatLastLoad(val)
+        return formatted
+          ? <span className="template-last-load">{formatted}</span>
+          : <span className="template-muted">—</span>
       }
     },
     {
       key: 'actions',
-      header: 'Действия',
-      width: '260px',
+      header: '',
+      width: '96px',
+      align: 'right',
       render: (_, row) => (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {row.connection_type === 'firebird' && (
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => setLoadFirebirdModal({
-                isOpen: true,
-                templateId: row.id,
-                templateName: row.name
-              })}
-            >
-              Загрузить (Firebird)
-            </Button>
-          )}
-          {(row.connection_type === 'api' || row.connection_type === 'web') && (
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => setLoadApiModal({
-                isOpen: true,
-                templateId: row.id,
-                templateName: row.name
-              })}
-            >
-              Загрузить {row.connection_type === 'web' ? '(XML API)' : '(API)'}
-            </Button>
-          )}
-          <Button size="sm" variant="primary" onClick={() => handleEditTemplate(row)}>
-            Редактировать
-          </Button>
-          <Button size="sm" variant="error" onClick={() => handleDeleteTemplate(row.id)}>
-            Удалить
-          </Button>
-        </div>
+        <TemplateRowActions
+          template={row}
+          onEdit={handleEditTemplate}
+          onDelete={handleDeleteTemplate}
+          onLoad={(t) => {
+            const payload = { isOpen: true, templateId: t.id, templateName: t.name }
+            if (t.connection_type === 'firebird') {
+              setLoadFirebirdModal(payload)
+            } else {
+              setLoadApiModal(payload)
+            }
+          }}
+        />
       )
     }
   ]
@@ -417,53 +374,55 @@ const TemplatesList = () => {
 
   return (
     <div className="templates-list">
-      <Card variant="elevated" padding="lg">
-        <Card.Header>
-          <Card.Title>Конструктор шаблонов</Card.Title>
-          <p className="templates-subtitle">
-            Настройте шаблоны для преобразования файлов Excel в формат ЮПМ Газпром. Выберите провайдера и создайте или отредактируйте шаблон.
-          </p>
-        </Card.Header>
+      {/* Заголовок вынесен из Card.Header: тот раскладывает детей в ряд
+          space-between, поэтому заголовок зажимался в min-content и ломался
+          на две строки при свободном месте справа. */}
+      <header className="templates-page-header">
+        <h1 className="templates-page-title">Шаблоны</h1>
+        <p className="templates-subtitle">
+          Правила разбора выгрузок поставщиков в формат ЮПМ Газпром
+        </p>
+      </header>
 
-        <Card.Body>
-          {error && (
-            <Alert variant="error" title="Операция завершена с предупреждениями">
-              {error}
+      {error && (
+        <Alert variant="error" title="Операция завершена с предупреждениями">
+          {error}
+        </Alert>
+      )}
+
+      <div className="templates-layout">
+        <aside className="providers-rail" aria-label="Провайдеры">
+          <div className="providers-rail-title">Провайдеры</div>
+          {providers.length > 0 ? (
+            providers.map((provider) => (
+              <button
+                key={provider.id}
+                type="button"
+                className={`provider-rail-item${selectedProviderId === provider.id ? ' is-selected' : ''}`}
+                aria-pressed={selectedProviderId === provider.id}
+                onClick={() => {
+                  setSelectedProviderId(provider.id)
+                  setShowTemplateEditor(false)
+                  setEditingTemplate(null)
+                }}
+              >
+                <span className="provider-rail-name">{provider.name}</span>
+                {provider.code && <span className="provider-rail-code">{provider.code}</span>}
+              </button>
+            ))
+          ) : (
+            <Alert variant="info">
+              Провайдеры не найдены. Добавьте их в разделе «Провайдеры».
             </Alert>
           )}
+        </aside>
 
-          <div className="providers-list-form">
-            {providers.length > 0 ? (
-              providers.map(provider => (
-                <Button
-                  key={provider.id}
-                  variant={selectedProviderId === provider.id ? 'primary' : 'secondary'}
-                  onClick={() => {
-                    setSelectedProviderId(provider.id)
-                    setShowTemplateEditor(false)
-                    setEditingTemplate(null)
-                  }}
-                  style={{ minWidth: 140 }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <span>{provider.name}</span>
-                    {provider.code && (
-                      <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{provider.code}</span>
-                    )}
-                  </div>
-                </Button>
-              ))
-            ) : (
-              <Alert variant="info">Провайдеры не найдены. Добавьте провайдеров в разделе "Провайдеры".</Alert>
-            )}
-          </div>
-
-          {selectedProviderId && (
-            <div style={{ marginTop: 16, marginBottom: 16, display: 'flex', justifyContent: 'flex-start' }}>
-              <Button variant="primary" onClick={handleAddTemplate}>
-                Создать шаблон
-              </Button>
-            </div>
+        <section className="templates-main">
+          {!selectedProviderId && (
+            <EmptyState
+              title="Выберите провайдера"
+              description="Слева список поставщиков. Выберите одного, чтобы увидеть и настроить его шаблоны."
+            />
           )}
 
           {showTemplateEditor && selectedProviderId && (
@@ -478,42 +437,53 @@ const TemplatesList = () => {
           )}
 
           {!showTemplateEditor && selectedProviderId && (
-            <div className="templates-table-section">
-              {loading && templates.length === 0 ? (
-                <Skeleton variant="rectangular" height={200} />
-              ) : templates.length > 0 ? (
-                <Table
-                  columns={columns}
-                  data={tableData}
-                  striped
-                  hoverable
-                  stickyHeader
-                  compact
-                  defaultSortColumn="name"
-                />
-              ) : (
-                <Alert variant="info">
-                  Шаблоны не найдены для выбранного провайдера. Создайте первый шаблон.
-                </Alert>
-              )}
-            </div>
-          )}
+            <Card variant="elevated" padding="md" className="templates-card">
+              <Card.Header>
+                <Card.Title>Шаблоны · {total}</Card.Title>
+                <Button variant="primary" onClick={handleAddTemplate}>
+                  Создать шаблон
+                </Button>
+              </Card.Header>
 
-          {!selectedProviderId && (
-            <Alert variant="info">Выберите провайдера для просмотра и редактирования шаблонов.</Alert>
-          )}
+              <Card.Body>
+                {loading && templates.length === 0 ? (
+                  <Skeleton variant="rectangular" height={200} />
+                ) : templates.length > 0 ? (
+                  <Table
+                    columns={columns}
+                    data={tableData}
+                    striped
+                    hoverable
+                    stickyHeader
+                    compact
+                    defaultSortColumn="name"
+                  />
+                ) : (
+                  <EmptyState
+                    title="Шаблонов пока нет"
+                    description="Шаблон описывает, как разобрать выгрузку этого поставщика."
+                    action={
+                      <Button variant="primary" onClick={handleAddTemplate}>
+                        Создать шаблон
+                      </Button>
+                    }
+                  />
+                )}
 
-          {selectedProviderId && total > limit && (
-            <Table.Pagination
-              currentPage={currentPage}
-              totalPages={Math.ceil(total / limit)}
-              total={total}
-              pageSize={limit}
-              onPageChange={(page) => setCurrentPage(page)}
-            />
+                {total > limit && (
+                  <Table.Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(total / limit)}
+                    total={total}
+                    pageSize={limit}
+                    onPageChange={(page) => setCurrentPage(page)}
+                  />
+                )}
+              </Card.Body>
+            </Card>
           )}
-        </Card.Body>
-      </Card>
+        </section>
+      </div>
 
       <ConfirmModal
         isOpen={deleteConfirm.isOpen}
@@ -763,7 +733,7 @@ const TemplatesList = () => {
         onCancel={() => setSuccessModal({ isOpen: false, message: '' })}
         confirmText="OK"
         cancelText={null}
-        variant="success"
+        variant="primary"
       />
     </div>
   )

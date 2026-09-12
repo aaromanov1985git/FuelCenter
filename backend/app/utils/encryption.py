@@ -37,16 +37,34 @@ if not CRYPTOGRAPHY_AVAILABLE:
     ) from (_import_error if '_import_error' in globals() else None)
 
 
-def get_encryption_key() -> bytes:
+def get_active_secret() -> str:
     """
-    Получение ключа шифрования из настроек или генерация нового
-    
+    Секрет, от которого производится ключ шифрования в текущей конфигурации
+
+    Приоритет: ENCRYPTION_KEY (env) -> encryption_key (настройки) -> secret_key.
+    ВАЖНО: если ENCRYPTION_KEY не задан, шифрование привязано к SECRET_KEY,
+    поэтому смена SECRET_KEY делает ранее зашифрованные данные нечитаемыми
+    без перешифровки (см. scripts/rotate_secret_key.py).
+
+    Returns:
+        str: Активный секрет
+    """
+    return os.getenv("ENCRYPTION_KEY") or settings.encryption_key or settings.secret_key
+
+
+def derive_key_from_secret(secret_key: str) -> bytes:
+    """
+    Производная ключа Fernet из произвольного секрета
+
+    Выделено отдельно, чтобы перешифровка данных при ротации секрета
+    использовала ровно ту же схему KDF, что и рабочий код.
+
+    Args:
+        secret_key: Секрет (SECRET_KEY или ENCRYPTION_KEY)
+
     Returns:
         bytes: Ключ шифрования Fernet
     """
-    # Получаем секретный ключ из настроек (используем ENCRYPTION_KEY или SECRET_KEY для JWT)
-    secret_key = os.getenv("ENCRYPTION_KEY") or settings.encryption_key or settings.secret_key
-    
     # Генерируем ключ Fernet из секретного ключа
     # Используем PBKDF2 для получения ключа фиксированной длины из произвольной строки
     # ВАЖНО: Используем уникальную соль на основе секретного ключа для безопасности
@@ -67,6 +85,31 @@ def get_encryption_key() -> bytes:
     
     key = base64.urlsafe_b64encode(kdf.derive(secret_key.encode()))
     return key
+
+
+def get_encryption_key() -> bytes:
+    """
+    Получение ключа шифрования для текущей конфигурации
+
+    Returns:
+        bytes: Ключ шифрования Fernet
+    """
+    return derive_key_from_secret(get_active_secret())
+
+
+def build_fernet(secret_key: str) -> Fernet:
+    """
+    Экземпляр Fernet для заданного секрета (в обход кэша get_fernet)
+
+    Нужен при ротации секрета, когда одновременно требуются старый и новый ключ.
+
+    Args:
+        secret_key: Секрет, от которого производится ключ
+
+    Returns:
+        Fernet: Экземпляр Fernet
+    """
+    return Fernet(derive_key_from_secret(secret_key))
 
 
 # Инициализация Fernet с ключом

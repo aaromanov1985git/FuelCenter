@@ -70,7 +70,7 @@ const Table = ({
 
   // Обработка клика по заголовку для сортировки
   const handleHeaderClick = (column) => {
-    if (!sortable || !column.sortable) return;
+    if (!sortable || column.sortable !== true) return;
 
     const newSortOrder = sortColumn === column.key && sortOrder === 'asc' ? 'desc' : 'asc';
 
@@ -104,14 +104,14 @@ const Table = ({
 
   // Иконка сортировки
   const getSortIcon = (column) => {
-    if (!sortable || column.sortable === false) return null;
+    if (!sortable || column.sortable !== true) return null;
 
     if (sortColumn !== column.key) {
-      return <span className="table-sort-icon">⇅</span>;
+      return <span className="ui-table-sort-icon">⇅</span>;
     }
 
     return (
-      <span className="table-sort-icon active">
+      <span className="ui-table-sort-icon active">
         {sortOrder === 'asc' ? '↑' : '↓'}
       </span>
     );
@@ -175,7 +175,7 @@ const Table = ({
                 ].filter(Boolean).join(' ')}
                 onClick={() => handleHeaderClick(column)}
                 style={{ width: column.width }}
-                role={sortable && column.sortable !== false ? 'columnheader button' : 'columnheader'}
+                role={sortable && column.sortable === true ? 'columnheader button' : 'columnheader'}
                 aria-sort={
                   sortColumn === column.key
                     ? sortOrder === 'asc'
@@ -183,7 +183,14 @@ const Table = ({
                       : 'descending'
                     : 'none'
                 }
-                tabIndex={sortable && column.sortable !== false ? 0 : undefined}
+                tabIndex={sortable && column.sortable === true ? 0 : undefined}
+                onKeyDown={(e) => {
+                  if (!sortable || column.sortable !== true) return;
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleHeaderClick(column);
+                  }
+                }}
               >
                 <div className="ui-table-header-content">
                   {column.header || column.label}

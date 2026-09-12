@@ -1,0 +1,121 @@
+# ═══════════════════════════════════════════════════════════════
+#  GSM Converter — PRODUCTION стек (самодостаточный, НЕ override)
+# ═══════════════════════════════════════════════════════════════
+#  Отличия от dev docker-compose.yml:
+#    - frontend: собранная статика за nginx (без Vite hot-reload)
+#    - backend:  образ без bind-mount исходников, uvicorn без --reload
+#    - нет монтирования ./src, ./backend/app и т.п. → деплой иммутабельный
+#
+#  Запуск (через переменную COMPOSE_FILE, чтобы скрипты восстановления
+#  тоже использовали этот файл):
+#    export COMPOSE_FILE=docker-compose.prod.yml
+#    docker compose up -d --build
+#  Либо явно:
+#    docker compose -f docker-compose.prod.yml up -d --build
+#
+#  Предварительно: docker network create gsm_network  (шаг 02_setup)
+# ───────────────────────────────────────────────────────────────
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: gsm_db
+    stop_grace_period: 10s
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gsm_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gsm_password}
+      POSTGRES_DB: ${POSTGRES_DB:-gsm_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gsm_user} -d ${POSTGRES_DB:-gsm_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+      - gsm_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: gsm_redis
+    stop_grace_period: 10s
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+      - gsm_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gsm_backend
+    stop_grace_period: 15s
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://gsm_user:gsm_password@db:5432/gsm_db}
+      # В prod фронт и /api — один origin за nginx, поэтому CORS почти не задействуется.
+      # Адрес сервера задаётся через ALLOWED_ORIGINS в .env (дефолт прошивать нельзя).
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3002}
+      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-52428800}
+      ENABLE_RATE_LIMIT: ${ENABLE_RATE_LIMIT:-true}
+      RATE_LIMIT_DEFAULT: ${RATE_LIMIT_DEFAULT:-500/minute}
+      RATE_LIMIT_STRICT: ${RATE_LIMIT_STRICT:-50/minute}
+      # SECRET_KEY / ADMIN_PASSWORD / ENVIRONMENT / COOKIE_SECURE — только из backend/.env
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Только персистентные данные. Исходники НЕ монтируются (иммутабельный образ).
+      - gsm_backups:/app/backups
+    # CMD из Dockerfile (uvicorn без --reload)
+    networks:
+      - default
+      - gsm_network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend.prod
+      args:
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
+    container_name: gsm_frontend
+    stop_grace_period: 10s
+    restart: unless-stopped
+    # FRONTEND_PORT=80 → чистый URL http://$GSM_HOST без порта ; по умолчанию 3002
+    ports:
+      - "${FRONTEND_PORT:-3002}:80"
+    depends_on:
+      - backend
+    networks:
+      - default
+      - gsm_network
+
+networks:
+  gsm_network:
+    name: gsm_network
+    external: true
+
+volumes:
+  postgres_data:
+  redis_data:
+  gsm_backups:
