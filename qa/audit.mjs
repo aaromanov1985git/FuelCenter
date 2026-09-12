@@ -144,20 +144,40 @@ const MEASURE = () => {
   }
   const nodes = Array.from(document.querySelectorAll('body *')).filter(visible)
 
-  const lum = (c) => {
-    const m = c.match(/[\d.]+/g)
+  const rgb = (c) => {
+    const m = (c || '').match(/[\d.]+/g)
     if (!m) return null
     const [r, g, b, a] = m.map(Number)
     if (a !== undefined && a < 0.95) return null
-    const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4) }
-    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+    return { r, g, b }
+  }
+  const lum = (c) => {
+    const v = rgb(c)
+    if (!v) return null
+    const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4) }
+    return 0.2126 * f(v.r) + 0.7152 * f(v.g) + 0.0722 * f(v.b)
+  }
+  /** HSL: насыщенность и светлота в процентах, оттенок в градусах. */
+  const hsl = (c) => {
+    const v = rgb(c)
+    if (!v) return null
+    const r = v.r / 255, g = v.g / 255, b = v.b / 255
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn
+    const l = (mx + mn) / 2
+    const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1))
+    let h = 0
+    if (d !== 0) {
+      if (mx === r) h = 60 * (((g - b) / d) % 6)
+      else if (mx === g) h = 60 * ((b - r) / d + 2)
+      else h = 60 * ((r - g) / d + 4)
+    }
+    return { h: Math.round((h + 360) % 360), s: Math.round(s * 100), l: Math.round(l * 100) }
   }
   const effBg = (el) => {
     let n = el
     while (n && n !== document.documentElement) {
       const bg = getComputedStyle(n).backgroundColor
-      const l = lum(bg)
-      if (l !== null) return bg
+      if (lum(bg) !== null) return bg
       n = n.parentElement
     }
     return getComputedStyle(document.body).backgroundColor
@@ -179,27 +199,44 @@ const MEASURE = () => {
   const F = {}
   const add = (code, item) => { (F[code] = F[code] || []).push(item) }
 
-  // ── A. отступы и ритм ────────────────────────────────────────────────
+  // ── A1. отступы вне шкалы, СВЁРНУТЫЕ по (селектор, свойство, значение) ──
+  const off = new Map()
   for (const el of nodes) {
     const cs = getComputedStyle(el)
     for (const prop of ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'marginTop', 'marginBottom', 'rowGap', 'columnGap']) {
       const v = px(cs[prop])
-      if (v > 0 && !SCALE.has(v)) add('A1', { sel: short(el), prop, value: v })
+      if (v > 0 && !SCALE.has(v)) {
+        const k = `${short(el)}|${prop}|${v}`
+        off.set(k, (off.get(k) || 0) + 1)
+      }
     }
   }
+  for (const [k, n] of off) {
+    const [sel, prop, value] = k.split('|')
+    add('A1', { sel, prop, value: Number(value), nodes: n })
+  }
+
+  // ── A2. ритм: сравниваем зазоры между РЯДАМИ, допуск 2px ────────────────
   for (const el of nodes) {
     const kids = Array.from(el.children).filter(visible)
     if (kids.length < 3) continue
-    const cs = getComputedStyle(el)
-    if (cs.display !== 'flex' && cs.display !== 'block' && cs.display !== 'grid') continue
-    const gaps = []
-    for (let i = 1; i < kids.length; i++) {
-      const a = kids[i - 1].getBoundingClientRect(), b = kids[i].getBoundingClientRect()
-      if (b.top >= a.bottom - 1) gaps.push(Math.round(b.top - a.bottom))
+    const boxes = kids.map((k) => ({ el: k, r: k.getBoundingClientRect() })).sort((a, b) => a.r.top - b.r.top)
+    const rows = []
+    for (const b of boxes) {
+      const row = rows[rows.length - 1]
+      if (row && Math.abs(b.r.top - row.top) < 4) { row.bottom = Math.max(row.bottom, b.r.bottom); row.n++ }
+      else rows.push({ top: b.r.top, bottom: b.r.bottom, n: 1 })
     }
-    const uniq = [...new Set(gaps)]
-    if (gaps.length >= 2 && uniq.length > 1) add('A2', { sel: short(el), gaps: uniq.slice(0, 6) })
+    if (rows.length < 3) continue
+    const gaps = []
+    for (let i = 1; i < rows.length; i++) gaps.push(Math.round(rows[i].top - rows[i - 1].bottom))
+    // допуск 2px: субпиксельное округление нарушением не считаем
+    const uniq = []
+    for (const g of gaps) if (!uniq.some((u) => Math.abs(u - g) <= 2)) uniq.push(g)
+    if (uniq.length > 1) add('A2', { sel: short(el), rows: rows.length, gaps: uniq.slice(0, 6) })
   }
+
+  // ── A3. двойной отступ по краю ──────────────────────────────────────────
   for (const el of nodes) {
     const cs = getComputedStyle(el)
     if (px(cs.paddingTop) === 0 && px(cs.paddingBottom) === 0) continue
@@ -209,21 +246,28 @@ const MEASURE = () => {
     const mb = px(getComputedStyle(kids[kids.length - 1]).marginBottom)
     if (mt > 0 || mb > 0) add('A3', { sel: short(el), firstChildMarginTop: mt, lastChildMarginBottom: mb })
   }
-  for (const tr of document.querySelectorAll('tbody tr')) {
-    if (!visible(tr)) continue
-    const h = Math.round(tr.getBoundingClientRect().height)
-    const td = tr.querySelector('td')
+
+  // ── A4. плотность строки: МЕДИАНА по первым 20 строкам ──────────────────
+  for (const table of document.querySelectorAll('table')) {
+    if (!visible(table)) continue
+    const trs = Array.from(table.querySelectorAll('tbody tr')).filter(visible).slice(0, 20)
+    if (trs.length < 3) continue
+    const hs = trs.map((tr) => Math.round(tr.getBoundingClientRect().height)).sort((a, b) => a - b)
+    const med = hs[Math.floor(hs.length / 2)]
+    const td = trs[0].querySelector('td')
     const fs = td ? px(getComputedStyle(td).fontSize) : null
-    if (h && (h < 32 || h > 44)) add('A4', { sel: short(tr.closest('table')), rowHeight: h, cellFontSize: fs })
-    break
-  }
-  const main = document.querySelector('.container, .main-content, main')
-  if (main) {
-    const r = main.getBoundingClientRect()
-    add('A5', { sel: short(main), left: Math.round(r.left), right: Math.round(window.innerWidth - r.right) })
+    if (med < 32 || med > 44) add('A4', { table: short(table), medianRowHeight: med, rows: hs.length, cellFontSize: fs, min: hs[0], max: hs[hs.length - 1] })
   }
 
-  // ── B. колонки и таблицы ─────────────────────────────────────────────
+  // ── A5. боковой отступ страницы: мерим padding самого контейнера ─────────
+  const main = document.querySelector('main.main-content, .main-content, main')
+  if (main) {
+    const cs = getComputedStyle(main)
+    const l = px(cs.paddingLeft), r = px(cs.paddingRight)
+    if (l < 16 || r < 16 || l !== r) add('A5', { sel: short(main), paddingLeft: l, paddingRight: r })
+  }
+
+  // ── B. колонки и таблицы ────────────────────────────────────────────────
   for (const table of document.querySelectorAll('table')) {
     if (!visible(table)) continue
     const tsel = short(table)
@@ -234,11 +278,21 @@ const MEASURE = () => {
       const h = th.getBoundingClientRect().height - px(cs.paddingTop) - px(cs.paddingBottom)
       if (lh && h > lh * 1.6) add('B1', { table: tsel, th: (th.textContent || '').trim().slice(0, 28), inner: Math.round(h), lineHeight: lh })
     }
+    // B2 через Range: ширина самого текста против внутренней ширины ячейки
     const cells = Array.from(table.querySelectorAll('th, td')).filter(visible)
     for (const c of cells) {
-      if (c.scrollWidth > c.clientWidth + 1) {
-        const cs = getComputedStyle(c)
-        add('B2', { table: tsel, cell: (c.textContent || '').trim().slice(0, 28), scrollWidth: c.scrollWidth, clientWidth: c.clientWidth, textOverflow: cs.textOverflow, title: !!c.title })
+      const txt = (c.textContent || '').trim()
+      if (!txt) continue
+      let w = 0
+      try {
+        const rg = document.createRange()
+        rg.selectNodeContents(c)
+        w = rg.getBoundingClientRect().width
+      } catch { continue }
+      const cs = getComputedStyle(c)
+      const inner = c.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight)
+      if (inner > 0 && w > inner + 1) {
+        add('B2', { table: tsel, cell: txt.slice(0, 28), textWidth: Math.round(w), innerWidth: Math.round(inner), textOverflow: cs.textOverflow, overflow: cs.overflow, title: !!c.title })
       }
     }
     const heads = Array.from(table.querySelectorAll('thead th'))
@@ -246,11 +300,12 @@ const MEASURE = () => {
     if (firstRow) {
       Array.from(firstRow.children).forEach((td, i) => {
         const txt = (td.textContent || '').trim()
-        const numeric = /^[\d\s.,-]+$/.test(txt) && /\d/.test(txt)
+        const head = (heads[i]?.textContent || '').trim()
+        const looksId = /^(id|№|номер)/i.test(head)
+        const numeric = /^[\d\s.,-]+$/.test(txt) && /\d/.test(txt) && txt.replace(/\D/g, '').length > 0
         const cs = getComputedStyle(td)
-        const hs = heads[i] ? getComputedStyle(heads[i]).textAlign : null
         if (numeric && (cs.textAlign !== 'right' || !cs.fontVariantNumeric.includes('tabular')))
-          add('B3', { table: tsel, col: (heads[i]?.textContent || '').trim().slice(0, 24), align: cs.textAlign, headAlign: hs, tabular: cs.fontVariantNumeric, sample: txt.slice(0, 14) })
+          add('B3', { table: tsel, col: head.slice(0, 24), looksLikeIdentifier: looksId, align: cs.textAlign, tabular: cs.fontVariantNumeric, sample: txt.slice(0, 14) })
       })
     }
     const wrap = table.parentElement
@@ -267,7 +322,7 @@ const MEASURE = () => {
     }
   }
 
-  // ── C. поверхности ───────────────────────────────────────────────────
+  // ── C. поверхности ──────────────────────────────────────────────────────
   for (const el of nodes) {
     if (!isPanel(el)) continue
     const inner = Array.from(el.querySelectorAll('*')).filter((n) => visible(n) && isPanel(n))
@@ -276,7 +331,7 @@ const MEASURE = () => {
   for (const el of nodes) {
     const cs = getComputedStyle(el)
     if (cs.boxShadow && cs.boxShadow !== 'none' && !inOverlay(el) && !interactive(el))
-      add('C2', { sel: short(el), shadow: cs.boxShadow.slice(0, 48) })
+      add('C2', { sel: short(el), shadow: cs.boxShadow.slice(0, 48), inset: cs.boxShadow.includes('inset') })
   }
   for (const h1 of document.querySelectorAll('h1')) {
     if (!visible(h1)) continue
@@ -285,26 +340,23 @@ const MEASURE = () => {
     if (hit) add('C3', { h1: (h1.textContent || '').trim().slice(0, 30), panel: hit })
   }
 
-  // ── D. типографика ───────────────────────────────────────────────────
-  const golos = document.fonts.check('14px "Golos Text"')
-  const plex = document.fonts.check('14px "IBM Plex Mono"')
+  // ── D. типографика ──────────────────────────────────────────────────────
   const sizes = new Set()
   for (const el of nodes) {
     if (!el.textContent || !el.textContent.trim()) continue
     const cs = getComputedStyle(el)
     sizes.add(px(cs.fontSize))
     const fam = cs.fontFamily.toLowerCase()
-    if (fam.includes('mono') || fam.includes('plex')) {
-      const inTable = el.closest('td, th')
-      if (!inTable) add('D2', { sel: short(el), family: cs.fontFamily.slice(0, 40), text: el.textContent.trim().slice(0, 24) })
-    }
+    if ((fam.includes('mono') || fam.includes('plex')) && !el.closest('td, th'))
+      add('D2', { sel: short(el), family: cs.fontFamily.slice(0, 40), text: el.textContent.trim().slice(0, 24) })
     if (interactive(el) && px(cs.fontSize) > 0 && px(cs.fontSize) < 12)
       add('D4', { sel: short(el), fontSize: px(cs.fontSize) })
   }
-  add('D1', { golosLoaded: golos, plexLoaded: plex, bodyFamily: getComputedStyle(document.body).fontFamily.slice(0, 60) })
-  add('D3', { distinctFontSizes: [...sizes].sort((a, b) => a - b) })
+  add('D1', { golosLoaded: document.fonts.check('14px "Golos Text"'), plexLoaded: document.fonts.check('14px "IBM Plex Mono"'), bodyFamily: getComputedStyle(document.body).fontFamily.slice(0, 60) })
+  const sz = [...sizes].sort((a, b) => a - b)
+  if (sz.length > 6) add('D3', { distinctFontSizes: sz })
 
-  // ── E. цвет и контраст ───────────────────────────────────────────────
+  // ── E. контраст ─────────────────────────────────────────────────────────
   for (const el of nodes) {
     const own = Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim().length > 1)
     if (!own) continue
@@ -320,47 +372,110 @@ const MEASURE = () => {
       add('E2', { sel: short(el), ratio, need, fontSize: size, color: cs.color, bg, text: (el.textContent || '').trim().slice(0, 24) })
   }
 
-  // ── F. состояния и интерактив ────────────────────────────────────────
+  // ── F. интерактив ───────────────────────────────────────────────────────
   for (const el of nodes) {
     if (!interactive(el)) continue
     const r = el.getBoundingClientRect()
     if (r.width < 32 || r.height < 32)
       add('F2', { sel: short(el), w: Math.round(r.width), h: Math.round(r.height), text: (el.textContent || '').trim().slice(0, 20) })
-    const cs = getComputedStyle(el)
-    if (cs.outlineStyle === 'none' && px(cs.outlineWidth) === 0) add('F1', { sel: short(el), note: 'outline снят, проверить :focus-visible' })
   }
 
-  // ── G. признаки безличного оформления ────────────────────────────────
+  // ── G. признаки безличного оформления ───────────────────────────────────
   for (const el of nodes) {
     const cs = getComputedStyle(el)
     const bi = cs.backgroundImage
     if (bi && bi.includes('gradient')) {
       const stops = bi.match(/rgba?\([^)]*\)/g) || []
       const uniq = [...new Set(stops)]
-      if (stops.length >= 2 && uniq.length === 1) add('G2', { sel: short(el), gradient: bi.slice(0, 60), stops: uniq })
+      if (stops.length >= 2 && uniq.length === 1) add('G2', { sel: short(el), gradient: bi.slice(0, 60) })
     }
     const four = px(cs.borderTopWidth) > 0 && px(cs.borderRadius) > 0 && lum(cs.backgroundColor) !== null && cs.boxShadow !== 'none'
     if (four && !inOverlay(el)) add('G4', { sel: short(el) })
     if (/^h[1-6]$/i.test(el.tagName) && cs.textAlign === 'center') add('G7', { sel: short(el), align: 'center' })
     if (cs.textShadow && cs.textShadow !== 'none') add('G7', { sel: short(el), textShadow: cs.textShadow.slice(0, 40) })
-    if (!interactive(el) && !inOverlay(el)) {
-      if (cs.transitionDuration && cs.transitionDuration !== '0s' && cs.transitionProperty !== 'none')
-        add('G10', { sel: short(el), transition: `${cs.transitionProperty.slice(0, 24)} ${cs.transitionDuration}` })
-    }
+    if (!interactive(el) && !inOverlay(el) && cs.transitionDuration !== '0s' && cs.transitionProperty !== 'none' && cs.transitionProperty !== 'all')
+      add('G10', { sel: short(el), transition: `${cs.transitionProperty.slice(0, 24)} ${cs.transitionDuration}` })
   }
   const upper = nodes.filter((el) => getComputedStyle(el).textTransform === 'uppercase' && el.textContent && el.textContent.trim())
-  add('G8', { uppercaseNodes: upper.length, totalTextNodes: nodes.filter((n) => n.textContent && n.textContent.trim()).length, samples: upper.slice(0, 6).map((n) => (n.textContent || '').trim().slice(0, 18)) })
+  const textNodes = nodes.filter((n) => n.textContent && n.textContent.trim())
+  if (upper.length > textNodes.length * 0.12)
+    add('G8', { uppercaseNodes: upper.length, textNodes: textNodes.length, sharePercent: Math.round((upper.length / textNodes.length) * 100), samples: upper.slice(0, 6).map((n) => (n.textContent || '').trim().slice(0, 18)) })
 
-  // ── H. сценарные ─────────────────────────────────────────────────────
-  const firstRow = document.querySelector('tbody tr')
-  if (firstRow) {
-    const t = Math.round(firstRow.getBoundingClientRect().top)
-    add('H2', { firstRowTop: t, viewportHeight: window.innerHeight, visibleWithoutScroll: t < window.innerHeight })
+  // ── G5. акцентная полоска на КАЖДОЙ карточке группы ─────────────────────
+  for (const el of nodes) {
+    const kids = Array.from(el.children).filter(visible)
+    if (kids.length < 3) continue
+    const barred = kids.filter((k) => {
+      const cs = getComputedStyle(k)
+      if (px(cs.borderLeftWidth) >= 3) { const c = hsl(cs.borderLeftColor); if (c && c.s > 25) return true }
+      // полоска отдельным узлом: узкий высокий первый ребёнок с насыщенной заливкой
+      const first = Array.from(k.children).filter(visible)[0]
+      if (first) {
+        const fr = first.getBoundingClientRect(), fcs = getComputedStyle(first)
+        const c = hsl(fcs.backgroundColor)
+        if (fr.width <= 8 && fr.height >= 12 && c && c.s > 25) return true
+      }
+      return false
+    })
+    if (barred.length === kids.length)
+      add('G5', { group: short(el), cards: kids.length, sample: barred.slice(0, 3).map(short) })
   }
-  const dataEl = document.querySelector('table, .list, .cards-grid')
-  if (dataEl) {
-    const t = Math.max(0, Math.round(dataEl.getBoundingClientRect().top))
-    add('H1', { chromeHeightAboveData: t, viewportHeight: window.innerHeight, sharePercent: Math.round((t / window.innerHeight) * 100) })
+
+  // ── I. громкость цвета (жалоба «очень яркие цвета») ─────────────────────
+  // Насыщенным считаем цвет с S > 45% и L в середине (25–70%): такой заметен
+  // как «краска», а не как чернила или подложка.
+  const loudFill = []
+  const loudText = []
+  const hues = new Set()
+  const vw = window.innerWidth, vh = window.innerHeight
+  let loudArea = 0
+  for (const el of nodes) {
+    const cs = getComputedStyle(el)
+    const r = el.getBoundingClientRect()
+    if (r.bottom < 0 || r.top > vh) continue // считаем только первый экран
+    const bgc = hsl(cs.backgroundColor)
+    if (bgc && bgc.s > 45 && bgc.l > 25 && bgc.l < 70) {
+      const area = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) * Math.min(r.width, vw)
+      loudArea += area
+      hues.add(Math.round(bgc.h / 30) * 30)
+      loudFill.push({ sel: short(el), color: cs.backgroundColor, s: bgc.s, l: bgc.l, area: Math.round(area) })
+    }
+    const own = Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim().length > 0)
+    if (own) {
+      const tc = hsl(cs.color)
+      const size = px(cs.fontSize)
+      if (tc && tc.s > 45 && tc.l > 25 && tc.l < 70) {
+        hues.add(Math.round(tc.h / 30) * 30)
+        if (size >= 18) loudText.push({ sel: short(el), color: cs.color, s: tc.s, fontSize: size, text: (el.textContent || '').trim().slice(0, 20) })
+      }
+    }
+  }
+  loudFill.sort((a, b) => b.area - a.area)
+  const sharePercent = Math.round((loudArea / (vw * vh)) * 1000) / 10
+  // I1: доля первого экрана, залитая насыщенным цветом. Порог 2%.
+  if (sharePercent > 2) add('I1', { sharePercent, threshold: 2, topFills: loudFill.slice(0, 8) })
+  // I2: сплошной насыщенный цвет на крупном тексте (≥18px) — там положен приглушённый тон
+  for (const t of loudText.slice(0, 12)) add('I2', t)
+  // I3: сколько насыщенных оттенков видно на одном экране. Порог 3.
+  if (hues.size > 3) add('I3', { distinctHues: [...hues].sort((a, b) => a - b), count: hues.size, threshold: 3 })
+
+  // ── H. сценарные: цель — САМЫЙ КРУПНЫЙ блок данных, а не первый в DOM ───
+  const candidates = Array.from(document.querySelectorAll('table, .list, .cards-grid, [role="table"]')).filter(visible)
+  let target = null, best = 0
+  for (const c of candidates) {
+    const r = c.getBoundingClientRect()
+    const area = r.width * r.height
+    if (area > best) { best = area; target = c }
+  }
+  if (target) {
+    const t = Math.max(0, Math.round(target.getBoundingClientRect().top))
+    const share = Math.round((t / vh) * 100)
+    add('H1', { target: short(target), chromeHeightAboveData: t, viewportHeight: vh, sharePercent: share, violates: share >= 40 })
+    const firstRow = target.querySelector('tbody tr, li, .card')
+    if (firstRow) {
+      const rt = Math.round(firstRow.getBoundingClientRect().top)
+      add('H2', { firstRowTop: rt, viewportHeight: vh, visibleWithoutScroll: rt < vh, violates: rt >= vh })
+    }
   }
 
   return { findings: F, counts: Object.fromEntries(Object.entries(F).map(([k, v]) => [k, v.length])) }
