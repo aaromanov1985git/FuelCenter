@@ -7,7 +7,7 @@
  * сверяется именно отрисованный DOM с этой моделью.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, fireEvent } from '@testing-library/react'
 import TemplateEditor from '../TemplateEditor'
 import { visibleStepIds } from '../../utils/templateModel'
 
@@ -110,5 +110,59 @@ describe('TemplateEditor: нумерация шагов на экране', () =
     expect(screen.getByText(/Настройки подключения к Firebird/)).toBeInTheDocument()
     expect(screen.getByText(/Источник данных в Firebird/)).toBeInTheDocument()
     expect(screen.getByText(/Настройки автоматической загрузки/)).toBeInTheDocument()
+  })
+})
+
+/**
+ * Имя таблицы и SQL-запрос — взаимоисключающие источники данных, запрос имеет
+ * приоритет. Имя таблицы велось в двух состояниях сразу (formData.source_table и
+ * отдельное selectedTable), а ввод запроса очищал только первое: список таблиц
+ * продолжал показывать прежнюю таблицу, а кнопка «Загрузить колонки» оставалась
+ * доступной и грузила колонки покинутой таблицы.
+ */
+describe('TemplateEditor: источник данных Firebird', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAuthFetch.mockResolvedValue({ ok: true, json: async () => ({ items: [] }) })
+  })
+
+  const tableInput = () => screen.getByPlaceholderText(/введите имя таблицы вручную/i)
+  const loadColumnsButton = () => screen.getByTitle('Загрузить колонки выбранной таблицы')
+  const queryInput = () => screen.getByPlaceholderText(/^SELECT/)
+
+  it('имя таблицы из шаблона показано, кнопка колонок доступна', async () => {
+    await renderEditor({ connection_type: 'firebird', source_table: 'rgAmountRests' })
+
+    expect(tableInput()).toHaveValue('rgAmountRests')
+    expect(loadColumnsButton()).toBeEnabled()
+  })
+
+  it('ввод SQL-запроса очищает имя таблицы и запирает кнопку колонок', async () => {
+    await renderEditor({ connection_type: 'firebird', source_table: 'rgAmountRests' })
+
+    await act(async () => {
+      fireEvent.change(queryInput(), { target: { value: 'SELECT 1 FROM "dcCards"' } })
+    })
+
+    expect(tableInput()).toHaveValue('')
+    expect(loadColumnsButton()).toBeDisabled()
+  })
+
+  it('без имени таблицы кнопка колонок заперта', async () => {
+    await renderEditor({ connection_type: 'firebird' })
+
+    expect(tableInput()).toHaveValue('')
+    expect(loadColumnsButton()).toBeDisabled()
+  })
+
+  it('ввод имени таблицы вручную отпирает кнопку колонок', async () => {
+    await renderEditor({ connection_type: 'firebird' })
+
+    await act(async () => {
+      fireEvent.change(tableInput(), { target: { value: 'dcCards' } })
+    })
+
+    expect(tableInput()).toHaveValue('dcCards')
+    expect(loadColumnsButton()).toBeEnabled()
   })
 })

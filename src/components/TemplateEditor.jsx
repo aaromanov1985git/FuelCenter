@@ -122,7 +122,6 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
   const [loadingColumns, setLoadingColumns] = useState(false)
   const [availableTables, setAvailableTables] = useState([])
   const [selectedTableColumns, setSelectedTableColumns] = useState([])
-  const [selectedTable, setSelectedTable] = useState(template?.source_table || '')
   const [fileColumns, setFileColumns] = useState([])
   const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState('')
@@ -342,8 +341,8 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
           setConnectionTestResult(result)
           
           // Если выбрана таблица, загружаем её колонки
-          if (formData.source_table || selectedTable) {
-            await loadTableColumns(formData.source_table || selectedTable)
+          if (formData.source_table) {
+            await loadTableColumns(formData.source_table)
           }
         } else {
           setError(result.message || 'Не удалось получить список таблиц')
@@ -371,8 +370,8 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
             setConnectionTestResult(result)
             
             // Если выбрана таблица, загружаем её колонки
-            if (formData.source_table || selectedTable) {
-              await loadTableColumns(formData.source_table || selectedTable)
+            if (formData.source_table) {
+              await loadTableColumns(formData.source_table)
             }
           } else {
             setError(result.message || 'Не удалось получить список таблиц')
@@ -946,10 +945,9 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', gap: '10px', width: '100%', flex: '1 1 auto' }}>
                     <select
-                      value={selectedTable}
+                      value={formData.source_table || ''}
                       onChange={(e) => {
                         const tableName = e.target.value
-                        setSelectedTable(tableName)
                         setFormData({ ...formData, source_table: tableName, source_query: '' })
                         // Очищаем колонки при смене таблицы
                         setSelectedTableColumns([])
@@ -967,7 +965,6 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                       value={formData.source_table || ''}
                       onChange={(e) => {
                         const tableName = e.target.value
-                        setSelectedTable(tableName)
                         setFormData({ ...formData, source_table: tableName, source_query: '' })
                         // Очищаем колонки при изменении имени таблицы
                         setSelectedTableColumns([])
@@ -990,14 +987,14 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                     type="button"
                     className="btn-load-columns"
                     onClick={async () => {
-                      const tableName = formData.source_table || selectedTable
+                      const tableName = formData.source_table
                       if (!tableName) {
                         setError('Сначала выберите или введите имя таблицы')
                         return
                       }
                       await loadTableColumns(tableName)
                     }}
-                    disabled={(!formData.source_table && !selectedTable) || loadingColumns}
+                    disabled={!formData.source_table || loadingColumns}
                     title="Загрузить колонки выбранной таблицы"
                   >
                     {loadingColumns ? '⏳ Загрузка...' : '🔍 Загрузить колонки'}
@@ -1017,7 +1014,7 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
                   <svg xmlns="http://www.w3.org/2000/svg" className="icon-small" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
-                  Найдено колонок в таблице "{selectedTable}": {selectedTableColumns.length}
+                  Найдено колонок в таблице "{formData.source_table}": {selectedTableColumns.length}
                 </div>
                 <div className="columns-list">
                   {selectedTableColumns.map((col, idx) => (
