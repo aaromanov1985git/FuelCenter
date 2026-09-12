@@ -234,3 +234,58 @@ export const buildConnectionSettings = (connectionType, connectionSettings) => {
   }
   return null
 }
+
+/**
+ * Порядок секций редактора на экране и условие показа каждой.
+ *
+ * Единственный источник правды о том, какие шаги видит пользователь при
+ * данном типе подключения. Номера шагов не хранятся: они выводятся из этого
+ * списка, поэтому у любого типа получается сквозная нумерация 1..N без
+ * пропусков и дублей.
+ *
+ * Три блока настроек подключения (api, web, firebird) взаимоисключающие —
+ * одновременно рендерится ровно один, поэтому у них общий id и общий номер.
+ */
+const STEP_ORDER = [
+  { id: 'file-upload', visible: ({ type }) => type === 'file' },
+  { id: 'connection-type', visible: () => true },
+  { id: 'connection-settings', visible: ({ type }) => type === 'api' || type === 'web' || type === 'firebird' },
+  { id: 'firebird-source', visible: ({ type }) => type === 'firebird' },
+  { id: 'basic-info', visible: () => true },
+  { id: 'file-parsing', visible: ({ type, hasFileColumns }) => type === 'file' && hasFileColumns },
+  { id: 'ppr-key', visible: () => true },
+  {
+    id: 'field-mapping',
+    visible: ({ type, hasFileColumns }) =>
+      (type === 'file' && hasFileColumns) || type === 'firebird' || type === 'api' || type === 'web'
+  },
+  { id: 'activation', visible: () => true },
+  { id: 'auto-load', visible: ({ type }) => type === 'firebird' || type === 'api' || type === 'web' }
+]
+
+export const STEP_IDS = STEP_ORDER.map(step => step.id)
+
+/**
+ * Список id видимых шагов в порядке появления на экране.
+ *
+ * @param {object} state
+ * @param {string} state.connectionType - тип подключения шаблона
+ * @param {boolean} state.hasFileColumns - разобран ли пример файла
+ * @returns {string[]} id видимых шагов в порядке рендера
+ */
+export const visibleStepIds = ({ connectionType, hasFileColumns }) =>
+  STEP_ORDER
+    .filter(step => step.visible({ type: connectionType, hasFileColumns: Boolean(hasFileColumns) }))
+    .map(step => step.id)
+
+/**
+ * Номера видимых шагов для показа на экране.
+ *
+ * Скрытые шаги в результат не попадают, поэтому обращение к ним даёт
+ * undefined — у скрытой секции номера и не должно быть.
+ *
+ * @param {object} state - то же, что у visibleStepIds
+ * @returns {Object<string, number>} id шага -> его номер, начиная с 1
+ */
+export const stepNumbers = (state) =>
+  Object.fromEntries(visibleStepIds(state).map((id, index) => [id, index + 1]))

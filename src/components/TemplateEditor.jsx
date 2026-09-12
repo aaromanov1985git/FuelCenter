@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import IconButton from './IconButton'
-import { SYSTEM_FIELDS, formatSchedule, parseConnectionSettings, buildConnectionSettings } from '../utils/templateModel'
+import { SYSTEM_FIELDS, formatSchedule, parseConnectionSettings, buildConnectionSettings, stepNumbers } from '../utils/templateModel'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
 import './TemplateEditor.css'
@@ -608,6 +608,17 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
     }
   }
 
+  // Номера шагов считаются по фактически видимым секциям, а не пишутся в
+  // разметке: набор секций зависит от типа подключения и от того, разобран ли
+  // пример файла.
+  const step = useMemo(
+    () => stepNumbers({
+      connectionType: formData.connection_type,
+      hasFileColumns: fileColumns.length > 0
+    }),
+    [formData.connection_type, fileColumns.length]
+  )
+
   return (
     <div className="template-editor">
       <div className="template-editor-header">
@@ -617,11 +628,11 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       {error && <div className="error-message">{error}</div>}
 
       <div className="template-form">
-        {/* ШАГ 1: Выбор файла для анализа (только для типа file) */}
+        {/* Выбор файла для анализа (только для типа file) */}
         {formData.connection_type === 'file' && (
           <div className="form-section file-upload-section">
           <h4 className="section-title">
-            <span className="step-number">1</span>
+            <span className="step-number">{step['file-upload']}</span>
             Выбор файла для анализа
           </h4>
           <p className="section-description">
@@ -680,10 +691,10 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         </div>
         )}
 
-        {/* ШАГ 1: Тип подключения */}
+        {/* Тип подключения */}
         <div className="form-section">
           <h4 className="section-title">
-            <span className="step-number">2</span>
+            <span className="step-number">{step['connection-type']}</span>
             Тип подключения
           </h4>
           <p className="section-description">
@@ -757,11 +768,11 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
           </div>
         </div>
 
-        {/* ШАГ 2: Настройки подключения к API */}
+        {/* Настройки подключения к API */}
         {formData.connection_type === 'api' && (
           <div className="form-section">
             <h4 className="section-title">
-              <span className="step-number">2</span>
+              <span className="step-number">{step['connection-settings']}</span>
               Настройки подключения к API
             </h4>
             <p className="section-description">
@@ -1136,11 +1147,11 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
           </div>
         )}
 
-        {/* ШАГ 2: Настройки подключения к веб-сервису */}
+        {/* Настройки подключения к веб-сервису */}
         {formData.connection_type === 'web' && (
           <div className="form-section">
             <h4 className="section-title">
-              <span className="step-number">2</span>
+              <span className="step-number">{step['connection-settings']}</span>
               Настройки подключения к веб-сервису
             </h4>
             <p className="section-description">
@@ -1415,11 +1426,11 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
           </div>
         )}
 
-        {/* ШАГ 2: Настройки подключения к Firebird */}
+        {/* Настройки подключения к Firebird */}
         {formData.connection_type === 'firebird' && (
           <div className="form-section">
             <h4 className="section-title">
-              <span className="step-number">2</span>
+              <span className="step-number">{step['connection-settings']}</span>
               Настройки подключения к Firebird
             </h4>
             <p className="section-description">
@@ -1547,11 +1558,11 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
           </div>
         )}
 
-        {/* ШАГ 3: Источник данных для Firebird */}
+        {/* Источник данных для Firebird */}
         {formData.connection_type === 'firebird' && (
           <div className="form-section">
             <h4 className="section-title">
-              <span className="step-number">3</span>
+              <span className="step-number">{step['firebird-source']}</span>
               Источник данных в Firebird
             </h4>
             <p className="section-description">
@@ -1703,10 +1714,10 @@ ORDER BY rg."Date" DESC`}
           </div>
         )}
 
-        {/* ШАГ 4: Основная информация о шаблоне */}
+        {/* Основная информация о шаблоне */}
         <div className="form-section">
           <h4 className="section-title">
-            <span className="step-number">4</span>
+            <span className="step-number">{step['basic-info']}</span>
             Основная информация
           </h4>
           <div className="form-row form-row-basic-info">
@@ -1737,11 +1748,11 @@ ORDER BY rg."Date" DESC`}
           </div>
         </div>
 
-        {/* ШАГ 5: Параметры парсинга файла (только для типа file) */}
+        {/* Параметры парсинга файла (только для типа file) */}
         {formData.connection_type === 'file' && fileColumns.length > 0 && (
           <div className="form-section">
             <h4 className="section-title">
-              <span className="step-number">5</span>
+              <span className="step-number">{step['file-parsing']}</span>
               Параметры парсинга файла
             </h4>
             <p className="section-description">
@@ -1778,10 +1789,10 @@ ORDER BY rg."Date" DESC`}
           </div>
         )}
 
-        {/* ШАГ 6.5: Настройки PPR API ключа */}
+        {/* Настройки PPR API ключа */}
         <div className="form-section">
           <h4 className="section-title">
-            <span className="step-number">6.5</span>
+            <span className="step-number">{step['ppr-key']}</span>
             Настройки PPR API ключа
           </h4>
           <p className="section-description">
@@ -1912,11 +1923,11 @@ ORDER BY rg."Date" DESC`}
           </div>
         </div>
 
-        {/* ШАГ 7: Сопоставление полей */}
+        {/* Сопоставление полей */}
         {((formData.connection_type === 'file' && fileColumns.length > 0) || formData.connection_type === 'firebird' || formData.connection_type === 'api' || formData.connection_type === 'web') && (
           <div className="form-section mapping-section">
             <h4 className="section-title">
-              <span className="step-number">7</span>
+              <span className="step-number">{step['field-mapping']}</span>
               Сопоставление полей
             </h4>
             <p className="section-description">
@@ -2230,8 +2241,12 @@ ORDER BY rg."Date" DESC`}
           </div>
         )}
 
-        {/* ШАГ 6: Активация шаблона */}
+        {/* Активация шаблона */}
         <div className="form-section">
+          <h4 className="section-title">
+            <span className="step-number">{step['activation']}</span>
+            Активация шаблона
+          </h4>
           <div className="form-group checkbox-group">
             <label className="checkbox-label">
               <input
@@ -2245,10 +2260,13 @@ ORDER BY rg."Date" DESC`}
           </div>
         </div>
 
-        {/* ШАГ 7: Настройки автоматической загрузки (только для Firebird, API и Web) */}
+        {/* Настройки автоматической загрузки (только для Firebird, API и Web) */}
         {(formData.connection_type === 'firebird' || formData.connection_type === 'api' || formData.connection_type === 'web') && (
           <div className="form-section">
-            <h3 className="section-title">Настройки автоматической загрузки</h3>
+            <h4 className="section-title">
+              <span className="step-number">{step['auto-load']}</span>
+              Настройки автоматической загрузки
+            </h4>
             <div className="form-group checkbox-group">
               <label className="checkbox-label">
                 <input

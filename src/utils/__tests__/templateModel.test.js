@@ -5,7 +5,10 @@ import {
   extractPprKey,
   parseConnectionSettings,
   buildConnectionSettings,
-  PPR_KEY_ALIASES
+  PPR_KEY_ALIASES,
+  STEP_IDS,
+  visibleStepIds,
+  stepNumbers
 } from '../templateModel'
 
 /**
@@ -266,5 +269,63 @@ describe('инвариант: разбор и обратная сборка не
     expect(built.host).toBe('db.example.local')
     expect(built.database).toBe('/data/base.fdb')
     expect(built.user).toBe('SYSDBA')
+  })
+})
+
+/**
+ * Нумерация шагов. До этого этапа номера были вписаны в разметку и врали при
+ * каждом типе подключения: file видел 1, 2, 4, 5, 6.5, 7, остальные начинались
+ * с 2 и имели две секции под номером 2. Здесь закреплено главное свойство —
+ * что бы ни показывалось, номера идут 1..N без пропусков, дублей и дробей.
+ */
+describe('нумерация шагов редактора', () => {
+  const states = [
+    ['file без разобранного файла', { connectionType: 'file', hasFileColumns: false }],
+    ['file с разобранным файлом', { connectionType: 'file', hasFileColumns: true }],
+    ['firebird', { connectionType: 'firebird', hasFileColumns: false }],
+    ['api', { connectionType: 'api', hasFileColumns: false }],
+    ['web', { connectionType: 'web', hasFileColumns: false }]
+  ]
+
+  it.each(states)('%s: номера идут 1..N без пропусков и дублей', (_name, state) => {
+    const numbers = Object.values(stepNumbers(state))
+    const visible = visibleStepIds(state)
+
+    expect(numbers).toEqual(Array.from({ length: visible.length }, (_, i) => i + 1))
+  })
+
+  it.each(states)('%s: порядок шагов не расходится с порядком в реестре', (_name, state) => {
+    const visible = visibleStepIds(state)
+    const positions = visible.map(id => STEP_IDS.indexOf(id))
+
+    expect(positions).toEqual([...positions].sort((a, b) => a - b))
+    expect(positions).not.toContain(-1)
+  })
+
+  it('у скрытого шага номера нет', () => {
+    const fileState = { connectionType: 'file', hasFileColumns: true }
+
+    // Настройки подключения и автозагрузка файловому шаблону не показываются.
+    expect(stepNumbers(fileState)['connection-settings']).toBeUndefined()
+    expect(stepNumbers(fileState)['auto-load']).toBeUndefined()
+  })
+
+  it('первым шагом у file идёт выбор файла, у остальных — тип подключения', () => {
+    expect(visibleStepIds({ connectionType: 'file', hasFileColumns: false })[0]).toBe('file-upload')
+    expect(visibleStepIds({ connectionType: 'firebird', hasFileColumns: false })[0]).toBe('connection-type')
+    expect(visibleStepIds({ connectionType: 'api', hasFileColumns: false })[0]).toBe('connection-type')
+    expect(visibleStepIds({ connectionType: 'web', hasFileColumns: false })[0]).toBe('connection-type')
+  })
+
+  it('сопоставление полей у file появляется только после разбора примера', () => {
+    expect(visibleStepIds({ connectionType: 'file', hasFileColumns: false })).not.toContain('field-mapping')
+    expect(visibleStepIds({ connectionType: 'file', hasFileColumns: true })).toContain('field-mapping')
+  })
+
+  it('разбор примера файла не влияет на нефайловые типы', () => {
+    for (const type of ['firebird', 'api', 'web']) {
+      expect(visibleStepIds({ connectionType: type, hasFileColumns: false }))
+        .toEqual(visibleStepIds({ connectionType: type, hasFileColumns: true }))
+    }
   })
 })
