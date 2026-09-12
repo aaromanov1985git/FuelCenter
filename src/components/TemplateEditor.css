@@ -521,6 +521,14 @@
   gap: var(--spacing-small);
 }
 
+/* Ряд кнопок проверки подключения: на узком экране переносится */
+.connection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-small);
+}
+
 .btn-test-connection {
   padding: var(--padding-small) var(--padding-section);
   background: var(--color-primary);
