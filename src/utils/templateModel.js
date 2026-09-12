@@ -138,9 +138,9 @@ const defaultsFor = (connectionType, withPprKey) => {
 /**
  * Разобрать connection_settings шаблона в состояние формы.
  *
- * ВНИМАНИЕ: поведение сохранено в точности, включая мутацию переданного объекта,
- * когда settings уже объект. Это известная острая грань — чинить её следует
- * отдельно и под тестами, а не заодно с переносом.
+ * Возвращает новый объект и переданный не меняет. Раньше, когда settings уже был
+ * объектом, функция работала по ссылке и дописывала в него восстановленные из
+ * алиасов ключи — то есть правила объект шаблона, лежащий в состоянии списка.
  *
  * @param {string|object|null} settings - connection_settings из шаблона
  * @param {string} connectionType - тип подключения
@@ -174,6 +174,10 @@ export const parseConnectionSettings = (settings, connectionType) => {
       // включая file — проваливалось к дефолтам firebird. Поведение сохранено.
       return defaultsFor(connectionType === 'web' ? 'web' : 'firebird', true)
     }
+  } else if (settings && typeof settings === 'object') {
+    // Копия: дальше в parsed дописываются ключи, восстановленные из алиасов, а
+    // объект шаблона принадлежит вызывающей стороне.
+    parsed = { ...settings }
   } else {
     parsed = settings
   }

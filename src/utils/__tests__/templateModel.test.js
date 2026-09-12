@@ -375,3 +375,60 @@ describe('настройки при смене типа подключения',
     expect(settingsForConnectionType('file', {}).api_key).toBe('')
   })
 })
+
+/**
+ * Объектный путь parseConnectionSettings. Именно он и работает в жизни: схема
+ * ответа ProviderTemplateResponse отдаёт connection_settings уже словарём (и
+ * расшифровывает пароли), так что редактор передаёт сюда объект, а не строку.
+ * Все прежние тесты передавали строку, поэтому этот путь оставался непокрытым.
+ */
+describe('parseConnectionSettings — на входе объект', () => {
+  it('не трогает переданный объект', () => {
+    const settings = clone(FIXTURES.webNoPpr)
+    const before = clone(settings)
+
+    parseConnectionSettings(settings, 'web')
+
+    expect(settings).toEqual(before)
+  })
+
+  it('не трогает переданный объект и для файла', () => {
+    const settings = clone(FIXTURES.file)
+    const before = clone(settings)
+
+    parseConnectionSettings(settings, 'file')
+
+    expect(settings).toEqual(before)
+  })
+
+  it('возвращает не тот же объект, что передали', () => {
+    const settings = clone(FIXTURES.firebird)
+
+    expect(parseConnectionSettings(settings, 'firebird')).not.toBe(settings)
+  })
+
+  it('даёт тот же результат, что и разбор той же формы из строки', () => {
+    for (const [type, fixture] of [
+      ['web', FIXTURES.webNoPpr],
+      ['api', FIXTURES.apiRncard],
+      ['api', FIXTURES.apiGpn],
+      ['firebird', FIXTURES.firebird],
+      ['file', FIXTURES.file]
+    ]) {
+      const fromObject = parseConnectionSettings(clone(fixture), type)
+      const fromString = parseConnectionSettings(JSON.stringify(fixture), type)
+      expect(fromObject).toEqual(fromString)
+    }
+  })
+
+  it('повторный разбор одной и той же формы даёт одно и то же', () => {
+    // Пока объект мутировался, второй разбор шёл по другой ветке: ключ уже был
+    // восстановлен из алиаса, и условия его восстановления больше не срабатывали.
+    const settings = clone(FIXTURES.webNoPpr)
+
+    const first = parseConnectionSettings(settings, 'web')
+    const second = parseConnectionSettings(settings, 'web')
+
+    expect(second).toEqual(first)
+  })
+})
