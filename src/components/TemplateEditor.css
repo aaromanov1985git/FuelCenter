@@ -59,8 +59,10 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  background: var(--accent);
-  color: #fff;
+  /* Заливка — var(--accent-solid), а не var(--accent): белая подпись на
+     #7c5cff даёт 4.35:1 в тёмной теме при пороге 4.5, на #6a4aee — 5.49. */
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
   border-radius: 50%;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -112,7 +114,9 @@
   background: var(--surface);
   border: 2px dashed var(--accent);
   border-radius: var(--radius-medium);
-  color: var(--accent);
+  /* Текст акцентом — роль --accent-text: var(--accent) как текст даёт
+     4.20:1 на --surface в тёмной теме, var(--accent-text) — 5.45. */
+  color: var(--accent-text);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-normal);
   transition: all 0.2s;
@@ -153,7 +157,7 @@
   gap: var(--spacing-small);
   padding: var(--padding-tiny) var(--padding-small);
   background: var(--green-soft);
-  color: var(--green);
+  color: var(--green-ink);
   border-radius: var(--radius-small);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-normal);
@@ -168,7 +172,7 @@
   margin-top: var(--padding-tiny);
   padding: var(--spacing-tiny) var(--padding-small);
   background: var(--cyan-soft);
-  color: var(--cyan);
+  color: var(--cyan-ink);
   border-radius: var(--radius-small);
   font-size: var(--font-size-xs);
 }
@@ -295,7 +299,7 @@
 
 .analyzing {
   margin-left: var(--spacing-small);
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: var(--font-size-xs);
 }
 
@@ -391,12 +395,12 @@
 
 .status-auto {
   background: var(--green-soft);
-  color: var(--green);
+  color: var(--green-ink);
 }
 
 .status-manual {
   background: var(--cyan-soft);
-  color: var(--cyan);
+  color: var(--cyan-ink);
 }
 
 .status-empty {
@@ -432,7 +436,7 @@
 }
 
 .required-mark {
-  color: var(--red);
+  color: var(--red-ink);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -465,7 +469,7 @@
 
 .mapped-badge {
   margin-left: var(--spacing-small);
-  color: var(--green);
+  color: var(--green-ink);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -578,25 +582,35 @@
   flex: 1;
 }
 
+/* Общий блок больше не задаёт цвет подписи: var(--surface) в роли чернил
+   работал только в светлой теме (на #ffffff 6.08:1), в тёмной давал 4.20:1
+   на акценте и был заведомо неверен на зелёной заливке .btn-copy-key. */
 .btn-generate-key,
 .btn-copy-key {
   padding: var(--padding-tiny) var(--padding-element);
-  color: var(--surface);
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, border-color 0.2s;
 }
 
+/* Вторичный вид вместо акцентной заливки: в форме было четыре равно-главных
+   действия, залитых акцентом. Главное в секции подключения одно —
+   «Проверить подключение», оно акцент и сохраняет.
+   Заодно снят мёртвый :hover — база и наведение объявляли один и тот же
+   var(--accent), дельта цвета 0. */
 .btn-generate-key {
-  background: var(--accent);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
 }
 
 .btn-generate-key:hover {
-  background: var(--accent);
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--text-1));
+  border-color: var(--border-strong);
 }
 
 .btn-copy-key {
@@ -604,10 +618,13 @@
   align-items: center;
   gap: var(--spacing-tiny);
   background: var(--green);
+  /* Подпись на светлом --green: var(--surface) = белый давал 2.54:1
+     в светлой теме, var(--ink-on-bright) даёт 7.09 (светлая) и 10.13 (тёмная). */
+  color: var(--ink-on-bright);
 }
 
 .btn-copy-key:hover:not(:disabled) {
-  background: var(--green);
+  background: color-mix(in srgb, var(--green) 88%, var(--ink-on-accent));
 }
 
 .btn-copy-key:disabled {
@@ -632,7 +649,7 @@
   width: 20px;
   height: 20px;
   margin-top: 2px;
-  color: var(--cyan);
+  color: var(--cyan-ink);
 }
 
 .info-box-body {
@@ -698,10 +715,13 @@
   gap: var(--padding-tiny);
 }
 
+/* Единственное действие в редакторе, оставленное с акцентной заливкой:
+   в секции подключения оно главное. 5.49:1 против 4.20 у прежней пары
+   var(--accent) + var(--surface) в тёмной теме. */
 .btn-test-connection {
   padding: var(--padding-small) var(--padding-section);
-  background: var(--accent);
-  color: var(--surface);
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -719,8 +739,11 @@
   line-height: 1.4;
 }
 
+/* Наведение ЗАТЕМНЯЕТ заливку (как .btn-primary): с белой подписью
+   осветление отнимает контраст ровно под курсором. Раньше здесь стоял тот же
+   var(--accent), что и в базе, — дельта цвета 0 при transition: all. */
 .btn-test-connection:hover:not(:disabled) {
-  background: var(--accent);
+  background: color-mix(in srgb, var(--accent-solid) 88%, var(--ink-on-bright));
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
@@ -742,13 +765,13 @@
 
 .connection-test-result.success {
   background: var(--green-soft);
-  color: var(--green);
+  color: var(--green-ink);
   border: 1px solid var(--green);
 }
 
 .connection-test-result.error {
   background: var(--red-soft);
-  color: var(--red);
+  color: var(--red-ink);
   border: 1px solid var(--red);
 }
 
@@ -819,15 +842,19 @@
   color: var(--text-1);
 }
 
+/* Тумблер «включён» — состояние, а не главное действие, поэтому формула
+   10/30/100: подложка --accent-soft, рамка --accent, текст --accent-text.
+   Прежняя пара заливка var(--accent) + var(--surface) давала 4.20:1
+   в тёмной теме при пороге 4.5. */
 .btn-toggle-editor.is-active {
-  background: var(--accent);
+  background: var(--accent-soft);
   border-color: var(--accent);
-  color: var(--surface);
+  color: var(--accent-text);
 }
 
 .btn-clear-mapping {
   border: 1px solid var(--red);
-  color: var(--red);
+  color: var(--red-ink);
 }
 
 .fuel-mapping-entries {
@@ -877,7 +904,7 @@
   min-width: 32px;
   padding: var(--spacing-tiny);
   border: 1px solid var(--red);
-  color: var(--red);
+  color: var(--red-ink);
 }
 
 .btn-add-entry {
@@ -885,7 +912,7 @@
   margin-top: var(--spacing-block);
   padding: var(--spacing-small) var(--spacing-block);
   border: 1px solid var(--accent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .fuel-mapping-json {
@@ -893,11 +920,14 @@
 }
 
 /* Стили для загрузки таблиц Firebird */
+/* Вспомогательная кнопка «загрузить список таблиц» рядом с полем ввода —
+   вторичный вид: акцентная заливка здесь была декоративной, а #fff —
+   захардкоженным hex в src/. */
 .btn-load-tables {
   padding: var(--padding-small);
-  background: var(--accent);
-  color: #fff;
-  border: none;
+  background: var(--surface-2);
+  color: var(--text-1);
+  border: 1px solid var(--border);
   border-radius: var(--radius-small);
   cursor: pointer;
   min-width: 40px;
@@ -910,7 +940,8 @@
 }
 
 .btn-load-tables:hover:not(:disabled) {
-  background: var(--accent);
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--text-1));
+  border-color: var(--border-strong);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
@@ -923,7 +954,9 @@
 .btn-load-columns {
   padding: var(--padding-small) var(--padding-section);
   background: var(--green);
-  color: #fff;
+  /* #fff на --green давал 2.54:1 в светлой теме и 1.92:1 в тёмной при пороге
+     4.5; --ink-on-bright даёт 7.09 и 10.13. */
+  color: var(--ink-on-bright);
   border: none;
   border-radius: var(--radius-small);
   cursor: pointer;
@@ -971,7 +1004,9 @@
   display: inline-block;
   padding: var(--spacing-tiny) var(--padding-tiny);
   background: var(--accent-soft);
-  color: var(--accent);
+  /* На подложке accent-soft var(--accent) как текст даёт 3.64:1
+     в тёмной теме, var(--accent-text) — 4.72. */
+  color: var(--accent-text);
   border-radius: var(--radius-small);
   font-size: var(--font-size-xs);
   font-family: var(--font-mono);
@@ -979,7 +1014,7 @@
 
 .error-message {
   background: var(--red-soft);
-  color: var(--red);
+  color: var(--red-ink);
   padding: var(--padding-small);
   border-radius: var(--radius-small);
   margin-bottom: var(--padding-element);

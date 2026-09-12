@@ -141,22 +141,34 @@ function MarkerCluster({ markers, createIcon, onMarkerClick }) {
 // Кастомная иконка маркера с размером в зависимости от количества транзакций
 function createCustomIcon(transactionCount, maxCount) {
   const size = Math.max(20, Math.min(40, 20 + (transactionCount / maxCount) * 20))
+  const glyph = Math.round(size * 0.5)
+  // Метка карты рисуется той же геометрией, что ICON_PATHS.pin (ui/Icon) — но
+  // строкой: Leaflet принимает только HTML, а renderToStaticMarkup тянет
+  // react-dom/server в общий vendor-react (замер: +22.3 кБ gzip на КАЖДОЙ
+  // странице) ради одного глифа. Здесь единственная в проекте копия геометрии
+  // примитива; править её нужно вместе с ICON_PATHS.pin.
+  // stroke-width = 1.6 x 16 / glyph: раньше он был жёстко 1.6 при переменном
+  // размере, и отрисованный штрих плыл от 1.0px (маркер 20px) до 2.0px (40px).
+  // Цвета были литералами white / rgba(0,0,0,.3). Сплошная заливка под
+  // --ink-on-accent по ролям токенов — --accent-solid (5.49:1 против 4.35
+  // у --accent), поэтому белый глиф на ней проходит порог.
+  const stroke = ((1.6 * 16) / glyph).toFixed(2)
   return L.divIcon({
     className: 'custom-marker',
     html: `<div style="
       width: ${size}px;
       height: ${size}px;
-      background-color: var(--accent);
-      border: 2px solid white;
+      background-color: var(--accent-solid);
+      border: 2px solid var(--surface);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
+      color: var(--ink-on-accent);
       font-weight: bold;
       font-size: ${size * 0.4}px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    "><svg width="${size * 0.5}" height="${size * 0.5}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.4c0 0 4.6 5 4.6 8.1a4.6 4.6 0 11-9.2 0C3.4 6.4 8 1.4 8 1.4z"/></svg></div>`,
+      box-shadow: var(--shadow-md);
+    "><svg width="${glyph}" height="${glyph}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 6.5c0 3.5-5 8-5 8s-5-4.5-5-8a5 5 0 0110 0z"/><circle cx="8" cy="6.4" r="1.8"/></svg></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   })

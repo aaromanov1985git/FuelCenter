@@ -33,19 +33,10 @@
   box-sizing: border-box;
 }
 
-.login-bg::before {
-  content: '';
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--accent-glow, rgba(124, 92, 255, 0.35)), transparent 70%);
-  top: -200px;
-  left: -200px;
-  filter: blur(60px);
-  opacity: 0.5;
-  pointer-events: none;
-}
+/* Здесь был .login-bg::before — размытый круг 600x600 = 360 000 px^2 акцентного
+   свечения, самая крупная декоративная площадь страницы входа. Не кодировал
+   ничего, а литерал rgba(124,92,255,.35) в fallback'е — это значение ТЁМНОЙ
+   темы, то есть в светлой круг был чужого тона. Удалён целиком. */
 
 .login-bg::after {
   content: '';
@@ -87,15 +78,19 @@
   width: 52px;
   height: 52px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--accent, #7c5cff), #b16cff);
+  /* Заливка плоская и через токен роли: градиент уходил в #b16cff (h268 s100) —
+     самый насыщенный фиолетовый продукта, которого нет ни в одном токене, а
+     var(--accent, #7c5cff) держал в fallback'е значение тёмной темы.
+     Подпись --ink-on-accent на --accent-solid: 5.49:1 в тёмной, 6.08 в светлой
+     (на прежнем --accent было 4.35 при пороге 4.5). */
+  background: var(--accent-solid);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 15px;
   font-weight: 800;
-  color: #fff;
+  color: var(--ink-on-accent);
   letter-spacing: 0.5px;
-  box-shadow: 0 8px 24px var(--accent-glow, rgba(124, 92, 255, 0.45));
   margin-bottom: 14px;
 }
 
@@ -183,8 +178,8 @@
 }
 
 .login-bg .input-wrap:focus-within {
-  border-color: var(--accent, #7c5cff);
-  box-shadow: 0 0 0 3px var(--accent-soft, rgba(124, 92, 255, 0.18));
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .login-bg .input-wrap.is-error {
@@ -258,7 +253,7 @@
 }
 
 .login-remember input[type='checkbox'] {
-  accent-color: var(--accent, #7c5cff);
+  accent-color: var(--accent);
   width: 15px;
   height: 15px;
   cursor: pointer;
@@ -277,14 +272,19 @@
   padding: 12px 16px;
   border-radius: 10px;
   border: 1px solid transparent;
-  background: var(--accent, #7c5cff);
-  color: #fff;
+  /* Заливка под белой подписью — роль --accent-solid: #fff на --accent давал
+     4.35:1 при пороге 4.5, на --accent-solid — 5.49 в тёмной и 6.08 в светлой.
+     Fallback снят: токены объявлены на :root, а литерал в нём был значением
+     тёмной темы. */
+  background: var(--accent-solid);
+  color: var(--ink-on-accent);
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.2px;
   cursor: pointer;
-  box-shadow: 0 8px 24px var(--accent-glow, rgba(124, 92, 255, 0.45));
+  /* box-shadow 0 8px 24px var(--accent-glow) снят: свечение вне шкалы
+     --shadow-sm/--shadow-md, и это второй акцентный слой поверх заливки. */
   transition: transform 0.1s ease, filter 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
@@ -305,7 +305,7 @@
 .login-spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid #fff;
+  border: 2px solid var(--ink-on-accent);
   border-top-color: transparent;
   border-radius: 50%;
   animation: loginSpin 0.6s linear infinite;
@@ -326,7 +326,9 @@
   padding: 0;
   font: inherit;
   font-size: 12px;
-  color: var(--accent, #7c5cff);
+  /* Ссылка — ТЕКСТ 12px, значит роль --accent-text: сам --accent даёт 4.20:1
+     на --surface в тёмной теме при пороге 4.5, --accent-text — 5.45. */
+  color: var(--accent-text);
   font-weight: 500;
   text-decoration: none;
   cursor: pointer;

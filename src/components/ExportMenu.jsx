@@ -111,9 +111,12 @@ const ExportMenu = ({ data, headers, onExportExcel, filename = 'transactions' })
           size="medium"
           className="export-menu-icon-button"
         />
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 20 20" fill="currentColor" className="export-menu-arrow">
-          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-        </svg>
+        {/* Один и тот же залитый каре был скопирован в оба меню, но у
+            export-menu-arrow размер перебивает CSS (10px), а у
+            clear-menu-arrow его не было — в одной панели рядом стояли 10px и
+            12px. Теперь оба 10px из примитива; strokeWidth 2.4 при 10px даёт
+            отрисованный штрих 1.5px (тот же приём, что в ThemeToggle). */}
+        <Icon name="chevron-down" size={10} strokeWidth={2.4} className="export-menu-arrow" />
       </div>
 
       {isOpen && (

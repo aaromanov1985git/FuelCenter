@@ -3,7 +3,7 @@ import TemplateEditor from './TemplateEditor'
 import ConfirmModal from './ConfirmModal'
 import LoadFirebirdModal from './LoadFirebirdModal'
 import LoadApiModal from './LoadApiModal'
-import { Button, Card, Badge, Table, Alert, Skeleton, useToast } from './ui'
+import { Button, Badge, Table, Alert, Skeleton, useToast } from './ui'
 import TemplateRowActions from './TemplateRowActions'
 import EmptyState from './EmptyState'
 import { formatSchedule } from '../utils/templateModel'
@@ -13,6 +13,35 @@ import './TemplatesList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
+// Шаблон в модели данных существует только внутри провайдера
+// (ProviderTemplate.provider_id NOT NULL), сводного вида «все шаблоны» нет,
+// поэтому «провайдер не выбран» — не рабочее состояние, а дырка в инициализации:
+// при загрузке правая колонка была 896x200 при рабочей области 1160x880,
+// то есть 77.2% ширины несли одну строку текста (заполнение блока 3.7%),
+// а максимальный сплошной пустой прямоугольник первого экрана составлял
+// 1080x660 = 69.8% рабочей области. Провайдер выбирается сразу: сохранённый,
+// если он ещё активен, иначе первый в списке.
+const PROVIDER_KEY = 'templates.providerId'
+
+const readStoredProviderId = () => {
+  try {
+    const raw = localStorage.getItem(PROVIDER_KEY)
+    const id = raw === null ? NaN : Number(raw)
+    return Number.isFinite(id) && id > 0 ? id : null
+  } catch {
+    return null
+  }
+}
+
+const storeProviderId = (id) => {
+  try {
+    localStorage.setItem(PROVIDER_KEY, String(id))
+  } catch {
+    // Приватный режим или заблокированное хранилище — выбор просто не переживёт
+    // перезагрузку, работу страницы это не ломает.
+  }
+}
+
 const TemplatesList = () => {
   const { error: showError, success } = useToast()
   const [providers, setProviders] = useState([])
@@ -20,6 +49,9 @@ const TemplatesList = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [selectedProviderId, setSelectedProviderId] = useState(null)
+  // Отличает «список ещё не пришёл» от «активных провайдеров нет»: без этого
+  // на первом кадре мелькало бы пустое состояние «Провайдеров нет».
+  const [providersLoaded, setProvidersLoaded] = useState(false)
   const [showTemplateEditor, setShowTemplateEditor] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, templateId: null })
@@ -44,7 +76,14 @@ const TemplatesList = () => {
       const response = await authFetch(`${API_URL}/api/v1/providers?limit=1000`)
       if (response.ok) {
         const result = await response.json()
-        setProviders(result.items.filter(p => p.is_active))
+        const active = result.items.filter(p => p.is_active)
+        setProviders(active)
+        setSelectedProviderId((prev) => {
+          if (prev && active.some(p => p.id === prev)) return prev
+          const saved = readStoredProviderId()
+          if (saved && active.some(p => p.id === saved)) return saved
+          return active.length > 0 ? active[0].id : null
+        })
       }
     } catch (err) {
       // Не показываем ошибку при 401 - это обрабатывается централизованно
@@ -52,6 +91,8 @@ const TemplatesList = () => {
         return
       }
       logger.error('Ошибка загрузки провайдеров', { error: err.message })
+    } finally {
+      setProvidersLoaded(true)
     }
   }
 
@@ -290,15 +331,19 @@ const TemplatesList = () => {
       key: 'name',
       header: 'Название',
       sortable: true,
-      render: (val, row) => (
-        <div className="template-name-cell">
-          <span className="template-name">{val}</span>
-          <span className="template-name-meta">
-            id {row.id}
-            {row.description && row.description !== '—' ? ` · ${row.description}` : ''}
-          </span>
-        </div>
-      )
+      render: (val, row) => {
+        // Имя и служебная подпись в ОДНУ строку: --table-row-height в проекте
+        // 36px, а двустрочная ячейка держала медиану строки 57px — на 13px выше
+        // верхней границы A4 (32-44) и на 58% выше проектной высоты.
+        // Восемь строк давали 168px лишней высоты, полсотни — 1050px.
+        const meta = `id ${row.id}${row.description && row.description !== '—' ? ` · ${row.description}` : ''}`
+        return (
+          <div className="template-name-cell">
+            <span className="template-name" title={val}>{val}</span>
+            <span className="template-name-meta" title={meta}>{meta}</span>
+          </div>
+        )
+      }
     },
     {
       key: 'connection_type',
@@ -367,6 +412,25 @@ const TemplatesList = () => {
     }
   ]
 
+  // Provider.code — отдельное обязательное уникальное поле, ничем не выводимое
+  // из name, поэтому оператор часто вписывает в оба одну строку: на текущих
+  // данных дубль в 8 пунктах из 8. Строка кода добавляла к пункту 18px
+  // (52px вместо 34px) — 144px, то есть 31.7% высоты рельса, на дубль.
+  const railCode = (provider) => {
+    const code = (provider.code || '').trim()
+    if (!code) return null
+    const name = (provider.name || '').trim()
+    if (code.localeCompare(name, 'ru', { sensitivity: 'accent' }) === 0) return null
+    return code
+  }
+
+  const selectProvider = (id) => {
+    setSelectedProviderId(id)
+    storeProviderId(id)
+    setShowTemplateEditor(false)
+    setEditingTemplate(null)
+  }
+
   const tableData = templates.map((t) => ({
     ...t,
     description: t.description || '—'
@@ -393,35 +457,36 @@ const TemplatesList = () => {
       <div className="templates-layout">
         <aside className="providers-rail" aria-label="Провайдеры">
           <div className="providers-rail-title">Провайдеры</div>
-          {providers.length > 0 ? (
-            providers.map((provider) => (
+          {providers.map((provider) => {
+            const code = railCode(provider)
+            return (
               <button
                 key={provider.id}
                 type="button"
                 className={`provider-rail-item${selectedProviderId === provider.id ? ' is-selected' : ''}`}
                 aria-pressed={selectedProviderId === provider.id}
-                onClick={() => {
-                  setSelectedProviderId(provider.id)
-                  setShowTemplateEditor(false)
-                  setEditingTemplate(null)
-                }}
+                onClick={() => selectProvider(provider.id)}
               >
                 <span className="provider-rail-name">{provider.name}</span>
-                {provider.code && <span className="provider-rail-code">{provider.code}</span>}
+                {code && <span className="provider-rail-code">{code}</span>}
               </button>
-            ))
-          ) : (
-            <Alert variant="info">
-              Провайдеры не найдены. Добавьте их в разделе «Провайдеры».
-            </Alert>
-          )}
+            )
+          })}
         </aside>
 
         <section className="templates-main">
-          {!selectedProviderId && (
+          {/* Заглушка «Выберите провайдера» стала недостижимой: провайдер
+              выбирается при загрузке. Остаётся единственный настоящий случай —
+              активных провайдеров нет, и тогда шаблону не к чему привязаться.
+              Проп называется message: description компонент EmptyState
+              не объявляет, и React молча выбрасывал подпись — в DOM оставался
+              один узел h3 245x27 внутри блока 896x200. */}
+          {!providersLoaded && <Skeleton variant="rectangular" height={320} />}
+
+          {providersLoaded && !selectedProviderId && (
             <EmptyState
-              title="Выберите провайдера"
-              description="Слева список поставщиков. Выберите одного, чтобы увидеть и настроить его шаблоны."
+              title="Активных провайдеров нет"
+              message="Шаблон описывает разбор выгрузки конкретного поставщика и без провайдера существовать не может. Добавьте провайдера в разделе «Провайдеры» — шаблоны появятся здесь."
             />
           )}
 
@@ -436,51 +501,53 @@ const TemplatesList = () => {
             </div>
           )}
 
+          {/* Card убран: у .ui-table-wrapper уже есть своя поверхность
+              (фон --surface, радиус, тень), поэтому карточка вокруг неё была
+              поверхностью в поверхности — 2 находки C2 на срез, 8 на четыре
+              среза страницы. Остаётся шапка зоны и сама таблица. */}
           {!showTemplateEditor && selectedProviderId && (
-            <Card variant="elevated" padding="md" className="templates-card">
-              <Card.Header>
-                <Card.Title>Шаблоны · {total}</Card.Title>
+            <>
+              <div className="templates-main-header">
+                <h2 className="templates-main-title">Шаблоны · {total}</h2>
                 <Button variant="primary" onClick={handleAddTemplate}>
                   Создать шаблон
                 </Button>
-              </Card.Header>
+              </div>
 
-              <Card.Body>
-                {loading && templates.length === 0 ? (
-                  <Skeleton variant="rectangular" height={200} />
-                ) : templates.length > 0 ? (
-                  <Table
-                    columns={columns}
-                    data={tableData}
-                    striped
-                    hoverable
-                    stickyHeader
-                    compact
-                    defaultSortColumn="name"
-                  />
-                ) : (
-                  <EmptyState
-                    title="Шаблонов пока нет"
-                    description="Шаблон описывает, как разобрать выгрузку этого поставщика."
-                    action={
-                      <Button variant="primary" onClick={handleAddTemplate}>
-                        Создать шаблон
-                      </Button>
-                    }
-                  />
-                )}
+              {loading && templates.length === 0 ? (
+                <Skeleton variant="rectangular" height={200} />
+              ) : templates.length > 0 ? (
+                <Table
+                  columns={columns}
+                  data={tableData}
+                  striped
+                  hoverable
+                  stickyHeader
+                  compact
+                  defaultSortColumn="name"
+                />
+              ) : (
+                <EmptyState
+                  title="Шаблонов пока нет"
+                  message="Шаблон описывает, как разобрать выгрузку этого поставщика."
+                  action={
+                    <Button variant="primary" onClick={handleAddTemplate}>
+                      Создать шаблон
+                    </Button>
+                  }
+                />
+              )}
 
-                {total > limit && (
-                  <Table.Pagination
-                    currentPage={currentPage}
-                    totalPages={Math.ceil(total / limit)}
-                    total={total}
-                    pageSize={limit}
-                    onPageChange={(page) => setCurrentPage(page)}
-                  />
-                )}
-              </Card.Body>
-            </Card>
+              {total > limit && (
+                <Table.Pagination
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(total / limit)}
+                  total={total}
+                  pageSize={limit}
+                  onPageChange={(page) => setCurrentPage(page)}
+                />
+              )}
+            </>
           )}
         </section>
       </div>

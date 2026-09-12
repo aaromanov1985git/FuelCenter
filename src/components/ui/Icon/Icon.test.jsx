@@ -14,6 +14,10 @@ const REQUIRED = [
   // «Выйти» получал замок, корень навигации — сетку, «Неактивен» — крестик,
   // а sun/moon приходилось брать из второго, старого набора иконок.
   'chevron-up', 'more', 'sun', 'moon', 'log-out', 'home', 'shield', 'eye-off', 'pause',
+  // Добавлено при сведении инлайновых svg к примитиву: своего глифа не было ни
+  // у одиночного человека (users — это ДВОЕ, а поле «Логин» рисовало пару), ни
+  // у «заполнено вручную» (планшет со списком).
+  'user', 'clipboard',
 ]
 
 describe('Icon', () => {
@@ -50,6 +54,21 @@ describe('Icon', () => {
     expect(svg.getAttribute('width')).toBe('20')
     expect(svg.classList.contains('ui-icon')).toBe(true)
     expect(svg.classList.contains('btn-icon')).toBe(true)
+  })
+
+  it('gear — шестерня, а не второе солнце', () => {
+    // gear и sun стоят на одном экране: кнопка «Настроить поля» и переключатель
+    // темы в сайдбаре. Пока gear был кругом с 8 радиальными лучами, он отличался
+    // от sun только диаметром внутреннего круга — 4.4 против 6.4 px при 16px.
+    const gear = render(<Icon name="gear" />).container.querySelector('svg')
+    const d = gear.querySelector('path').getAttribute('d')
+    expect(d).toMatch(/^M/)
+    expect(d.endsWith('Z'), 'контур зубьев должен быть замкнут').toBe(true)
+    expect((d.match(/A4\.7 4\.7/g) || []).length, 'шесть зубьев — шесть дуг основания').toBe(6)
+    const sunRays = render(<Icon name="sun" />)
+      .container.querySelector('svg')
+      .querySelectorAll('path').length
+    expect(sunRays).toBe(1) // лучи остались только у sun
   })
 
   it('неизвестное имя ничего не рисует и не падает', () => {

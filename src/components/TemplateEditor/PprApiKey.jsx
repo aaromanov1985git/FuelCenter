@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import Icon from '../ui/Icon'
 import { useToast } from '../ToastContainer'
 import { extractPprKey } from '../../utils/templateModel'
 
@@ -100,10 +101,11 @@ const PprApiKey = ({ stepNumber, connectionSettings, setConnectionSettings, onEr
               disabled={!currentKey}
               title="Скопировать ключ в буфер обмена"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="icon-small" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-                <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
-              </svg>
+              {/* Класс icon-small здесь ни к чему не привязан (правило есть только
+                  внутри .success-badge и .connection-test-result), поэтому у svg не
+                  было ни одного размера — замещаемый элемент разворачивался в
+                  дефолтные 300x150. Размер задаём явно: 16px. */}
+              <Icon name="copy" size={16} />
               Копировать
             </button>
           </div>
@@ -116,9 +118,9 @@ const PprApiKey = ({ stepNumber, connectionSettings, setConnectionSettings, onEr
       </div>
 
       <div className="info-box">
-        <svg xmlns="http://www.w3.org/2000/svg" className="info-box-icon" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-        </svg>
+        {/* Класс info-box-icon оставлен: на нём 20px, цвет --cyan и отбивка.
+            strokeWidth 1.28 = 1.6 x 16/20 держит отрисованный штрих на 1.6px. */}
+        <Icon name="info" className="info-box-icon" size={20} strokeWidth={1.28} />
         <div className="info-box-body">
           <strong>Как это работает:</strong>
           <ul>

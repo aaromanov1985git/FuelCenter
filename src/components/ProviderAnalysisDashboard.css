@@ -355,9 +355,14 @@
   overflow: clip;
 }
 
+/* Полоса — один ряд данных, величину кодирует ДЛИНА. Градиент --accent -> --cyan
+   менял оттенок вдоль полосы, то есть смешивал фирменный тон с информационным
+   cyan в пределах одного объекта и выглядел как вторая кодировка величины.
+   Заливка сплошная: --accent-solid, контраст к подложке --surface-2 держится
+   роликом заливки (порог 3:1 для графического объекта взят). */
 .bar {
   height: 100%;
-  background: linear-gradient(to right, var(--accent), var(--cyan));
+  background: var(--accent-solid);
   border-radius: var(--radius-small);
   display: flex;
   align-items: center;

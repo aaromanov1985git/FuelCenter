@@ -10,30 +10,19 @@ import './Dashboard.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
-// Палитра серий для графика и провайдеров — фиксированные цвета из дизайн-системы
+/* Палитра серий графика и провайдеров.
+ * Было восемь hex-литералов, и это давало два дефекта сразу: цвет шёл мимо токенов,
+ * а значения были взяты из ТЁМНОЙ палитры и рисовались в обеих темах — в светлой
+ * первая полоса выходила тоном #7c5cff при том, что --accent там #5b46e5.
+ * Токены шкалы объявлены в обеих темах (src/styles/tokens.css), поэтому подставлять
+ * их надо через style, а не через SVG-атрибут: presentation attribute var() не решает. */
 const SERIES_COLORS = [
-  '#7c5cff', // accent (violet)
-  '#ffb547', // amber
-  '#4fd1ff', // cyan
-  '#22d3a7', // green
-  '#ff78c4', // pink
-  '#ff6b6b', // red
-  '#8b5cf6',
-  '#06b6d4',
+  'var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)',
+  'var(--series-5)', 'var(--series-6)', 'var(--series-7)', 'var(--series-8)',
 ]
 
-// Затемнение hex-цвета для градиента
-const darkenHex = (hex, amount = 30) => {
-  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-  if (!m) return hex
-  const r = Math.max(0, parseInt(m[1], 16) - amount)
-  const g = Math.max(0, parseInt(m[2], 16) - amount)
-  const b = Math.max(0, parseInt(m[3], 16) - amount)
-  return `rgb(${r}, ${g}, ${b})`
-}
-
 // Компактная спарклайн-диаграмма для стат-карточки
-const Sparkline = ({ data, color }) => {
+const Sparkline = ({ data, color, seriesIndex = 0 }) => {
   if (!data || data.length === 0) return null
   const max = Math.max(...data, 1)
   const min = Math.min(...data, 0)
@@ -41,16 +30,18 @@ const Sparkline = ({ data, color }) => {
   const pts = data.map((v, i) =>
     `${(i / (data.length - 1 || 1)) * 100},${100 - ((v - min) / range) * 80 - 10}`
   ).join(' ')
-  const gid = `dash-sp-${color.replace(/[^a-z0-9]/gi, '')}-${data.length}`
+  // Идентификатор от индекса ряда: из `var(--series-1)` прежняя чистка символов
+  // давала одинаковый ключ для всех токенов и градиенты перетирали друг друга.
+  const gid = `dash-sp-${seriesIndex}-${data.length}`
   return (
-    <svg width="100%" height="32" viewBox="0 0 100 100" preserveAspectRatio="none" className="dash-sparkline">
+    <svg width="100%" height="32" viewBox="0 0 100 100" preserveAspectRatio="none" className="dash-sparkline" aria-hidden="true">
       <defs>
         <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity=".5" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
+          <stop offset="0%" style={{ stopColor: color }} stopOpacity=".5" />
+          <stop offset="100%" style={{ stopColor: color }} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+      <polyline points={pts} fill="none" style={{ stroke: color }} strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
       <polygon points={`0,100 ${pts} 100,100`} fill={`url(#${gid})`} />
     </svg>
   )
@@ -298,10 +289,14 @@ const Dashboard = () => {
       spark: sparkCnt.length ? sparkCnt : [1, 2, 3, 4, 5],
     },
     {
-      label: autoLoadStats ? `Автозагрузки · ${autoLoadStats.period_hours}ч` : 'Автозагрузки',
+      // Окно всегда приходит с сервера (dashboard.py отдаёт period_hours: 24), но если
+      // поле пропадёт, подпись должна ужаться до «Автозагрузки», а не напечатать undefined.
+      label: autoLoadStats && autoLoadStats.period_hours
+        ? `Автозагрузки · ${autoLoadStats.period_hours}ч`
+        : 'Автозагрузки',
       value: autoLoadStats ? (autoLoadStats.total_transactions || 0).toLocaleString('ru-RU') : '—',
       color: autoLoadStats && autoLoadStats.has_errors ? 'var(--red)' : SERIES_COLORS[1],
-      colorRaw: autoLoadStats && autoLoadStats.has_errors ? '#ff6b6b' : SERIES_COLORS[1],
+      colorRaw: autoLoadStats && autoLoadStats.has_errors ? 'var(--red)' : SERIES_COLORS[1],
       spark: sparkCnt.length ? sparkCnt : [1, 2, 3, 4, 5],
       footer: autoLoadStats
         ? (autoLoadStats.has_errors
@@ -352,7 +347,7 @@ const Dashboard = () => {
 
       {/* Стат-карточки */}
       <div className="dash-stat-grid">
-        {statCards.map((c) => (
+        {statCards.map((c, i) => (
           <div key={c.label} className="dash-stat-card">
             <div className="t-label dash-stat-label">{c.label}</div>
             <div className="dash-stat-row">
@@ -366,7 +361,7 @@ const Dashboard = () => {
                 </span>
               )}
             </div>
-            <Sparkline data={c.spark} color={c.colorRaw || c.color} />
+            <Sparkline data={c.spark} color={c.colorRaw || c.color} seriesIndex={i} />
           </div>
         ))}
       </div>
@@ -389,7 +384,9 @@ const Dashboard = () => {
           <div className="dash-card-header">
             <div>
               <div className="dash-card-title">Загрузка по расписанию</div>
-              <div className="dash-card-subtitle">За последние {autoLoadStats.period_hours} ч</div>
+              {autoLoadStats.period_hours ? (
+                <div className="dash-card-subtitle">За последние {autoLoadStats.period_hours} ч</div>
+              ) : null}
             </div>
             <span className={`dash-chip ${autoLoadStats.has_errors ? 'dash-chip-amber' : 'dash-chip-green'}`}>
               {autoLoadStats.has_errors
@@ -414,10 +411,7 @@ const Dashboard = () => {
                 {recentUploads.length > 0 ? recentUploads.map((p, idx) => (
                   <div key={`${p.name}-${idx}`} className="dash-upload-row">
                     <div className="dash-upload-icon" aria-hidden="true">
-                      <svg width="14" height="16" viewBox="0 0 14 16" fill="none">
-                        <path d="M1 2a1 1 0 011-1h6l5 5v9a1 1 0 01-1 1H2a1 1 0 01-1-1V2z" stroke="currentColor" strokeWidth="1.3" />
-                        <path d="M8 1v5h5" stroke="currentColor" strokeWidth="1.3" />
-                      </svg>
+                      <Icon name="file" size={16} />
                     </div>
                     <div className="dash-upload-meta">
                       <div className="dash-upload-name">{p.name}</div>
@@ -492,7 +486,10 @@ const Dashboard = () => {
                             className="dash-chart-bar-segment"
                             style={{
                               height: `${segmentHeight}%`,
-                              background: `linear-gradient(to top, ${pd.color}, ${darkenHex(pd.color, 30)})`,
+                              /* Плоская заливка вместо градиента «цвет -> он же на 30 темнее»:
+                                 такой градиент ничего не кодирует, а darkenHex умел
+                                 только hex и на токене вернул бы строку как есть. */
+                              background: pd.color,
                             }}
                             title={`${pd.name}: ${formatNumber(pd.quantity)} л, ${pd.count} транз.`}
                           />

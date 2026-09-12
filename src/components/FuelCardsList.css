@@ -18,9 +18,10 @@
 }
 
 /* -------- Статистика (дашборд) -------- */
+/* Четыре плитки вместо пяти: «Не закреплённых» = «Всего» − «Закреплённых». */
 .fc-root .fc-stats-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
 
@@ -46,8 +47,8 @@
    Было четыре сплошные полоски S=72-100% на одной строке плиток, плюс
    .fc-stat-bar-neutral, покрашенная чернилами --text-1 (17.97:1 — полоска была
    темнее подписи рядом). Вес линии из шкалы бордеров: 1.43:1 в светлой,
-   1.42:1 в тёмной. Модификаторы -green/-red/-amber/-accent/-neutral оставлены
-   пустышками: чистка классов в JSX — отдельным проходом. */
+   1.42:1 в тёмной. Модификаторы -green/-red/-amber/-accent/-neutral вычищены
+   из JSX: девять классов без правил в CSS. */
 .fc-root .fc-stat-bar {
   width: 4px;
   height: 28px;
@@ -117,7 +118,7 @@
 .fc-root .fc-view-toggle {
   display: inline-flex;
   gap: 4px;
-  padding: 3px;
+  padding: 4px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -127,7 +128,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  /* 8+8+16 = 32px, минимальная цель нажатия: было 6px, то есть 28px. */
+  padding: 8px 12px;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-3);
@@ -156,157 +158,101 @@
   gap: 14px;
 }
 
-/* -------- Визуальная топливная карта -------- */
+/* -------- Карточка данных (grid view) -------- */
 .fc-root .fc-card-wrap {
   animation: fcFadeUp .35s ease;
 }
 
+/* Карточка внутри .fc-main-card различается ТОНОМ, а не четырьмя признаками
+   разом: рамка+радиус+фон+тень были нарисованы дважды подряд на одной
+   поверхности — 60 из 66 находок G4 и 60 из 126 теней C2 на срез давала
+   именно .fc-card. */
 .fc-root .fc-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: clip;
-  box-shadow: var(--shadow-md);
-  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
   display: flex;
   flex-direction: column;
+  gap: var(--spacing-small);
+  padding: var(--spacing-element);
+  background: var(--surface-2);
+  border-radius: 10px;
+  overflow: clip;
+  transition: background .2s ease, box-shadow .2s ease;
 }
 
+/* Ховер-тень была захардкожена 0 18px 36px rgba(0,0,0,.55) в обеих темах —
+   альфа в 9.2 раза больше --shadow-md светлой темы (rgba(15,23,36,.06)). */
 .fc-root .fc-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--border-strong);
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.35);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
 }
 
 .fc-root .fc-card-blocked .fc-card {
   opacity: .75;
 }
 
-.fc-root .fc-card-top {
-  position: relative;
-  padding: 18px 18px 16px;
-  color: #fff;
-  overflow: clip;
-  min-height: 150px;
-}
-
-.fc-root .fc-card-glow {
-  position: absolute;
-  top: -40px;
-  right: -40px;
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  opacity: .22;
-  filter: blur(30px);
-  pointer-events: none;
-}
-
-.fc-root .fc-card-top-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-  position: relative;
-  gap: 10px;
-}
-
-.fc-root .fc-card-provider {
-  font-size: 10px;
-  font-weight: 700;
-  opacity: .85;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-}
-
-.fc-root .fc-card-holder {
-  font-size: 13px;
-  font-weight: 500;
-  opacity: .95;
-  margin-top: 2px;
-  max-width: 180px;
-  overflow: clip;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fc-root .fc-card-chip {
-  width: 28px;
-  height: 20px;
-  background: rgba(255, 255, 255, .22);
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .15);
-  flex-shrink: 0;
-}
-
-.fc-root .fc-card-number {
-  font-family: var(--font-mono);
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  margin-bottom: 10px;
-  position: relative;
-  color: #fff;
-  word-break: break-all;
-}
-
-.fc-root .fc-card-footer-top {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  opacity: .85;
-  position: relative;
-  text-transform: uppercase;
-  letter-spacing: .4px;
-}
-
-.fc-root .fc-card-id-value {
-  font-weight: 700;
-  font-family: var(--font-mono);
-  letter-spacing: .5px;
-}
-
-/* -------- Нижняя панель -------- */
-.fc-root .fc-card-bottom {
-  padding: 14px 16px;
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: 1;
-}
-
+/* Единый ритм строк: было три разных margin-bottom (24 и 10) внутри плашки,
+   что давало 60 из 62 находок A2 на странице. Теперь один gap на колонке. */
 .fc-root .fc-card-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--spacing-small);
+  min-width: 0;
 }
 
-.fc-root .fc-card-vehicle {
-  font-size: 11px;
-  color: var(--text-3);
-  font-weight: 500;
-  max-width: 60%;
+/* Номер карты — единственное место, где моноширинный кегль оправдан.
+   Было 16px белым на градиенте: 3.30:1 при пороге 4.5. Стало --accent-text
+   на --surface-2 — 5.63:1 в светлой и 4.92:1 в тёмной, как в списочном виде. */
+.fc-root .fc-card-number {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  color: var(--accent-text);
   overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* ID — суррогатный ключ БД: мелко и третьим тиром чернил (4.67:1 в светлой,
+   4.69:1 в тёмной), но НЕ моноширинным — мон удваивал D2 с 60 до 120. */
+.fc-root .fc-card-id {
+  font-size: 11px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+/* Идентичность провайдера — точка-маркер роли 30 (var(--accent)), а не заливка
+   в половину карточки: пять брендовых градиентов давали белым текстом
+   1.76–4.35:1 на светлом конце против порога 4.5. */
+.fc-root .fc-card-provider {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-small);
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.fc-root .fc-card-provider-name {
+  overflow: clip;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Держатель печатался дважды — 13px белым на краске и 11px чернилами,
+   120 узлов на 60 значений. Остался один вывод, 17.97:1 в светлой теме. */
 .fc-root .fc-card-meta {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--spacing-tiny);
 }
 
 .fc-root .fc-card-meta-item {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--spacing-small);
   font-size: 11px;
 }
 
@@ -326,18 +272,16 @@
 .fc-root .fc-card-actions {
   display: flex;
   justify-content: flex-end;
-  padding-top: 2px;
   border-top: 1px dashed var(--border);
-  margin-top: 2px;
-  padding-top: 8px;
+  padding-top: var(--spacing-small);
 }
 
 /* -------- Chips / Badges -------- */
 .fc-root .fc-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
+  gap: 4px;
+  padding: 4px 8px;
   font-size: 11px;
   font-weight: 600;
   border-radius: 999px;
@@ -362,19 +306,13 @@
 .fc-root .fc-chip-green {
   background: var(--green-soft);
   color: var(--green-ink);
-  border-color: rgba(34, 211, 167, .25);
+  border-color: var(--green);
 }
 
 .fc-root .fc-chip-red {
   background: var(--red-soft);
   color: var(--red-ink);
-  border-color: rgba(255, 107, 107, .25);
-}
-
-.fc-root .fc-chip-amber {
-  background: var(--amber-soft);
-  color: var(--amber-ink);
-  border-color: rgba(255, 181, 71, .25);
+  border-color: var(--red);
 }
 
 /* -------- Таблица (list view) -------- */
@@ -433,12 +371,15 @@
   font-weight: 500;
 }
 
+/* Маркер провайдера: один токен роли 30 вместо инлайнового брендового hex.
+   Тень 0 0 0 2px rgba(255,255,255,.05) снята — она давала находку C2 на
+   каждую строку списка и не читалась ни в одной из тем. */
 .fc-root .fc-provider-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
+  background: var(--accent);
 }
 
 /* -------- Пустое состояние -------- */
@@ -461,7 +402,7 @@
 /* ==================== АДАПТИВНОСТЬ ==================== */
 @media (max-width: 1200px) {
   .fc-root .fc-stats-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -481,15 +422,6 @@
 
   .fc-root .fc-grid {
     grid-template-columns: 1fr;
-  }
-
-  .fc-root .fc-card-top {
-    padding: 16px;
-  }
-
-  .fc-root .fc-card-number {
-    font-size: 14px;
-    letter-spacing: 1.5px;
   }
 }
 

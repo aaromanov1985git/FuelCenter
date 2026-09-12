@@ -187,9 +187,13 @@
   background: var(--surface-2);
 }
 
+/* Подпись выбранного пункта — ТЕКСТ: --accent на подложке --accent-soft поверх
+   --surface даёт 3.64:1 в тёмной теме при пороге 4.5, --accent-text — 4.72.
+   Галочка .select-check ниже остаётся на --accent: у графического объекта порог
+   3:1, и 3.64 его берёт. */
 .select-option-selected {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: var(--font-weight-semibold);
 }
 
