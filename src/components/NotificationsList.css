@@ -178,13 +178,15 @@
   background: var(--surface-2);
 }
 
+/* Полоса-дубль погашена. Бит «не прочитано» уже несёт подложка
+   .notif-item.is-unread (--accent-soft, вся строка), а здесь он рисовался
+   ВТОРЫМ носителем и притом самым насыщенным вариантом акцента — сплошной
+   заливкой 3px x высота строки. Оба слоя приходили по одному условию
+   !notification.is_read. Узел рендерит NotificationsList.jsx (чужой файл),
+   поэтому правило оставлено с display: none — так полоса гаснет, не меняя
+   раскладку строки. */
 .notif-root .notif-item-accent {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--accent);
+  display: none;
 }
 
 /* ---------- Type icon badge ---------- */

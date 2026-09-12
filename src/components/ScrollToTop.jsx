@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from './ui'
+import Icon from './ui/Icon'
 import './ScrollToTop.css'
 
 /**
@@ -75,20 +76,10 @@ const ScrollToTop = ({ showAfter = 300, scrollDuration = 500 }) => {
         opacity: 0.9
       }}
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="scroll-to-top-icon"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-        width="24"
-        height="24"
-      >
-        <path
-          fillRule="evenodd"
-          d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
-          clipRule="evenodd"
-        />
-      </svg>
+      {/* Класс scroll-to-top-icon намеренно не передаётся: он задавал 24px
+          (залитый глиф), а в кнопке 48x48 контурный шеврон канонично 20px.
+          strokeWidth 1.28 = 1.6 x 16/20 — отрисованный штрих остаётся 1.6px. */}
+      <Icon name="chevron-up" size={20} strokeWidth={1.28} />
     </Button>
   )
 }

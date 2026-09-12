@@ -36,10 +36,20 @@
   align-items: start;
 }
 
+/* Рельсу нужна поверхность: раньше он был прозрачным (background rgba(0,0,0,0),
+   border 0) и стоял вплотную к 896px пустоты справа — 240x454 столбик текста
+   без границы читался не как навигатор, а как случайное выравнивание по левому
+   краю. Поверхность + рамка без тени: три признака панели (фон, радиус, рамка)
+   даёт правило C1 только при вложенности панели в панель, а пункты рельса
+   панелями не являются (border-top-width: 0), поэтому вложенности нет. */
 .providers-rail {
   display: grid;
   gap: 2px;
   align-content: start;
+  padding: var(--spacing-small);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
 }
 
 .providers-rail-title {
@@ -47,7 +57,9 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-3);
-  padding: 0 var(--spacing-small) var(--spacing-small);
+  /* 10px = 2px полосы выбора + 8px внутреннего отступа пункта: подпись группы
+     встаёт ровно по левому краю названий провайдеров. */
+  padding: 0 10px var(--spacing-small);
 }
 
 .provider-rail-item {
@@ -76,11 +88,14 @@
   outline-offset: -2px;
 }
 
-/* Выбор обозначается полосой и цветом текста, а не заливкой во всю кнопку:
-   заливка акцентом — язык основного действия, а не состояния. */
+/* Выбор и наведение объявляли одну и ту же заливку var(--surface-2) — дельта
+   цвета 0, и выбранный пункт отличался от пункта под курсором только полосой
+   2px. Теперь состояние набрано по формуле 10/30: подложка --accent-soft (10%)
+   и маркер --accent (порог 3:1). Сплошной заливки акцентом нет намеренно —
+   это язык основного действия, а не состояния, и текст остаётся --text-1. */
 .provider-rail-item.is-selected {
   border-left-color: var(--accent);
-  background: var(--surface-2);
+  background: var(--accent-soft);
   color: var(--text-1);
   font-weight: var(--font-weight-medium, 500);
 }
@@ -98,7 +113,28 @@
   min-width: 0;
 }
 
-@media (max-width: 900px) {
+/* Шапка зоны данных вместо Card.Header: карточка вокруг таблицы давала
+   поверхность в поверхности (у .ui-table-wrapper свои фон, радиус и тень)
+   и 2 находки C2 на каждый срез страницы. */
+.templates-main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-block);
+  margin-bottom: var(--spacing-element);
+}
+
+.templates-main-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-1);
+}
+
+/* Порог поднят с 900 до 1100px по замеру: на 1024 две колонки оставляли
+   таблице 480px при её минимальной ширине 612px — горизонтальная прокрутка
+   в покое (B4). В одну колонку таблица получает ~744px и укладывается. */
+@media (max-width: 1100px) {
   .templates-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -547,14 +583,21 @@
    Высота строки задаётся содержимым фиксированной структуры, а не
    количеством кнопок в ячейке действий: раньше перенос трёх кнопок
    растягивал строку примерно до 112px вместо 44 и сбивал выравнивание
-   соседних ячеек, у которых vertical-align: middle. */
+   соседних ячеек, у которых vertical-align: middle.
+   Имя и служебная подпись лежат в ОДНУ строку: сетка из двух строк давала
+   медиану строки 57px против проектных --table-row-height 36px и верхней
+   границы A4 44px, а ещё выпускала содержимое за ячейку (82px текста
+   при 78px внутренней ширины на 1024 — находка B2). */
 .templates-list .template-name-cell {
-  display: grid;
-  gap: 2px;
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-small);
   min-width: 0;
 }
 
 .templates-list .template-name {
+  flex: 0 1 auto;
+  min-width: 0;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -562,6 +605,8 @@
 }
 
 .templates-list .template-name-meta {
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: 11px;
   color: var(--text-3);
   font-variant-numeric: tabular-nums;

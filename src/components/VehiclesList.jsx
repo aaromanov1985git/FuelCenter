@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Button, Input, Card, Badge, Table, Alert, useToast, Select, Modal } from './ui'
+import Icon from './ui/Icon'
 import { authFetch } from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
 import { logger } from '../utils/logger'
@@ -287,7 +288,10 @@ const VehiclesList = () => {
           title="Редактировать"
           data-testid={`vehicle-edit-${row.id}`}
         >
-          <span aria-hidden="true">⋯</span>
+          {/* Было текстовое ⋯ 18px (штрих ~1.1px против 1.6px у примитива) — и
+              формой «ещё», хотя действие одно: редактирование. В семи других
+              списках это карандаш. */}
+          <Icon name="edit" size={16} />
         </button>
       )
     }
@@ -345,10 +349,7 @@ const VehiclesList = () => {
       {/* Filter/search row */}
       <div className="veh-toolbar" data-testid="vehicles-toolbar">
         <div className="veh-search">
-          <svg className="veh-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-            <circle cx="11" cy="11" r="7" />
-            <path d="M21 21l-4.35-4.35" />
-          </svg>
+          <Icon name="search" className="veh-search__icon" size={16} />
           <input
             type="text"
             className="veh-search__input"

@@ -374,7 +374,7 @@ const FuelTypesList = () => {
             />
             <IconButton 
               icon="delete" 
-              variant="danger" 
+              variant="error" 
               onClick={() => handleDelete(fuelType)}
               title="Удалить"
               size="small"
@@ -567,11 +567,7 @@ const FuelTypesList = () => {
                 variant="secondary"
                 onClick={handleCancel}
                 disabled={loading}
-                icon={
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                }
+                icon={<Icon name="close" size={16} />}
                 iconPosition="left"
               >
                 Отмена
@@ -581,11 +577,7 @@ const FuelTypesList = () => {
                 onClick={() => editingId && handleSave(editingId)}
                 disabled={loading}
                 loading={loading}
-                icon={
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                }
+                icon={<Icon name="save" size={16} />}
                 iconPosition="left"
               >
                 {loading ? 'Сохранение...' : 'Сохранить'}
@@ -640,7 +632,7 @@ const FuelTypesList = () => {
                 onClick={() => setShowColumnSettings(false)}
                 aria-label="Закрыть"
               >
-                ×
+                <Icon name="close" size={16} />
               </button>
             </div>
             <p style={{ marginBottom: 'var(--spacing-block)', color: 'var(--text-2)', fontSize: 'var(--font-size-sm)' }}>

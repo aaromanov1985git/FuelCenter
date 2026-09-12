@@ -347,9 +347,15 @@
   background: var(--surface-2);
 }
 
+/* Активный бейдж организации — плоская заливка роли "фон под --ink-on-accent".
+   Было два лишних слоя одного бита: градиент --accent -> --pink уводил оттенок
+   в другую семантическую семью (иконка --ink-on-accent давала на левом стопе
+   4.35:1, на правом — другой цвет вовсе), а тень на --accent-glow — четвёртый
+   тир вне шкалы --shadow-sm/--shadow-md. Тот же glow уже снят у .org-btn-primary
+   (см. комментарий на строках 139-143) — правило применено последовательно.
+   --ink-on-accent на --accent-solid: 5.49:1 в тёмной, 6.08 в светлой. */
 .org-root .org-detail-badge-active {
-  background: linear-gradient(135deg, var(--accent), var(--pink));
-  box-shadow: 0 6px 16px var(--accent-glow);
+  background: var(--accent-solid);
 }
 
 .org-root .org-detail-info {

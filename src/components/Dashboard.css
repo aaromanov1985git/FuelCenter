@@ -338,17 +338,27 @@
   filter: brightness(1.15);
 }
 
+/* Столбцы одноряднoго графика — нейтраль. 12 столбцов давали 153 356 px^2 =
+   11.8% первого экрана 1440x900, то есть самую крупную акцентную площадь
+   продукта, при том что ряд ОДИН: оттенок не кодировал ни категорию, ни
+   состояние. Нейтраль взята --text-3, а не --border-strong: столбец несёт
+   данные, то есть это графический объект с порогом 3:1, а --border-strong даёт
+   на --surface всего 1.42:1 в тёмной и 1.43 в светлой — ниже порога. --text-3
+   даёт 5.26 и 5.05. Акцент переехал на столбец под курсором — там он снова
+   кодирует состояние (--accent на --surface: 4.20 в тёмной, 6.08 в светлой). */
 .dash-chart-bar-simple {
   width: 100%;
   position: relative;
   min-height: 6px;
   border-radius: 6px 6px 0 0;
-  background: linear-gradient(to top, var(--accent), color-mix(in srgb, var(--accent) 60%, black));
+  background: var(--text-3);
   cursor: pointer;
-  transition: filter .2s ease;
+  transition: background .2s ease;
 }
 
-.dash-chart-bar-simple:hover { filter: brightness(1.12); }
+.dash-chart-bar-wrapper:hover .dash-chart-bar-simple {
+  background: var(--accent);
+}
 
 .dash-chart-value {
   position: absolute;
