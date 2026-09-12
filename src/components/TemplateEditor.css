@@ -73,6 +73,19 @@
   line-height: var(--line-height-normal);
 }
 
+/* Заголовок подгруппы полей внутри секции — тиром ниже .section-title */
+.subgroup-title {
+  margin: 0 0 var(--spacing-small) 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* Подгруппа параметров XML API внутри секции веб-сервиса */
+.xml-api-params {
+  margin-top: var(--spacing-element);
+}
+
 .file-upload-section {
   background: var(--color-info-light);
   border-color: var(--color-info);
