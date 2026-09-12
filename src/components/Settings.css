@@ -44,6 +44,9 @@
 }
 
 .settings-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 7px 12px;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -283,10 +286,9 @@
 }
 
 .settings-option-arrow {
+  display: flex;
   flex-shrink: 0;
   color: var(--text-3);
-  font-size: 16px;
-  line-height: 1;
   align-self: center;
 }
 

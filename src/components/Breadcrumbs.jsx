@@ -1,5 +1,6 @@
 import React from 'react'
 import { Button } from './ui'
+import Icon from './ui/Icon'
 import './Breadcrumbs.css'
 
 /**
@@ -38,6 +39,10 @@ const Breadcrumbs = ({ items = [], separator = '>', className = '' }) => {
         {items.map((item, index) => {
           const isLast = index === items.length - 1
           const isClickable = item.onClick || item.path
+          // Первый элемент — корень навигации, он и получает значок раздела.
+          const leadingIcon = index === 0
+            ? <Icon name="home" size={16} />
+            : null
           
           return (
             <li key={item.label} className="breadcrumbs-item">
@@ -47,10 +52,11 @@ const Breadcrumbs = ({ items = [], separator = '>', className = '' }) => {
                 </span>
               )}
               {isLast ? (
-                <span 
-                  className="breadcrumbs-current" 
+                <span
+                  className="breadcrumbs-current"
                   aria-current="page"
                 >
+                  {leadingIcon}
                   {item.label}
                 </span>
               ) : isClickable ? (
@@ -59,11 +65,12 @@ const Breadcrumbs = ({ items = [], separator = '>', className = '' }) => {
                   size="sm"
                   onClick={() => handleClick(item, index)}
                   className="breadcrumbs-link"
+                  icon={leadingIcon}
                 >
                   {item.label}
                 </Button>
               ) : (
-                <span className="breadcrumbs-text">{item.label}</span>
+                <span className="breadcrumbs-text">{leadingIcon}{item.label}</span>
               )}
             </li>
           )

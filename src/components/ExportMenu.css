@@ -92,9 +92,10 @@
 }
 
 .export-menu-icon {
-  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 20px;
-  text-align: center;
 }
 
 .export-menu-label {

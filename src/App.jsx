@@ -10,6 +10,7 @@ import { TAB_LABELS, getTabFromPath, getPathFromTab } from './router/routes'
 import TransactionUpload from './components/TransactionUpload'
 import TransactionTable from './components/TransactionTable'
 import Breadcrumbs from './components/Breadcrumbs'
+import Icon from './components/ui/Icon'
 import AdvancedSearch from './components/AdvancedSearch'
 import './components/ColumnSettingsModal.css'
 import StatusIndicator from './components/StatusIndicator'
@@ -181,8 +182,7 @@ const App = () => {
     visibleColumns,
     toggleColumnVisibility,
     resetColumnVisibility,
-    getSortIcon,
-  } = useTableColumns(sortConfig)
+  } = useTableColumns()
 
   const transactionFilterConfig = useMemo(() => [
     { key: 'card_number', label: 'Номер карты', placeholder: 'Введите номер карты', type: 'text' },
@@ -233,13 +233,9 @@ const App = () => {
           aria-label={sidebarVisible ? 'Закрыть меню' : 'Открыть меню'}
           aria-expanded={sidebarVisible}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            {sidebarVisible ? (
-              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-            ) : (
-              <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-            )}
-          </svg>
+          {/* Был встроенный ЗАЛИТЫЙ svg 0 0 20 20 — последний глиф в проекте
+              вне общего набора. Теперь контурная иконка 16px из ui/Icon. */}
+          <Icon name={sidebarVisible ? 'chevron-left' : 'rows'} className="icon" />
         </button>
 
         {isMobile && sidebarVisible && (
@@ -277,8 +273,8 @@ const App = () => {
             
             {activeTab === 'transactions' && (
               <>
-                <h1>Транзакции ГСМ</h1>
-                <p className="subtitle">Загрузите файл для импорта, затем просматривайте и фильтруйте данные</p>
+                <h1 className="t-page-title tx-page-title">Транзакции ГСМ</h1>
+                <p className="subtitle tx-page-subtitle">Загрузите файл для импорта, затем просматривайте и фильтруйте данные</p>
               </>
             )}
             {!TABS_WITH_OWN_H1.has(activeTab) && (
@@ -338,7 +334,6 @@ const App = () => {
             debouncedProduct={debouncedProduct}
             isAdmin={isAdmin}
             onSort={handleSort}
-            getSortIcon={getSortIcon}
             onOpenColumnSettings={() => setShowColumnSettings(true)}
             onDownloadExcel={downloadExcel}
             onRefresh={() => loadTransactions()}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card, Button, Select, Skeleton } from './ui'
+import Icon from './ui/Icon'
 import Pagination from './Pagination'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
@@ -7,32 +8,14 @@ import './NotificationsList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
-// Inline SVG icons matching the redesign reference
+/* Собственные inline-svg 14px заменены на примитив ui/Icon. Сопоставление
+   такое же, как у Alert и Toast, чтобы один и тот же тип сообщения не получал
+   в разных местах разные значки. */
 const TypeIcons = {
-  error: (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M8 5v4M8 11v.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  ),
-  warning: (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M8 2l6 11H2L8 2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-      <path d="M8 7v3M8 12v.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  ),
-  success: (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M5 8l2.5 2.5L11 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  ),
-  info: (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M8 7v4M8 5v.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  )
+  error: <Icon name="close" />,
+  warning: <Icon name="alert" />,
+  success: <Icon name="check" />,
+  info: <Icon name="info" />
 }
 
 const TYPE_META = {
@@ -279,7 +262,7 @@ const NotificationsList = () => {
           </div>
         ) : notifications.length === 0 ? (
           <div className="notif-empty">
-            <div className="notif-empty-mark" aria-hidden="true">◈</div>
+            <div className="notif-empty-mark" aria-hidden="true"><Icon name="bell" size={32} /></div>
             <div className="notif-empty-text">Нет уведомлений</div>
           </div>
         ) : (

@@ -71,6 +71,17 @@
   --overlay:      rgba(15,23,36,.4);
 }
 
+/* ============ ТИПОГРАФИКА: семейства ============
+ * Не зависят от темы, поэтому вынесены из блоков dark/light.
+ * Golos Text — интерфейс и текст. IBM Plex Mono — только цифры, стоящие в колонку
+ * (ячейки td/th таблиц). В заголовках, KPI-плитках и сводках цифры остаются
+ * в Golos Text, иначе моноширинный читается как чужеродная вставка.
+ */
+:root {
+  --font-sans: 'Golos Text', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 /* Скролл и сглаживание */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html {
@@ -81,7 +92,7 @@ html {
 html, body {
   background: var(--bg);
   color: var(--text-1);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   transition: background .2s ease, color .2s ease;
 }
@@ -131,34 +142,76 @@ select:-webkit-autofill {
 }
 :where(input, textarea)::placeholder { color: var(--text-3); }
 
-/* ============ Типографические utility-классы ============ */
+/* ============ Типографические utility-классы ============
+ * Префикс t- намеренный: глобальные .page-title / .section-title перебивали бы
+ * одноимённые классы в CSS отдельных компонентов (index.css грузится последним).
+ * Шкала кеглей и её токены — в src/index.css.
+ */
+.t-page-title {
+  font-size: var(--font-size-page-title);
+  line-height: var(--line-height-page-title);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-title);
+  color: var(--text-1);
+}
+.t-section-title {
+  font-size: var(--font-size-section-title);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-1);
+}
+.t-body {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  color: var(--text-1);
+}
+.t-caption {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-caption);
+  color: var(--text-3);
+}
+/* .t-numeric — ТОЛЬКО для цифр, стоящих в колонку (td/th таблиц):
+   идентификаторы, номера карт, количество, курс, даты в таблицах.
+   В заголовках, KPI-плитках и сводках цифры остаются в Golos Text. */
+.t-numeric {
+  font-family: var(--font-mono);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* .t-label — это caption из шкалы кеглей */
 .t-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
   color: var(--text-3);
   text-transform: uppercase;
-  letter-spacing: .4px;
+  letter-spacing: var(--letter-spacing-caption);
 }
+/* KPI-значения: цифры остаются в Golos Text (var(--font-sans) наследуется),
+   моноширинный здесь читался бы как чужеродная вставка. */
 .t-value {
-  font-size: 26px;
-  font-weight: 700;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
   color: var(--text-1);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -.3px;
+  letter-spacing: var(--letter-spacing-title);
   line-height: 1.1;
 }
 .t-value-sm {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
   color: var(--text-1);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -.2px;
+  letter-spacing: var(--letter-spacing-title);
   line-height: 1.2;
 }
 .t-unit {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: var(--text-3);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   margin-left: 4px;
 }
 

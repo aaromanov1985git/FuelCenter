@@ -23,10 +23,15 @@ const Button = ({
     onClick?.(e);
   };
 
+  // Кнопка без подписи — иконочная: квадрат 36×36 (md) без боковых отступов.
+  const hasLabel = !(children === undefined || children === null || children === false || children === '');
+  const iconOnly = Boolean(icon) && !hasLabel;
+
   const classes = [
     'btn',
     `btn-${variant}`,
     `btn-${size}`,
+    iconOnly && 'btn-icon-only',
     fullWidth && 'btn-full-width',
     loading && 'btn-loading',
     className
@@ -45,7 +50,7 @@ const Button = ({
       {!loading && icon && iconPosition === 'left' && (
         <span className="btn-icon btn-icon-left">{icon}</span>
       )}
-      {!loading && <span className="btn-text">{children}</span>}
+      {!loading && hasLabel && <span className="btn-text">{children}</span>}
       {!loading && icon && iconPosition === 'right' && (
         <span className="btn-icon btn-icon-right">{icon}</span>
       )}

@@ -1,5 +1,6 @@
 import React from 'react'
 import { Badge } from './ui'
+import Icon from './ui/Icon'
 import { useNotifications } from '../hooks/useNotifications'
 import './NotificationBadge.css'
 
@@ -12,7 +13,7 @@ const NotificationBadge = ({ onClick, className = '' }) => {
   if (onClick) {
     return (
       <div className={`notification-badge ${className}`} onClick={onClick}>
-        <span className="notification-badge-icon">🔔</span>
+        <span className="notification-badge-icon"><Icon name="bell" size={16} /></span>
         <NotificationCount />
       </div>
     )

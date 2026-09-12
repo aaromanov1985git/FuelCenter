@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import Icon from '../Icon';
 import './Select.css';
 
 const Select = ({
@@ -165,7 +166,7 @@ const Select = ({
             </button>
           )}
           <span className={`select-arrow ${isOpen ? 'select-arrow-up' : ''}`}>
-            ▼
+            <Icon name="chevron-down" size={16} />
           </span>
         </div>
       </div>
@@ -213,7 +214,7 @@ const Select = ({
                 >
                   {option.label}
                   {option.value === value && (
-                    <span className="select-check">✓</span>
+                    <span className="select-check"><Icon name="check" size={16} /></span>
                   )}
                 </div>
               ))

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Card, Button, Table, Badge, Skeleton, Alert, Modal, Input, Select, Checkbox } from './ui'
+import Icon from './ui/Icon'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
@@ -191,13 +192,20 @@ const CardInfoSchedulesList = () => {
       return '-'
     }
     const result = schedule.last_run_result
+    // Значок исхода — контурная иконка рядом с числами, а не глиф внутри строки.
+    const view = (iconName, text) => (
+      <span className="schedule-result">
+        <Icon name={iconName} size={16} />
+        <span>{text}</span>
+      </span>
+    )
     if (result.status === 'success') {
-      return `✓ ${result.cards_updated}/${result.cards_processed}`
-    } else if (result.status === 'partial') {
-      return `⚠ ${result.cards_updated}/${result.cards_processed}`
-    } else {
-      return `✗ ${result.cards_failed} ошибок`
+      return view('check', `${result.cards_updated}/${result.cards_processed}`)
     }
+    if (result.status === 'partial') {
+      return view('alert', `${result.cards_updated}/${result.cards_processed}`)
+    }
+    return view('close', `${result.cards_failed} ошибок`)
   }
 
   const tableData = schedules.map(schedule => ({

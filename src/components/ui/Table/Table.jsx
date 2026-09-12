@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import Icon from '../Icon';
 import './Table.css';
 
 const Table = ({
@@ -106,13 +107,23 @@ const Table = ({
   const getSortIcon = (column) => {
     if (!sortable || column.sortable !== true) return null;
 
+    // Направление показывает поворот одного и того же шеврона: отдельных глифов
+    // «вверх/вниз» в наборе Icon нет, а поворот честнее случайной иконки.
     if (sortColumn !== column.key) {
-      return <span className="ui-table-sort-icon">⇅</span>;
+      return (
+        <span className="ui-table-sort-icon">
+          <Icon name="chevron-down" size={16} />
+        </span>
+      );
     }
 
     return (
-      <span className="ui-table-sort-icon active">
-        {sortOrder === 'asc' ? '↑' : '↓'}
+      <span
+        className={`ui-table-sort-icon active${
+          sortOrder === 'asc' ? ' ui-table-sort-icon-asc' : ''
+        }`}
+      >
+        <Icon name="chevron-down" size={16} />
       </span>
     );
   };
@@ -141,7 +152,7 @@ const Table = ({
   if (!data || data.length === 0) {
     return (
       <div className="ui-table-empty">
-        <div className="ui-table-empty-icon">📊</div>
+        <div className="ui-table-empty-icon"><Icon name="chart" size={32} /></div>
         <div className="ui-table-empty-message">{emptyMessage}</div>
       </div>
     );

@@ -1,3 +1,6 @@
+/* Иконочная кнопка. Глиф рисует общий примитив ui/Icon — контурный svg,
+   наследующий цвет текста, поэтому здесь НЕТ ни одного правила `fill`:
+   залитая иконка ломала бы контурный набор. */
 .icon-button {
   display: inline-flex;
   align-items: center;
@@ -16,6 +19,8 @@
   cursor: not-allowed;
 }
 
+/* Размеры по шкале кнопок: 32px в панелях и строках таблиц,
+   36×36 — обычная иконочная кнопка, 40px — ключевое действие. */
 .icon-button-small {
   width: 32px;
   height: 32px;
@@ -23,15 +28,21 @@
 }
 
 .icon-button-medium {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+}
+
+.icon-button-large {
   width: 40px;
   height: 40px;
   min-width: 40px;
 }
 
-.icon-button-large {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
+/* Размер svg задаётся в базовом классе кнопки, а не в местах вызова. */
+.icon-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 .icon-button-primary {
@@ -39,43 +50,20 @@
   color: var(--accent);
 }
 
-.icon-button-primary svg {
-  color: var(--accent);
-  fill: var(--accent);
-}
-
 .icon-button-primary:hover:not(:disabled) {
   background: var(--accent-soft);
   color: var(--accent);
 }
 
-.icon-button-primary:hover:not(:disabled) svg {
-  color: var(--accent);
-  fill: var(--accent);
-}
-
-/* Улучшенная видимость для светлой темы - используем более темный цвет */
-:not([data-theme]) .icon-button-primary {
-  color: #312e81;
-}
-
-:not([data-theme]) .icon-button-primary svg {
-  color: #312e81;
-  fill: #312e81;
-}
-
-:not([data-theme]) .icon-button-primary:hover:not(:disabled) {
-  color: #1e1b4b;
-}
-
-:not([data-theme]) .icon-button-primary:hover:not(:disabled) svg {
-  color: #1e1b4b;
-  fill: #1e1b4b;
-}
+/* Здесь стояли перекрытия :not([data-theme]) с литералами #312e81 / #1e1b4b,
+   затемнявшие акцент вручную. Токен --accent уже разный в тёмной и светлой
+   теме, поэтому перекрытия удалены вместе с литералами. */
 
 .icon-button-success {
   background: var(--green);
-  color: #fff;
+  /* Инверсия к цветной подложке: в тёмной теме это почти чёрный, в светлой —
+     белый, как и было у литерала #fff, но без литерала. */
+  color: var(--surface);
 }
 
 .icon-button-success:hover:not(:disabled) {
@@ -103,20 +91,4 @@
 .icon-button-secondary:hover:not(:disabled) {
   background: var(--surface-2);
   border-color: var(--border-strong);
-}
-
-/* Для маленьких кнопок уменьшаем размер иконки */
-.icon-button-small svg {
-  width: 16px;
-  height: 16px;
-}
-
-.icon-button-medium svg {
-  width: 20px;
-  height: 20px;
-}
-
-.icon-button-large svg {
-  width: 24px;
-  height: 24px;
 }

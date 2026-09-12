@@ -102,10 +102,9 @@
 }
 
 .select-arrow {
-  font-size: var(--font-size-xs);
+  display: inline-flex;
   color: var(--text-2);
   transition: transform var(--duration-normal) var(--ease-in-out);
-  display: inline-block;
 }
 
 .select-arrow-up {
@@ -195,7 +194,7 @@
 }
 
 .select-check {
-  font-size: var(--font-size-lg);
+  display: inline-flex;
   color: var(--accent);
 }
 

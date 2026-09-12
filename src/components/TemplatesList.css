@@ -206,7 +206,7 @@
 .provider-code {
   font-size: var(--font-size-xs);
   color: var(--text-2);
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 .provider-card-selected .provider-name {

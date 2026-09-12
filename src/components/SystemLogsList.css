@@ -90,7 +90,7 @@
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-medium);
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: var(--font-size-sm);
   white-space: pre-wrap;
   word-break: break-word;

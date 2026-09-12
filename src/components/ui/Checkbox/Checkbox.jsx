@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from '../Icon';
 import './Checkbox.css';
 
 const Checkbox = ({
@@ -41,7 +42,7 @@ const Checkbox = ({
         {indeterminate ? (
           <span className="checkbox-indeterminate">−</span>
         ) : checked ? (
-          <span className="checkbox-check">✓</span>
+          <span className="checkbox-check"><Icon name="check" size={12} strokeWidth={2.2} /></span>
         ) : null}
       </span>
       {label && <span className="checkbox-label">{label}</span>}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Card, Button, Badge, Modal, Skeleton } from './ui'
+import Icon from './ui/Icon'
 import ConfirmModal from './ConfirmModal'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
@@ -244,7 +245,7 @@ const BackupManagement = () => {
       ) : backups.length === 0 ? (
         <Card className="backup-empty">
           <div className="backup-empty-content">
-            <div className="backup-empty-icon">💾</div>
+            <div className="backup-empty-icon"><Icon name="save" size={32} /></div>
             <h3>Нет резервных копий</h3>
             <p>Создайте первую резервную копию базы данных</p>
             <Button
@@ -268,7 +269,8 @@ const BackupManagement = () => {
                   </div>
                   <div className="backup-item-meta">
                     <span className="backup-item-date">
-                      📅 {formatDate(backup.created)}
+                      <Icon name="calendar" size={16} />
+                      {formatDate(backup.created)}
                     </span>
                   </div>
                 </div>

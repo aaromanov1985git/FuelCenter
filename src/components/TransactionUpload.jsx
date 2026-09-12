@@ -1,9 +1,28 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import FileUploadProgress from './FileUploadProgress'
+import { Button, Icon } from './ui'
 import { formatLiters } from '../utils/format'
+import './TransactionUpload.css'
 
 const MAX_FILE_SIZE_MB = 50
 
+// formatNumber из utils/format всегда даёт два знака после запятой — для счётчика
+// транзакций это «85 178,00», поэтому целые считаем отдельно.
+const formatCount = (value) => new Intl.NumberFormat('ru-RU').format(value || 0)
+
+// Перетаскивание мимо файлов (выделенный текст, ссылка) не должно поднимать оверлей
+const hasFiles = (e) => {
+  const types = e.dataTransfer?.types
+  return !!types && Array.from(types).includes('Files')
+}
+
+/**
+ * Загрузка файла транзакций: кнопка в шапке страницы плюс приём перетаскивания
+ * по всей странице. Раскрытой зоны «Перетащите файл сюда» больше нет — она вместе
+ * с дашбордом из четырёх плиток отодвигала первую строку таблицы примерно на 250px,
+ * а файл загружают раз в день, тогда как таблицу смотрят постоянно.
+ */
 const TransactionUpload = ({
   dragActive,
   loading,
@@ -23,50 +42,135 @@ const TransactionUpload = ({
   onDrag,
   onDrop,
   onFileInput,
-}) => (
-  <>
-    <div
-      className={`upload-section ${dragActive ? 'drag-active' : ''}`}
-      onDragEnter={onDrag}
-      onDragLeave={onDrag}
-      onDragOver={onDrag}
-      onDrop={onDrop}
-    >
-      <div className="drag-drop-area">
+}) => {
+  const fileInputRef = useRef(null)
+  // dragenter/dragleave всплывают от каждого элемента под курсором: без счётчика
+  // вложенности оверлей мигал бы на каждой границе внутри страницы.
+  const dragDepth = useRef(0)
+
+  useEffect(() => {
+    const handleEnter = (e) => {
+      if (!hasFiles(e)) return
+      dragDepth.current += 1
+      onDrag(e)
+    }
+    const handleOver = (e) => {
+      if (!hasFiles(e)) return
+      // preventDefault внутри onDrag обязателен на каждом dragover: без него
+      // браузер откроет файл сам и drop до нас не дойдёт.
+      onDrag(e)
+    }
+    const handleLeave = (e) => {
+      if (!hasFiles(e)) return
+      dragDepth.current = Math.max(0, dragDepth.current - 1)
+      if (dragDepth.current === 0) onDrag(e)
+    }
+    const handleDrop = (e) => {
+      dragDepth.current = 0
+      onDrop(e)
+    }
+
+    window.addEventListener('dragenter', handleEnter)
+    window.addEventListener('dragover', handleOver)
+    window.addEventListener('dragleave', handleLeave)
+    window.addEventListener('drop', handleDrop)
+    return () => {
+      window.removeEventListener('dragenter', handleEnter)
+      window.removeEventListener('dragover', handleOver)
+      window.removeEventListener('dragleave', handleLeave)
+      window.removeEventListener('drop', handleDrop)
+      dragDepth.current = 0
+    }
+  }, [onDrag, onDrop])
+
+  const activeProviderName = selectedProviderTab !== null && selectedProviderTab !== undefined
+    ? (providers.find(p => p.id === selectedProviderTab)?.name || '—')
+    : null
+
+  const providerCount = stats?.provider_count || (selectedProviderTab ? 1 : providers.length)
+
+  return (
+    <>
+      <div className="tx-toolbar">
+        {/* id="file-upload-input" обязателен: useFileUpload сбрасывает значение
+            поля через document.getElementById после отмены выбора файла. */}
         <input
           type="file"
           accept=".xlsx,.xls"
           onChange={onFileInput}
-          className="file-input"
+          className="tx-file-input"
           disabled={loading}
           id="file-upload-input"
+          ref={fileInputRef}
         />
-        <label htmlFor="file-upload-input" className="drag-drop-label">
-          <svg xmlns="http://www.w3.org/2000/svg" className="icon-large" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-          <div className="drag-drop-text">
-            <span className="drag-drop-title">Перетащите файл сюда</span>
-            <span className="drag-drop-subtitle">или нажмите для выбора файла</span>
-            <span className="drag-drop-hint">Максимальный размер файла: {MAX_FILE_SIZE_MB}MB</span>
-          </div>
-        </label>
+        <Button
+          variant="primary"
+          icon={<Icon name="upload" size={16} />}
+          onClick={() => fileInputRef.current?.click()}
+          disabled={loading}
+          title={`Excel .xlsx или .xls, не больше ${MAX_FILE_SIZE_MB} МБ`}
+        >
+          Загрузить файл
+        </Button>
+
+        {fileName ? (
+          <span className="tx-file-status">
+            <Icon name="file" size={16} />
+            <span className="tx-file-status-name" title={fileName}>{fileName}</span>
+            {fileMatchInfo?.provider_name && (
+              <span className="tx-file-status-dim">
+                {' · '}{fileMatchInfo.provider_name}
+                {fileMatchInfo.template_name && ` (шаблон: ${fileMatchInfo.template_name})`}
+                {fileMatchInfo.score > 0 && ` · совпадение ${fileMatchInfo.score}%`}
+              </span>
+            )}
+          </span>
+        ) : (
+          <span className="tx-toolbar-hint">
+            или перетащите файл в любое место страницы · xlsx, xls · до {MAX_FILE_SIZE_MB} МБ
+          </span>
+        )}
+
+        <span className="tx-toolbar-spacer" />
+
+        {activeProviderName && (
+          <button
+            type="button"
+            className="tx-chip"
+            onClick={() => onSelectedProviderTabChange(null)}
+            title="Сбросить фильтр по поставщику"
+          >
+            <Icon name="filter" size={16} />
+            <span className="tx-chip-text">{activeProviderName}</span>
+            <Icon name="close" size={16} />
+          </button>
+        )}
       </div>
 
-      {fileName && (
-        <div className="file-info">
-          <span className="file-name">Загружен: {fileName}</span>
-          {fileMatchInfo && fileMatchInfo.provider_name && (
-            <div className="match-info">
-              <span className="match-label">Определен провайдер:</span>
-              <span className="match-value">{fileMatchInfo.provider_name}</span>
-              {fileMatchInfo.template_name && (
-                <span className="match-template">(шаблон: {fileMatchInfo.template_name})</span>
-              )}
-            </div>
-          )}
+      {/* Уровень «зона»: приглушённая подложка без бордера. Крупные плитки уместны,
+          когда цифры и есть цель экрана; здесь цель — таблица. */}
+      <div className="tx-summary">
+        <div className="tx-summary-item">
+          <span className="t-caption tx-summary-label">Всего транзакций</span>
+          <span className="tx-summary-value">{formatCount(stats?.total_transactions)}</span>
         </div>
-      )}
+        <div className="tx-summary-item">
+          <span className="t-caption tx-summary-label">Всего литров</span>
+          <span className="tx-summary-value">
+            {stats?.total_quantity ? formatLiters(stats.total_quantity) : '0.00 л'}
+          </span>
+        </div>
+        <div className="tx-summary-item">
+          <span className="t-caption tx-summary-label">Видов топлива</span>
+          <span className="tx-summary-value">
+            {stats?.products ? Object.keys(stats.products).length : 0}
+          </span>
+        </div>
+        <div className="tx-summary-item">
+          <span className="t-caption tx-summary-label">Поставщиков</span>
+          <span className="tx-summary-value">{providerCount}</span>
+        </div>
+      </div>
 
       {(uploadStatus || uploadProgress > 0) && (
         <FileUploadProgress
@@ -87,82 +191,29 @@ const TransactionUpload = ({
         </div>
       )}
 
+      {/* Сообщение об успехе useFileUpload пишет в ту же переменную, что и ошибку,
+          текстом «Файл успешно загружен» — со строчной буквы. Проверка на 'Успешно'
+          с заглавной не срабатывала, и зелёное сообщение показывалось красным. */}
       {error && (
-        <div className={error.includes('Успешно') ? 'success' : 'error'}>
+        <div className={/успешно/i.test(error) ? 'success' : 'error'}>
           {error}
         </div>
       )}
-    </div>
 
-    <div className="upload-dashboard">
-      <h2 className="upload-dashboard-title">Дашборд загрузки</h2>
-      <div className="upload-dashboard-grid">
-        <div className="upload-dashboard-card stat-primary">
-          <div className="upload-dashboard-label">Всего транзакций</div>
-          <div className="upload-dashboard-value">{stats?.total_transactions || 0}</div>
-        </div>
-        <div className="upload-dashboard-card stat-success">
-          <div className="upload-dashboard-label">Всего литров</div>
-          <div className="upload-dashboard-value">
-            {stats?.total_quantity ? formatLiters(stats.total_quantity) : '0.00 л'}
+      {/* Зона приёма всплывает только пока файл тащат над окном. Портал в body —
+          чтобы position: fixed не зависел от трансформаций родителей страницы. */}
+      {dragActive && createPortal(
+        <div className="tx-dropzone">
+          <div className="tx-dropzone-card">
+            <Icon name="upload" size={16} className="tx-dropzone-icon" />
+            <span className="tx-dropzone-title">Отпустите файл для загрузки</span>
+            <span className="tx-dropzone-hint">Excel .xlsx или .xls, до {MAX_FILE_SIZE_MB} МБ</span>
           </div>
-        </div>
-        <div className="upload-dashboard-card stat-secondary">
-          <div className="upload-dashboard-label">Видов топлива</div>
-          <div className="upload-dashboard-value">
-            {stats?.products ? Object.keys(stats.products).length : 0}
-          </div>
-        </div>
-        <div className="upload-dashboard-card stat-secondary">
-          <div className="upload-dashboard-label">Провайдеров</div>
-          <div className="upload-dashboard-value">
-            {stats?.provider_count || (selectedProviderTab ? 1 : providers.length)}
-          </div>
-          {selectedProviderTab !== null && (
-            <div className="upload-dashboard-subvalue">
-              <span style={{ fontWeight: 'bold', color: 'var(--accent)' }}>
-                Фильтр: {providers.find(p => p.id === selectedProviderTab)?.name || '—'}
-              </span>
-              <button
-                onClick={() => onSelectedProviderTabChange(null)}
-                style={{
-                  marginLeft: '8px',
-                  padding: '2px 8px',
-                  fontSize: '12px',
-                  background: 'var(--red-soft)',
-                  color: 'var(--red)',
-                  border: '1px solid var(--red)',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-                title="Сбросить фильтр"
-              >
-                ✕ Сбросить
-              </button>
-            </div>
-          )}
-        </div>
-        {fileMatchInfo && fileMatchInfo.provider_name && (
-          <div className="upload-dashboard-card upload-dashboard-card-highlight">
-            <div className="upload-dashboard-label">Последний провайдер</div>
-            <div className="upload-dashboard-value-small">{fileMatchInfo.provider_name}</div>
-            {fileMatchInfo.template_name && (
-              <div className="upload-dashboard-subvalue">Шаблон: {fileMatchInfo.template_name}</div>
-            )}
-            {fileMatchInfo.score && fileMatchInfo.score > 0 && (
-              <div className="upload-dashboard-subvalue">Совпадение: {fileMatchInfo.score}%</div>
-            )}
-          </div>
-        )}
-        {fileName && (
-          <div className="upload-dashboard-card">
-            <div className="upload-dashboard-label">Последний файл</div>
-            <div className="upload-dashboard-value-small">{fileName}</div>
-          </div>
-        )}
-      </div>
-    </div>
-  </>
-)
+        </div>,
+        document.body,
+      )}
+    </>
+  )
+}
 
 export default TransactionUpload

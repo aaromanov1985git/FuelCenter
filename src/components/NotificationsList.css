@@ -345,7 +345,8 @@
 }
 
 .notif-root .notif-empty-mark {
-  font-size: 32px;
+  display: flex;
+  justify-content: center;
   opacity: .25;
   margin-bottom: 10px;
   color: var(--text-3);

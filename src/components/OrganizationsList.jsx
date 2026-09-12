@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Button, Input, Modal, Skeleton, Tooltip } from './ui'
+import Icon from './ui/Icon'
 import ConfirmModal from './ConfirmModal'
 import { useToast } from './ToastContainer'
 import { useFormValidation } from '../hooks/useFormValidation'
@@ -9,39 +10,17 @@ import './OrganizationsList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
-// Inline SVG icons matching design reference
+/* Здесь лежал локальный набор inline-svg 13-16px со stroke-width 1.8 —
+   ещё один набор иконок со своей геометрией. Все значки теперь идут через
+   примитив ui/Icon: контурные 16px в currentColor. */
 const Icons = {
-  search: (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
-  ),
-  plus: (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  ),
-  edit: (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  ),
-  trash: (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-      <path d="M10 11v6M14 11v6" />
-    </svg>
-  ),
-  bldg: (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 21h18" />
-      <path d="M5 21V7l7-4 7 4v14" />
-      <path d="M9 9h.01M15 9h.01M9 13h.01M15 13h.01M9 17h.01M15 17h.01" />
-    </svg>
-  ),
+  search: <Icon name="search" />,
+  plus: <Icon name="plus" />,
+  edit: <Icon name="edit" />,
+  trash: <Icon name="trash" />,
+  bldg: <Icon name="building" />,
 }
+
 
 const OrganizationsList = () => {
   const { user: currentUser } = useAuth()
@@ -568,7 +547,7 @@ const OrganizationsList = () => {
         throw new Error(errorData.detail || 'Не удалось создать организацию')
       }
 
-      success('✅ Организация успешно создана')
+      success('Организация успешно создана')
       setTimeout(() => {
         reset()
         setShowModal(false)
@@ -646,7 +625,7 @@ const OrganizationsList = () => {
         throw new Error(errorData.detail || 'Не удалось обновить организацию')
       }
 
-      success('✅ Организация успешно обновлена')
+      success('Организация успешно обновлена')
       setTimeout(() => {
         setShowModal(false)
         setEditingOrg(null)
@@ -1041,7 +1020,7 @@ const OrganizationsList = () => {
               <div className="org-detail-card" data-testid="org-detail-card">
                 <div className="org-detail-head">
                   <div className={`org-detail-badge ${selectedOrg.is_active ? 'org-detail-badge-active' : ''}`}>
-                    <span style={{ transform: 'scale(1.3)', display: 'inline-flex' }}>{Icons.bldg}</span>
+                    <span style={{ display: 'inline-flex' }}>{Icons.bldg}</span>
                   </div>
                   <div className="org-detail-info">
                     <div className="org-detail-title-row">
@@ -1245,7 +1224,7 @@ const OrganizationsList = () => {
                   value={newOrg.name}
                   onChange={handleNameChange}
                   onBlur={handleBlur}
-                  error={touched.name && errors.name ? `⚠️ ${errors.name}` : undefined}
+                  error={touched.name && errors.name ? `${errors.name}` : undefined}
                   placeholder="ООО «Пример»"
                   maxLength={255}
                   aria-label="Название организации"
@@ -1265,7 +1244,7 @@ const OrganizationsList = () => {
                     value={newOrg.code}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    error={touched.code && errors.code ? `⚠️ ${errors.code}` : undefined}
+                    error={touched.code && errors.code ? `${errors.code}` : undefined}
                     placeholder="Автогенерация из названия"
                     maxLength={50}
                     aria-label="Код организации"
@@ -1277,7 +1256,7 @@ const OrganizationsList = () => {
                   <label>
                     ОГРН
                     <Tooltip content="Основной государственный регистрационный номер. Для юридических лиц — 13 цифр, для ИП — 15 цифр." position="top">
-                      <span className="tooltip-icon">ℹ️</span>
+                      <span className="tooltip-icon"><Icon name="info" size={16} /></span>
                     </Tooltip>
                   </label>
                   <Input
@@ -1287,7 +1266,7 @@ const OrganizationsList = () => {
                     onChange={handleFormattedChange}
                     onBlur={handleBlur}
                     placeholder="12 34 56 78 90 123"
-                    error={touched.ogrn && errors.ogrn ? `⚠️ ${errors.ogrn}` : undefined}
+                    error={touched.ogrn && errors.ogrn ? `${errors.ogrn}` : undefined}
                     aria-label="ОГРН организации"
                   />
                 </div>
@@ -1315,7 +1294,7 @@ const OrganizationsList = () => {
                   <label>
                     ИНН <span className="required">*</span>
                     <Tooltip content="Идентификационный номер налогоплательщика. Для юридических лиц — 10 цифр, для ИП — 12 цифр. Включает контрольную сумму." position="top">
-                      <span className="tooltip-icon">ℹ️</span>
+                      <span className="tooltip-icon"><Icon name="info" size={16} /></span>
                     </Tooltip>
                   </label>
                   <Input
@@ -1325,7 +1304,7 @@ const OrganizationsList = () => {
                     onChange={handleFormattedChange}
                     onBlur={handleINNBlur}
                     placeholder="1234 5678 90"
-                    error={touched.inn && errors.inn ? `⚠️ ${errors.inn}` : undefined}
+                    error={touched.inn && errors.inn ? `${errors.inn}` : undefined}
                     aria-label="ИНН организации"
                     aria-required="true"
                     aria-invalid={touched.inn && !!errors.inn}
@@ -1335,7 +1314,7 @@ const OrganizationsList = () => {
                   <label>
                     КПП
                     <Tooltip content="Код причины постановки на учёт — 9 цифр. Первые 4 цифры — код налогового органа, обычно совпадает с первыми 4 цифрами ИНН." position="top">
-                      <span className="tooltip-icon">ℹ️</span>
+                      <span className="tooltip-icon"><Icon name="info" size={16} /></span>
                     </Tooltip>
                   </label>
                   <Input
@@ -1345,7 +1324,7 @@ const OrganizationsList = () => {
                     onChange={handleFormattedChange}
                     onBlur={handleBlur}
                     placeholder="1234 56789"
-                    error={touched.kpp && errors.kpp ? `⚠️ ${errors.kpp}` : undefined}
+                    error={touched.kpp && errors.kpp ? `${errors.kpp}` : undefined}
                     aria-label="КПП организации"
                   />
                 </div>
@@ -1357,7 +1336,8 @@ const OrganizationsList = () => {
               <h3>Адреса</h3>
               {sameAsLegalAddress && (
                 <div className="sync-hint">
-                  💡 При изменении юридического адреса фактический адрес автоматически обновится
+                  <Icon name="info" size={16} />
+                  При изменении юридического адреса фактический адрес автоматически обновится
                 </div>
               )}
               <div className={`form-group ${touched.legal_address && errors.legal_address ? 'has-error' : ''} ${!newOrg.legal_address && touched.legal_address ? 'required-empty' : ''}`}>
@@ -1378,7 +1358,7 @@ const OrganizationsList = () => {
                 />
                 {touched.legal_address && errors.legal_address && (
                   <span className="error-message" role="alert" aria-live="polite">
-                    <span className="error-icon">⚠️</span>
+                    <span className="error-icon"><Icon name="alert" size={16} /></span>
                     {errors.legal_address}
                   </span>
                 )}
@@ -1432,7 +1412,7 @@ const OrganizationsList = () => {
                 tabIndex={0}
               >
                 <h3>
-                  <span className="chev">▶</span>
+                  <span className="chev"><Icon name="chevron-right" /></span>
                   Контакты
                   <span className="form-section-hint">(необязательно)</span>
                 </h3>
@@ -1449,7 +1429,7 @@ const OrganizationsList = () => {
                         onChange={handleFormattedChange}
                         onBlur={handleBlur}
                         placeholder="+7 (999) 123-45-67"
-                        error={touched.phone && errors.phone ? `⚠️ ${errors.phone}` : undefined}
+                        error={touched.phone && errors.phone ? `${errors.phone}` : undefined}
                         aria-label="Телефон организации"
                         aria-invalid={touched.phone && !!errors.phone}
                       />
@@ -1463,7 +1443,7 @@ const OrganizationsList = () => {
                         onChange={handleChange}
                         onBlur={handleBlur}
                         placeholder="org@example.com"
-                        error={touched.email && errors.email ? `⚠️ ${errors.email}` : undefined}
+                        error={touched.email && errors.email ? `${errors.email}` : undefined}
                         aria-label="Email организации"
                         aria-invalid={touched.email && !!errors.email}
                       />
@@ -1478,7 +1458,7 @@ const OrganizationsList = () => {
                       onChange={handleChange}
                       onBlur={handleBlur}
                       placeholder="https://example.com или example.com"
-                      error={touched.website && errors.website ? `⚠️ ${errors.website}` : undefined}
+                      error={touched.website && errors.website ? `${errors.website}` : undefined}
                     />
                   </div>
                   <div className="form-row">
@@ -1502,7 +1482,7 @@ const OrganizationsList = () => {
                         onChange={handleFormattedChange}
                         onBlur={handleBlur}
                         placeholder="+7 (999) 123-45-67"
-                        error={touched.contact_phone && errors.contact_phone ? `⚠️ ${errors.contact_phone}` : undefined}
+                        error={touched.contact_phone && errors.contact_phone ? `${errors.contact_phone}` : undefined}
                         aria-label="Контактный телефон"
                         aria-invalid={touched.contact_phone && !!errors.contact_phone}
                       />
@@ -1521,7 +1501,7 @@ const OrganizationsList = () => {
                 tabIndex={0}
               >
                 <h3>
-                  <span className="chev">▶</span>
+                  <span className="chev"><Icon name="chevron-right" /></span>
                   Банковские реквизиты
                   <span className="form-section-hint">(необязательно)</span>
                 </h3>
@@ -1537,7 +1517,7 @@ const OrganizationsList = () => {
                       onChange={handleChange}
                       onBlur={handleBlur}
                       placeholder="ПАО Банк"
-                      error={touched.bank_name && errors.bank_name ? `⚠️ ${errors.bank_name}` : undefined}
+                      error={touched.bank_name && errors.bank_name ? `${errors.bank_name}` : undefined}
                       aria-label="Название банка"
                     />
                   </div>
@@ -1551,7 +1531,7 @@ const OrganizationsList = () => {
                         onChange={handleFormattedChange}
                         onBlur={handleBlur}
                         placeholder="4070 2810 1000 0000 0000"
-                        error={touched.bank_account && errors.bank_account ? `⚠️ ${errors.bank_account}` : undefined}
+                        error={touched.bank_account && errors.bank_account ? `${errors.bank_account}` : undefined}
                         aria-label="Расчетный счет"
                       />
                     </div>
@@ -1559,7 +1539,7 @@ const OrganizationsList = () => {
                       <label>
                         БИК
                         <Tooltip content="Банковский идентификационный код — 9 цифр. Первые 2 цифры — код региона. Указывает на конкретный банк." position="top">
-                          <span className="tooltip-icon">ℹ️</span>
+                          <span className="tooltip-icon"><Icon name="info" size={16} /></span>
                         </Tooltip>
                       </label>
                       <Input
@@ -1569,7 +1549,7 @@ const OrganizationsList = () => {
                         onChange={handleFormattedChange}
                         onBlur={handleBIKBlur}
                         placeholder="044 525 225"
-                        error={touched.bank_bik && errors.bank_bik ? `⚠️ ${errors.bank_bik}` : undefined}
+                        error={touched.bank_bik && errors.bank_bik ? `${errors.bank_bik}` : undefined}
                         aria-label="БИК банка"
                         aria-invalid={touched.bank_bik && !!errors.bank_bik}
                       />
@@ -1579,7 +1559,7 @@ const OrganizationsList = () => {
                     <label>
                       Корреспондентский счет
                       <Tooltip content="Счёт банка в Центральном банке РФ. Обычно начинается с 301. Используется для межбанковских операций." position="top">
-                        <span className="tooltip-icon">ℹ️</span>
+                        <span className="tooltip-icon"><Icon name="info" size={16} /></span>
                       </Tooltip>
                     </label>
                     <Input
@@ -1589,7 +1569,7 @@ const OrganizationsList = () => {
                       onChange={handleFormattedChange}
                       onBlur={handleBlur}
                       placeholder="3010 1810 1000 0000 0593"
-                      error={touched.bank_correspondent_account && errors.bank_correspondent_account ? `⚠️ ${errors.bank_correspondent_account}` : undefined}
+                      error={touched.bank_correspondent_account && errors.bank_correspondent_account ? `${errors.bank_correspondent_account}` : undefined}
                       aria-label="Корреспондентский счет"
                     />
                   </div>
@@ -1618,7 +1598,10 @@ const OrganizationsList = () => {
         <Modal.Footer>
           {!isValid && (
             <div className="validation-summary">
-              <strong>⚠️ Исправьте ошибки:</strong>
+              <strong className="validation-summary-title">
+                <Icon name="alert" size={16} />
+                Исправьте ошибки:
+              </strong>
               <ul>
                 {(() => {
                   const fieldLabels = {

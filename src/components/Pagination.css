@@ -1,12 +1,22 @@
+/* Пагинация — не панель. Во всех местах вызова она стоит ВНУТРИ панели
+   (Card на страницах журналов и уведомлений, подвал .table-footer у таблицы
+   транзакций), поэтому собственные фон, бордер и радиус давали «карточку
+   в карточке». Панельность теперь опциональна: класс .pagination-wrapper--panel
+   для случая, когда пагинация действительно стоит на странице сама по себе. */
 .pagination-wrapper {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-element);
+  margin-top: var(--spacing-element);
+  padding: var(--spacing-element) 0 0;
+}
+
+.pagination-wrapper--panel {
   margin-top: var(--spacing-block);
   padding: var(--spacing-block);
   background: var(--surface);
   border-radius: var(--radius-medium);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
 }
 
 .pagination-info {
@@ -166,7 +176,7 @@
 
 /* Мобильная адаптация */
 @media (max-width: 768px) {
-  .pagination-wrapper {
+  .pagination-wrapper--panel {
     padding: var(--spacing-element);
   }
 

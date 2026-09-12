@@ -791,7 +791,7 @@ const ProvidersList = () => {
               onChange={handleFormChange}
               onBlur={handleFormBlur}
               placeholder="Название провайдера"
-              error={formTouched.name && formErrors.name ? `⚠️ ${formErrors.name}` : undefined}
+              error={formTouched.name && formErrors.name ? `${formErrors.name}` : undefined}
               fullWidth
             />
           </div>
@@ -806,7 +806,7 @@ const ProvidersList = () => {
               onChange={handleFormChange}
               onBlur={handleFormBlur}
               placeholder="Код провайдера"
-              error={formTouched.code && formErrors.code ? `⚠️ ${formErrors.code}` : undefined}
+              error={formTouched.code && formErrors.code ? `${formErrors.code}` : undefined}
               fullWidth
             />
           </div>

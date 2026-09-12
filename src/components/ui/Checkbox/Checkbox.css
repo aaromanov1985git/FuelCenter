@@ -52,6 +52,9 @@
 
 .checkbox-check,
 .checkbox-indeterminate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: white;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);

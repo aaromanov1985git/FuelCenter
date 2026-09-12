@@ -51,7 +51,7 @@
   background: var(--bg);
   border-radius: 4px;
   font-size: 0.875rem;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   color: var(--red);
   overflow-x: auto;
   white-space: pre-wrap;

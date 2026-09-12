@@ -14,7 +14,9 @@
   font-family: inherit;
 }
 
-/* Sizes */
+/* Размеры по шкале дизайн-системы:
+   sm 32px — в панелях и строках таблиц, md 36px — обычная кнопка,
+   lg 40px — одиночное ключевое действие. Иконочная — квадрат той же высоты. */
 .btn-sm {
   height: 32px;
   padding: 0 12px;
@@ -22,16 +24,25 @@
 }
 
 .btn-md {
-  height: 40px;
-  padding: 0 20px;
-  font-size: var(--font-size-base);
+  height: 36px;
+  padding: 0 16px;
+  font-size: var(--font-size-body);
 }
 
 .btn-lg {
-  height: 48px;
-  padding: 0 24px;
-  font-size: var(--font-size-lg);
+  height: 40px;
+  padding: 0 20px;
+  font-size: var(--font-size-body);
 }
+
+/* Иконочная кнопка: квадрат по высоте своего размера (36×36 для md). */
+.btn-icon-only {
+  padding: 0;
+}
+
+.btn-icon-only.btn-sm { width: 32px; }
+.btn-icon-only.btn-md { width: 36px; }
+.btn-icon-only.btn-lg { width: 40px; }
 
 /* Variants */
 .btn-primary {
@@ -138,9 +149,22 @@
   }
 }
 
-/* Icon */
+/* Иконка. Размер svg задаётся здесь, в базовом классе кнопки, а не в местах
+   вызова: <Icon /> внутри кнопки всегда 16px и наследует цвет текста. */
 .btn-icon {
   display: inline-flex;
   align-items: center;
-  font-size: 1.2em;
+}
+
+.btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* children кнопки — строчный контекст, поэтому строку держим flex:
+   <Icon /> (display: block) внутри текста кнопки не рвёт строку. */
+.btn-text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-tiny);
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from './ui'
+import Icon from './ui/Icon'
 import ConfirmModal from './ConfirmModal'
 import ClearProviderModal from './ClearProviderModal'
 import SystemLogsList from './SystemLogsList'
@@ -72,49 +73,49 @@ const Settings = () => {
       id: 'transactions',
       label: 'Транзакции',
       description: 'Удалить все транзакции или по провайдеру с фильтрацией по датам',
-      icon: '📊',
+      icon: 'chart',
       endpoint: '/api/v1/transactions/clear'
     },
     {
       id: 'cards',
       label: 'Карты',
       description: 'Удалить все топливные карты из базы данных',
-      icon: '💳',
+      icon: 'card',
       endpoint: '/api/v1/fuel-cards/clear'
     },
     {
       id: 'gas-stations',
       label: 'АЗС',
       description: 'Удалить все АЗС из базы данных',
-      icon: '⛽',
+      icon: 'drop',
       endpoint: '/api/v1/gas-stations/clear'
     },
     {
       id: 'vehicles',
       label: 'ТС',
       description: 'Удалить все транспортные средства из базы данных',
-      icon: '🚗',
+      icon: 'truck',
       endpoint: '/api/v1/vehicles/clear'
     },
     {
       id: 'system-logs',
       label: 'Системные логи',
       description: 'Удалить все системные логи из базы данных',
-      icon: '📋',
+      icon: 'rows',
       endpoint: '/api/v1/logs/system/clear'
     },
     {
       id: 'user-action-logs',
       label: 'Действия пользователей',
       description: 'Удалить все логи действий пользователей из базы данных',
-      icon: '👤',
+      icon: 'users',
       endpoint: '/api/v1/logs/user-actions/clear'
     },
     {
       id: 'upload-events',
       label: 'События загрузок',
       description: 'Удалить все события загрузок из базы данных',
-      icon: '📤',
+      icon: 'upload',
       endpoint: '/api/v1/upload-events/clear'
     }
   ]
@@ -286,14 +287,14 @@ const Settings = () => {
     setConfirmModal({ isOpen: false, type: null, title: '', message: '' })
   }
 
-  // Sidebar tabs definition (icon = emoji/svg kept minimal to avoid extra deps)
+  // icon — имя глифа из примитива Icon (эмодзи в интерфейсе не используем)
   const sectionTabs = [
-    { id: 'cleanup', label: 'Очистка', icon: '🧹' },
-    { id: 'admin', label: 'Администрирование', icon: '🛡️' },
-    { id: 'appearance', label: 'Внешний вид', icon: '🎨' },
-    { id: 'normalization', label: 'Нормализация', icon: '🧭' },
-    { id: 'card-info-schedules', label: 'Регламенты по картам', icon: '📅' },
-    { id: 'notifications', label: 'Уведомления', icon: '🔔' },
+    { id: 'cleanup', label: 'Очистка', icon: 'trash' },
+    { id: 'admin', label: 'Администрирование', icon: 'shield' },
+    { id: 'appearance', label: 'Внешний вид', icon: 'eye' },
+    { id: 'normalization', label: 'Нормализация', icon: 'gear' },
+    { id: 'card-info-schedules', label: 'Регламенты по картам', icon: 'calendar' },
+    { id: 'notifications', label: 'Уведомления', icon: 'bell' },
   ]
 
   // Если открыт какой-то админский компонент, показываем его
@@ -323,7 +324,8 @@ const Settings = () => {
             className="settings-back-button"
             onClick={() => setAdminView(null)}
           >
-            ← Назад к настройкам
+            <Icon name="chevron-left" size={16} />
+            Назад к настройкам
           </button>
           <h1>Настройки</h1>
         </div>
@@ -350,7 +352,8 @@ const Settings = () => {
             className="settings-back-button"
             onClick={() => setAppearanceView(null)}
           >
-            ← Назад к настройкам
+            <Icon name="chevron-left" size={16} />
+            Назад к настройкам
           </button>
           <h1>Настройки</h1>
         </div>
@@ -378,7 +381,7 @@ const Settings = () => {
             className={`settings-tab ${activeSection === t.id ? 'is-active' : ''}`}
             onClick={() => setActiveSection(t.id)}
           >
-            <span className="settings-tab-icon" aria-hidden="true">{t.icon}</span>
+            <span className="settings-tab-icon" aria-hidden="true"><Icon name={t.icon} size={16} /></span>
             {t.label}
           </button>
         ))}
@@ -399,7 +402,7 @@ const Settings = () => {
               {clearOptions.map(option => (
                 <div key={option.id} className="settings-option">
                   <div className="settings-option-top">
-                    <div className="settings-option-icon" aria-hidden="true">{option.icon}</div>
+                    <div className="settings-option-icon" aria-hidden="true"><Icon name={option.icon} size={16} /></div>
                     <div className="settings-option-info">
                       <h3 className="settings-option-label">{option.label}</h3>
                       <p className="settings-option-desc">{option.description}</p>
@@ -460,12 +463,12 @@ const Settings = () => {
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setAdminView('system-logs') }}
               >
                 <div className="settings-option-top">
-                  <div className="settings-option-icon" aria-hidden="true">📋</div>
+                  <div className="settings-option-icon" aria-hidden="true"><Icon name="rows" size={16} /></div>
                   <div className="settings-option-info">
                     <h3 className="settings-option-label">Системные логи</h3>
                     <p className="settings-option-desc">Просмотр системных логов и ошибок</p>
                   </div>
-                  <div className="settings-option-arrow" aria-hidden="true">→</div>
+                  <div className="settings-option-arrow" aria-hidden="true"><Icon name="chevron-right" size={16} /></div>
                 </div>
               </div>
 
@@ -477,12 +480,12 @@ const Settings = () => {
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setAdminView('user-action-logs') }}
               >
                 <div className="settings-option-top">
-                  <div className="settings-option-icon" aria-hidden="true">👤</div>
+                  <div className="settings-option-icon" aria-hidden="true"><Icon name="users" size={16} /></div>
                   <div className="settings-option-info">
                     <h3 className="settings-option-label">Действия пользователей</h3>
                     <p className="settings-option-desc">История действий пользователей системы</p>
                   </div>
-                  <div className="settings-option-arrow" aria-hidden="true">→</div>
+                  <div className="settings-option-arrow" aria-hidden="true"><Icon name="chevron-right" size={16} /></div>
                 </div>
               </div>
 
@@ -494,12 +497,12 @@ const Settings = () => {
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setAdminView('period-lock') }}
               >
                 <div className="settings-option-top">
-                  <div className="settings-option-icon" aria-hidden="true">🔒</div>
+                  <div className="settings-option-icon" aria-hidden="true"><Icon name="lock" size={16} /></div>
                   <div className="settings-option-info">
                     <h3 className="settings-option-label">Закрытие периода</h3>
                     <p className="settings-option-desc">Блокировка периодов для загрузки транзакций</p>
                   </div>
-                  <div className="settings-option-arrow" aria-hidden="true">→</div>
+                  <div className="settings-option-arrow" aria-hidden="true"><Icon name="chevron-right" size={16} /></div>
                 </div>
               </div>
 
@@ -511,12 +514,12 @@ const Settings = () => {
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setAdminView('backup') }}
               >
                 <div className="settings-option-top">
-                  <div className="settings-option-icon" aria-hidden="true">💾</div>
+                  <div className="settings-option-icon" aria-hidden="true"><Icon name="save" size={16} /></div>
                   <div className="settings-option-info">
                     <h3 className="settings-option-label">Резервное копирование</h3>
                     <p className="settings-option-desc">Управление резервными копиями базы данных</p>
                   </div>
-                  <div className="settings-option-arrow" aria-hidden="true">→</div>
+                  <div className="settings-option-arrow" aria-hidden="true"><Icon name="chevron-right" size={16} /></div>
                 </div>
               </div>
             </div>
@@ -590,12 +593,12 @@ const Settings = () => {
               style={{ marginTop: 14 }}
             >
               <div className="settings-option-top">
-                <div className="settings-option-icon" aria-hidden="true">🎨</div>
+                <div className="settings-option-icon" aria-hidden="true"><Icon name="grid" size={16} /></div>
                 <div className="settings-option-info">
                   <h3 className="settings-option-label">UI Компоненты</h3>
                   <p className="settings-option-desc">Демонстрация всех UI компонентов системы</p>
                 </div>
-                <div className="settings-option-arrow" aria-hidden="true">→</div>
+                <div className="settings-option-arrow" aria-hidden="true"><Icon name="chevron-right" size={16} /></div>
               </div>
             </div>
           </div>

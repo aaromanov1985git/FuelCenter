@@ -130,13 +130,13 @@ export const useFileUpload = ({ onUploaded, setLoading, setError, logout }) => {
             setTotalItems((result.transactions_created || 0) + (result.transactions_skipped || 0))
             await onUploaded?.()
 
-            let message = `✅ Файл успешно загружен. Обработано ${result.transactions_created} транзакций`
+            let message = `Файл успешно загружен. Обработано ${result.transactions_created} транзакций`
             if (result.transactions_skipped > 0) {
               message += `. Пропущено дубликатов: ${result.transactions_skipped}`
             }
             if (result.validation_warnings && result.validation_warnings.length > 0) {
               success(message)
-              info(`⚠️ Предупреждения валидации: ${result.validation_warnings.join(', ')}`, 10000)
+              info(`Предупреждения валидации: ${result.validation_warnings.join(', ')}`, 10000)
             } else {
               success(message)
             }
@@ -305,13 +305,13 @@ export const useFileUpload = ({ onUploaded, setLoading, setError, logout }) => {
             setTotalItems((result.transactions_created || 0) + (result.transactions_skipped || 0))
             await onUploaded?.()
 
-            let message = `✅ Файл успешно загружен. Обработано ${result.transactions_created} транзакций`
+            let message = `Файл успешно загружен. Обработано ${result.transactions_created} транзакций`
             if (result.transactions_skipped > 0) {
               message += `. Пропущено дубликатов: ${result.transactions_skipped}`
             }
             if (result.validation_warnings && result.validation_warnings.length > 0) {
               success(message)
-              info(`⚠️ Предупреждения валидации: ${result.validation_warnings.join(', ')}`, 10000)
+              info(`Предупреждения валидации: ${result.validation_warnings.join(', ')}`, 10000)
               setError(message)
               setTimeout(() => setError(''), 15000)
             } else {

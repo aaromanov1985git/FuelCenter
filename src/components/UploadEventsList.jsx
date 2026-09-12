@@ -4,6 +4,7 @@ import { authFetch } from '../utils/api'
 import { useToast } from './ToastContainer'
 import { useDebounce } from '../hooks/useDebounce'
 import StatusBadge from './StatusBadge'
+import Icon from './ui/Icon'
 import EmptyState from './EmptyState'
 import { logger } from '../utils/logger'
 import './UploadEventsList.css'
@@ -253,7 +254,7 @@ const UploadEventsList = () => {
             title="Просмотреть полный текст"
             aria-label="Просмотреть полный текст сообщения"
           >
-            📄
+            <Icon name="eye" size={16} />
           </button>
         )}
       </div>
@@ -299,7 +300,7 @@ const UploadEventsList = () => {
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
             placeholder="Файл, пользователь, провайдер, сообщение..."
-            icon="🔍"
+            icon={<Icon name="search" size={16} />}
             iconPosition="left"
             fullWidth
           />
@@ -379,7 +380,7 @@ const UploadEventsList = () => {
                     ? 'Попробуйте изменить параметры фильтрации или сбросить фильтры, чтобы увидеть все события.'
                     : 'События загрузок пока отсутствуют. Загрузите файл для создания первого события.'
                 }
-                icon="📋"
+                icon={<Icon name="rows" size={32} />}
                 variant="default"
                 action={
                   hasActiveFilters ? (

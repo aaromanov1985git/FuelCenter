@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ConnectionTestResult from './ConnectionTestResult'
+import Icon from '../ui/Icon'
 import { authFetch } from '../../utils/api'
 import { logger } from '../../utils/logger'
 
@@ -370,7 +371,8 @@ const ApiConnection = ({
             disabled={loadingFields || Boolean(missing)}
             title="Загрузить список полей из API ответа"
           >
-            {loadingFields ? '⏳ Загрузка...' : '🔍 Загрузить поля из API'}
+            <Icon name={loadingFields ? 'clock' : 'search'} size={16} />
+            {loadingFields ? 'Загрузка...' : 'Загрузить поля из API'}
           </button>
         </div>
         <ConnectionTestResult result={testResult} />

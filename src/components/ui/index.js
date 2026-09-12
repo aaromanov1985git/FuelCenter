@@ -15,4 +15,9 @@ export { default as Tooltip } from './Tooltip';
 export { default as Alert } from './Alert';
 export { default as Toast, useToast } from './Toast';
 export { default as Skeleton } from './Skeleton';
-export { Icons } from './Icons/Icons.jsx';
+// Единственный набор иконок в проекте: примитив контурной иконки 16px,
+// наследующей цвет текста, — <Icon name="trash" />.
+// Старый набор ./Icons/Icons.jsx (готовые элементы 14×14 с вшитым
+// strokeWidth=1.4) намеренно НЕ реэкспортируется: он больше нигде не
+// используется, а два набора давали разную геометрию в одном интерфейсе.
+export { default as Icon, ICON_NAMES } from './Icon';

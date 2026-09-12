@@ -43,27 +43,48 @@
   --overlay-background-light: rgba(0, 0, 0, 0.3);
   --overlay-backdrop-blur: blur(4px);
 
-  /* Типографика */
-  --font-size-xs: 0.75rem;       /* 12px - мелкий текст */
-  --font-size-sm: 0.875rem;      /* 14px - маленький текст */
-  --font-size-base: 1rem;        /* 16px - базовый текст */
-  --font-size-lg: 1.125rem;      /* 18px - большой текст */
-  --font-size-xl: 1.5rem;        /* 24px - заголовки секций */
-  --font-size-2xl: 2rem;         /* 32px - главные заголовки */
-  --font-size-3xl: 2.5rem;       /* 40px - крупные заголовки */
-  --font-size-4xl: 3rem;         /* 48px - экстра крупные заголовки */
-  --font-size-compact: 0.625rem; /* 10px - компактный текст для таблиц */
+  /* ============ ТИПОГРАФИКА ============
+   * Шкала кеглей (источник истины — дизайн-система GSM):
+   *   page-title    1.375rem / line-height 2rem / 600 / letter-spacing -0.01em
+   *   section-title 0.875rem / 600
+   *   body          0.875rem / 400
+   *   numeric       IBM Plex Mono / 500 / tabular-nums (только колонки цифр в таблицах)
+   *   caption       0.72rem  / 500 / uppercase / letter-spacing 0.08em
+   * Семейства --font-sans / --font-mono определены в styles/tokens.css.
+   *
+   * Семантические токены шкалы — предпочтительны в новом коде.
+   */
+  --font-size-page-title: 1.375rem;
+  --font-size-section-title: 0.875rem;
+  --font-size-body: 0.875rem;
+  --font-size-caption: 0.72rem;
 
-  --font-weight-normal: 500;     /* Обычный текст */
-  --font-weight-medium: 550;     /* Средний текст */
-  --font-weight-semibold: 600;   /* Акцентный текст */
-  --font-weight-bold: 700;       /* Заголовки */
+  --line-height-page-title: 2rem;
+
+  /* Размерная лесенка t-shirt — legacy-алиасы, значения выровнены по шкале.
+     xs == caption, sm == body/section-title, xl == page-title. */
+  --font-size-xs: 0.72rem;       /* caption */
+  --font-size-sm: 0.875rem;      /* 14px - body, section-title */
+  --font-size-base: 1rem;        /* 16px - укрупнённый текст */
+  --font-size-lg: 1.125rem;      /* 18px - подзаголовок блока */
+  --font-size-xl: 1.375rem;      /* page-title */
+  --font-size-2xl: 1.75rem;      /* крупное KPI-значение */
+  --font-size-3xl: 2.25rem;      /* единичный крупный показатель */
+  --font-size-4xl: 2.75rem;      /* экран-заглушка / пустое состояние */
+  --font-size-compact: 0.72rem;  /* компактный текст для таблиц == caption */
+
+  --font-weight-normal: 400;     /* body — в шкале вес 400 */
+  --font-weight-medium: 500;     /* numeric, caption; 500 — реальный вес Golos Text */
+  --font-weight-semibold: 600;   /* page-title, section-title */
+  --font-weight-bold: 700;       /* KPI-значения */
 
   --line-height-tight: 1.2;      /* Заголовки */
   --line-height-normal: 1.5;     /* Обычный текст */
   --line-height-relaxed: 1.75;   /* Длинный текст */
 
   /* Letter spacing */
+  --letter-spacing-title: -0.01em; /* page-title и KPI-значения */
+  --letter-spacing-caption: 0.08em;
   --letter-spacing-tight: -0.025em;
   --letter-spacing-normal: 0;
   --letter-spacing-wide: 0.025em;
@@ -102,12 +123,12 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-weight: 500;
+  font-weight: var(--font-weight-normal);
   color: var(--text-1);
   background-color: var(--bg);
   /* Улучшенная прокрутка на мобильных */
