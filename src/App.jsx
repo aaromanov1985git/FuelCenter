@@ -2132,7 +2132,8 @@ const App = () => {
               </div>
             </div>
 
-            <div className="table-wrapper">
+            <div className="tx-table-card">
+              <div className="table-wrapper">
               {loading && data.length === 0 ? (
                 <SkeletonTable rows={10} columns={displayHeaders.length} />
               ) : data.length === 0 ? (
@@ -2246,6 +2247,7 @@ const App = () => {
                 </tbody>
               </table>
               )}
+              </div>
               <div className="table-footer">
                 Показаны основные колонки. Полные данные — в скачиваемом файле.
                 {total > 0 && (

@@ -1604,6 +1604,7 @@ h1 {
     font-size: var(--font-size-sm); /* Используем нормальный размер шрифта */
   }
 
+
   .data-table thead {
     display: none; /* Скрываем заголовки на мобильных */
   }
@@ -1935,17 +1936,29 @@ h1 {
   letter-spacing: .5px;
 }
 
-/* Table wrapper — token-based */
-.tx-root .table-wrapper {
+/* Карточка таблицы. Рамку, скругление и тень несёт она, а не сама прокручиваемая
+   обёртка: подвал с пагинацией лежит под областью прокрутки, а не внутри неё. */
+.tx-root .tx-table-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
-  /* Горизонтальная прокрутка обязательна: таблица ниже объявлена шириной не
-     менее 1100px, а контентная область при открытом сайдбаре уже этого на
-     распространённых ноутбучных ширинах. overflow: hidden обрезал правые
-     колонки без возможности до них добраться. */
-  overflow-x: auto;
+  overflow: hidden; /* скругление обрезает углы таблицы */
+}
+
+/* Собственная область прокрутки таблицы.
+   По вертикали: шапка и первая колонка объявлены position: sticky, но липнуть им
+   было не к чему — контейнером прокрутки служит эта обёртка, а высота у неё не
+   ограничивалась. Страница ехала целиком, унося и шапку, и колонку ID.
+   По горизонтали: таблица ниже объявлена шириной не менее 1100px, а прежний
+   overflow: hidden обрезал правые колонки без возможности до них добраться. */
+.tx-root .table-wrapper {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: auto;
+  max-height: 70vh;
   -webkit-overflow-scrolling: touch;
 }
 .tx-root .table-wrapper::after { display: none; }
@@ -1970,6 +1983,20 @@ h1 {
 .tx-root .data-table td:first-child {
   background: var(--surface-2);
   box-shadow: none;
+}
+
+/* Шапка остаётся на месте, пока прокручивается тело таблицы.
+   Фон и разделитель заданы на самой ячейке: при border-collapse: collapse у
+   прилипшей строки они не рисуются, и сквозь шапку просвечивали бы строки. */
+.tx-root .data-table th {
+  background: var(--surface-2);
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+
+/* Угловая ячейка липнет сразу к двум краям, поэтому лежит выше остальных */
+.tx-root .data-table th:first-child {
+  z-index: 11;
+  box-shadow: inset 0 -1px 0 var(--border);
 }
 .tx-root .data-table tbody tr {
   transition: background .1s ease;
@@ -2002,6 +2029,20 @@ h1 {
   color: var(--text-3);
   font-size: 11px;
   border-top: 1px solid var(--border);
+}
+
+/* Телефон: карточный вид строк. Мобильные правила объявлены выше по файлу и при
+   равной специфичности проигрывают секции .tx-root, поэтому перекрытия для неё
+   стоят здесь — иначе карточки растягивало на объявленные таблице 1100px.
+   Ограничение высоты тоже снимается: вложенная прокрутка на телефоне лишняя. */
+@media (max-width: 480px) {
+  .tx-root .data-table {
+    min-width: unset;
+  }
+
+  .tx-root .table-wrapper {
+    max-height: none;
+  }
 }
 
 
