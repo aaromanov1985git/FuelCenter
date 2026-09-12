@@ -8,7 +8,8 @@ import {
   PPR_KEY_ALIASES,
   STEP_IDS,
   visibleStepIds,
-  stepNumbers
+  stepNumbers,
+  settingsForConnectionType
 } from '../templateModel'
 
 /**
@@ -327,5 +328,50 @@ describe('нумерация шагов редактора', () => {
       expect(visibleStepIds({ connectionType: type, hasFileColumns: false }))
         .toEqual(visibleStepIds({ connectionType: type, hasFileColumns: true }))
     }
+  })
+})
+
+/**
+ * Смена типа подключения. Наборы полей у типов не пересекаются, поэтому прежние
+ * настройки сбрасываются — кроме ключа PPR API, который к типу не относится.
+ */
+describe('настройки при смене типа подключения', () => {
+  const withKey = { ppr_api_key: 'PPR-CARRIED', host: 'db.example.local', database: '/data/base.fdb' }
+
+  it.each([
+    ['api', ['provider_type', 'base_url', 'api_token', 'currency', 'api_key', 'ppr_api_key']],
+    ['firebird', ['host', 'database', 'user', 'password', 'port', 'charset', 'api_key', 'ppr_api_key']],
+    ['web', ['base_url', 'username', 'password', 'currency', 'certificate', 'pos_code', 'key', 'signature', 'salt', 'cod_azs', 'api_key', 'ppr_api_key']],
+    ['file', ['ppr_api_key', 'api_key']]
+  ])('%s: набор полей совпадает с ожидаемым', (type, keys) => {
+    expect(Object.keys(settingsForConnectionType(type, {})).sort()).toEqual([...keys].sort())
+  })
+
+  it.each(['api', 'firebird', 'web', 'file'])('%s: ключ PPR переносится', (type) => {
+    expect(settingsForConnectionType(type, withKey).ppr_api_key).toBe('PPR-CARRIED')
+  })
+
+  it('у файла ключ дублируется в api_key, у остальных типов api_key пуст', () => {
+    expect(settingsForConnectionType('file', withKey).api_key).toBe('PPR-CARRIED')
+    for (const type of ['api', 'firebird', 'web']) {
+      expect(settingsForConnectionType(type, withKey).api_key).toBe('')
+    }
+  })
+
+  it('ключ берётся из любого своего алиаса', () => {
+    for (const alias of PPR_KEY_ALIASES) {
+      expect(settingsForConnectionType('firebird', { [alias]: 'K' }).ppr_api_key).toBe('K')
+    }
+  })
+
+  it('прежние настройки прошлого типа не протекают', () => {
+    const fromFirebird = settingsForConnectionType('api', withKey)
+    expect(fromFirebird.host).toBeUndefined()
+    expect(fromFirebird.database).toBeUndefined()
+  })
+
+  it('без ключа он пустой, а не undefined', () => {
+    expect(settingsForConnectionType('firebird', {}).ppr_api_key).toBe('')
+    expect(settingsForConnectionType('file', {}).api_key).toBe('')
   })
 })

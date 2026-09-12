@@ -289,3 +289,27 @@ export const visibleStepIds = ({ connectionType, hasFileColumns }) =>
  */
 export const stepNumbers = (state) =>
   Object.fromEntries(visibleStepIds(state).map((id, index) => [id, index + 1]))
+
+/**
+ * Настройки подключения при смене его типа.
+ *
+ * Набор полей у каждого типа свой, поэтому прежние настройки не сохраняются —
+ * кроме ключа PPR API: он к типу подключения не относится и переносится.
+ *
+ * Эти же наборы полей отдаёт defaultsFor при разборе шаблона, но в обработчике
+ * смены типа они были выписаны заново, ветка за ветку.
+ *
+ * @param {string} connectionType - новый тип подключения
+ * @param {object} currentSettings - настройки до смены типа
+ * @returns {object} Настройки для формы
+ */
+export const settingsForConnectionType = (connectionType, currentSettings) => {
+  const pprApiKey = extractPprKey(currentSettings) || ''
+
+  if (connectionType === 'file') {
+    // У файла ключ дублируется в api_key: бэкенд читает его именно оттуда.
+    return { ppr_api_key: pprApiKey, api_key: pprApiKey }
+  }
+
+  return { ...defaultsFor(connectionType, true), ppr_api_key: pprApiKey }
+}

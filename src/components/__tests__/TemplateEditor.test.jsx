@@ -427,3 +427,50 @@ describe('TemplateEditor: маппинг видов топлива', () => {
     )
   })
 })
+
+/**
+ * Смена типа подключения сбрасывает настройки: наборы полей у типов не
+ * пересекаются. Переносится только ключ PPR API — он к типу не относится.
+ */
+describe('TemplateEditor: смена типа подключения', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAuthFetch.mockResolvedValue({ ok: true, json: async () => ({ items: [] }) })
+  })
+
+  const typeSelect = () => screen.getByLabelText(/Тип подключения/)
+
+  it('ключ PPR переносится, а настройки прежнего типа уходят', async () => {
+    await renderEditor({
+      connection_type: 'api',
+      connection_settings: JSON.stringify({
+        provider_type: 'petrolplus',
+        base_url: 'https://online.petrolplus.ru/api',
+        api_token: 'TOKEN',
+        ppr_api_key: 'PPR-CARRIED'
+      })
+    })
+
+    await act(async () => {
+      fireEvent.change(typeSelect(), { target: { value: 'firebird' } })
+    })
+
+    expect(screen.getByPlaceholderText('Введите API ключ для PPR API')).toHaveValue('PPR-CARRIED')
+    expect(screen.getByPlaceholderText('localhost')).toHaveValue('localhost')
+    expect(screen.queryByPlaceholderText('Ваш API токен')).not.toBeInTheDocument()
+  })
+
+  it('смена типа меняет набор показанных шагов', async () => {
+    const { container } = await renderEditor({ connection_type: 'firebird' })
+    const before = container.querySelectorAll('.step-number').length
+
+    await act(async () => {
+      fireEvent.change(typeSelect(), { target: { value: 'file' } })
+    })
+    const after = Array.from(container.querySelectorAll('.step-number')).map(el => el.textContent)
+
+    // У файла без разобранного примера шагов меньше, и нумерация снова сквозная.
+    expect(after.length).toBeLessThan(before)
+    expect(after).toEqual(after.map((_, i) => String(i + 1)))
+  })
+})

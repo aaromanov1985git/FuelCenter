@@ -7,7 +7,11 @@ import PprApiKey from './TemplateEditor/PprApiKey'
 import Activation from './TemplateEditor/Activation'
 import AutoLoad from './TemplateEditor/AutoLoad'
 import FieldMapping from './TemplateEditor/FieldMapping'
-import { SYSTEM_FIELDS, parseConnectionSettings, buildConnectionSettings, stepNumbers } from '../utils/templateModel'
+import FileUpload from './TemplateEditor/FileUpload'
+import ConnectionType from './TemplateEditor/ConnectionType'
+import BasicInfo from './TemplateEditor/BasicInfo'
+import FileParsing from './TemplateEditor/FileParsing'
+import { SYSTEM_FIELDS, parseConnectionSettings, buildConnectionSettings, stepNumbers, settingsForConnectionType } from '../utils/templateModel'
 import { authFetch } from '../utils/api'
 import { logger } from '../utils/logger'
 import './TemplateEditor.css'
@@ -291,142 +295,26 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
       <div className="template-form">
         {/* Выбор файла для анализа (только для типа file) */}
         {formData.connection_type === 'file' && (
-          <div className="form-section file-upload-section">
-          <h4 className="section-title">
-            <span className="step-number">{step['file-upload']}</span>
-            Выбор файла для анализа
-          </h4>
-          <p className="section-description">
-            Загрузите пример файла Excel для автоматического определения структуры и сопоставления полей.
-            Система автоматически проанализирует файл и предложит сопоставление полей.
-          </p>
-          <div className="form-group file-upload-group">
-            <label className="file-upload-label">
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleFileUpload}
-                disabled={analyzing}
-                className="file-input-hidden"
-                id="template-file-input"
-              />
-              <span className="file-upload-button">
-                {analyzing ? (
-                  <>
-                    <span className="spinner-small"></span>
-                    Анализ файла...
-                  </>
-                ) : selectedFileName ? (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="icon" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
-                    </svg>
-                    {selectedFileName}
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="icon" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                    Выберите файл Excel
-                  </>
-                )}
-              </span>
-            </label>
-            {fileColumns.length > 0 && (
-              <div className="analysis-result">
-                <div className="success-badge">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="icon-small" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Файл проанализирован: найдено {fileColumns.length} колонок
-                </div>
-                {Object.keys(autoMappedFields).length > 0 && (
-                  <div className="auto-mapping-info">
-                    Автоматически сопоставлено полей: {Object.keys(autoMappedFields).length} из {SYSTEM_FIELDS.length}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+          <FileUpload
+            stepNumber={step['file-upload']}
+            analyzing={analyzing}
+            fileName={selectedFileName}
+            columnCount={fileColumns.length}
+            autoMappedCount={Object.keys(autoMappedFields).length}
+            systemFieldCount={SYSTEM_FIELDS.length}
+            onFileChange={handleFileUpload}
+          />
         )}
 
         {/* Тип подключения */}
-        <div className="form-section">
-          <h4 className="section-title">
-            <span className="step-number">{step['connection-type']}</span>
-            Тип подключения
-          </h4>
-          <p className="section-description">
-            Выберите источник данных для шаблона: загрузка из файла Excel, подключение к базе данных Firebird, загрузка через API провайдера или подключение к веб-сервису с авторизацией.
-          </p>
-          <div className="form-group">
-            <label>
-              Тип подключения: <span className="required-mark">*</span>
-              <select
-                value={formData.connection_type}
-                onChange={(e) => {
-                  const newConnectionType = e.target.value
-                  setFormData({ ...formData, connection_type: newConnectionType })
-                  // Обновляем настройки подключения в зависимости от типа
-                  // Сохраняем ppr_api_key и api_key при смене типа подключения
-                  const currentPprApiKey = connectionSettings.ppr_api_key || connectionSettings.pprApiKey || connectionSettings.api_key || connectionSettings.apiKey || connectionSettings.КлючАвторизации || ''
-                  const currentGpnApiKey = connectionSettings.provider_type === 'gpn' ? (connectionSettings.api_key || '') : ''
-                  
-                  if (newConnectionType === 'api') {
-                    setConnectionSettings({ 
-                      provider_type: 'petrolplus', 
-                      base_url: 'https://online.petrolplus.ru/api', 
-                      api_token: '', 
-                      currency: 'RUB', 
-                      api_key: '',  // Для API провайдеров api_key используется для самого API
-                      ppr_api_key: currentPprApiKey  // PPR API ключ хранится отдельно
-                    })
-                  } else if (newConnectionType === 'firebird') {
-                    setConnectionSettings({ 
-                      host: 'localhost', 
-                      database: '', 
-                      user: 'SYSDBA', 
-                      password: '', 
-                      port: 3050, 
-                      charset: 'UTF8', 
-                      api_key: '',  // Для Firebird api_key не используется
-                      ppr_api_key: currentPprApiKey  // PPR API ключ хранится отдельно
-                    })
-                  } else if (newConnectionType === 'web') {
-                    setConnectionSettings({ 
-                      base_url: '', 
-                      username: '', 
-                      password: '', 
-                      currency: 'RUB',
-                      certificate: '',
-                      pos_code: '',
-                      key: '',
-                      signature: '',
-                      salt: '',
-                      cod_azs: 1000001,
-                      api_key: '',  // Для Web api_key не используется
-                      ppr_api_key: currentPprApiKey  // PPR API ключ хранится отдельно
-                    })
-                  } else {
-                    // Для типа 'file' сохраняем только PPR API ключ
-                    setConnectionSettings({ 
-                      ppr_api_key: currentPprApiKey,
-                      api_key: currentPprApiKey  // Для обратной совместимости
-                    })
-                  }
-                }}
-                className="input-full-width"
-              >
-                <option value="file">Загрузка из файла Excel</option>
-                <option value="firebird">Firebird Database (FDB)</option>
-                <option value="api">Загрузка API</option>
-                <option value="web">Веб-сервис (Web Service)</option>
-              </select>
-            </label>
-          </div>
-        </div>
+        <ConnectionType
+          stepNumber={step['connection-type']}
+          value={formData.connection_type}
+          onChange={(newType) => {
+            setFormData(prev => ({ ...prev, connection_type: newType }))
+            setConnectionSettings(settingsForConnectionType(newType, connectionSettings))
+          }}
+        />
 
         {/* Настройки подключения к API */}
         {formData.connection_type === 'api' && (
@@ -469,78 +357,21 @@ const TemplateEditor = ({ providerId, template, onSave, onCancel }) => {
         )}
 
         {/* Основная информация о шаблоне */}
-        <div className="form-section">
-          <h4 className="section-title">
-            <span className="step-number">{step['basic-info']}</span>
-            Основная информация
-          </h4>
-          <div className="form-row form-row-basic-info">
-            <div className="form-group form-group-name">
-              <label>
-                Название шаблона: <span className="required-mark">*</span>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Например: Стандартный шаблон РП-газпром"
-                  className="input-full-width"
-                />
-              </label>
-            </div>
-            <div className="form-group form-group-description">
-              <label>
-                Описание:
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Описание шаблона..."
-                  rows="3"
-                  className="textarea-full-width"
-                />
-              </label>
-            </div>
-          </div>
-        </div>
+        <BasicInfo
+          stepNumber={step['basic-info']}
+          name={formData.name}
+          description={formData.description}
+          onChange={(patch) => setFormData(prev => ({ ...prev, ...patch }))}
+        />
 
         {/* Параметры парсинга файла (только для типа file) */}
         {formData.connection_type === 'file' && fileColumns.length > 0 && (
-          <div className="form-section">
-            <h4 className="section-title">
-              <span className="step-number">{step['file-parsing']}</span>
-              Параметры парсинга файла
-            </h4>
-            <p className="section-description">
-              Укажите, в каких строках находятся заголовки и данные в исходном файле Excel.
-            </p>
-            <div className="form-row form-row-numbers">
-              <div className="form-group form-group-number">
-                <label>
-                  Строка заголовков (начиная с 0):
-                  <input
-                    type="number"
-                    value={formData.header_row}
-                    onChange={(e) => setFormData({ ...formData, header_row: parseInt(e.target.value) || 0 })}
-                    min="0"
-                    className="input-number"
-                  />
-                  <span className="field-help">Номер строки, где находятся названия колонок</span>
-                </label>
-              </div>
-              <div className="form-group form-group-number">
-                <label>
-                  Строка начала данных (начиная с 0):
-                  <input
-                    type="number"
-                    value={formData.data_start_row}
-                    onChange={(e) => setFormData({ ...formData, data_start_row: parseInt(e.target.value) || 1 })}
-                    min="0"
-                    className="input-number"
-                  />
-                  <span className="field-help">Номер строки, с которой начинаются данные</span>
-                </label>
-              </div>
-            </div>
-          </div>
+          <FileParsing
+            stepNumber={step['file-parsing']}
+            headerRow={formData.header_row}
+            dataStartRow={formData.data_start_row}
+            onChange={(patch) => setFormData(prev => ({ ...prev, ...patch }))}
+          />
         )}
 
         {/* Настройки PPR API ключа */}
