@@ -10,6 +10,45 @@ import './Dashboard.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
+/**
+ * Ключ периода в вид, пригодный для сравнения строк.
+ *
+ * Backend отдаёт периоды как «ДД.ММ.ГГГГ», «ММ.ГГГГ» или «ГГГГ» — от мелкого к
+ * крупному. Обычный .sort() по таким ключам сортирует по дню или месяцу и лишь
+ * потом по году: «09.2025» оказывается между «08.2026» и «09.2026», а октябрь,
+ * ноябрь и декабрь 2025 уезжают в самый конец графика. Переворачиваем части,
+ * получая «ГГГГММДД» — сравнение строк становится хронологическим.
+ *
+ * @param {string} periodKey - ключ периода из ответа API
+ * @returns {string} Ключ, сравнимый лексикографически
+ */
+const periodSortKey = (periodKey) =>
+  String(periodKey).split('.').reverse().map(part => part.padStart(2, '0')).join('')
+
+/** Сравнение периодов по времени, а не по строке ключа. */
+const comparePeriods = (a, b) => periodSortKey(a).localeCompare(periodSortKey(b))
+
+/**
+ * Верх шкалы, округлённый до ровного деления.
+ *
+ * Шкала строится как четыре равные доли максимума, и от «сырого» максимума
+ * получались деления вида 163 / 326 / 488 / 651 — читать по ним высоту столбца
+ * невозможно. Округляем шаг вверх до 1, 2, 2.5 или 5 в своём порядке величины,
+ * чтобы подписи оси были круглыми, а столбцы считались от того же числа и не
+ * разъезжались со шкалой.
+ *
+ * @param {number} max - наибольшее значение ряда
+ * @returns {number} Верх шкалы, кратный четырём ровным делениям
+ */
+const niceAxisMax = (max) => {
+  if (!(max > 0)) return 1
+  const rawStep = max / 4
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)))
+  const normalized = rawStep / magnitude
+  const niceStep = (normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 2.5 ? 2.5 : normalized <= 5 ? 5 : 10) * magnitude
+  return niceStep * 4
+}
+
 /* Палитра серий графика и провайдеров.
  * Было восемь hex-литералов, и это давало два дефекта сразу: цвет шёл мимо токенов,
  * а значения были взяты из ТЁМНОЙ палитры и рисовались в обеих темах — в светлой
@@ -113,9 +152,14 @@ const Dashboard = () => {
     return new Intl.NumberFormat('ru-RU').format(thousands)
   }
 
+  // Подпись под столбцом. Две цифры после запятой здесь ничего не уточняют —
+  // это тысячи литров, — зато «511,00 тыс. л» не влезало в столбец и рвалось на
+  // две строки, оставляя внизу одинокое «л». Дробную часть держим только для
+  // малых значений, где она различает соседние месяцы.
   const formatLitersForColumn = (num) => {
     const thousands = num / 1000
-    return new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(thousands) + ' тыс. л'
+    const digits = Math.abs(thousands) < 10 ? 1 : 0
+    return new Intl.NumberFormat('ru-RU', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(thousands) + ' тыс. л'
   }
 
   const formatPeriodLabel = (periodStr, periodType) => {
@@ -133,7 +177,9 @@ const Dashboard = () => {
 
   const getPeriodTitle = () => {
     if (!stats || !stats.period_data || stats.period_data.length === 0) return ''
-    const dates = stats.period_data.map(d => d.period)
+    // Подпись берёт края диапазона, поэтому сортируем — иначе «Период» показал
+    // бы не начало и конец, а первый и последний элемент как есть.
+    const dates = stats.period_data.map(d => d.period).sort(comparePeriods)
     if (period === 'day' && dates.length > 0) {
       const [firstDay, firstMonth] = dates[0].split('.')
       const [lastDay, lastMonth, lastYear] = dates[dates.length - 1].split('.')
@@ -208,7 +254,7 @@ const Dashboard = () => {
     if (!stats) return null
     // Приоритет — разрез по провайдерам
     if (stats.period_providers && Object.keys(stats.period_providers).length > 0) {
-      const periods = Object.keys(stats.period_providers).sort()
+      const periods = Object.keys(stats.period_providers).sort(comparePeriods)
       const providersSet = new Set()
       periods.forEach(p => Object.keys(stats.period_providers[p]).forEach(n => providersSet.add(n)))
       const providersList = Array.from(providersSet).sort()
@@ -223,14 +269,17 @@ const Dashboard = () => {
             return sum + (d ? (Number(d.quantity) || 0) : 0)
           }, 0)
       })
-      const maxQuantity = periodTotals.length > 0 ? Math.max(...periodTotals, 1) : 1
+      // Столбцы считаем от округлённого верха шкалы, иначе самый высокий
+      // упирался бы в потолок, а подписи оси стояли бы не на его отметках.
+      const maxQuantity = niceAxisMax(periodTotals.length > 0 ? Math.max(...periodTotals, 1) : 1)
 
       return { kind: 'provider', periods, providersList, providerColorMap, periodTotals, maxQuantity }
     }
-    // Базовый случай — без разреза
-    const periodData = stats.period_data || []
+    // Базовый случай — без разреза. Сортируем тоже: порядок графика не должен
+    // зависеть от того, в каком порядке пришёл ответ.
+    const periodData = [...(stats.period_data || [])].sort((a, b) => comparePeriods(a.period, b.period))
     const quantities = periodData.map(d => Number(d.quantity) || 0)
-    const maxQuantity = quantities.length > 0 ? Math.max(...quantities, 1) : 1
+    const maxQuantity = niceAxisMax(quantities.length > 0 ? Math.max(...quantities, 1) : 1)
     return { kind: 'simple', data: periodData, maxQuantity }
   }, [stats, hiddenProviders])
 
