@@ -82,6 +82,9 @@
 }
 
 .sidebar-logo-title {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   font-size: var(--font-size-section-title);
   font-weight: var(--font-weight-semibold);
   line-height: 1.1;
@@ -89,13 +92,15 @@
   white-space: nowrap;
 }
 
+/* Номер версии, а не подпись-рубрика: ни капса, ни разрядки. С
+   text-transform: uppercase и letter-spacing он печатался как «V2.0» —
+   вторым заголовком под названием, одного с ним веса. */
 .sidebar-logo-sub {
   font-size: var(--font-size-caption);
-  font-weight: var(--font-weight-medium);
-  letter-spacing: var(--letter-spacing-caption);
-  text-transform: uppercase;
+  font-weight: var(--font-weight-normal);
   line-height: 1.1;
   color: var(--text-3);
+  font-variant-numeric: tabular-nums;
 }
 
 /* --- кнопка сворачивания (разметка в App.jsx) --- */

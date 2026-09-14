@@ -7,6 +7,18 @@ import './AppSidebar.css'
 /* Меню объявлено данными, а не разметкой: порядок групп и пунктов — часть
  * навигационного контракта, его удобнее читать одним списком.
  * access: 'admin' — только администратору, 'self' — только рядовому пользователю. */
+/**
+ * Группы меню.
+ *
+ * Прежнее деление рассыпалось по смыслу: «Анализ карт» стоял в «Работе», а
+ * «Анализ провайдера» — в «Справочниках», хотя это один и тот же род занятия;
+ * «Транспорт», «Топливные карты», «АЗС» и «Виды топлива» — справочные данные,
+ * но лежали в «Работе», раздувая её до семи пунктов; «Пользователи» —
+ * администрирование, а стояли среди справочников.
+ *
+ * Теперь четыре группы по роду занятия: что делают каждый день, что смотрят,
+ * что ведут как справочник и что настраивают.
+ */
 const NAV_GROUPS = [
   {
     id: 'work',
@@ -14,11 +26,16 @@ const NAV_GROUPS = [
     items: [
       { tab: 'dashboard', icon: 'grid', label: 'Дашборд' },
       { tab: 'transactions', icon: 'rows', label: 'Транзакции' },
-      { tab: 'vehicles', icon: 'truck', label: 'Транспорт' },
-      { tab: 'cards', icon: 'card', label: 'Топливные карты' },
+      { tab: 'upload-events', icon: 'clock', label: 'События загрузок' },
+      { tab: 'notifications', icon: 'bell', label: 'Уведомления', counter: 'notifications' },
+    ],
+  },
+  {
+    id: 'analytics',
+    title: 'Аналитика',
+    items: [
       { tab: 'fuel-card-analysis', icon: 'chart', label: 'Анализ карт' },
-      { tab: 'gas-stations', icon: 'pin', label: 'АЗС' },
-      { tab: 'fuel-types', icon: 'drop', label: 'Виды топлива' },
+      { tab: 'provider-analysis', icon: 'chart', label: 'Анализ провайдера' },
     ],
   },
   {
@@ -26,19 +43,20 @@ const NAV_GROUPS = [
     title: 'Справочники',
     items: [
       { tab: 'providers', icon: 'box', label: 'Провайдеры' },
-      { tab: 'provider-analysis', icon: 'chart', label: 'Анализ провайдера' },
-      { tab: 'templates', icon: 'layers', label: 'Шаблоны' },
+      { tab: 'vehicles', icon: 'truck', label: 'Транспорт' },
+      { tab: 'cards', icon: 'card', label: 'Топливные карты' },
+      { tab: 'gas-stations', icon: 'pin', label: 'АЗС' },
+      { tab: 'fuel-types', icon: 'drop', label: 'Виды топлива' },
       { tab: 'organizations', icon: 'building', label: 'Организации', access: 'admin' },
-      { tab: 'users', icon: 'users', label: 'Пользователи', access: 'admin' },
     ],
   },
   {
     id: 'system',
     title: 'Система',
     items: [
+      { tab: 'templates', icon: 'layers', label: 'Шаблоны' },
+      { tab: 'users', icon: 'users', label: 'Пользователи', access: 'admin' },
       { tab: 'my-actions', icon: 'check', label: 'Мои действия', access: 'self' },
-      { tab: 'upload-events', icon: 'clock', label: 'События загрузок' },
-      { tab: 'notifications', icon: 'bell', label: 'Уведомления', counter: 'notifications' },
       { tab: 'settings', icon: 'gear', label: 'Настройки' },
     ],
   },
@@ -121,9 +139,14 @@ const AppSidebar = ({
       <div className="sidebar-header">
         <div className="sidebar-logo">
           <div className="sidebar-logo-mark" aria-hidden="true">ГСМ</div>
+          {/* Версия стоит в строку с названием, а не под ним: отдельной
+              строкой в капсе она читалась как вторая половина имени —
+              «ГСМ Конвертер 2» — и спорила с самим названием по весу. */}
           <div className="sidebar-logo-text">
-            <div className="sidebar-logo-title">ГСМ Конвертер</div>
-            <div className="sidebar-logo-sub">v2.0</div>
+            <div className="sidebar-logo-title">
+              ГСМ Конвертер
+              <span className="sidebar-logo-sub">2.0</span>
+            </div>
           </div>
         </div>
       </div>
