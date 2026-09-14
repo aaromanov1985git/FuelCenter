@@ -103,6 +103,45 @@
   color: var(--text-1);
 }
 
+.tnk-station__title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tnk-station__name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tnk-station__provider {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.tnk-station__label {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.tnk-station__place {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.tnk-station__place svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--text-3);
+}
+
 .tnk-fuels,
 .tnk-tanks {
   list-style: none;

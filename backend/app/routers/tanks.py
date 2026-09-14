@@ -308,6 +308,7 @@ def get_tank_overview(
     stations: Dict[tuple, List[TankResponse]] = {}
     for item in responses:
         stations.setdefault((item.provider_id, item.azs_code), []).append(item)
+    station_places = {tank.gas_station_id: tank.gas_station for tank in tanks if tank.gas_station is not None}
 
     return TankOverviewResponse(
         stations=[
@@ -317,6 +318,9 @@ def get_tank_overview(
                 provider_name=items[0].provider_name,
                 gas_station_id=items[0].gas_station_id,
                 gas_station_name=items[0].gas_station_name,
+                location=getattr(station_places.get(items[0].gas_station_id), "location", None),
+                settlement=getattr(station_places.get(items[0].gas_station_id), "settlement", None),
+                region=getattr(station_places.get(items[0].gas_station_id), "region", None),
                 fuels=_station_fuels(items, db, clock, session_templates, fills_loaded_at),
                 tanks=items,
             )

@@ -346,10 +346,11 @@ def export_fills_by_card(
     fills = fills_query.all()
 
     workbook = Workbook()
-    summary = workbook.active
-    summary.title = "Итоги по картам"
-    _summary_sheet(summary, items)
-    _details_sheet(workbook.create_sheet("Заправки по картам"), items, fills)
+    # Главный лист — детальный: заправки, сгруппированные по карте; итоги — справочно вторым листом
+    details = workbook.active
+    details.title = "Заправки по картам"
+    _details_sheet(details, items, fills)
+    _summary_sheet(workbook.create_sheet("Итоги по картам"), items)
 
     output = io.BytesIO()
     workbook.save(output)

@@ -276,6 +276,19 @@ const TankSettingsModal = ({ tank, onClose, onSaved }) => {
   )
 }
 
+const stationPlace = (station) => [station.settlement, station.location].filter(Boolean).join(', ')
+
+const fuelAgeHint = (fuel) => {
+  if (fuel.estimate_base_at) {
+    return `Остаток рассчитан: замер всех ёмкостей в ${formatSourceDateTime(fuel.estimate_base_at).slice(-5)} `
+      + `(${formatLiters(fuel.estimate_base_volume)} л) минус отпуск ${formatLiters(fuel.estimate_dispensed)} л. `
+      + 'Возраст — когда последний раз загружались заправки.'
+  }
+  const parts = [`Последний замер уровнемера: ${formatAge(fuel.age_minutes)}`]
+  if (fuel.tanks_count > 1) parts.push(`ёмкостей: ${fuel.tanks_count}`)
+  return parts.join(', ')
+}
+
 const TankRow = ({ tank, isAdmin, onHistory, onSettings }) => (
   <li className={`tnk-tank${tank.is_active ? '' : ' is-inactive'}`} data-testid="tank-row">
     <div className="tnk-tank__head">
@@ -317,12 +330,20 @@ const StationCard = ({ station, isAdmin, onHistory, onSettings }) => {
   return (
     <article className="tnk-station" data-testid="tank-station">
       <header className="tnk-station__head">
-        <div>
-          <h3 className="tnk-station__code t-numeric">{station.azs_code}</h3>
-          <div className="tnk-muted">
-            {station.provider_name}
-            {station.gas_station_name && station.gas_station_name !== station.azs_code ? ` · ${station.gas_station_name}` : ''}
+        <div className="tnk-station__title">
+          <div className="tnk-station__name-row">
+            <h3 className="tnk-station__code t-numeric">{station.azs_code}</h3>
+            <span className="tnk-station__provider">{station.provider_name}</span>
           </div>
+          {station.gas_station_name && station.gas_station_name !== station.azs_code ? (
+            <div className="tnk-station__label">{station.gas_station_name}</div>
+          ) : null}
+          {stationPlace(station) ? (
+            <div className="tnk-station__place" title={[station.region, station.settlement, station.location].filter(Boolean).join(', ')}>
+              <Icon name="pin" size={14} />
+              <span>{stationPlace(station)}</span>
+            </div>
+          ) : null}
         </div>
       </header>
 
@@ -341,30 +362,9 @@ const StationCard = ({ station, isAdmin, onHistory, onSettings }) => {
                 <span className="t-numeric">
                   {fuel.capacity_liters ? `${formatPercent(fuel.fill_percent)} из ${formatLiters(fuel.capacity_liters)} л` : 'вместимость не задана'}
                 </span>
-                <span>
-                  {fuel.tanks_count > 1 ? `${fuel.tanks_count} ёмк. · ` : ''}
-                  {fuel.estimate_base_at ? (
-                    fuel.age_minutes !== null && fuel.age_minutes !== undefined
-                      ? `заправки загружены ${formatAge(fuel.age_minutes)}`
-                      : 'заправки ещё не загружались'
-                  ) : (
-                    <>
-                      {formatAge(fuel.age_minutes)}
-                      {fuel.oldest_age_minutes !== null && fuel.oldest_age_minutes !== undefined && fuel.age_minutes !== null && fuel.age_minutes !== undefined && fuel.oldest_age_minutes - fuel.age_minutes > 60
-                        ? ` · старейший замер ${formatAge(fuel.oldest_age_minutes)}`
-                        : ''}
-                    </>
-                  )}
-                </span>
+                {/* Как считан остаток — только в подсказке: на КАЗС это замер на открытии смены минус отпуск */}
+                <span title={fuelAgeHint(fuel)} data-testid="fuel-age">{formatAge(fuel.age_minutes)}</span>
               </div>
-              {fuel.estimate_base_at ? (
-                <div className="tnk-fuel-row__meta" data-testid="fuel-estimate">
-                  <span>
-                    Расчёт: замер {formatSourceDateTime(fuel.estimate_base_at).slice(-5)} ({formatLiters(fuel.estimate_base_volume)} л)
-                    {' '}− отпуск {formatLiters(fuel.estimate_dispensed)} л
-                  </span>
-                </div>
-              ) : null}
               <WarningChips warnings={fuel.warnings} skip={['no_capacity']} />
             </li>
           ))}

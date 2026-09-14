@@ -1480,6 +1480,9 @@ class TankStation(BaseModel):
     provider_name: Optional[str] = None
     gas_station_id: Optional[int] = None
     gas_station_name: Optional[str] = None
+    location: Optional[str] = Field(None, description="Адрес АЗС из справочника")
+    settlement: Optional[str] = Field(None, description="Населённый пункт")
+    region: Optional[str] = Field(None, description="Регион")
     fuels: List[TankStationFuel]
     tanks: List[TankResponse]
 

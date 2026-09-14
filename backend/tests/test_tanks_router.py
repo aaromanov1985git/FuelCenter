@@ -54,13 +54,23 @@ def mazs(test_db):
 
 
 class TestTankOverview:
-    def test_groups_by_station_and_sums_fuel(self, client, auth_headers, mazs):
+    def test_groups_by_station_and_sums_fuel(self, client, auth_headers, test_db, mazs):
+        from app.models import GasStation
+        station = GasStation(provider_id=mazs["provider"].id, original_name="1016201", name="1016201", azs_number="1016201",
+                             location='База АО "УТТ"', settlement="Нягань", region="ХМАО-Ю")
+        test_db.add(station)
+        test_db.flush()
+        for tank in (mazs["petrol"], mazs["diesel"]):
+            tank.gas_station_id = station.id
+        test_db.commit()
+
         response = client.get("/api/v1/tanks", headers=auth_headers)
         assert response.status_code == 200
         body = response.json()
         assert body["total_tanks"] == 3
         stations = {s["azs_code"]: s for s in body["stations"]}
         main = stations["1016201"]
+        assert (main["location"], main["settlement"], main["region"]) == ('База АО "УТТ"', "Нягань", "ХМАО-Ю")
         fuels = {f["fuel_type"]: f for f in main["fuels"]}
         assert fuels["АИ-92"]["volume"] == 5409.18
         assert fuels["АИ-92"]["fill_percent"] == 18.0
@@ -359,7 +369,7 @@ class TestFillsByCard:
         assert "zapravki-karty_2026-09-10_2026-09-14.xlsx" in response.headers["content-disposition"]
 
         workbook = load_workbook(_io.BytesIO(response.content))
-        assert workbook.sheetnames == ["Итоги по картам", "Заправки по картам"]
+        assert workbook.sheetnames == ["Заправки по картам", "Итоги по картам"]
         summary = workbook["Итоги по картам"]
         assert [summary.cell(row=r, column=2).value for r in range(2, summary.max_row + 1)] == ["214 ИП Касумов 772", "УТ226"]
 

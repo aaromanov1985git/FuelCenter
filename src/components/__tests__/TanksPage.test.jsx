@@ -162,10 +162,23 @@ describe('TanksPage', () => {
     })
     renderWithProviders(<TanksPage />)
 
-    const estimate = await screen.findByTestId('fuel-estimate')
-    expect(estimate).toHaveTextContent(/Расчёт: замер 00:00 \(22\s706 л\) − отпуск 553 л/)
-    expect(screen.getByText(/заправки загружены 18 мин назад/)).toBeInTheDocument()
-    expect(screen.queryByText(/старейший замер/)).not.toBeInTheDocument()
+    const age = await screen.findByTestId('fuel-age')
+    // Строка выглядит как у остальных АЗС, а способ расчёта — только в подсказке
+    expect(age).toHaveTextContent('18 мин назад')
+    expect(age.getAttribute('title')).toMatch(/замер всех ёмкостей в 00:00 \(22\s706 л\) минус отпуск 553 л/)
+    expect(screen.queryByText(/Расчёт:/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/заправки загружены/)).not.toBeInTheDocument()
+  })
+
+  it('показывает в шапке АЗС населённый пункт и адрес', async () => {
+    setup({
+      ...overview,
+      stations: [{ ...overview.stations[0], location: 'База АО "УТТ"', settlement: 'Нягань', region: 'ХМАО-Ю' }],
+    })
+    renderWithProviders(<TanksPage />)
+
+    const station = await screen.findByTestId('tank-station')
+    expect(within(station).getByText('Нягань, База АО "УТТ"')).toBeInTheDocument()
   })
 
   it('скрывает выключенные ёмкости и АЗС без видимых ёмкостей', async () => {

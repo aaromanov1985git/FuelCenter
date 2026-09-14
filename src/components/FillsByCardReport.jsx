@@ -165,7 +165,7 @@ const CardFillsModal = ({ item, period, onClose }) => {
           loading={exporting}
           onClick={exportCard}
         >
-          Скачать XLSX
+          XLSX: заправки карты
         </Button>
         <Button variant="primary" onClick={onClose}>Закрыть</Button>
       </Modal.Footer>
@@ -292,9 +292,9 @@ const FillsByCardReport = () => {
             onClick={downloadReport}
             loading={exporting}
             disabled={!report?.items?.length}
-            title="Лист итогов по картам и лист всех заправок, сгруппированных по карте"
+            title="Все заправки, сгруппированные по карте (строки можно сворачивать), и лист итогов по картам"
           >
-            Скачать XLSX
+            XLSX: заправки по картам
           </Button>
         </div>
       </div>
