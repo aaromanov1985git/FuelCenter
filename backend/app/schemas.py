@@ -1421,3 +1421,186 @@ class PushSubscriptionRequest(BaseModel):
     Схема запроса на регистрацию подписки на push-уведомления
     """
     subscription: Dict[str, Any] = Field(..., description="Данные подписки на push-уведомления")
+
+# ---------------------------------------------------------------------------
+# Резервуары и лимиты карт (данные Топаза)
+# ---------------------------------------------------------------------------
+
+class TankResponse(BaseModel):
+    """Резервуар с последним замером"""
+    id: int
+    provider_id: int
+    provider_name: Optional[str] = None
+    template_id: int
+    gas_station_id: Optional[int] = None
+    gas_station_name: Optional[str] = None
+    azs_code: str
+    source_key: str
+    tank_number: Optional[int] = None
+    source_name: Optional[str] = None
+    source_fuel: Optional[str] = None
+    fuel_type: Optional[str] = Field(None, description="Вид топлива с учётом ручной поправки")
+    fuel_type_override: Optional[str] = None
+    capacity_liters: Optional[float] = None
+    overflow_group: Optional[str] = None
+    is_active: bool
+    last_measured_at: Optional[datetime] = None
+    last_volume: Optional[float] = None
+    last_mass: Optional[float] = None
+    last_density: Optional[float] = None
+    last_temperature: Optional[float] = None
+    last_water: Optional[float] = None
+    fill_percent: Optional[float] = None
+    age_minutes: Optional[int] = Field(None, description="Возраст замера по часам сервера Топаза")
+    warnings: List[str] = Field(default_factory=list, description="stale | density_mismatch | no_capacity | over_capacity | no_readings")
+
+
+class TankStationFuel(BaseModel):
+    """Остаток вида топлива на АЗС (сумма активных ёмкостей)"""
+    fuel_type: Optional[str] = None
+    volume: float
+    mass: Optional[float] = None
+    capacity_liters: Optional[float] = None
+    fill_percent: Optional[float] = None
+    tanks_count: int
+    measured_at: Optional[datetime] = Field(None, description="Самый старый из последних замеров ёмкостей")
+    age_minutes: Optional[int] = None
+    warnings: List[str] = Field(default_factory=list)
+
+
+class TankStation(BaseModel):
+    """АЗС с резервуарами"""
+    azs_code: str
+    provider_id: int
+    provider_name: Optional[str] = None
+    gas_station_id: Optional[int] = None
+    gas_station_name: Optional[str] = None
+    fuels: List[TankStationFuel]
+    tanks: List[TankResponse]
+
+
+class TopazSyncStateResponse(BaseModel):
+    """Состояние загрузки из Топаза по шаблону"""
+    template_id: int
+    template_name: Optional[str] = None
+    provider_id: Optional[int] = None
+    provider_name: Optional[str] = None
+    source_kind: Optional[str] = None
+    last_run_at: Optional[datetime] = None
+    last_success_at: Optional[datetime] = None
+    last_status: Optional[str] = None
+    last_error: Optional[str] = None
+    tanks_count: Optional[int] = None
+    readings_added: Optional[int] = None
+    limits_count: Optional[int] = None
+
+
+class TankOverviewResponse(BaseModel):
+    """Остатки по всем АЗС"""
+    stations: List[TankStation]
+    total_tanks: int
+    sync: List[TopazSyncStateResponse]
+
+
+class TankUpdate(BaseModel):
+    """Ручные настройки резервуара. Переданный null очищает поле."""
+    capacity_liters: Optional[float] = Field(None, ge=0, le=1_000_000)
+    fuel_type_override: Optional[str] = Field(None, max_length=100)
+    overflow_group: Optional[str] = Field(None, max_length=50)
+    is_active: Optional[bool] = None
+
+
+class TankReadingPoint(BaseModel):
+    measured_at: datetime
+    volume: Optional[float] = None
+    mass: Optional[float] = None
+    density: Optional[float] = None
+    temperature: Optional[float] = None
+    water: Optional[float] = None
+
+
+class TankReadingsResponse(BaseModel):
+    tank_id: int
+    total: int
+    items: List[TankReadingPoint]
+
+
+class TopazSyncResult(BaseModel):
+    template_id: int
+    template_name: Optional[str] = None
+    provider_id: Optional[int] = None
+    status: str
+    source_kind: Optional[str] = None
+    tanks_count: int = 0
+    readings_added: int = 0
+    limits_count: int = 0
+    error: Optional[str] = None
+
+
+class CardLimitResponse(BaseModel):
+    """Лимит карты с расходом в текущем периоде"""
+    id: int
+    provider_id: int
+    provider_name: Optional[str] = None
+    card_code: Optional[str] = None
+    card_name: Optional[str] = None
+    card_enabled: bool
+    source_fuel: Optional[str] = None
+    fuel_type: Optional[str] = None
+    limit_type_id: Optional[int] = None
+    limit_type_name: Optional[str] = None
+    limit_liters: Optional[float] = None
+    period: Optional[int] = None
+    period_start: Optional[datetime] = None
+    used_liters: Optional[float] = None
+    remaining_liters: Optional[float] = None
+    used_percent: Optional[float] = None
+    synced_at: Optional[datetime] = None
+
+
+class CardLimitStats(BaseModel):
+    total: int
+    enabled: int
+    near_limit: int = Field(..., description="Израсходовано 90 % лимита и больше")
+    exhausted: int = Field(..., description="Лимит выбран полностью")
+    forbidden: int
+    without_period: int = Field(..., description="Лимит задан, но тип периода не выбран")
+
+
+class CardLimitListResponse(BaseModel):
+    total: int
+    items: List[CardLimitResponse]
+    stats: CardLimitStats
+    synced_at: Optional[datetime] = None
+
+
+class FillsByCardItem(BaseModel):
+    """Строка отчёта «Заправки по картам»"""
+    provider_id: Optional[int] = None
+    provider_name: Optional[str] = None
+    card_number: Optional[str] = None
+    fuel_type: Optional[str] = None
+    fills_count: int
+    liters: float
+    days_with_fills: int
+    max_daily_liters: float
+    avg_daily_liters: float
+    first_fill: Optional[datetime] = None
+    last_fill: Optional[datetime] = None
+    azs_numbers: List[str] = Field(default_factory=list)
+    daily_limit: Optional[float] = Field(None, description="Суточный лимит карты по этому топливу")
+    days_at_limit: Optional[int] = Field(None, description="Дней, когда выбрано 90 % суточного лимита и больше")
+
+
+class FillsByCardTotals(BaseModel):
+    cards: int
+    fills_count: int
+    liters: float
+
+
+class FillsByCardResponse(BaseModel):
+    date_from: date
+    date_to: date
+    total: int
+    items: List[FillsByCardItem]
+    totals: FillsByCardTotals

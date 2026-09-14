@@ -1,0 +1,226 @@
+"""
+Тесты API резервуаров, лимитов карт и отчёта «Заправки по картам»
+"""
+import json
+from datetime import datetime, timedelta
+from decimal import Decimal
+
+import pytest
+
+from app.models import CardLimit, Provider, ProviderTemplate, Tank, TankReading, TopazSyncState, Transaction
+
+SOURCE_NOW = datetime(2026, 9, 14, 14, 0, 0)
+
+
+@pytest.fixture
+def mazs(test_db):
+    provider = Provider(name="МАЗС", code="MAZS")
+    test_db.add(provider)
+    test_db.flush()
+    template = ProviderTemplate(
+        provider_id=provider.id,
+        name="MAZS",
+        connection_type="firebird",
+        field_mapping="{}",
+        connection_settings=json.dumps({"host": "10.30.1.8", "database": "db.fdb"}),
+        fuel_type_mapping=json.dumps({"Бензин": "АИ-92", "ДТ3": "ДТ"}),
+    )
+    test_db.add(template)
+    test_db.flush()
+    # Сервер Топаза живёт на 5 часов впереди сервера GSM
+    run_at = datetime.now()
+    test_db.add(TopazSyncState(
+        template_id=template.id, source_kind="snapshots", last_tank_row_id=0,
+        last_run_at=run_at, source_clock=run_at + timedelta(hours=5), last_status="success",
+    ))
+    source_now = run_at + timedelta(hours=5)
+
+    def tank(key, num, fuel, volume, density, measured_at, capacity=None, **extra):
+        item = Tank(
+            provider_id=provider.id, template_id=template.id, azs_code="1016201", source_key=key,
+            tank_number=num, source_name=f"Емкость {num} - 1016201", source_fuel=fuel,
+            last_volume=Decimal(str(volume)), last_density=Decimal(str(density)), last_mass=Decimal("1000"),
+            last_measured_at=measured_at, capacity_liters=Decimal(str(capacity)) if capacity else None, **extra,
+        )
+        test_db.add(item)
+        return item
+
+    petrol = tank("snap:1", 1, "АИ-92", 5409.18, 765.06, source_now - timedelta(minutes=10), capacity=30000)
+    diesel = tank("snap:3", 2, "ДТ", 4230.71, 826.81, source_now - timedelta(minutes=5), capacity=30000)
+    mirror = tank("snap:2", 1, "ДТ", 5477.05, 765.05, source_now - timedelta(days=3), capacity=30000)
+    mirror.azs_code = "807211"
+    test_db.commit()
+    return {"provider": provider, "template": template, "petrol": petrol, "diesel": diesel, "mirror": mirror}
+
+
+class TestTankOverview:
+    def test_groups_by_station_and_sums_fuel(self, client, auth_headers, mazs):
+        response = client.get("/api/v1/tanks", headers=auth_headers)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["total_tanks"] == 3
+        stations = {s["azs_code"]: s for s in body["stations"]}
+        main = stations["1016201"]
+        fuels = {f["fuel_type"]: f for f in main["fuels"]}
+        assert fuels["АИ-92"]["volume"] == 5409.18
+        assert fuels["АИ-92"]["fill_percent"] == 18.0
+        assert fuels["ДТ"]["capacity_liters"] == 30000
+        assert body["sync"][0]["template_name"] == "MAZS"
+
+    def test_age_uses_source_clock_and_flags_problems(self, client, auth_headers, mazs):
+        body = client.get("/api/v1/tanks", headers=auth_headers).json()
+        tanks = {t["source_key"]: t for s in body["stations"] for t in s["tanks"]}
+        assert tanks["snap:1"]["age_minutes"] < 30
+        assert tanks["snap:1"]["warnings"] == []
+        # «ДТ» с бензиновой плотностью и замером трёхдневной давности
+        assert set(tanks["snap:2"]["warnings"]) == {"density_mismatch", "stale"}
+
+    def test_inactive_tank_excluded_from_station_totals(self, client, auth_headers, admin_auth_headers, mazs):
+        mirror_id = mazs["mirror"].id
+        response = client.patch(f"/api/v1/tanks/{mirror_id}", json={"is_active": False}, headers=admin_auth_headers)
+        assert response.status_code == 200
+        assert response.json()["is_active"] is False
+
+        body = client.get("/api/v1/tanks", headers=auth_headers).json()
+        station = next(s for s in body["stations"] if s["azs_code"] == "807211")
+        assert station["fuels"] == []
+
+
+class TestTankUpdate:
+    def test_admin_sets_capacity_override_and_group(self, client, admin_auth_headers, mazs):
+        tank_id = mazs["diesel"].id
+        response = client.patch(
+            f"/api/v1/tanks/{tank_id}",
+            json={"capacity_liters": 10000, "fuel_type_override": "ДТ", "overflow_group": "A"},
+            headers=admin_auth_headers,
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["capacity_liters"] == 10000
+        assert body["fuel_type"] == "ДТ"
+        assert body["overflow_group"] == "A"
+        assert body["fill_percent"] == 42.3
+
+        cleared = client.patch(f"/api/v1/tanks/{tank_id}", json={"overflow_group": None}, headers=admin_auth_headers)
+        assert cleared.json()["overflow_group"] is None
+        assert cleared.json()["capacity_liters"] == 10000
+
+    def test_regular_user_cannot_update(self, client, auth_headers, mazs):
+        response = client.patch(f"/api/v1/tanks/{mazs['diesel'].id}", json={"capacity_liters": 1}, headers=auth_headers)
+        assert response.status_code == 403
+
+    def test_unknown_tank(self, client, admin_auth_headers, mazs):
+        response = client.patch("/api/v1/tanks/99999", json={"capacity_liters": 1}, headers=admin_auth_headers)
+        assert response.status_code == 404
+
+
+class TestTankReadings:
+    def test_readings_sorted_and_filtered(self, client, auth_headers, test_db, mazs):
+        tank_id = mazs["diesel"].id
+        base = datetime(2026, 9, 14, 10, 0)
+        for i in range(5):
+            test_db.add(TankReading(tank_id=tank_id, measured_at=base + timedelta(hours=i),
+                                    volume=Decimal(5000 - i * 100), source_row_id=100 + i))
+        test_db.commit()
+
+        response = client.get(f"/api/v1/tanks/{tank_id}/readings",
+                              params={"date_from": "2026-09-14T11:00:00", "limit": 2}, headers=auth_headers)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["total"] == 4
+        assert [p["volume"] for p in body["items"]] == [4700.0, 4600.0]
+
+
+class TestCardLimits:
+    @pytest.fixture
+    def limits(self, test_db, mazs):
+        common = dict(provider_id=mazs["provider"].id, template_id=mazs["template"].id, synced_at=datetime(2026, 9, 14, 12, 0))
+        rows = [
+            CardLimit(source_card_id=1, source_fuel_id=3, card_code="A1", card_name="200 ИП Касумов 793", card_enabled=True,
+                      fuel_type="АИ-92", limit_type_id=7, limit_type_name="Календарный день",
+                      limit_liters=Decimal("40"), used_liters=Decimal("40"), **common),
+            CardLimit(source_card_id=2, source_fuel_id=2, card_code="B2", card_name="УТ126", card_enabled=True,
+                      fuel_type="ДТ", limit_type_id=7, limit_type_name="Календарный день",
+                      limit_liters=Decimal("250"), used_liters=Decimal("225.17"), **common),
+            CardLimit(source_card_id=3, source_fuel_id=2, card_code="C3", card_name="УТ110", card_enabled=True,
+                      fuel_type="ДТ", limit_type_id=7, limit_type_name="Календарный день",
+                      limit_liters=Decimal("150"), used_liters=Decimal("0"), **common),
+            CardLimit(source_card_id=4, source_fuel_id=2, card_code="D4", card_name="К010", card_enabled=True,
+                      fuel_type="ДТ", limit_type_id=0, limit_liters=Decimal("200"), used_liters=None, **common),
+            CardLimit(source_card_id=5, source_fuel_id=3, card_code="E5", card_name="Выключена", card_enabled=False,
+                      fuel_type="АИ-92", limit_type_id=7, limit_liters=Decimal("30"), used_liters=Decimal("30"), **common),
+        ]
+        test_db.add_all(rows)
+        test_db.commit()
+        return rows
+
+    def test_sorted_by_usage_with_stats(self, client, auth_headers, limits):
+        response = client.get("/api/v1/card-limits", headers=auth_headers)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["total"] == 4
+        assert [item["card_name"] for item in body["items"][:2]] == ["200 ИП Касумов 793", "УТ126"]
+        assert body["items"][1]["remaining_liters"] == 24.83
+        assert body["items"][1]["used_percent"] == 90.1
+        stats = body["stats"]
+        assert stats == {"total": 5, "enabled": 4, "near_limit": 2, "exhausted": 1, "forbidden": 0, "without_period": 1}
+
+    def test_filters(self, client, auth_headers, limits):
+        near = client.get("/api/v1/card-limits", params={"near_limit": True}, headers=auth_headers).json()
+        assert {item["card_name"] for item in near["items"]} == {"200 ИП Касумов 793", "УТ126"}
+
+        found = client.get("/api/v1/card-limits", params={"search": "УТ1", "fuel_type": "ДТ"}, headers=auth_headers).json()
+        assert {item["card_name"] for item in found["items"]} == {"УТ126", "УТ110"}
+
+        with_disabled = client.get("/api/v1/card-limits", params={"only_enabled": False}, headers=auth_headers).json()
+        assert with_disabled["total"] == 5
+
+
+class TestFillsByCard:
+    def test_aggregates_days_and_compares_with_daily_limit(self, client, auth_headers, test_db, mazs):
+        provider_id = mazs["provider"].id
+        test_db.add(CardLimit(provider_id=provider_id, template_id=mazs["template"].id, source_card_id=1, source_fuel_id=3,
+                              card_code="A1", card_name="214 ИП Касумов 772 ", card_enabled=True, fuel_type="АИ-92",
+                              limit_type_id=7, limit_liters=Decimal("20")))
+        fills = [
+            ("214 ИП Касумов 772", "АИ-92", datetime(2026, 9, 10, 9, 0), "20", "1016201"),
+            ("214 ИП Касумов 772", "АИ-92", datetime(2026, 9, 11, 9, 0), "10", "1016201"),
+            ("214 ИП Касумов 772", "АИ-92", datetime(2026, 9, 11, 18, 0), "9", "1016201"),
+            ("214 ИП Касумов 772", "АИ-92", datetime(2026, 9, 12, 9, 0), "12", "1016201"),
+            ("УТ226", "ДТ", datetime(2026, 9, 11, 9, 0), "200", "807211"),
+            ("УТ226", "ДТ", datetime(2026, 8, 1, 9, 0), "999", "807211"),  # вне периода
+        ]
+        for card, product, when, qty, azs in fills:
+            test_db.add(Transaction(provider_id=provider_id, card_number=card, product=product, transaction_date=when,
+                                    quantity=Decimal(qty), azs_number=azs))
+        test_db.commit()
+
+        response = client.get("/api/v1/reports/fills-by-card",
+                              params={"date_from": "2026-09-10", "date_to": "2026-09-14"}, headers=auth_headers)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["totals"] == {"cards": 2, "fills_count": 5, "liters": 251.0}
+
+        first = body["items"][0]
+        assert first["card_number"] == "214 ИП Касумов 772"
+        assert first["fills_count"] == 4
+        assert first["days_with_fills"] == 3
+        assert first["max_daily_liters"] == 20.0
+        assert first["daily_limit"] == 20.0
+        assert first["days_at_limit"] == 2
+        assert first["azs_numbers"] == ["1016201"]
+
+        diesel = body["items"][1]
+        assert diesel["daily_limit"] is None
+        assert diesel["days_at_limit"] is None
+
+        at_limit = client.get("/api/v1/reports/fills-by-card",
+                              params={"date_from": "2026-09-10", "date_to": "2026-09-14", "at_limit_only": True},
+                              headers=auth_headers).json()
+        assert [item["card_number"] for item in at_limit["items"]] == ["214 ИП Касумов 772"]
+
+    def test_rejects_long_or_inverted_period(self, client, auth_headers):
+        assert client.get("/api/v1/reports/fills-by-card", params={"date_from": "2026-01-01", "date_to": "2026-09-01"},
+                          headers=auth_headers).status_code == 400
+        assert client.get("/api/v1/reports/fills-by-card", params={"date_from": "2026-09-10", "date_to": "2026-09-01"},
+                          headers=auth_headers).status_code == 400

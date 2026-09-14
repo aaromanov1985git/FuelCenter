@@ -17,7 +17,8 @@ from app.database import Base, engine
 from app.models import (
     Transaction, Vehicle, Provider, ProviderTemplate, 
     FuelCard, UploadPeriodLock, User, GasStation, NormalizationSettings, CardInfoSchedule,
-    VehicleRefuel, VehicleLocation, FuelCardAnalysisResult, Notification, NotificationSettings
+    VehicleRefuel, VehicleLocation, FuelCardAnalysisResult, Notification, NotificationSettings,
+    Tank, TankReading, CardLimit, TopazSyncState
 )
 
 # Конфигурация Alembic
