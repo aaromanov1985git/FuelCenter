@@ -17,6 +17,9 @@ const UploadEventsList = lazy(() => import('./UploadEventsList'))
 const UserActionLogsList = lazy(() => import('./UserActionLogsList'))
 const Settings = lazy(() => import('./Settings'))
 const NotificationsList = lazy(() => import('./NotificationsList'))
+const TanksPage = lazy(() => import('./TanksPage'))
+const CardLimitsList = lazy(() => import('./CardLimitsList'))
+const FillsByCardReport = lazy(() => import('./FillsByCardReport'))
 
 const LoadingFallback = () => (
   <div className="loading">
@@ -57,6 +60,9 @@ const AppRoutes = ({ onOpenRefuelsUpload, onOpenLocationsUpload }) => (
         />
       } />
       <Route path="/gas-stations" element={<GasStationsList />} />
+      <Route path="/tanks" element={<TanksPage />} />
+      <Route path="/card-limits" element={<CardLimitsList />} />
+      <Route path="/fills-report" element={<FillsByCardReport />} />
       <Route path="/fuel-types" element={<FuelTypesList />} />
       <Route path="/providers" element={<ProvidersList />} />
       <Route path="/provider-analysis" element={<ProviderAnalysisDashboard />} />
