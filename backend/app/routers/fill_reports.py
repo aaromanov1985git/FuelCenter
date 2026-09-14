@@ -11,8 +11,10 @@ from sqlalchemy.orm import Session
 from app.auth import require_auth_if_enabled
 from app.database import get_db
 from app.models import CardLimit, Provider, Transaction, User
-from app.schemas import FillsByCardItem, FillsByCardResponse, FillsByCardTotals
-from app.services.topaz_sync_service import LIMIT_TYPE_DAY
+from app.schemas import (
+    FillDetailItem, FillsByCardItem, FillsByCardResponse, FillsByCardTotals, FillsDetailResponse, TopazProviderOption,
+)
+from app.services.topaz_sync_service import LIMIT_TYPE_DAY, topaz_providers
 
 router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
 
@@ -22,6 +24,73 @@ AT_LIMIT_SHARE = 0.9
 
 def _card_key(value: Optional[str]) -> str:
     return (value or "").strip().lower()
+
+
+def _period(date_from: Optional[date], date_to: Optional[date]) -> Tuple[date, date]:
+    date_to = date_to or date.today()
+    date_from = date_from or (date_to - timedelta(days=29))
+    if date_from > date_to:
+        raise HTTPException(status_code=400, detail="Дата «с» позже даты «по»")
+    if (date_to - date_from).days + 1 > MAX_PERIOD_DAYS:
+        raise HTTPException(status_code=400, detail=f"Период не больше {MAX_PERIOD_DAYS} дней")
+    return date_from, date_to
+
+
+@router.get("/fills", response_model=FillsDetailResponse)
+def fills_detail(
+    date_from: Optional[date] = Query(None, description="С (по умолчанию — 30 дней назад)"),
+    date_to: Optional[date] = Query(None, description="По (по умолчанию — сегодня)"),
+    provider_id: Optional[int] = Query(None),
+    card_number: Optional[str] = Query(None, description="Точное название карты — детализация одной строки отчёта"),
+    azs_number: Optional[str] = Query(None),
+    fuel_type: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, description="Поиск по карте"),
+    limit: int = Query(5000, ge=1, le=20000),
+    db: Session = Depends(get_db),
+    _: Optional[User] = Depends(require_auth_if_enabled),
+):
+    """Детализация «Заправок по картам»: каждая заправка на АЗС Топаза, самые свежие первыми."""
+    date_from, date_to = _period(date_from, date_to)
+    scope_ids = [pid for pid, _name in topaz_providers(db) if not provider_id or pid == provider_id]
+
+    query = db.query(Transaction).filter(
+        Transaction.transaction_date >= datetime.combine(date_from, time.min),
+        Transaction.transaction_date <= datetime.combine(date_to, time.max),
+        Transaction.quantity > 0,
+        Transaction.provider_id.in_(scope_ids),
+    )
+    if card_number is not None:
+        query = query.filter(Transaction.card_number == card_number)
+    if azs_number:
+        query = query.filter(Transaction.azs_number == azs_number)
+    if fuel_type:
+        query = query.filter(Transaction.product == fuel_type)
+    if search:
+        query = query.filter(Transaction.card_number.ilike(f"%{search.strip()}%"))
+
+    total = query.count()
+    rows = query.order_by(Transaction.transaction_date.desc(), Transaction.id.desc()).limit(limit).all()
+    providers = {pid: name for pid, name in db.query(Provider.id, Provider.name)}
+    return FillsDetailResponse(
+        date_from=date_from,
+        date_to=date_to,
+        total=total,
+        truncated=total > len(rows),
+        items=[
+            FillDetailItem(
+                id=row.id,
+                transaction_date=row.transaction_date,
+                provider_id=row.provider_id,
+                provider_name=providers.get(row.provider_id),
+                card_number=row.card_number,
+                vehicle=row.vehicle,
+                azs_number=row.azs_number,
+                fuel_type=row.product,
+                liters=float(row.quantity),
+            )
+            for row in rows
+        ],
+    )
 
 
 @router.get("/fills-by-card", response_model=FillsByCardResponse)
@@ -37,12 +106,12 @@ def fills_by_card(
     _: Optional[User] = Depends(require_auth_if_enabled),
 ):
     """Заправки по картам за период: литры, дни с заправками, максимум в сутки и сравнение с суточным лимитом."""
-    date_to = date_to or date.today()
-    date_from = date_from or (date_to - timedelta(days=29))
-    if date_from > date_to:
-        raise HTTPException(status_code=400, detail="Дата «с» позже даты «по»")
-    if (date_to - date_from).days + 1 > MAX_PERIOD_DAYS:
-        raise HTTPException(status_code=400, detail=f"Период не больше {MAX_PERIOD_DAYS} дней")
+    date_from, date_to = _period(date_from, date_to)
+
+    # Отчёт — часть блока «АЗС Топаз»: только провайдеры, чьи АЗС читаются из Топаза
+    topaz = topaz_providers(db)
+    topaz_ids = [pid for pid, _ in topaz]
+    scope_ids = [pid for pid in topaz_ids if not provider_id or pid == provider_id]
 
     day = func.date(Transaction.transaction_date)
     query = db.query(
@@ -58,9 +127,8 @@ def fills_by_card(
         Transaction.transaction_date >= datetime.combine(date_from, time.min),
         Transaction.transaction_date <= datetime.combine(date_to, time.max),
         Transaction.quantity > 0,
+        Transaction.provider_id.in_(scope_ids),
     )
-    if provider_id:
-        query = query.filter(Transaction.provider_id == provider_id)
     if azs_number:
         query = query.filter(Transaction.azs_number == azs_number)
     if fuel_type:
@@ -73,9 +141,8 @@ def fills_by_card(
         Transaction.transaction_date >= datetime.combine(date_from, time.min),
         Transaction.transaction_date <= datetime.combine(date_to, time.max),
         Transaction.quantity > 0,
+        Transaction.provider_id.in_(scope_ids),
     )
-    if provider_id:
-        azs_query = azs_query.filter(Transaction.provider_id == provider_id)
     azs_by_key: Dict[Tuple, set] = {}
     for prov, card, product, azs in azs_query.distinct().all():
         if azs:
@@ -141,4 +208,11 @@ def fills_by_card(
             fills_count=sum(item.fills_count for item in items),
             liters=round(sum(item.liters for item in items), 2),
         ),
+        providers=[TopazProviderOption(id=pid, name=name) for pid, name in topaz],
+        fuel_types=[
+            product for (product,) in db.query(Transaction.product)
+            .filter(Transaction.provider_id.in_(topaz_ids), Transaction.product.isnot(None))
+            .distinct()
+            .order_by(Transaction.product)
+        ] if topaz_ids else [],
     )

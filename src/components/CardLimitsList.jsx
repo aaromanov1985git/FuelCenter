@@ -44,17 +44,12 @@ const CardLimitsList = () => {
   const { error: showError } = useToast()
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [page, setPage] = useState(1)
-  const [data, setData] = useState({ items: [], total: 0, stats: null, synced_at: null })
-  const [providers, setProviders] = useState([])
+  const [data, setData] = useState({ items: [], total: 0, stats: null, synced_at: null, providers: [], fuel_types: [] })
   const [loading, setLoading] = useState(true)
   const debouncedSearch = useDebounce(filters.search, 400)
-
-  useEffect(() => {
-    authFetch(`${API_URL}/api/v1/providers?limit=200`)
-      .then((response) => (response.ok ? response.json() : { items: [] }))
-      .then((body) => setProviders(body.items || body || []))
-      .catch(() => setProviders([]))
-  }, [])
+  // Варианты фильтров приходят вместе с лимитами: только провайдеры и топливо АЗС Топаза
+  const providers = data.providers || []
+  const fuelTypes = data.fuel_types || []
 
   useEffect(() => { setPage(1) }, [debouncedSearch, filters.provider_id, filters.fuel_type, filters.near_limit, filters.only_enabled])
 
@@ -179,7 +174,7 @@ const CardLimitsList = () => {
           label="Топливо"
           value={filters.fuel_type}
           onChange={(value) => setFilter('fuel_type', value || '')}
-          options={[{ value: '', label: 'Все' }, { value: 'ДТ', label: 'ДТ' }, { value: 'АИ-92', label: 'АИ-92' }, { value: 'АИ-95', label: 'АИ-95' }]}
+          options={[{ value: '', label: 'Все' }, ...fuelTypes.map((fuel) => ({ value: fuel, label: fuel }))]}
           fullWidth
         />
         <Select

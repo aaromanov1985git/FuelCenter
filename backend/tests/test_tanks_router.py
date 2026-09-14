@@ -233,6 +233,8 @@ class TestCardLimits:
         assert body["items"][1]["used_percent"] == 90.1
         stats = body["stats"]
         assert stats == {"total": 5, "enabled": 4, "near_limit": 2, "exhausted": 1, "forbidden": 0, "without_period": 1}
+        assert [p["name"] for p in body["providers"]] == ["МАЗС"]
+        assert body["fuel_types"] == ["АИ-92", "ДТ"]
 
     def test_filters(self, client, auth_headers, limits):
         near = client.get("/api/v1/card-limits", params={"near_limit": True}, headers=auth_headers).json()
@@ -264,11 +266,21 @@ class TestFillsByCard:
                                     quantity=Decimal(qty), azs_number=azs))
         test_db.commit()
 
+        other = Provider(name="РН-Карт", code="RN")
+        test_db.add(other)
+        test_db.flush()
+        test_db.add(Transaction(provider_id=other.id, card_number="чужая карта", product="ДТ",
+                                transaction_date=datetime(2026, 9, 11, 10, 0), quantity=Decimal("77"), azs_number="X1"))
+        test_db.commit()
+
         response = client.get("/api/v1/reports/fills-by-card",
                               params={"date_from": "2026-09-10", "date_to": "2026-09-14"}, headers=auth_headers)
         assert response.status_code == 200
         body = response.json()
+        # Провайдер без подключения к Топазу в отчёт блока «АЗС Топаз» не попадает
         assert body["totals"] == {"cards": 2, "fills_count": 5, "liters": 251.0}
+        assert body["providers"] == [{"id": provider_id, "name": "МАЗС"}]
+        assert body["fuel_types"] == ["АИ-92", "ДТ"]
 
         first = body["items"][0]
         assert first["card_number"] == "214 ИП Касумов 772"
@@ -287,6 +299,40 @@ class TestFillsByCard:
                               params={"date_from": "2026-09-10", "date_to": "2026-09-14", "at_limit_only": True},
                               headers=auth_headers).json()
         assert [item["card_number"] for item in at_limit["items"]] == ["214 ИП Касумов 772"]
+
+    def test_detail_lists_each_fill_of_card(self, client, auth_headers, test_db, mazs):
+        provider_id = mazs["provider"].id
+        other = Provider(name="РН-Карт", code="RN")
+        test_db.add(other)
+        test_db.flush()
+        rows = [
+            (provider_id, "214 ИП Касумов 772", "АИ-92", datetime(2026, 9, 11, 9, 0), "10", "1016201"),
+            (provider_id, "214 ИП Касумов 772", "АИ-92", datetime(2026, 9, 11, 18, 0), "9", "1016201"),
+            (provider_id, "УТ226", "ДТ", datetime(2026, 9, 12, 9, 0), "200", "807211"),
+            (other.id, "214 ИП Касумов 772", "АИ-92", datetime(2026, 9, 12, 9, 0), "55", "X1"),  # не Топаз
+        ]
+        for prov, card, product, when, qty, azs in rows:
+            test_db.add(Transaction(provider_id=prov, card_number=card, product=product, transaction_date=when,
+                                    quantity=Decimal(qty), azs_number=azs))
+        test_db.commit()
+
+        body = client.get("/api/v1/reports/fills", params={
+            "date_from": "2026-09-10", "date_to": "2026-09-14", "card_number": "214 ИП Касумов 772",
+            "provider_id": provider_id, "fuel_type": "АИ-92",
+        }, headers=auth_headers).json()
+        assert body["total"] == 2
+        assert body["truncated"] is False
+        assert [(item["transaction_date"], item["liters"], item["azs_number"]) for item in body["items"]] == [
+            ("2026-09-11T18:00:00", 9.0, "1016201"),
+            ("2026-09-11T09:00:00", 10.0, "1016201"),
+        ]
+
+        everything = client.get("/api/v1/reports/fills", params={
+            "date_from": "2026-09-10", "date_to": "2026-09-14", "limit": 2,
+        }, headers=auth_headers).json()
+        assert everything["total"] == 3
+        assert everything["truncated"] is True
+        assert everything["items"][0]["card_number"] == "УТ226"
 
     def test_rejects_long_or_inverted_period(self, client, auth_headers):
         assert client.get("/api/v1/reports/fills-by-card", params={"date_from": "2026-01-01", "date_to": "2026-09-01"},

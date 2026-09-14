@@ -18,10 +18,17 @@ const NAV_GROUPS = [
       { tab: 'cards', icon: 'card', label: 'Топливные карты' },
       { tab: 'fuel-card-analysis', icon: 'chart', label: 'Анализ карт' },
       { tab: 'gas-stations', icon: 'pin', label: 'АЗС' },
-      { tab: 'tanks', icon: 'tank', label: 'Резервуары' },
-      { tab: 'card-limits', icon: 'gauge', label: 'Лимиты карт' },
-      { tab: 'fills-report', icon: 'file', label: 'Заправки по картам' },
       { tab: 'fuel-types', icon: 'drop', label: 'Виды топлива' },
+    ],
+  },
+  {
+    // Данные собственных АЗС из баз Топаза: остатки, заправки и лимиты карт
+    id: 'topaz',
+    title: 'АЗС Топаз',
+    items: [
+      { tab: 'tanks', icon: 'tank', label: 'Резервуары' },
+      { tab: 'fills-report', icon: 'file', label: 'Заправки' },
+      { tab: 'card-limits', icon: 'gauge', label: 'Лимиты карт' },
     ],
   },
   {

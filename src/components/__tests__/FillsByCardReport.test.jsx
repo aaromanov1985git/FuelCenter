@@ -11,8 +11,10 @@ vi.mock('../../utils/api', () => ({
   authFetch: (...args) => mockAuthFetch(...args)
 }))
 
+// Функции тоста стабильны, как в ToastContainer (useCallback): иначе эффекты загрузки перезапускаются бесконечно
+const mockToast = { success: vi.fn(), error: vi.fn() }
 vi.mock('../ToastContainer', () => ({
-  useToast: () => ({ success: vi.fn(), error: vi.fn() })
+  useToast: () => mockToast
 }))
 
 const makeResponse = (body) => ({ ok: true, status: 200, json: async () => body })
@@ -32,12 +34,43 @@ const report = {
   ],
 }
 
+const detail = {
+  date_from: '2026-08-16',
+  date_to: '2026-09-14',
+  total: 3,
+  truncated: false,
+  items: [
+    { id: 3, transaction_date: '2026-09-13T18:00:00', provider_name: 'МАЗС', card_number: '214 ИП Касумов 772', azs_number: '1016201', fuel_type: 'АИ-92', liters: 10 },
+    { id: 2, transaction_date: '2026-09-13T09:00:00', provider_name: 'МАЗС', card_number: '214 ИП Касумов 772', azs_number: '1016201', fuel_type: 'АИ-92', liters: 10 },
+    { id: 1, transaction_date: '2026-09-12T13:32:00', provider_name: 'МАЗС', card_number: '214 ИП Касумов 772', azs_number: '1016201', fuel_type: 'АИ-92', liters: 12 },
+  ],
+}
+
 describe('FillsByCardReport', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockAuthFetch.mockImplementation((url) =>
-      Promise.resolve(makeResponse(url.includes('/api/v1/reports/fills-by-card') ? report : { items: [] }))
-    )
+    mockAuthFetch.mockImplementation((url) => {
+      if (url.includes('/api/v1/reports/fills-by-card')) {
+        return Promise.resolve(makeResponse({ ...report, providers: [{ id: 3, name: 'МАЗС' }], fuel_types: ['АИ-92', 'ДТ'] }))
+      }
+      if (url.includes('/api/v1/reports/fills?')) return Promise.resolve(makeResponse(detail))
+      return Promise.resolve(makeResponse({ items: [] }))
+    })
+  })
+
+  it('по клику на карту показывает её заправки по дням', async () => {
+    renderWithProviders(<FillsByCardReport />)
+
+    fireEvent.click(await screen.findByText('214 ИП Касумов 772'))
+    const list = await screen.findByTestId('card-fills-detail')
+    expect(list).toHaveTextContent('13.09.2026')
+    expect(list).toHaveTextContent(/20 л из 20/)
+    expect(list).toHaveTextContent('Лимит выбран')
+    expect(list).toHaveTextContent('12.09.2026')
+
+    const url = mockAuthFetch.mock.calls.map(([u]) => u).find((u) => u.includes('/api/v1/reports/fills?'))
+    expect(decodeURIComponent(url.replace(/\+/g, ' '))).toContain('card_number=214 ИП Касумов 772')
+    expect(url).toContain('provider_id=3')
   })
 
   it('строит отчёт за последние 30 дней', async () => {

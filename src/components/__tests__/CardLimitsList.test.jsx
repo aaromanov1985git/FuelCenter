@@ -11,8 +11,10 @@ vi.mock('../../utils/api', () => ({
   authFetch: (...args) => mockAuthFetch(...args)
 }))
 
+// Функции тоста стабильны, как в ToastContainer (useCallback): иначе эффекты загрузки перезапускаются бесконечно
+const mockToast = { success: vi.fn(), error: vi.fn() }
 vi.mock('../ToastContainer', () => ({
-  useToast: () => ({ success: vi.fn(), error: vi.fn() })
+  useToast: () => mockToast
 }))
 
 const makeResponse = (body) => ({ ok: true, status: 200, json: async () => body })

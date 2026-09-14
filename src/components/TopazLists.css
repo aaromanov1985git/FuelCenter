@@ -139,3 +139,57 @@
 .tpz-bar[data-tone="ok"] .tpz-bar__fill { background: var(--green); }
 .tpz-bar[data-tone="warn"] .tpz-bar__fill { background: var(--amber); }
 .tpz-bar[data-tone="low"] .tpz-bar__fill { background: var(--red); }
+
+.tpz-header__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Детализация заправок карты ---------- */
+.tpz-detail__lead {
+  margin: 0 0 12px;
+  font-size: 12px;
+}
+
+.tpz-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.tpz-detail__day {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: clip;
+}
+
+.tpz-detail__day-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.tpz-detail__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tpz-detail__table td {
+  padding: 6px 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text-1);
+}
+
+.tpz-detail__liters {
+  text-align: right;
+  white-space: nowrap;
+}

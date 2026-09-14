@@ -17,7 +17,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from app.logger import logger
-from app.models import CardLimit, GasStation, ProviderTemplate, Tank, TankReading, TopazSyncState
+from app.models import CardLimit, GasStation, Provider, ProviderTemplate, Tank, TankReading, TopazSyncState
 from app.services.normalization_service import normalize_fuel
 from app.utils.fuel_mapping import match_fuel_type
 from app.utils.json_utils import parse_template_json
@@ -97,6 +97,18 @@ def resolve_fuel_type(raw: Optional[str], mapping: Optional[Dict[str, str]]) -> 
             if mapped:
                 return mapped
     return normalize_fuel(value) or value
+
+
+def topaz_providers(db: Session) -> List[Tuple[int, str]]:
+    """Провайдеры, чьи АЗС читаются из баз Топаза: у их шаблона есть состояние синхронизации."""
+    return (
+        db.query(Provider.id, Provider.name)
+        .join(ProviderTemplate, ProviderTemplate.provider_id == Provider.id)
+        .join(TopazSyncState, TopazSyncState.template_id == ProviderTemplate.id)
+        .distinct()
+        .order_by(Provider.name)
+        .all()
+    )
 
 
 def limit_period_start(limit_type_id: Optional[int], period: Optional[int], now: datetime) -> Optional[datetime]:

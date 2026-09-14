@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Input, Select, Table, Skeleton, Button } from './ui'
+import { Input, Select, Table, Skeleton, Button, Modal } from './ui'
 import Icon from './ui/Icon'
 import EmptyState from './EmptyState'
 import { authFetch } from '../utils/api'
@@ -10,6 +10,8 @@ import { formatDecimal, formatLiters, formatSourceDate, formatSourceDateTime, to
 import './TopazLists.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
+const AT_LIMIT_SHARE = 0.9
+const DETAIL_EXPORT_LIMIT = 20000
 
 const defaultFilters = () => {
   const today = new Date()
@@ -18,36 +20,175 @@ const defaultFilters = () => {
   return { date_from: toIsoDate(from), date_to: toIsoDate(today), provider_id: '', fuel_type: '', search: '', at_limit_only: '' }
 }
 
-const toCsv = (items) => {
-  const header = ['Провайдер', 'Карта', 'Топливо', 'Заправок', 'Литров', 'Дней с заправками', 'Максимум за сутки', 'Среднее за сутки', 'Суточный лимит', 'Дней у лимита', 'АЗС', 'Первая', 'Последняя']
-  const escape = (value) => {
-    const text = value === null || value === undefined ? '' : String(value)
-    return /[";\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
-  }
-  const lines = items.map((item) => [
-    item.provider_name, item.card_number, item.fuel_type, item.fills_count,
-    String(item.liters).replace('.', ','), item.days_with_fills,
-    String(item.max_daily_liters).replace('.', ','), String(item.avg_daily_liters).replace('.', ','),
-    item.daily_limit ?? '', item.days_at_limit ?? '', item.azs_numbers.join(' '),
-    formatSourceDateTime(item.first_fill), formatSourceDateTime(item.last_fill),
-  ].map(escape).join(';'))
-  return '﻿' + [header.join(';'), ...lines].join('\r\n')
+const escapeCsv = (value) => {
+  const text = value === null || value === undefined ? '' : String(value)
+  return /[";\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+}
+
+const decimalCsv = (value) => (value === null || value === undefined ? '' : String(value).replace('.', ','))
+
+const csvDocument = (header, lines) => '﻿' + [header.join(';'), ...lines.map((line) => line.map(escapeCsv).join(';'))].join('\r\n')
+
+const summaryCsv = (items) => csvDocument(
+  ['Провайдер', 'Карта', 'Топливо', 'Заправок', 'Литров', 'Дней с заправками', 'Максимум за сутки', 'Среднее за сутки', 'Суточный лимит', 'Дней у лимита', 'АЗС', 'Первая', 'Последняя'],
+  items.map((item) => [
+    item.provider_name, item.card_number, item.fuel_type, item.fills_count, decimalCsv(item.liters), item.days_with_fills,
+    decimalCsv(item.max_daily_liters), decimalCsv(item.avg_daily_liters), item.daily_limit ?? '', item.days_at_limit ?? '',
+    item.azs_numbers.join(' '), formatSourceDateTime(item.first_fill), formatSourceDateTime(item.last_fill),
+  ]),
+)
+
+const detailCsv = (items) => csvDocument(
+  ['Дата и время', 'Провайдер', 'АЗС', 'Карта', 'Закреплена за', 'Топливо', 'Литров'],
+  items.map((item) => [
+    formatSourceDateTime(item.transaction_date), item.provider_name, item.azs_number, item.card_number,
+    item.vehicle, item.fuel_type, decimalCsv(item.liters),
+  ]),
+)
+
+const saveCsv = (content, filename) => {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+const periodParams = (filters) => {
+  const params = new URLSearchParams({ date_from: filters.date_from, date_to: filters.date_to })
+  if (filters.provider_id) params.append('provider_id', filters.provider_id)
+  if (filters.fuel_type) params.append('fuel_type', filters.fuel_type)
+  return params
+}
+
+const readError = async (response, fallback) => {
+  const detail = await response.json().catch(() => ({}))
+  return new Error(detail.detail || fallback)
+}
+
+/* Детализация одной строки отчёта: заправки карты по дням, сумма дня против суточного лимита. */
+const CardFillsModal = ({ item, period, onClose }) => {
+  const { error: showError } = useToast()
+  const [detail, setDetail] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!item) return
+    let cancelled = false
+    const load = async () => {
+      setLoading(true)
+      setDetail(null)
+      try {
+        const params = new URLSearchParams({ date_from: period.date_from, date_to: period.date_to, card_number: item.card_number ?? '' })
+        if (item.provider_id) params.append('provider_id', String(item.provider_id))
+        if (item.fuel_type) params.append('fuel_type', item.fuel_type)
+        const response = await authFetch(`${API_URL}/api/v1/reports/fills?${params}`)
+        if (!response.ok) throw await readError(response, 'Не удалось загрузить заправки карты')
+        const body = await response.json()
+        if (!cancelled) setDetail(body)
+      } catch (err) {
+        if (!err.isUnauthorized) showError(err.message)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [item, period, showError])
+
+  const days = useMemo(() => {
+    const groups = new Map()
+    for (const fill of detail?.items || []) {
+      const day = (fill.transaction_date || '').slice(0, 10)
+      if (!groups.has(day)) groups.set(day, [])
+      groups.get(day).push(fill)
+    }
+    return [...groups.entries()].map(([day, fills]) => ({
+      day,
+      fills,
+      liters: fills.reduce((sum, fill) => sum + fill.liters, 0),
+    }))
+  }, [detail])
+
+  if (!item) return null
+  const limit = item.daily_limit
+
+  return (
+    <Modal isOpen={Boolean(item)} onClose={onClose} title={`Заправки: ${item.card_number || 'без карты'}`} size="lg">
+      <Modal.Body>
+        <p className="tpz-muted tpz-detail__lead">
+          {item.provider_name} · {item.fuel_type || 'топливо не указано'} · {formatSourceDate(period.date_from)} — {formatSourceDate(period.date_to)}
+          {limit ? ` · суточный лимит ${formatLiters(limit)} л` : ' · суточного лимита в Топазе нет'}
+        </p>
+        {loading || !detail ? (
+          <Skeleton rows={5} columns={4} />
+        ) : days.length === 0 ? (
+          <p className="tpz-muted">Заправок за период нет.</p>
+        ) : (
+          <div className="tpz-detail" data-testid="card-fills-detail">
+            {detail.truncated ? (
+              <p className="tpz-muted">Показаны последние {detail.items.length} из {detail.total} заправок.</p>
+            ) : null}
+            {days.map(({ day, fills, liters }) => {
+              const atLimit = limit && liters >= limit * AT_LIMIT_SHARE
+              return (
+                <section key={day} className="tpz-detail__day">
+                  <header className="tpz-detail__day-head">
+                    <span className="tpz-primary">{formatSourceDate(day)}</span>
+                    <span className="t-numeric">
+                      {formatDecimal(liters)} л{limit ? ` из ${formatLiters(limit)}` : ''}
+                      {' '}· {fills.length} {fills.length === 1 ? 'заправка' : fills.length < 5 ? 'заправки' : 'заправок'}
+                    </span>
+                    {atLimit ? <span className="tpz-chip" data-tone="warn">Лимит выбран</span> : null}
+                  </header>
+                  <table className="tpz-detail__table">
+                    <tbody>
+                      {fills.map((fill) => (
+                        <tr key={fill.id}>
+                          <td className="t-numeric">{formatSourceDateTime(fill.transaction_date).slice(-5)}</td>
+                          <td className="t-numeric">АЗС {fill.azs_number || '—'}</td>
+                          <td className="tpz-muted">{fill.vehicle || ''}</td>
+                          <td className="t-numeric tpz-detail__liters">{formatDecimal(fill.liters)} л</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </section>
+              )
+            })}
+          </div>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button
+          variant="secondary"
+          icon={<Icon name="download" size={16} />}
+          disabled={!detail?.items?.length}
+          onClick={() => saveCsv(detailCsv(detail.items), `zapravki_${item.card_number || 'bez-karty'}_${period.date_from}_${period.date_to}.csv`)}
+        >
+          Скачать CSV
+        </Button>
+        <Button variant="primary" onClick={onClose}>Закрыть</Button>
+      </Modal.Footer>
+    </Modal>
+  )
 }
 
 const FillsByCardReport = () => {
   const { error: showError } = useToast()
   const [filters, setFilters] = useState(defaultFilters)
   const [report, setReport] = useState(null)
-  const [providers, setProviders] = useState([])
+  // Варианты фильтров сохраняем между запросами: при ошибке отчёта они не должны пропадать
+  const [options, setOptions] = useState({ providers: [], fuel_types: [] })
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const [selected, setSelected] = useState(null)
   const debouncedSearch = useDebounce(filters.search, 400)
-
-  useEffect(() => {
-    authFetch(`${API_URL}/api/v1/providers?limit=200`)
-      .then((response) => (response.ok ? response.json() : { items: [] }))
-      .then((body) => setProviders(body.items || body || []))
-      .catch(() => setProviders([]))
-  }, [])
+  const providers = options.providers
 
   useEffect(() => {
     if (!filters.date_from || !filters.date_to) return
@@ -55,18 +196,16 @@ const FillsByCardReport = () => {
     const load = async () => {
       setLoading(true)
       try {
-        const params = new URLSearchParams({ date_from: filters.date_from, date_to: filters.date_to })
-        if (filters.provider_id) params.append('provider_id', filters.provider_id)
-        if (filters.fuel_type) params.append('fuel_type', filters.fuel_type)
+        const params = periodParams(filters)
         if (debouncedSearch.trim()) params.append('search', debouncedSearch.trim())
         if (filters.at_limit_only) params.append('at_limit_only', 'true')
         const response = await authFetch(`${API_URL}/api/v1/reports/fills-by-card?${params}`)
-        if (!response.ok) {
-          const detail = await response.json().catch(() => ({}))
-          throw new Error(detail.detail || 'Не удалось построить отчёт')
-        }
+        if (!response.ok) throw await readError(response, 'Не удалось построить отчёт')
         const body = await response.json()
-        if (!cancelled) setReport(body)
+        if (!cancelled) {
+          setReport(body)
+          setOptions({ providers: body.providers || [], fuel_types: body.fuel_types || [] })
+        }
       } catch (err) {
         if (err.isUnauthorized) return
         logger.error('Ошибка отчёта по заправкам:', err)
@@ -78,21 +217,33 @@ const FillsByCardReport = () => {
     }
     load()
     return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.date_from, filters.date_to, filters.provider_id, filters.fuel_type, filters.at_limit_only, debouncedSearch, showError])
 
   const setFilter = (field, value) => setFilters((prev) => ({ ...prev, [field]: value }))
 
-  const downloadCsv = () => {
+  const downloadSummary = () => {
     if (!report?.items?.length) return
-    const blob = new Blob([toCsv(report.items)], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `zapravki-po-kartam_${report.date_from}_${report.date_to}.csv`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(url)
+    saveCsv(summaryCsv(report.items), `zapravki-po-kartam_${report.date_from}_${report.date_to}.csv`)
+  }
+
+  const downloadDetail = async () => {
+    if (!report) return
+    setExporting(true)
+    try {
+      const params = periodParams(filters)
+      if (debouncedSearch.trim()) params.append('search', debouncedSearch.trim())
+      params.append('limit', String(DETAIL_EXPORT_LIMIT))
+      const response = await authFetch(`${API_URL}/api/v1/reports/fills?${params}`)
+      if (!response.ok) throw await readError(response, 'Не удалось выгрузить заправки')
+      const body = await response.json()
+      if (body.truncated) showError(`Выгружены последние ${body.items.length} из ${body.total} заправок — сузьте период`)
+      saveCsv(detailCsv(body.items), `zapravki-detalno_${body.date_from}_${body.date_to}.csv`)
+    } catch (err) {
+      if (!err.isUnauthorized) showError(err.message)
+    } finally {
+      setExporting(false)
+    }
   }
 
   const columns = [
@@ -110,6 +261,7 @@ const FillsByCardReport = () => {
 
   const rows = useMemo(() => (report?.items || []).map((item, index) => ({
     id: `${item.provider_id}-${item.card_number}-${item.fuel_type}-${index}`,
+    item,
     card: (
       <div>
         <div className="tpz-primary">{item.card_number || 'без карты'}</div>
@@ -132,6 +284,10 @@ const FillsByCardReport = () => {
   })), [report])
 
   const invalidPeriod = filters.date_from && filters.date_to && filters.date_from > filters.date_to
+  const period = useMemo(
+    () => ({ date_from: report?.date_from || filters.date_from, date_to: report?.date_to || filters.date_to }),
+    [report, filters.date_from, filters.date_to],
+  )
 
   return (
     <div className="tpz-root" data-testid="fills-by-card-report">
@@ -139,12 +295,18 @@ const FillsByCardReport = () => {
         <div>
           <h2 className="tpz-header__title">Заправки по картам</h2>
           <p className="tpz-header__subtitle">
-            Сколько и как часто заправлялась каждая карта и как это соотносится с её суточным лимитом в Топазе. Период — до 93 дней.
+            Заправки на АЗС Топаза по каждой карте и как они соотносятся с её суточным лимитом. Нажмите на строку, чтобы увидеть
+            каждую заправку. Данные — транзакции, загруженные в GSM; период до 93 дней.
           </p>
         </div>
-        <Button variant="secondary" icon={<Icon name="download" size={16} />} onClick={downloadCsv} disabled={!report?.items?.length}>
-          Скачать CSV
-        </Button>
+        <div className="tpz-header__actions">
+          <Button variant="secondary" icon={<Icon name="download" size={16} />} onClick={downloadSummary} disabled={!report?.items?.length}>
+            Итоги CSV
+          </Button>
+          <Button variant="secondary" icon={<Icon name="download" size={16} />} onClick={downloadDetail} loading={exporting} disabled={!report?.items?.length}>
+            Все заправки CSV
+          </Button>
+        </div>
       </div>
 
       <div className="tpz-filters">
@@ -155,14 +317,14 @@ const FillsByCardReport = () => {
           label="Провайдер"
           value={filters.provider_id}
           onChange={(value) => setFilter('provider_id', value || '')}
-          options={[{ value: '', label: 'Все' }, ...providers.map((p) => ({ value: String(p.id), label: p.name }))]}
+          options={[{ value: '', label: 'Все АЗС Топаза' }, ...providers.map((p) => ({ value: String(p.id), label: p.name }))]}
           fullWidth
         />
         <Select
           label="Топливо"
           value={filters.fuel_type}
           onChange={(value) => setFilter('fuel_type', value || '')}
-          options={[{ value: '', label: 'Все' }, { value: 'ДТ', label: 'ДТ' }, { value: 'АИ-92', label: 'АИ-92' }, { value: 'АИ-95', label: 'АИ-95' }]}
+          options={[{ value: '', label: 'Все' }, ...options.fuel_types.map((fuel) => ({ value: fuel, label: fuel }))]}
           fullWidth
         />
         <Input label="Карта" value={filters.search} onChange={(e) => setFilter('search', e.target.value)}
@@ -200,9 +362,11 @@ const FillsByCardReport = () => {
             />
           </div>
         ) : (
-          <Table columns={columns} data={rows} striped hoverable compact stickyHeader />
+          <Table columns={columns} data={rows} striped hoverable compact stickyHeader onRowClick={(row) => setSelected(row.item)} />
         )}
       </div>
+
+      <CardFillsModal item={selected} period={period} onClose={() => setSelected(null)} />
     </div>
   )
 }

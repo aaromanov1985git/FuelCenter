@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session, joinedload
 from app.auth import require_auth_if_enabled
 from app.database import get_db
 from app.models import CardLimit, User
-from app.schemas import CardLimitListResponse, CardLimitResponse, CardLimitStats
-from app.services.topaz_sync_service import LIMIT_TYPE_FORBIDDEN
+from app.schemas import CardLimitListResponse, CardLimitResponse, CardLimitStats, TopazProviderOption
+from app.services.topaz_sync_service import LIMIT_TYPE_FORBIDDEN, topaz_providers
 
 router = APIRouter(prefix="/api/v1/card-limits", tags=["card-limits"])
 
@@ -90,10 +90,9 @@ def list_card_limits(
     _: Optional[User] = Depends(require_auth_if_enabled),
 ):
     """Лимиты карт с расходом в текущем периоде. Сортировка: сначала самые израсходованные."""
-    query = db.query(CardLimit).options(joinedload(CardLimit.provider))
-    if provider_id:
-        query = query.filter(CardLimit.provider_id == provider_id)
-    grouped = _group_limits(query.all())
+    all_rows = db.query(CardLimit).options(joinedload(CardLimit.provider)).all()
+    fuel_types = sorted({row.fuel_type for row in all_rows if row.fuel_type})
+    grouped = _group_limits([row for row in all_rows if not provider_id or row.provider_id == provider_id])
 
     stats = CardLimitStats(
         total=len(grouped),
@@ -128,4 +127,6 @@ def list_card_limits(
         items=items[start:start + limit],
         stats=stats,
         synced_at=synced_at,
+        providers=[TopazProviderOption(id=pid, name=name) for pid, name in topaz_providers(db)],
+        fuel_types=fuel_types,
     )

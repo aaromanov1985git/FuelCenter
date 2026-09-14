@@ -1572,11 +1572,19 @@ class CardLimitStats(BaseModel):
     without_period: int = Field(..., description="Лимит задан, но тип периода не выбран")
 
 
+class TopazProviderOption(BaseModel):
+    """Провайдер, чьи АЗС читаются из Топаза — вариант фильтра"""
+    id: int
+    name: str
+
+
 class CardLimitListResponse(BaseModel):
     total: int
     items: List[CardLimitResponse]
     stats: CardLimitStats
     synced_at: Optional[datetime] = None
+    providers: List[TopazProviderOption] = Field(default_factory=list)
+    fuel_types: List[str] = Field(default_factory=list)
 
 
 class FillsByCardItem(BaseModel):
@@ -1603,9 +1611,32 @@ class FillsByCardTotals(BaseModel):
     liters: float
 
 
+class FillDetailItem(BaseModel):
+    """Одна заправка в детализации отчёта"""
+    id: int
+    transaction_date: datetime
+    provider_id: Optional[int] = None
+    provider_name: Optional[str] = None
+    card_number: Optional[str] = None
+    vehicle: Optional[str] = None
+    azs_number: Optional[str] = None
+    fuel_type: Optional[str] = None
+    liters: float
+
+
+class FillsDetailResponse(BaseModel):
+    date_from: date
+    date_to: date
+    total: int
+    truncated: bool = Field(False, description="Строк больше лимита — выдана только часть, самые свежие")
+    items: List[FillDetailItem]
+
+
 class FillsByCardResponse(BaseModel):
     date_from: date
     date_to: date
     total: int
     items: List[FillsByCardItem]
     totals: FillsByCardTotals
+    providers: List[TopazProviderOption] = Field(default_factory=list)
+    fuel_types: List[str] = Field(default_factory=list)
