@@ -98,7 +98,18 @@ const FIXTURES = [
   [/\/transactions/, { total: 85249, items: txRows(100) }],
   [/\/providers/, { total: 8, items: PROVIDERS.map((name, i) => ({ id: i + 1, name, code: name, is_active: true, templates_count: i === 0 ? 1 : 0 })) }],
   [/\/templates/, { total: 1, items: [{ id: 2, name: 'РП Газпром', provider_id: 1, connection_type: 'file', is_active: true, auto_load_enabled: false, field_mapping: {}, created_at: '2026-09-01T10:00:00' }] }],
-  [/\/vehicles/, { total: 42, items: named(42, 'ТС') }],
+  // Номера обязаны быть в фикстуре: без license_plate знак рисуется пустым
+  // прочерком, и прогон не видит колонку госномера вовсе. Набор намеренно
+  // смешанный — двузначные и трёхзначные регионы, буквенные и цифровые серии,
+  // одна запись без номера ради состояния «—».
+  [/\/vehicles/, {
+    total: 42,
+    items: named(42, 'ТС').map((v, i) => ({
+      ...v,
+      garage_number: `${4100 + i}`,
+      license_plate: ['8689УН86', 'В331КМ186', 'К178РМ186', 'Н328УХ86', 'К914ТН186', '9485УХ86', ''][i % 7],
+    })),
+  }],
   [/\/fuel-cards/, { total: 709, items: named(60, 'Карта') }],
   [/\/gas-stations/, { total: 102, items: named(40, 'АЗС') }],
   [/\/fuel-types/, { total: 9, items: FUELS.map((name, i) => ({ id: i + 1, original_name: name, normalized_name: name, is_active: true })) }],
