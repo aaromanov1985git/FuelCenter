@@ -25,7 +25,10 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         should_log = not any(request.url.path.startswith(path) for path in skip_paths)
         
         # Специальная обработка для PPR API - всегда логируем
-        is_ppr_api = request.url.path.startswith("/api/public-api/v2") or request.url.path.startswith("/api/ppr")
+        # v1 сюда раньше не попадал: перечислены были только v2 и /api/ppr, поэтому
+        # запросы 1С ЕРП к /public-api/v1 не оставляли в логе ни строчки — а именно
+        # по ним и разбираются жалобы на «нет подключения к API ППР».
+        is_ppr_api = request.url.path.startswith(("/api/ppr", "/public-api/", "/api/public-api/"))
         if is_ppr_api:
             import sys
             print(f"\n{'!'*80}", file=sys.stdout, flush=True)

@@ -126,10 +126,16 @@ class TestPPRAPIPublicAPI:
         response = client.get("/api/public-api/v2/transactions")
         assert response.status_code in [401, 403]
     
-    def test_public_api_v1_transactions_missing_token(self, client: TestClient):
+    # API ППР v1 смонтирован по двум адресам (main.py): корневой путь настоящего
+    # ППР и путь под /api, по которому написан код 1С ЕРП и который проксирует
+    # nginx. Оба проверяем одним набором тестов — раньше не работал ни один.
+    V1_BASES = ["/public-api/v1", "/api/public-api/v1"]
+
+    @pytest.mark.parametrize("base", V1_BASES)
+    def test_public_api_v1_transactions_missing_token(self, client: TestClient, base: str):
         """Получение транзакций через публичный API v1 без токена"""
         response = client.post(
-            "/public-api/v1/transactions",
+            f"{base}/transaction-list",
             json={
                 "token": "",
                 "dateFrom": "2025-01-01",
@@ -138,4 +144,14 @@ class TestPPRAPIPublicAPI:
             }
         )
         assert response.status_code in [401, 403, 400]
+
+    @pytest.mark.parametrize("base", V1_BASES)
+    def test_public_api_v1_root_available(self, client: TestClient, base: str):
+        """Корень API ППР v1 отвечает JSON и подсказывает путь, по которому его позвали"""
+        response = client.get(base)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["endpoints"]["transaction-list"] == f"{base}/transaction-list"
 
