@@ -1,10 +1,11 @@
 """
 Роутер лимитов топливных карт (данные Топаза, только чтение)
 """
-from typing import Optional
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, or_
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_auth_if_enabled
@@ -18,33 +19,61 @@ router = APIRouter(prefix="/api/v1/card-limits", tags=["card-limits"])
 NEAR_LIMIT_SHARE = 0.9
 
 
-def _limit_response(limit: CardLimit) -> CardLimitResponse:
-    limit_liters = float(limit.limit_liters) if limit.limit_liters is not None else None
-    used = float(limit.used_liters) if limit.used_liters is not None else None
-    remaining = None
-    used_percent = None
-    if limit_liters and used is not None:
-        remaining = round(max(limit_liters - used, 0.0), 2)
-        used_percent = round(used / limit_liters * 100, 1)
-    return CardLimitResponse(
-        id=limit.id,
-        provider_id=limit.provider_id,
-        provider_name=limit.provider.name if limit.provider else None,
-        card_code=limit.card_code,
-        card_name=limit.card_name,
-        card_enabled=bool(limit.card_enabled),
-        source_fuel=limit.source_fuel,
-        fuel_type=limit.fuel_type,
-        limit_type_id=limit.limit_type_id,
-        limit_type_name=limit.limit_type_name,
-        limit_liters=limit_liters,
-        period=limit.period,
-        period_start=limit.period_start,
-        used_liters=used,
-        remaining_liters=remaining,
-        used_percent=used_percent,
-        synced_at=limit.synced_at,
-    )
+def _group_limits(rows: List[CardLimit]) -> List[CardLimitResponse]:
+    """
+    Схлопнуть одинаковые лимиты одной карты по одному виду топлива.
+
+    В Топазе дизель заводят несколькими кодами (ДТ1, ДТ2, ДТ3) и ставят на каждый
+    одинаковый лимит, а отпуск идёт по одному из них. После нормализации это один
+    лимит «ДТ», поэтому расход по кодам складывается.
+    """
+    groups: Dict[Tuple, List[CardLimit]] = {}
+    for row in rows:
+        key = (
+            row.template_id,
+            row.source_card_id,
+            row.fuel_type or row.source_fuel,
+            row.limit_type_id,
+            float(row.limit_liters) if row.limit_liters is not None else None,
+        )
+        groups.setdefault(key, []).append(row)
+
+    items: List[CardLimitResponse] = []
+    for members in groups.values():
+        first = min(members, key=lambda r: r.id)
+        limit_liters = float(first.limit_liters) if first.limit_liters is not None else None
+        used_values = [float(r.used_liters) for r in members if r.used_liters is not None]
+        used = round(sum(used_values), 2) if used_values else None
+        remaining = None
+        used_percent = None
+        if limit_liters and used is not None:
+            remaining = round(max(limit_liters - used, 0.0), 2)
+            used_percent = round(used / limit_liters * 100, 1)
+        source_fuels = sorted({r.source_fuel for r in members if r.source_fuel})
+        items.append(CardLimitResponse(
+            id=first.id,
+            provider_id=first.provider_id,
+            provider_name=first.provider.name if first.provider else None,
+            card_code=first.card_code,
+            card_name=first.card_name,
+            card_enabled=bool(first.card_enabled),
+            source_fuel=", ".join(source_fuels) if source_fuels else None,
+            fuel_type=first.fuel_type,
+            limit_type_id=first.limit_type_id,
+            limit_type_name=first.limit_type_name,
+            limit_liters=limit_liters,
+            period=first.period,
+            period_start=first.period_start,
+            used_liters=used,
+            remaining_liters=remaining,
+            used_percent=used_percent,
+            synced_at=max((r.synced_at for r in members if r.synced_at), default=None),
+        ))
+    return items
+
+
+def _is_near(item: CardLimitResponse, share: float) -> bool:
+    return bool(item.limit_liters) and item.used_liters is not None and item.used_liters >= item.limit_liters * share
 
 
 @router.get("", response_model=CardLimitListResponse)
@@ -61,61 +90,42 @@ def list_card_limits(
     _: Optional[User] = Depends(require_auth_if_enabled),
 ):
     """Лимиты карт с расходом в текущем периоде. Сортировка: сначала самые израсходованные."""
-    query = db.query(CardLimit)
+    query = db.query(CardLimit).options(joinedload(CardLimit.provider))
     if provider_id:
         query = query.filter(CardLimit.provider_id == provider_id)
+    grouped = _group_limits(query.all())
 
-    stats_rows = query.with_entities(
-        CardLimit.card_enabled, CardLimit.limit_type_id, CardLimit.limit_liters, CardLimit.used_liters
-    ).all()
     stats = CardLimitStats(
-        total=len(stats_rows),
-        enabled=sum(1 for row in stats_rows if row.card_enabled),
-        near_limit=sum(
-            1 for row in stats_rows
-            if row.card_enabled and row.limit_liters and row.used_liters is not None
-            and float(row.used_liters) >= float(row.limit_liters) * NEAR_LIMIT_SHARE
-        ),
-        exhausted=sum(
-            1 for row in stats_rows
-            if row.card_enabled and row.limit_liters and row.used_liters is not None
-            and float(row.used_liters) >= float(row.limit_liters)
-        ),
-        forbidden=sum(1 for row in stats_rows if row.limit_type_id == LIMIT_TYPE_FORBIDDEN),
+        total=len(grouped),
+        enabled=sum(1 for item in grouped if item.card_enabled),
+        near_limit=sum(1 for item in grouped if item.card_enabled and _is_near(item, NEAR_LIMIT_SHARE)),
+        exhausted=sum(1 for item in grouped if item.card_enabled and _is_near(item, 1.0)),
+        forbidden=sum(1 for item in grouped if item.limit_type_id == LIMIT_TYPE_FORBIDDEN),
         without_period=sum(
-            1 for row in stats_rows
-            if row.card_enabled and (row.limit_type_id or 0) == 0 and row.limit_liters
+            1 for item in grouped if item.card_enabled and (item.limit_type_id or 0) == 0 and item.limit_liters
         ),
     )
 
-    if only_enabled:
-        query = query.filter(CardLimit.card_enabled == True)  # noqa: E712
-    if fuel_type:
-        query = query.filter(CardLimit.fuel_type == fuel_type)
-    if limit_type_id is not None:
-        query = query.filter(CardLimit.limit_type_id == limit_type_id)
-    if search:
-        like_expr = f"%{search.strip()}%"
-        query = query.filter(or_(CardLimit.card_name.ilike(like_expr), CardLimit.card_code.ilike(like_expr)))
-    if near_limit:
-        query = query.filter(
-            CardLimit.limit_liters > 0,
-            CardLimit.used_liters >= CardLimit.limit_liters * NEAR_LIMIT_SHARE,
-        )
+    needle = search.strip().lower() if search and search.strip() else None
+    items = [
+        item for item in grouped
+        if (not only_enabled or item.card_enabled)
+        and (not fuel_type or item.fuel_type == fuel_type)
+        and (limit_type_id is None or item.limit_type_id == limit_type_id)
+        and (not near_limit or _is_near(item, NEAR_LIMIT_SHARE))
+        and (not needle or needle in (item.card_name or "").lower() or needle in (item.card_code or "").lower())
+    ]
+    items.sort(key=lambda item: (
+        -(item.used_percent if item.used_percent is not None else -1),
+        item.card_name or "",
+        item.fuel_type or "",
+    ))
 
-    total = query.count()
-    usage_share = func.coalesce(CardLimit.used_liters, 0) / func.nullif(CardLimit.limit_liters, 0)
-    rows = (
-        query.options(joinedload(CardLimit.provider))
-        .order_by(func.coalesce(usage_share, -1).desc(), CardLimit.card_name, CardLimit.fuel_type)
-        .offset((page - 1) * limit)
-        .limit(limit)
-        .all()
-    )
-    synced_at = db.query(func.max(CardLimit.synced_at)).scalar()
+    synced_at: Optional[datetime] = db.query(func.max(CardLimit.synced_at)).scalar()
+    start = (page - 1) * limit
     return CardLimitListResponse(
-        total=total,
-        items=[_limit_response(row) for row in rows],
+        total=len(items),
+        items=items[start:start + limit],
         stats=stats,
         synced_at=synced_at,
     )

@@ -224,3 +224,24 @@ class TestFillsByCard:
                           headers=auth_headers).status_code == 400
         assert client.get("/api/v1/reports/fills-by-card", params={"date_from": "2026-09-10", "date_to": "2026-09-01"},
                           headers=auth_headers).status_code == 400
+
+
+class TestCardLimitsGrouping:
+    def test_same_limit_on_diesel_grades_is_one_row(self, client, auth_headers, test_db, mazs):
+        common = dict(provider_id=mazs["provider"].id, template_id=mazs["template"].id, source_card_id=68,
+                      card_code="0087D287", card_name="К068", card_enabled=True, fuel_type="ДТ",
+                      limit_type_id=7, limit_type_name="Календарный день", limit_liters=Decimal("150"))
+        test_db.add_all([
+            CardLimit(source_fuel_id=1, source_fuel="ДТ1", used_liters=Decimal("0"), **common),
+            CardLimit(source_fuel_id=5, source_fuel="ДТ2", used_liters=Decimal("0"), **common),
+            CardLimit(source_fuel_id=6, source_fuel="ДТ3", used_liters=Decimal("120.05"), **common),
+        ])
+        test_db.commit()
+
+        body = client.get("/api/v1/card-limits", params={"search": "к068"}, headers=auth_headers).json()
+        assert body["total"] == 1
+        item = body["items"][0]
+        assert item["source_fuel"] == "ДТ1, ДТ2, ДТ3"
+        assert item["used_liters"] == 120.05
+        assert item["remaining_liters"] == 29.95
+        assert body["stats"]["total"] == 1
