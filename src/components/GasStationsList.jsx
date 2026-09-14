@@ -27,6 +27,66 @@ const getProviderAccent = (name) => {
   return 'var(--text-2)'
 }
 
+/**
+ * Набор колонок по умолчанию.
+ *
+ * Раньше показывались все десять сразу, и таблица выходила 2061px при области
+ * 1158px: «Статус», ради которого наверху стоят четыре плитки, не был виден без
+ * горизонтальной прокрутки. При этом «Регион», «Населённый пункт»,
+ * «Координаты» и «Ошибки» пусты на 94–96% строк, а «Исходное наименование»
+ * почти всегда дословно повторяет «Наименование».
+ *
+ * Поэтому по умолчанию открыты только те колонки, что несут значение в каждой
+ * строке. Остальные никуда не делись — включаются в «Настроить поля», и выбор
+ * запоминается.
+ */
+const COLUMN_SETTINGS_VERSION = 2
+
+const DEFAULT_COLUMN_SETTINGS = {
+  __v: COLUMN_SETTINGS_VERSION,
+  name: { visible: true, order: 0 },
+  original_name: { visible: false, order: 1 },
+  provider: { visible: true, order: 2 },
+  azs_number: { visible: true, order: 3 },
+  location: { visible: true, order: 4 },
+  region: { visible: false, order: 5 },
+  settlement: { visible: false, order: 6 },
+  coordinates: { visible: false, order: 7 },
+  status: { visible: true, order: 8 },
+  errors: { visible: false, order: 9 },
+  actions: { visible: true, order: 10 }
+}
+
+/** Пустое значение: приглушённое тире вместо дефиса в общем тоне текста. */
+const emptyCell = <span className="gsl-cell-empty">—</span>
+
+/**
+ * Содержимое текстовой ячейки: одна строка, лишнее срезается многоточием.
+ *
+ * Полное значение отдаём системной подсказкой `title` — на полусотне строк это
+ * втрое дешевле, чем полторы сотни экземпляров Tooltip с обработчиками, и
+ * работает ровно там, где текст обрезан. Оформленный Tooltip оставлен для
+ * случая, когда подсказка несёт отдельный смысл (аргумент hint), а не просто
+ * повторяет обрезанное.
+ *
+ * @param {string|null|undefined} value - значение поля
+ * @param {string} [hint] - пояснение, которое само по себе информативно
+ * @returns {React.ReactNode} Ячейка или приглушённое тире, если значения нет
+ */
+const cellText = (value, hint) => {
+  const text = value === null || value === undefined ? '' : String(value).trim()
+  if (text === '' || text === '-') return emptyCell
+
+  if (hint) {
+    return (
+      <Tooltip content={hint} position="top" maxWidth={360}>
+        <span className="gsl-ellipsis gsl-ellipsis--hinted">{text}</span>
+      </Tooltip>
+    )
+  }
+  return <span className="gsl-ellipsis" title={text}>{text}</span>
+}
+
 /* Здесь лежал локальный набор inline-svg 12-14px со stroke-width 2 — третий
    набор иконок в проекте, со своей геометрией и своими размерами. Все значки
    теперь идут через примитив ui/Icon: контурные 16px в currentColor. */
@@ -103,24 +163,17 @@ const GasStationsList = () => {
     const saved = localStorage.getItem('gasStationsColumnSettings')
     if (saved) {
       try {
-        return JSON.parse(saved)
+        const parsed = JSON.parse(saved)
+        // Старые сохранённые настройки включали все десять колонок сразу —
+        // именно они и делали таблицу вдвое шире окна. Без метки версии их
+        // нельзя отличить от осознанного выбора пользователя, поэтому
+        // настройки без версии отбрасываем и берём новый набор по умолчанию.
+        if (parsed && parsed.__v === COLUMN_SETTINGS_VERSION) return parsed
       } catch (e) {
         logger.error('Ошибка загрузки настроек колонок:', e)
       }
     }
-    return {
-      original_name: { visible: true, order: 0 },
-      name: { visible: true, order: 1 },
-      provider: { visible: true, order: 2 },
-      azs_number: { visible: true, order: 3 },
-      location: { visible: true, order: 4 },
-      region: { visible: true, order: 5 },
-      settlement: { visible: true, order: 6 },
-      coordinates: { visible: true, order: 7 },
-      status: { visible: true, order: 8 },
-      errors: { visible: true, order: 9 },
-      actions: { visible: true, order: 10 }
-    }
+    return DEFAULT_COLUMN_SETTINGS
   })
   const [draggedColumn, setDraggedColumn] = useState(null)
 
@@ -555,21 +608,27 @@ const GasStationsList = () => {
   }, [stats])
 
   const tableColumns = useMemo(() => {
+    // Ширины: узким колонкам — пиксели, текстовым — ничего. При
+    // table-layout: fixed (см. .gsl-table в GasStationsList.css) колонки без
+    // ширины делят остаток поровну, поэтому наименование и адрес занимают всё
+    // свободное место и обрезаются многоточием, а не распирают таблицу.
     const allColumns = [
-      { key: 'original_name', header: 'Исходное наименование', sortable: true },
-      { key: 'name', header: 'Наименование', sortable: true },
-      { key: 'provider', header: 'Провайдер', sortable: false },
-      { key: 'azs_number', header: 'Номер АЗС', sortable: true },
-      { key: 'location', header: 'Местоположение', sortable: true },
-      { key: 'region', header: 'Регион', sortable: true },
-      { key: 'settlement', header: 'Населенный пункт', sortable: true },
-      { key: 'coordinates', header: 'Координаты', sortable: false },
-      { key: 'status', header: 'Статус', sortable: true },
-      { key: 'errors', header: 'Ошибки', sortable: false },
-      // Липкая справа: таблица шире области (1262px против 742 при 1024), а
-      // «Действия» — единственный вход в редактирование строки, и при
-      // горизонтальной прокрутке он уезжал за правый край.
-      { key: 'actions', header: 'Действия', sortable: false, sticky: 'right' }
+      { key: 'name', header: 'Наименование', sortable: true, cellClassName: 'gsl-cell-text' },
+      { key: 'original_name', header: 'Исходное наименование', sortable: true, cellClassName: 'gsl-cell-text' },
+      { key: 'provider', header: 'Провайдер', sortable: false, width: 118, cellClassName: 'gsl-cell-text' },
+      { key: 'azs_number', header: 'Номер', sortable: true, width: 128, cellClassName: 'gsl-cell-text' },
+      { key: 'location', header: 'Местоположение', sortable: true, cellClassName: 'gsl-cell-text' },
+      { key: 'region', header: 'Регион', sortable: true, width: 150, cellClassName: 'gsl-cell-text' },
+      { key: 'settlement', header: 'Населенный пункт', sortable: true, width: 170, cellClassName: 'gsl-cell-text' },
+      { key: 'coordinates', header: 'Координаты', sortable: false, width: 150, cellClassName: 'gsl-cell-text' },
+      // 176px, а не 148: в 148 не влезал бейдж «Требует проверки» и его резало
+      // правым краем колонки — ровно в тех строках, ради которых на страницу и
+      // заходят.
+      { key: 'status', header: 'Статус', sortable: true, width: 176 },
+      { key: 'errors', header: 'Ошибки', sortable: false, cellClassName: 'gsl-cell-text' },
+      // Липкая справа: на узких окнах таблица всё ещё может не поместиться, а
+      // «Действия» — единственный вход в редактирование строки.
+      { key: 'actions', header: 'Действия', sortable: false, sticky: 'right', width: 88 }
     ]
     return allColumns
       .filter(col => {
@@ -589,39 +648,41 @@ const GasStationsList = () => {
       const errors = gasStation.validation_errors || ''
       const originalName = gasStation.original_name || '-'
       const name = gasStation.name || originalName || '-'
+      // Номер АЗС у части провайдеров приходит равным наименованию — тогда
+      // колонка печатала третью копию той же строки и ничего не сообщала.
+      // Показываем номер, только когда он отличается от наименований.
+      const rawNumber = (gasStation.azs_number || '').trim()
+      const numberIsName = rawNumber !== '' && (rawNumber === name.trim() || rawNumber === originalName.trim())
+
+      // Исходное наименование по умолчанию скрыто, поэтому расхождение с
+      // нормализованным показываем подсказкой — иначе оно теряется совсем.
+      const nameDiffers = originalName !== '-' && originalName.trim() !== name.trim()
+
       return {
         id: gasStation.id,
-        original_name: originalName !== '-' && originalName.length > 40 ? (
-          <Tooltip content={originalName} position="top" maxWidth={400}>
-            <span className="text-truncate">{originalName}</span>
-          </Tooltip>
-        ) : originalName,
-        name: name !== '-' && name.length > 40 ? (
-          <Tooltip content={name} position="top" maxWidth={400}>
-            <span className="text-truncate">{name}</span>
-          </Tooltip>
-        ) : name,
-        provider: getProviderName(gasStation.provider_id),
-        azs_number: gasStation.azs_number || '-',
-        location: location !== '-' && location.length > 50 ? (
-          <Tooltip content={location} position="top" maxWidth={400}>
-            <span className="text-truncate">{location}</span>
-          </Tooltip>
-        ) : location,
-        region: gasStation.region || '-',
-        settlement: gasStation.settlement || '-',
+        original_name: cellText(originalName),
+        name: nameDiffers
+          ? cellText(name, `Нормализовано из «${originalName}»`)
+          : cellText(name),
+        provider: cellText(getProviderName(gasStation.provider_id)),
+        azs_number: numberIsName || rawNumber === ''
+          ? emptyCell
+          : cellText(rawNumber),
+        location: cellText(location),
+        region: cellText(gasStation.region),
+        settlement: cellText(gasStation.settlement),
         coordinates: gasStation.latitude !== null && gasStation.longitude !== null
-          ? `${gasStation.latitude}, ${gasStation.longitude}` : '-',
-        status: getStatusBadge(gasStation.is_validated),
-        errors: errors ? (
-          errors.length > 50 ? (
-            <Tooltip content={errors} position="top" maxWidth={400}>
-              <span className="error-text text-truncate">{errors}</span>
-            </Tooltip>
-          ) : (
-            <span className="error-text" title={errors}>{errors}</span>
-          )
-        ) : '-',
+          ? cellText(`${gasStation.latitude}, ${gasStation.longitude}`)
+          : emptyCell,
+        // Текст ошибки живёт в подсказке к статусу: колонка «Ошибки» пуста у
+        // 94% строк и по умолчанию скрыта, а сама ошибка нужна ровно там, где
+        // видно, что запись невалидна.
+        status: errors ? (
+          <Tooltip content={errors} position="top" maxWidth={360}>
+            <span className="gsl-status-with-hint">{getStatusBadge(gasStation.is_validated)}</span>
+          </Tooltip>
+        ) : getStatusBadge(gasStation.is_validated),
+        errors: errors ? cellText(errors) : emptyCell,
         actions: (
           <div style={{ display: 'flex', gap: '8px' }}>
             <IconButton icon="edit" variant="primary" onClick={() => handleEdit(gasStation)} title="Редактировать" size="small"/>
@@ -1079,6 +1140,8 @@ const GasStationsList = () => {
             </p>
             <ul className="column-settings-list">
               {Object.entries(columnSettings)
+                // __v — метка версии набора, а не колонка
+                .filter(([key, settings]) => key !== '__v' && settings && typeof settings === 'object')
                 .sort(([, a], [, b]) => a.order - b.order)
                 .map(([key, settings]) => {
                   const columnLabels = {
@@ -1115,6 +1178,8 @@ const GasStationsList = () => {
                           setColumnSettings(prev => {
                             const newSettings = { ...prev }
                             Object.keys(newSettings).forEach(k => {
+                              // __v — метка версии, у неё нет order
+                              if (k === '__v') return
                               if (k === draggedColumn) {
                                 newSettings[k] = { ...newSettings[k], order: targetOrder }
                               } else if (newSettings[k].order === targetOrder && k !== draggedColumn) {
@@ -1150,21 +1215,11 @@ const GasStationsList = () => {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => {
-                  setColumnSettings({
-                    original_name: { visible: true, order: 0 },
-                    name: { visible: true, order: 1 },
-                    provider: { visible: true, order: 2 },
-                    azs_number: { visible: true, order: 3 },
-                    location: { visible: true, order: 4 },
-                    region: { visible: true, order: 5 },
-                    settlement: { visible: true, order: 6 },
-                    coordinates: { visible: true, order: 7 },
-                    status: { visible: true, order: 8 },
-                    errors: { visible: true, order: 9 },
-                    actions: { visible: true, order: 10 }
-                  })
-                }}
+                // Сброс возвращает набор по умолчанию, а не собственный
+                // список: раньше здесь был зашит второй, устаревший перечень
+                // со всеми десятью колонками — одно нажатие возвращало таблицу
+                // вдвое шире окна, да ещё и без метки версии.
+                onClick={() => setColumnSettings(DEFAULT_COLUMN_SETTINGS)}
               >
                 Сбросить
               </Button>

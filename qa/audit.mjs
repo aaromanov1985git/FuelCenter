@@ -111,7 +111,26 @@ const FIXTURES = [
     })),
   }],
   [/\/fuel-cards/, { total: 709, items: named(60, 'Карта') }],
-  [/\/gas-stations/, { total: 102, items: named(40, 'АЗС') }],
+  // Как и у ТС, ровные выдуманные строки («АЗС 1», «АЗС 2») прятали дефект:
+  // страница ломалась именно на боевой форме данных — длинные наименования с
+  // юрлицом и ИНН, у единиц развёрнутый адрес, у большинства пустые регион,
+  // населённый пункт и координаты. Подробный прогон — qa/_azs-shot.mjs.
+  [/\/gas-stations/, {
+    total: 102,
+    items: named(40, 'АЗС').map((s, i) => ({
+      ...s,
+      original_name: ['Сибирь Нефть Сервис ООО (ХМАО)', 'ТАИФ-НК АЗС ООО ИНН 1639028805', 'АЗС Коммунистический', 'контроллер КАЗС08 Аи-92 (сломан)', 'АЗС 37 км'][i % 5],
+      provider_id: (i % 3) + 1,
+      azs_number: ['Сибирь Нефть Сервис ООО (ХМАО)', '1639028805', 'АЗС Коммунистический', '08', '37'][i % 5],
+      location: i % 5 < 2 ? 'Р404, 750км, ХМАО, Нефтеюганский район, п. Сингапай, ул. Энтузиастов, строение 1, АЗС №2, Сингапай' : null,
+      region: null,
+      settlement: null,
+      latitude: null,
+      longitude: null,
+      validation_errors: i % 5 === 3 ? 'Не удалось определить населённый пункт по наименованию' : '',
+      is_validated: ['valid', 'valid', 'pending', 'invalid', 'valid'][i % 5],
+    })),
+  }],
   [/\/fuel-types/, { total: 9, items: FUELS.map((name, i) => ({ id: i + 1, original_name: name, normalized_name: name, is_active: true })) }],
   [/\/organizations/, { total: 12, items: named(12, 'ООО') }],
   [/\/users/, { total: 4, items: [{ id: 1, username: 'admin', full_name: 'Администратор', role: 'admin', is_active: true }, ...named(3, 'Пользователь')] }],

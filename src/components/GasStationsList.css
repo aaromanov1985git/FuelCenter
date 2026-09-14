@@ -168,6 +168,11 @@
 
 /* View toggle (cards / list) */
 .gsl-root .gsl-view-toggle {
+  /* Панель переносится по flex-wrap, и на ~1280px переключатель уезжал на
+     отдельную строку к левому краю, оставляя за собой пустую полосу во всю
+     ширину. Прижатый вправо, он и в одну строку стоит там же, и после переноса
+     читается как продолжение панели, а не как забытый элемент. */
+  margin-left: auto;
   display: flex;
   gap: 4px;
   background: var(--surface-2);
@@ -494,6 +499,54 @@
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
   overflow: clip;
+}
+
+/* ---------- Таблица справочника ----------
+   Раскладка фиксированная. При авторазметке ширину диктовало содержимое:
+   один развёрнутый адрес растягивал «Местоположение» до 652px, таблица
+   раздувалась до 2061px при области 1158px, и «Статус» уезжал за край. Теперь
+   узкие колонки держат заданные пиксели, текстовые делят остаток поровну, а
+   длинное значение обрезается многоточием и целиком показывается подсказкой. */
+.gsl-root .gsl-table-wrap .ui-table {
+  table-layout: fixed;
+}
+
+/* Ячейка не должна расширяться под содержимое: обрезка живёт на .gsl-ellipsis
+   внутри, но без overflow на самой ячейке фиксированная ширина не удержит
+   длинное слово. */
+.gsl-root .gsl-table-wrap .ui-table-cell.gsl-cell-text {
+  overflow: hidden;
+}
+
+.gsl-root .gsl-ellipsis {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Подсказка тут несёт свой смысл (исходное наименование до нормализации), а не
+   повторяет обрезанное, поэтому даём понять, что на строку можно навести. */
+.gsl-root .gsl-ellipsis--hinted {
+  text-decoration: underline dotted var(--border-strong);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.gsl-root .gsl-cell-empty {
+  color: var(--text-3);
+}
+
+.gsl-root .gsl-status-with-hint {
+  display: inline-flex;
+  cursor: help;
+}
+
+/* Ровный шаг строк. Высоты скакали 49–53–71–72px, потому что длинные
+   наименования переносились на две-три строки; теперь перенос исключён. */
+.gsl-root .gsl-table-wrap .ui-table-body .ui-table-cell {
+  height: 44px;
+  vertical-align: middle;
 }
 
 .gsl-root .gsl-pagination-wrap {
