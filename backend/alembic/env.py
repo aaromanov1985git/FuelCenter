@@ -32,7 +32,9 @@ config.set_main_option('sqlalchemy.url', database_url)
 
 # Настройка логирования
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # Не глушить логгеры приложения: env.py выполняется при старте из main.py,
+    # и fileConfig по умолчанию отключает все уже созданные логгеры (gsm_converter)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Метаданные для автогенерации миграций
 target_metadata = Base.metadata
