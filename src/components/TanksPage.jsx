@@ -256,13 +256,14 @@ const TankSettingsModal = ({ tank, onClose, onSaved }) => {
             fullWidth
           />
           <Select
-            label="Учитывать в остатках"
+            label="Показывать на странице и учитывать в остатках"
             value={form.active}
             onChange={(value) => setForm((prev) => ({ ...prev, active: value || 'true' }))}
             options={[
               { value: 'true', label: 'Да' },
-              { value: 'false', label: 'Нет — например, копия чужого уровнемера' },
+              { value: 'false', label: 'Нет — скрыть (например, копия чужого уровнемера)' },
             ]}
+            helperText="Скрытую ёмкость можно вернуть переключателем «Показать скрытые» над списком АЗС"
             fullWidth
           />
         </div>
@@ -402,6 +403,7 @@ const TanksPage = () => {
   const [syncing, setSyncing] = useState(false)
   const [historyTank, setHistoryTank] = useState(null)
   const [settingsTank, setSettingsTank] = useState(null)
+  const [showHidden, setShowHidden] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -458,6 +460,15 @@ const TanksPage = () => {
     ]
   }, [providers, overview.sync])
 
+  // Выключенные в настройках ёмкости скрыты; АЗС без видимых ёмкостей не показывается
+  const hiddenCount = overview.stations.reduce((sum, s) => sum + s.tanks.filter((t) => !t.is_active).length, 0)
+  const visibleStations = useMemo(() => {
+    if (showHidden && isAdmin) return overview.stations
+    return overview.stations
+      .map((station) => ({ ...station, tanks: station.tanks.filter((tank) => tank.is_active) }))
+      .filter((station) => station.tanks.length > 0)
+  }, [overview.stations, showHidden, isAdmin])
+
   const failedSync = overview.sync.filter((s) => s.last_status === 'failed')
   const lastSuccess = overview.sync
     .map((s) => s.last_success_at)
@@ -482,6 +493,16 @@ const TanksPage = () => {
             options={providerOptions}
             aria-label="Провайдер"
           />
+          {isAdmin && hiddenCount > 0 ? (
+            <Button
+              variant="secondary"
+              icon={<Icon name={showHidden ? 'eye-off' : 'eye'} size={16} />}
+              onClick={() => setShowHidden((value) => !value)}
+              aria-pressed={showHidden}
+            >
+              {showHidden ? 'Не показывать скрытые' : `Показать скрытые (${hiddenCount})`}
+            </Button>
+          ) : null}
           {isAdmin ? (
             <Button variant="secondary" icon={<Icon name="refresh" size={16} />} onClick={syncNow} loading={syncing}>
               Прочитать из Топаза
@@ -509,7 +530,7 @@ const TanksPage = () => {
             <div key={i} className="tnk-station"><Skeleton rows={4} columns={1} /></div>
           ))}
         </div>
-      ) : overview.stations.length === 0 ? (
+      ) : visibleStations.length === 0 ? (
         <div className="tnk-station">
           <EmptyState
             title="Резервуаров пока нет"
@@ -520,7 +541,7 @@ const TanksPage = () => {
         </div>
       ) : (
         <div className="tnk-grid">
-          {overview.stations.map((station) => (
+          {visibleStations.map((station) => (
             <StationCard
               key={`${station.provider_id}-${station.azs_code}`}
               station={station}

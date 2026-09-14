@@ -334,6 +334,52 @@ class TestFillsByCard:
         assert everything["truncated"] is True
         assert everything["items"][0]["card_number"] == "УТ226"
 
+    def test_xlsx_export_groups_fills_by_card(self, client, auth_headers, test_db, mazs):
+        import io as _io
+        from openpyxl import load_workbook
+
+        provider_id = mazs["provider"].id
+        test_db.add(CardLimit(provider_id=provider_id, template_id=mazs["template"].id, source_card_id=1, source_fuel_id=3,
+                              card_code="A1", card_name="214 ИП Касумов 772", card_enabled=True, fuel_type="АИ-92",
+                              limit_type_id=7, limit_liters=Decimal("20")))
+        for card, product, when, qty in [
+            ("214 ИП Касумов 772", "АИ-92", datetime(2026, 9, 11, 9, 0), "10"),
+            ("214 ИП Касумов 772", "АИ-92", datetime(2026, 9, 11, 18, 0), "10"),
+            ("214 ИП Касумов 772", "АИ-92", datetime(2026, 9, 12, 9, 0), "5"),
+            ("УТ226", "ДТ", datetime(2026, 9, 12, 9, 0), "200"),
+        ]:
+            test_db.add(Transaction(provider_id=provider_id, card_number=card, product=product, transaction_date=when,
+                                    quantity=Decimal(qty), azs_number="1016201", vehicle="УАЗ"))
+        test_db.commit()
+
+        response = client.get("/api/v1/reports/fills-by-card/export",
+                              params={"date_from": "2026-09-10", "date_to": "2026-09-14"}, headers=auth_headers)
+        assert response.status_code == 200
+        assert "spreadsheetml" in response.headers["content-type"]
+        assert "zapravki-karty_2026-09-10_2026-09-14.xlsx" in response.headers["content-disposition"]
+
+        workbook = load_workbook(_io.BytesIO(response.content))
+        assert workbook.sheetnames == ["Итоги по картам", "Заправки по картам"]
+        summary = workbook["Итоги по картам"]
+        assert [summary.cell(row=r, column=2).value for r in range(2, summary.max_row + 1)] == ["214 ИП Касумов 772", "УТ226"]
+
+        details = workbook["Заправки по картам"]
+        rows = list(details.iter_rows(min_row=2, values_only=True))
+        assert rows[0][0].startswith("214 ИП Касумов 772 — 3 заправ., 2 дн.")
+        assert [r[5] for r in rows[1:4]] == [10, 10, 5]
+        assert [r[6] for r in rows[1:4]] == [20, 20, 5]
+        assert [r[8] for r in rows[1:4]] == ["да", "да", None]
+        assert details.row_dimensions[3].outlineLevel == 1
+        assert details.row_dimensions[2].outlineLevel in (0, None)
+        assert rows[4][0].startswith("УТ226")
+
+        single = client.get("/api/v1/reports/fills-by-card/export", params={
+            "date_from": "2026-09-10", "date_to": "2026-09-14", "card_number": "УТ226", "provider_id": provider_id,
+        }, headers=auth_headers)
+        single_book = load_workbook(_io.BytesIO(single.content))
+        assert single_book["Итоги по картам"].max_row == 2
+        assert "zapravki-karta_" in single.headers["content-disposition"]
+
     def test_rejects_long_or_inverted_period(self, client, auth_headers):
         assert client.get("/api/v1/reports/fills-by-card", params={"date_from": "2026-01-01", "date_to": "2026-09-01"},
                           headers=auth_headers).status_code == 400

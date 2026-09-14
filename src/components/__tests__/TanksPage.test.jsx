@@ -168,6 +168,39 @@ describe('TanksPage', () => {
     expect(screen.queryByText(/старейший замер/)).not.toBeInTheDocument()
   })
 
+  it('скрывает выключенные ёмкости и АЗС без видимых ёмкостей', async () => {
+    const hiddenStation = {
+      azs_code: '807211', provider_id: 3, provider_name: 'МАЗС', fuels: [],
+      tanks: [tank({ id: 2, source_key: 'snap:2', azs_code: '807211', source_name: 'Емкость 1 - 807211', is_active: false })],
+    }
+    setup({ ...overview, stations: [...overview.stations, hiddenStation] })
+    renderWithProviders(<TanksPage />)
+
+    await screen.findByText('1016201')
+    expect(screen.queryByText('807211')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Показать скрытые (1)' }))
+    expect(screen.getByText('807211')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Не показывать скрытые' }))
+    expect(screen.queryByText('807211')).not.toBeInTheDocument()
+  })
+
+  it('рядовой пользователь не видит скрытые ёмкости и переключателя', async () => {
+    mockUser = { id: 2, username: 'viewer', role: 'viewer' }
+    setup({
+      ...overview,
+      stations: [...overview.stations, {
+        azs_code: '807211', provider_id: 3, provider_name: 'МАЗС', fuels: [],
+        tanks: [tank({ id: 2, azs_code: '807211', is_active: false })],
+      }],
+    })
+    renderWithProviders(<TanksPage />)
+
+    await screen.findByText('1016201')
+    expect(screen.queryByText('807211')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Показать скрытые/ })).not.toBeInTheDocument()
+  })
+
   it('показывает пустое состояние, если резервуаров нет', async () => {
     setup({ stations: [], sync: [], total_tanks: 0 })
     renderWithProviders(<TanksPage />)

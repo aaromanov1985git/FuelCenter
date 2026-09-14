@@ -11,7 +11,6 @@ import './TopazLists.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 const AT_LIMIT_SHARE = 0.9
-const DETAIL_EXPORT_LIMIT = 20000
 
 const defaultFilters = () => {
   const today = new Date()
@@ -20,34 +19,14 @@ const defaultFilters = () => {
   return { date_from: toIsoDate(from), date_to: toIsoDate(today), provider_id: '', fuel_type: '', search: '', at_limit_only: '' }
 }
 
-const escapeCsv = (value) => {
-  const text = value === null || value === undefined ? '' : String(value)
-  return /[";\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
-}
-
-const decimalCsv = (value) => (value === null || value === undefined ? '' : String(value).replace('.', ','))
-
-const csvDocument = (header, lines) => '﻿' + [header.join(';'), ...lines.map((line) => line.map(escapeCsv).join(';'))].join('\r\n')
-
-const summaryCsv = (items) => csvDocument(
-  ['Провайдер', 'Карта', 'Топливо', 'Заправок', 'Литров', 'Дней с заправками', 'Максимум за сутки', 'Среднее за сутки', 'Суточный лимит', 'Дней у лимита', 'АЗС', 'Первая', 'Последняя'],
-  items.map((item) => [
-    item.provider_name, item.card_number, item.fuel_type, item.fills_count, decimalCsv(item.liters), item.days_with_fills,
-    decimalCsv(item.max_daily_liters), decimalCsv(item.avg_daily_liters), item.daily_limit ?? '', item.days_at_limit ?? '',
-    item.azs_numbers.join(' '), formatSourceDateTime(item.first_fill), formatSourceDateTime(item.last_fill),
-  ]),
-)
-
-const detailCsv = (items) => csvDocument(
-  ['Дата и время', 'Провайдер', 'АЗС', 'Карта', 'Закреплена за', 'Топливо', 'Литров'],
-  items.map((item) => [
-    formatSourceDateTime(item.transaction_date), item.provider_name, item.azs_number, item.card_number,
-    item.vehicle, item.fuel_type, decimalCsv(item.liters),
-  ]),
-)
-
-const saveCsv = (content, filename) => {
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8' })
+/* XLSX собирает сервер: лист итогов по картам и лист заправок, сгруппированных по карте. */
+const downloadXlsx = async (params, fallbackName) => {
+  const response = await authFetch(`${API_URL}/api/v1/reports/fills-by-card/export?${params}`)
+  if (!response.ok) throw await readError(response, 'Не удалось выгрузить заправки')
+  const disposition = response.headers.get('Content-Disposition') || ''
+  const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+  const filename = match && match[1] ? match[1].replace(/['"]/g, '') : fallbackName
+  const blob = await response.blob()
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
@@ -75,6 +54,21 @@ const CardFillsModal = ({ item, period, onClose }) => {
   const { error: showError } = useToast()
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  const exportCard = async () => {
+    setExporting(true)
+    try {
+      const params = new URLSearchParams({ date_from: period.date_from, date_to: period.date_to, card_number: item.card_number ?? '' })
+      if (item.provider_id) params.append('provider_id', String(item.provider_id))
+      if (item.fuel_type) params.append('fuel_type', item.fuel_type)
+      await downloadXlsx(params, `zapravki-karta_${period.date_from}_${period.date_to}.xlsx`)
+    } catch (err) {
+      if (!err.isUnauthorized) showError(err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   useEffect(() => {
     if (!item) return
@@ -168,9 +162,10 @@ const CardFillsModal = ({ item, period, onClose }) => {
           variant="secondary"
           icon={<Icon name="download" size={16} />}
           disabled={!detail?.items?.length}
-          onClick={() => saveCsv(detailCsv(detail.items), `zapravki_${item.card_number || 'bez-karty'}_${period.date_from}_${period.date_to}.csv`)}
+          loading={exporting}
+          onClick={exportCard}
         >
-          Скачать CSV
+          Скачать XLSX
         </Button>
         <Button variant="primary" onClick={onClose}>Закрыть</Button>
       </Modal.Footer>
@@ -222,23 +217,14 @@ const FillsByCardReport = () => {
 
   const setFilter = (field, value) => setFilters((prev) => ({ ...prev, [field]: value }))
 
-  const downloadSummary = () => {
-    if (!report?.items?.length) return
-    saveCsv(summaryCsv(report.items), `zapravki-po-kartam_${report.date_from}_${report.date_to}.csv`)
-  }
-
-  const downloadDetail = async () => {
+  const downloadReport = async () => {
     if (!report) return
     setExporting(true)
     try {
       const params = periodParams(filters)
       if (debouncedSearch.trim()) params.append('search', debouncedSearch.trim())
-      params.append('limit', String(DETAIL_EXPORT_LIMIT))
-      const response = await authFetch(`${API_URL}/api/v1/reports/fills?${params}`)
-      if (!response.ok) throw await readError(response, 'Не удалось выгрузить заправки')
-      const body = await response.json()
-      if (body.truncated) showError(`Выгружены последние ${body.items.length} из ${body.total} заправок — сузьте период`)
-      saveCsv(detailCsv(body.items), `zapravki-detalno_${body.date_from}_${body.date_to}.csv`)
+      if (filters.at_limit_only) params.append('at_limit_only', 'true')
+      await downloadXlsx(params, `zapravki-karty_${filters.date_from}_${filters.date_to}.xlsx`)
     } catch (err) {
       if (!err.isUnauthorized) showError(err.message)
     } finally {
@@ -300,11 +286,15 @@ const FillsByCardReport = () => {
           </p>
         </div>
         <div className="tpz-header__actions">
-          <Button variant="secondary" icon={<Icon name="download" size={16} />} onClick={downloadSummary} disabled={!report?.items?.length}>
-            Итоги CSV
-          </Button>
-          <Button variant="secondary" icon={<Icon name="download" size={16} />} onClick={downloadDetail} loading={exporting} disabled={!report?.items?.length}>
-            Все заправки CSV
+          <Button
+            variant="secondary"
+            icon={<Icon name="download" size={16} />}
+            onClick={downloadReport}
+            loading={exporting}
+            disabled={!report?.items?.length}
+            title="Лист итогов по картам и лист всех заправок, сгруппированных по карте"
+          >
+            Скачать XLSX
           </Button>
         </div>
       </div>
