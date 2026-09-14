@@ -15,9 +15,14 @@ const ThemeToggle = ({ currentTheme, onThemeChange }) => {
     <div className="theme-toggle">
       <div className="theme-toggle-buttons">
         {themes.map((theme) => (
+          // variant всегда ghost. При 'primary' кнопка красила значок в
+          // --ink-on-accent (белый) под сплошную заливку, а .theme-toggle-button
+          // тут же перекрывала фон на --accent-soft — полупрозрачный тон в 8%.
+          // Выходил белый значок по почти белому: активную тему было не видно.
+          // Вид активной кнопки целиком задаёт CSS, см. ThemeToggle.css.
           <Button
             key={theme.id}
-            variant={currentTheme === theme.id ? 'primary' : 'ghost'}
+            variant="ghost"
             size="sm"
             onClick={() => onThemeChange(theme.id)}
             title={`${theme.name} тема`}
@@ -25,12 +30,10 @@ const ThemeToggle = ({ currentTheme, onThemeChange }) => {
             aria-pressed={currentTheme === theme.id}
             className={`theme-toggle-button ${currentTheme === theme.id ? 'active' : ''}`}
           >
+            {/* Галочки в углу больше нет: 10px значок садился на скругление
+                кнопки и налезал на сам символ темы. Состояние и так несут фон,
+                рамка и кольцо, а для чтения с экрана — aria-pressed. */}
             <span className="theme-toggle-icon"><Icon name={theme.icon} /></span>
-            {currentTheme === theme.id && (
-              <span className="theme-toggle-mark" aria-hidden="true">
-                <Icon name="check" size={10} strokeWidth={2.4} />
-              </span>
-            )}
           </Button>
         ))}
       </div>
