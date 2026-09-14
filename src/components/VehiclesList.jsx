@@ -8,13 +8,45 @@ import './VehiclesList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
-// License plate pill — matches redesign_vehicles.html
-// Simple monospace pill on surface-2, used inline in tables and forms.
+/**
+ * Отделяет код региона от основной части номера.
+ *
+ * Регион — это последние 2–3 цифры, но брать «последние три» вслепую нельзя:
+ * у «8689УН86» три последних знака — «Н86». Поэтому группа цифр якорится к
+ * концу строки, и ленивая основная часть отдаёт ей столько цифр, сколько там
+ * реально есть. Разделитель между частями может быть пробелом или дефисом.
+ *
+ * @param {string} plate - номер в верхнем регистре, без крайних пробелов
+ * @returns {{main: string, region: string}} Части знака; region пуст, если не распознан
+ */
+const splitRegion = (plate) => {
+  const match = plate.match(/^(.+?)[\s-]?(\d{2,3})$/)
+  return match ? { main: match[1].trim(), region: match[2] } : { main: plate, region: '' }
+}
+
+/**
+ * Госномер в виде знака: основная часть, код региона и блок с флагом РФ.
+ *
+ * Разметка собрана под давно написанный CSS (.veh-plate__main / __region /
+ * __flag). Одно время компонент отдавал номер одной строкой, и тогда знак
+ * ломался: горизонтальные отступы заданы на .veh-plate__main, без него буквы
+ * упирались прямо в рамку, а правила региона и флага лежали мёртвым грузом.
+ */
 const LicensePlate = ({ value }) => {
   if (!value) return <span className="veh-plate veh-plate--empty">—</span>
+
+  const { main, region } = splitRegion(String(value).trim().toUpperCase())
+
   return (
     <span className="veh-plate" title={value}>
-      {String(value).trim().toUpperCase()}
+      <span className="veh-plate__main">{main}</span>
+      {region && <span className="veh-plate__region">{region}</span>}
+      <span className="veh-plate__flag" aria-hidden="true">
+        <span className="veh-plate__flag-stripe veh-plate__flag-stripe--white" />
+        <span className="veh-plate__flag-stripe veh-plate__flag-stripe--blue" />
+        <span className="veh-plate__flag-stripe veh-plate__flag-stripe--red" />
+        <span className="veh-plate__flag-code">RUS</span>
+      </span>
     </span>
   )
 }
