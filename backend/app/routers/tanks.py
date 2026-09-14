@@ -6,16 +6,17 @@ from decimal import Decimal
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_admin, require_auth_if_enabled
 from app.database import get_db
-from app.models import Provider, ProviderTemplate, Tank, TankReading, TopazSyncState, User
+from app.models import Provider, ProviderTemplate, Tank, TankReading, TopazSyncState, Transaction, UploadEvent, User
 from app.schemas import (
     TankOverviewResponse, TankReadingPoint, TankReadingsResponse, TankResponse, TankStation,
     TankStationFuel, TankUpdate, TopazSyncResult, TopazSyncStateResponse,
 )
-from app.services.topaz_sync_service import TopazSyncService, resolve_fuel_type
+from app.services.topaz_sync_service import EVENT_ROW_OFFSET, SOURCE_SESSIONS, TopazSyncService, resolve_fuel_type
 from app.utils.firebird_utils import get_firebird_service
 from app.utils.json_utils import parse_template_json
 
@@ -71,6 +72,13 @@ class _SourceClock:
     def now_for(self, template_id: int) -> datetime:
         offset = self._offsets.get(template_id)
         return self._now + offset if offset is not None else self._now
+
+    def to_source(self, template_id: int, server_time: Optional[datetime]) -> Optional[datetime]:
+        """Перевести время сервера GSM на часы сервера Топаза."""
+        if server_time is None:
+            return None
+        offset = self._offsets.get(template_id)
+        return server_time + offset if offset is not None else server_time
 
 
 def _age_minutes(measured_at: Optional[datetime], source_now: datetime) -> Optional[int]:
@@ -128,7 +136,57 @@ def _tank_response(tank: Tank, mapping_by_template: Dict[int, dict], clock: _Sou
     )
 
 
-def _station_fuels(tanks: List[TankResponse]) -> List[TankStationFuel]:
+def _session_estimate(db: Session, items: List[TankResponse], fuel_type: Optional[str],
+                      clock: _SourceClock, fills_loaded_at: Dict[int, datetime]) -> Optional[dict]:
+    """
+    Остаток вида топлива для источника «замеры смен» (OnlineTerminal).
+
+    В течение дня Топаз пишет уровень только ёмкости, из которой отпускали, а ёмкости,
+    соединённые переливом, перетекают друг в друга. Сумма последних замеров разных
+    моментов поэтому врёт на объём перелива. Считаем от момента, когда замер есть
+    у всех ёмкостей сразу (открытие смены), и вычитаем отпуск этого топлива с тех пор.
+    """
+    if not fuel_type or not items:
+        return None
+    tank_ids = [t.id for t in items]
+    base_rows = (
+        db.query(TankReading.tank_id, func.max(TankReading.measured_at))
+        .filter(TankReading.tank_id.in_(tank_ids), TankReading.source_row_id < EVENT_ROW_OFFSET)
+        .group_by(TankReading.tank_id)
+        .all()
+    )
+    base_times = {tank_id: measured_at for tank_id, measured_at in base_rows}
+    if len(base_times) != len(tank_ids) or len(set(base_times.values())) != 1:
+        return None
+    base_at = next(iter(base_times.values()))
+    base_volume = sum(
+        float(volume or 0) for (volume,) in db.query(TankReading.volume).filter(
+            TankReading.tank_id.in_(tank_ids), TankReading.measured_at == base_at,
+            TankReading.source_row_id < EVENT_ROW_OFFSET,
+        )
+    )
+    first = items[0]
+    dispensed = db.query(func.coalesce(func.sum(Transaction.quantity), 0)).filter(
+        Transaction.provider_id == first.provider_id,
+        Transaction.azs_number == first.azs_code,
+        Transaction.product == fuel_type,
+        Transaction.transaction_date >= base_at,
+        Transaction.quantity > 0,
+    ).scalar()
+    loaded_at = clock.to_source(first.template_id, fills_loaded_at.get(first.template_id))
+    return {
+        "base_at": base_at,
+        "base_volume": round(base_volume, 2),
+        "dispensed": round(float(dispensed or 0), 2),
+        "volume": round(base_volume - float(dispensed or 0), 2),
+        "fills_loaded_at": loaded_at,
+        "age": _age_minutes(loaded_at, clock.now_for(first.template_id)) if loaded_at else None,
+    }
+
+
+def _station_fuels(tanks: List[TankResponse], db: Optional[Session] = None, clock: Optional[_SourceClock] = None,
+                   session_templates: frozenset = frozenset(),
+                   fills_loaded_at: Optional[Dict[int, datetime]] = None) -> List[TankStationFuel]:
     groups: Dict[Optional[str], List[TankResponse]] = {}
     for tank in tanks:
         if tank.is_active:
@@ -145,20 +203,39 @@ def _station_fuels(tanks: List[TankResponse]) -> List[TankStationFuel]:
         # из которой отпускали. Возраст суммы — по свежему замеру, отставание — отдельно.
         freshest = max((t.last_measured_at for t in measured), default=None)
         ages = [t.age_minutes for t in measured if t.age_minutes is not None]
-        warnings = sorted({w for t in items for w in t.warnings if w != "no_capacity"})
+        warnings = sorted({w for t in items for w in t.warnings if w not in ("no_capacity", "stale")})
         if capacity is None:
             warnings.append("no_capacity")
+
+        estimate = None
+        if db is not None and clock is not None and items[0].template_id in session_templates:
+            estimate = _session_estimate(db, items, fuel_type, clock, fills_loaded_at or {})
+
+        if estimate is not None:
+            volume = estimate["volume"]
+            age_minutes = estimate["age"]
+            oldest_age_minutes = None
+        else:
+            age_minutes = min(ages) if ages else None
+            oldest_age_minutes = max(ages) if ages else None
+            if any("stale" in t.warnings for t in items):
+                warnings.append("stale")
+
         fuels.append(TankStationFuel(
             fuel_type=fuel_type,
             volume=round(volume, 2),
-            mass=round(sum(masses), 2) if masses else None,
+            mass=round(sum(masses), 2) if masses and estimate is None else None,
             capacity_liters=capacity,
             fill_percent=round(volume / capacity * 100, 1) if capacity else None,
             tanks_count=len(items),
             measured_at=freshest,
-            age_minutes=min(ages) if ages else None,
-            oldest_age_minutes=max(ages) if ages else None,
-            warnings=warnings,
+            age_minutes=age_minutes,
+            oldest_age_minutes=oldest_age_minutes,
+            estimate_base_at=estimate["base_at"] if estimate else None,
+            estimate_base_volume=estimate["base_volume"] if estimate else None,
+            estimate_dispensed=estimate["dispensed"] if estimate else None,
+            fills_loaded_at=estimate["fills_loaded_at"] if estimate else None,
+            warnings=sorted(set(warnings)),
         ))
     fuels.sort(key=lambda f: (f.fuel_type or ""))
     return fuels
@@ -216,7 +293,15 @@ def get_tank_overview(
         query = query.filter(Tank.is_active == True)  # noqa: E712
     tanks = query.order_by(Tank.provider_id, Tank.azs_code, Tank.tank_number, Tank.id).all()
 
-    clock = _SourceClock(db.query(TopazSyncState).all())
+    states = db.query(TopazSyncState).all()
+    clock = _SourceClock(states)
+    session_templates = frozenset(s.template_id for s in states if s.source_kind == SOURCE_SESSIONS)
+    fills_loaded_at = {
+        template_id: loaded_at
+        for template_id, loaded_at in db.query(UploadEvent.template_id, func.max(UploadEvent.created_at))
+        .filter(UploadEvent.template_id.in_(list(session_templates)), UploadEvent.status == "success")
+        .group_by(UploadEvent.template_id)
+    } if session_templates else {}
     mappings = _mapping_by_template(db, {t.template_id for t in tanks})
     responses = [_tank_response(tank, mappings, clock) for tank in tanks]
 
@@ -232,7 +317,7 @@ def get_tank_overview(
                 provider_name=items[0].provider_name,
                 gas_station_id=items[0].gas_station_id,
                 gas_station_name=items[0].gas_station_name,
-                fuels=_station_fuels(items),
+                fuels=_station_fuels(items, db, clock, session_templates, fills_loaded_at),
                 tanks=items,
             )
             for (prov_id, azs_code), items in stations.items()

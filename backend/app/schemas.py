@@ -1466,6 +1466,10 @@ class TankStationFuel(BaseModel):
     measured_at: Optional[datetime] = Field(None, description="Самый свежий из последних замеров ёмкостей")
     age_minutes: Optional[int] = Field(None, description="Возраст самого свежего замера")
     oldest_age_minutes: Optional[int] = Field(None, description="Возраст самого старого из последних замеров ёмкостей")
+    estimate_base_at: Optional[datetime] = Field(None, description="Расчёт: момент общего замера всех ёмкостей (открытие смены)")
+    estimate_base_volume: Optional[float] = Field(None, description="Расчёт: объём на общем замере")
+    estimate_dispensed: Optional[float] = Field(None, description="Расчёт: отпущено этого топлива после общего замера")
+    fills_loaded_at: Optional[datetime] = Field(None, description="Расчёт: заправки загружены на это время (часы Топаза)")
     warnings: List[str] = Field(default_factory=list)
 
 

@@ -148,6 +148,26 @@ describe('TanksPage', () => {
     })
   })
 
+  it('для замеров смены показывает расчёт от замера и отпуска', async () => {
+    setup({
+      ...overview,
+      stations: [{
+        ...overview.stations[0],
+        fuels: [{
+          fuel_type: 'ДТ', volume: 22152.64, capacity_liters: 30000, fill_percent: 73.8, tanks_count: 3,
+          age_minutes: 18, oldest_age_minutes: null, warnings: [],
+          estimate_base_at: '2026-09-14T00:00:00', estimate_base_volume: 22705.93, estimate_dispensed: 553.29,
+        }],
+      }],
+    })
+    renderWithProviders(<TanksPage />)
+
+    const estimate = await screen.findByTestId('fuel-estimate')
+    expect(estimate).toHaveTextContent(/Расчёт: замер 00:00 \(22\s706 л\) − отпуск 553 л/)
+    expect(screen.getByText(/заправки загружены 18 мин назад/)).toBeInTheDocument()
+    expect(screen.queryByText(/старейший замер/)).not.toBeInTheDocument()
+  })
+
   it('показывает пустое состояние, если резервуаров нет', async () => {
     setup({ stations: [], sync: [], total_tanks: 0 })
     renderWithProviders(<TanksPage />)

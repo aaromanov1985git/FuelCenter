@@ -100,6 +100,61 @@ class TestTankOverview:
         assert station["fuels"] == []
 
 
+class TestSessionEstimate:
+    def test_overflow_pair_uses_shift_reading_minus_dispensed(self, client, auth_headers, test_db):
+        from app.models import UploadEvent
+        from app.services.topaz_sync_service import EVENT_ROW_OFFSET
+
+        provider = Provider(name="КАЗС", code="KAZS")
+        test_db.add(provider)
+        test_db.flush()
+        template = ProviderTemplate(provider_id=provider.id, name="KAZS", connection_type="firebird", field_mapping="{}",
+                                    connection_settings="{}", fuel_type_mapping=json.dumps({"ДТ3": "ДТ", "Бензин": "АИ-92"}))
+        test_db.add(template)
+        test_db.flush()
+        run_at = datetime.now()
+        test_db.add(TopazSyncState(template_id=template.id, source_kind="sessions", last_tank_row_id=0,
+                                   last_run_at=run_at, source_clock=run_at + timedelta(hours=5), last_status="success"))
+        source_now = run_at + timedelta(hours=5)
+        shift = source_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        dispense_at = shift + timedelta(hours=14, minutes=36)
+        if dispense_at > source_now:
+            dispense_at = source_now - timedelta(minutes=5)
+
+        def tank(num, volume_at_shift, last_volume, last_at):
+            item = Tank(provider_id=provider.id, template_id=template.id, azs_code="505221", source_key=f"ses:505221:{num}",
+                        tank_number=num, source_fuel="ДТ1", capacity_liters=Decimal("10000"),
+                        last_volume=Decimal(str(last_volume)), last_density=Decimal("834"), last_measured_at=last_at)
+            test_db.add(item)
+            test_db.flush()
+            test_db.add(TankReading(tank_id=item.id, measured_at=shift, volume=Decimal(str(volume_at_shift)), source_row_id=11400 + num))
+            return item
+
+        first = tank(1, 7842.16, 7574.46, dispense_at)  # перелив из рез. 2 уже внутри этого замера
+        tank(2, 7835.08, 7835.08, shift)
+        tank(3, 7028.69, 7028.69, shift)
+        test_db.add(TankReading(tank_id=first.id, measured_at=dispense_at, volume=Decimal("7574.46"),
+                                source_row_id=EVENT_ROW_OFFSET + 112835))
+        for qty in ("113", "120.05", "30.09", "250.07", "40.08"):
+            test_db.add(Transaction(provider_id=provider.id, azs_number="505221", product="ДТ", card_number="К051",
+                                    transaction_date=dispense_at - timedelta(minutes=1), quantity=Decimal(qty)))
+        test_db.add(Transaction(provider_id=provider.id, azs_number="505221", product="ДТ", card_number="К051",
+                                transaction_date=shift - timedelta(hours=1), quantity=Decimal("500")))  # до смены
+        test_db.add(UploadEvent(source_type="auto", status="success", provider_id=provider.id, template_id=template.id,
+                                created_at=run_at - timedelta(minutes=20)))
+        test_db.commit()
+
+        body = client.get("/api/v1/tanks", params={"provider_id": provider.id}, headers=auth_headers).json()
+        diesel = body["stations"][0]["fuels"][0]
+        assert diesel["fuel_type"] == "ДТ"
+        assert diesel["estimate_base_volume"] == 22705.93
+        assert diesel["estimate_dispensed"] == 553.29
+        assert diesel["volume"] == 22152.64
+        assert diesel["fill_percent"] == 73.8
+        assert 15 <= diesel["age_minutes"] <= 25
+        assert diesel["oldest_age_minutes"] is None
+
+
 class TestTankUpdate:
     def test_admin_sets_capacity_override_and_group(self, client, admin_auth_headers, mazs):
         tank_id = mazs["diesel"].id

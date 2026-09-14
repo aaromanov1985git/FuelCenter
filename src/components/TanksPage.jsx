@@ -342,12 +342,28 @@ const StationCard = ({ station, isAdmin, onHistory, onSettings }) => {
                 </span>
                 <span>
                   {fuel.tanks_count > 1 ? `${fuel.tanks_count} ёмк. · ` : ''}
-                  {formatAge(fuel.age_minutes)}
-                  {fuel.oldest_age_minutes !== null && fuel.oldest_age_minutes !== undefined && fuel.age_minutes !== null && fuel.age_minutes !== undefined && fuel.oldest_age_minutes - fuel.age_minutes > 60
-                    ? ` · старейший замер ${formatAge(fuel.oldest_age_minutes)}`
-                    : ''}
+                  {fuel.estimate_base_at ? (
+                    fuel.age_minutes !== null && fuel.age_minutes !== undefined
+                      ? `заправки загружены ${formatAge(fuel.age_minutes)}`
+                      : 'заправки ещё не загружались'
+                  ) : (
+                    <>
+                      {formatAge(fuel.age_minutes)}
+                      {fuel.oldest_age_minutes !== null && fuel.oldest_age_minutes !== undefined && fuel.age_minutes !== null && fuel.age_minutes !== undefined && fuel.oldest_age_minutes - fuel.age_minutes > 60
+                        ? ` · старейший замер ${formatAge(fuel.oldest_age_minutes)}`
+                        : ''}
+                    </>
+                  )}
                 </span>
               </div>
+              {fuel.estimate_base_at ? (
+                <div className="tnk-fuel-row__meta" data-testid="fuel-estimate">
+                  <span>
+                    Расчёт: замер {formatSourceDateTime(fuel.estimate_base_at).slice(-5)} ({formatLiters(fuel.estimate_base_volume)} л)
+                    {' '}− отпуск {formatLiters(fuel.estimate_dispensed)} л
+                  </span>
+                </div>
+              ) : null}
               <WarningChips warnings={fuel.warnings} skip={['no_capacity']} />
             </li>
           ))}
