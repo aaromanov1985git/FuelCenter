@@ -215,6 +215,27 @@ URL = "malignantly-meteoric-stallion.cloudpub.ru";
 - **`1C_PPR_API_v1_Integration.bsl`** - Обновленный модуль интеграции с API v1
 - **`PPR_API_v1_MIGRATION.md`** - Данная документация
 
+## Адреса эндпоинта
+
+API v1 отвечает по двум путям — оба рабочие, выбирать по тому, как настроена 1С:
+
+| Путь | Когда использовать |
+|------|--------------------|
+| `/api/public-api/v1/transaction-list` | Код 1С ЕРП из этой документации |
+| `/public-api/v1/transaction-list` | Путь настоящего ППР (`online.petrolplus.ru`); его подставляет 1С, если в настройках указан только хост |
+
+Проверка доступности без токена — GET на корень, ответ должен быть JSON:
+
+```
+curl https://<хост>/api/public-api/v1
+curl https://<хост>/public-api/v1
+```
+
+Если вместо JSON приходит HTML страницы приложения — nginx не проксирует этот путь
+на backend: в `nginx.frontend.conf` (и `nginx.frontend.https.conf` при HTTPS) должен
+быть блок `location /public-api`. Именно так выглядела ошибка «по указанному адресу
+отсутствует возможность подключения к функциям API ППР».
+
 ## Примечания
 
 1. API v1 требует HTTPS-соединение (используется SSL)

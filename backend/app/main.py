@@ -664,7 +664,15 @@ app.include_router(fuel_card_analysis.router)
 app.include_router(onec_integration.router)
 app.include_router(ppr_api.router)
 app.include_router(ppr_api.router_public_api)
+# API ППР v1 отвечает по двум адресам, и оба нужны:
+#   /public-api/v1/...      — путь настоящего ППР (online.petrolplus.ru), его
+#                             подставляет 1С, когда в настройках указан только хост;
+#   /api/public-api/v1/...  — путь из docs/api/ppr-api-v1-migration.md, по которому
+#                             написан код 1С ЕРП; он же работает за любым прокси,
+#                             который пробрасывает на backend только /api.
+# Алиас скрыт из схемы, иначе в OpenAPI дублируются operationId.
 app.include_router(ppr_api.router_public_api_v1)
+app.include_router(ppr_api.router_public_api_v1, prefix="/api", include_in_schema=False)
 app.include_router(notifications.router)
 app.include_router(system_settings.router)
 app.include_router(backup.router)
