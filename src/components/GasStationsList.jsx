@@ -124,6 +124,8 @@ const GasStationsList = () => {
     latitude: '',
     longitude: ''
   })
+  // Снимок формы на открытии: «Сохранить» активна, только если что-то изменили
+  const [initialEditForm, setInitialEditForm] = useState(null)
   const [formErrors, setFormErrors] = useState({})
   const [providers, setProviders] = useState([])
   const [filter, setFilter] = useState('all')
@@ -295,7 +297,7 @@ const GasStationsList = () => {
   const handleEdit = useCallback(async (gasStation) => {
     setEditingId(gasStation.id)
     const providerId = gasStation.provider_id || null
-    setEditForm({
+    const formValues = {
       original_name: gasStation.original_name || '',
       name: gasStation.name || gasStation.original_name || '',
       provider_id: providerId,
@@ -305,7 +307,9 @@ const GasStationsList = () => {
       settlement: gasStation.settlement || '',
       latitude: gasStation.latitude !== null && gasStation.latitude !== undefined ? gasStation.latitude.toString() : '',
       longitude: gasStation.longitude !== null && gasStation.longitude !== undefined ? gasStation.longitude.toString() : ''
-    })
+    }
+    setEditForm(formValues)
+    setInitialEditForm(formValues)
     setOriginalProviderId(providerId)
     setFormErrors({})
     const hasTrans = await checkHasTransactions(gasStation.azs_number)
@@ -476,28 +480,24 @@ const GasStationsList = () => {
   }
 
   const handleSave = async (gasStationId) => {
-    const latError = validateCoordinate(editForm.latitude, 'latitude')
-    const lngError = validateCoordinate(editForm.longitude, 'longitude')
-    if (latError || lngError) {
-      setFormErrors({ latitude: latError || undefined, longitude: lngError || undefined })
-      showError('Исправьте ошибки в координатах перед сохранением')
+    const errors = {
+      name: editForm.name.trim() ? undefined : 'Укажите наименование — оно выводится в отчётах',
+      azs_number: editForm.azs_number.trim() ? undefined : 'Укажите номер — по нему к АЗС привязываются транзакции',
+      latitude: validateCoordinate(editForm.latitude, 'latitude') || undefined,
+      longitude: validateCoordinate(editForm.longitude, 'longitude') || undefined,
+    }
+    if (Object.values(errors).some(Boolean)) {
+      setFormErrors(errors)
       return
     }
     try {
       setLoading(true)
       const { original_name, ...updateData } = editForm
-      if (updateData.latitude !== '') {
-        updateData.latitude = parseFloat(updateData.latitude)
-        if (isNaN(updateData.latitude)) updateData.latitude = null
-      } else {
-        updateData.latitude = null
+      for (const field of ['name', 'azs_number', 'location', 'region', 'settlement']) {
+        updateData[field] = updateData[field].trim()
       }
-      if (updateData.longitude !== '') {
-        updateData.longitude = parseFloat(updateData.longitude)
-        if (isNaN(updateData.longitude)) updateData.longitude = null
-      } else {
-        updateData.longitude = null
-      }
+      updateData.latitude = parseCoordinate(updateData.latitude)
+      updateData.longitude = parseCoordinate(updateData.longitude)
       const response = await authFetch(`${API_URL}/api/v1/gas-stations/${gasStationId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -533,6 +533,7 @@ const GasStationsList = () => {
     setEditingId(null)
     setShowEditModal(false)
     setEditForm({ original_name: '', name: '', provider_id: null, azs_number: '', location: '', region: '', settlement: '', latitude: '', longitude: '' })
+    setInitialEditForm(null)
     setFormErrors({})
     setOriginalProviderId(null)
     setHasTransactions(false)
@@ -552,28 +553,58 @@ const GasStationsList = () => {
     setPendingProviderId(null)
   }
 
+  // Координаты вводят и с точкой, и с запятой (русская раскладка)
+  const parseCoordinate = (value) => {
+    if (value === null || value === undefined || String(value).trim() === '') return null
+    const num = Number(String(value).trim().replace(',', '.'))
+    return Number.isFinite(num) ? num : null
+  }
+
   const validateCoordinate = (value, type) => {
-    if (!value || value.trim() === '') return null
-    const num = parseFloat(value)
-    if (isNaN(num)) return `Введите корректное число`
-    if (type === 'latitude' && (num < -90 || num > 90)) return `Широта должна быть от -90 до 90`
-    if (type === 'longitude' && (num < -180 || num > 180)) return `Долгота должна быть от -180 до 180`
+    if (!value || String(value).trim() === '') return null
+    const num = parseCoordinate(value)
+    if (num === null) return 'Введите число, например 61.1234'
+    if (type === 'latitude' && (num < -90 || num > 90)) return 'Широта — от −90 до 90'
+    if (type === 'longitude' && (num < -180 || num > 180)) return 'Долгота — от −180 до 180'
     return null
+  }
+
+  const updateField = (field, value) => {
+    setEditForm(prev => ({ ...prev, [field]: value }))
+    if (formErrors[field]) setFormErrors(prev => ({ ...prev, [field]: undefined }))
   }
 
   const handleLatitudeChange = (e) => {
     const value = e.target.value
-    setEditForm({...editForm, latitude: value})
-    const error = validateCoordinate(value, 'latitude')
-    setFormErrors(prev => ({ ...prev, latitude: error || undefined }))
+    setEditForm(prev => ({ ...prev, latitude: value }))
+    setFormErrors(prev => ({ ...prev, latitude: validateCoordinate(value, 'latitude') || undefined }))
   }
 
   const handleLongitudeChange = (e) => {
     const value = e.target.value
-    setEditForm({...editForm, longitude: value})
-    const error = validateCoordinate(value, 'longitude')
-    setFormErrors(prev => ({ ...prev, longitude: error || undefined }))
+    setEditForm(prev => ({ ...prev, longitude: value }))
+    setFormErrors(prev => ({ ...prev, longitude: validateCoordinate(value, 'longitude') || undefined }))
   }
+
+  // Пара «61.1234, 65.5678» из карт, вставленная в любое поле координат, раскладывается на широту и долготу
+  const handleCoordinatesPaste = (e) => {
+    const text = (e.clipboardData?.getData('text') || '').trim()
+    // «61.12, 65.33» или «61,12; 65,33»; одиночное «61,12» — это дробь, а не пара
+    const pair = text.match(/^(-?\d+\.\d+)\s*[,;\s]\s*(-?\d+\.\d+)$/) || text.match(/^(-?\d+,\d+)\s*[;\s]\s*(-?\d+,\d+)$/)
+    if (!pair) return
+    e.preventDefault()
+    const [latitude, longitude] = [pair[1], pair[2]]
+    setEditForm(prev => ({ ...prev, latitude, longitude }))
+    setFormErrors(prev => ({
+      ...prev,
+      latitude: validateCoordinate(latitude, 'latitude') || undefined,
+      longitude: validateCoordinate(longitude, 'longitude') || undefined,
+    }))
+  }
+
+  const isEditDirty = Boolean(initialEditForm) && Object.keys(initialEditForm).some(
+    key => String(editForm[key] ?? '') !== String(initialEditForm[key] ?? '')
+  )
 
   const handleMapConfirm = (lat, lng) => {
     setEditForm(prev => ({ ...prev, latitude: lat.toString(), longitude: lng.toString() }))
@@ -952,40 +983,42 @@ const GasStationsList = () => {
       <Modal
         isOpen={showEditModal}
         onClose={handleCancel}
-        title={editForm.name ? `Редактирование АЗС: "${editForm.name}"` : `Редактирование АЗС №${editForm.azs_number || '?'}`}
+        title={`АЗС ${editForm.azs_number || initialEditForm?.azs_number || ''}`.trim()}
         size="md"
-        closeOnOverlayClick={true}
+        closeOnOverlayClick={!isEditDirty}
         closeOnEsc={true}
         showCloseButton={true}
       >
-        <Modal.Body>
-          <div className="gas-station-edit-form">
-            <div className="form-section">
-              <h4 className="form-section-title">Основная информация</h4>
-              <div className="form-row">
-                <Input
-                  type="text"
-                  label="Текущее название (для справки)"
-                  value={editForm.original_name}
-                  onChange={(e) => setEditForm({...editForm, original_name: e.target.value})}
-                  disabled
-                  fullWidth
-                  name="original_name"
-                />
-              </div>
-              <div className="form-row">
-                <Input
-                  type="text"
-                  label="Новое название АЗС"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                  fullWidth
-                  placeholder="Введите наименование АЗС"
-                  required
-                  name="name"
-                />
-              </div>
-              <div className="form-row form-row-2">
+        <form
+          className="gse-form"
+          data-testid="gas-station-edit-form"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (editingId && isEditDirty && !loading) handleSave(editingId)
+          }}
+        >
+          <Modal.Body>
+            <section className="gse-section" aria-labelledby="gse-section-station">
+              <h4 id="gse-section-station" className="gse-section__title">АЗС</h4>
+              <Input
+                type="text"
+                label="Наименование"
+                value={editForm.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                placeholder="Как АЗС называется в отчётах"
+                helperText={
+                  editForm.original_name && editForm.original_name !== editForm.name
+                    ? `В данных провайдера: ${editForm.original_name}`
+                    : undefined
+                }
+                error={formErrors.name}
+                required
+                fullWidth
+                name="name"
+                autoFocus
+              />
+              <div className="gse-grid">
                 <Select
                   label="Провайдер"
                   value={editForm.provider_id ? editForm.provider_id.toString() : ''}
@@ -995,7 +1028,7 @@ const GasStationsList = () => {
                       setPendingProviderId(newProviderId)
                       setShowProviderChangeConfirm(true)
                     } else {
-                      setEditForm({...editForm, provider_id: newProviderId})
+                      setEditForm(prev => ({ ...prev, provider_id: newProviderId }))
                     }
                   }}
                   options={[
@@ -1006,116 +1039,106 @@ const GasStationsList = () => {
                     }))
                   ]}
                   fullWidth
-                  required
                 />
                 <Input
                   type="text"
                   label="Номер АЗС"
                   value={editForm.azs_number}
-                  onChange={(e) => setEditForm({...editForm, azs_number: e.target.value})}
-                  placeholder="Номер АЗС"
-                  fullWidth
+                  onChange={(e) => updateField('azs_number', e.target.value)}
+                  placeholder="Например: 505221"
+                  error={formErrors.azs_number}
                   required
+                  fullWidth
                   name="azs_number"
+                  inputMode="numeric"
                 />
               </div>
-            </div>
+              {hasTransactions ? (
+                <p className="gse-note">
+                  <Icon name="info" size={14} />
+                  По АЗС уже есть транзакции: смену провайдера нужно будет подтвердить.
+                </p>
+              ) : null}
+            </section>
 
-            <div className="form-section">
-              <h4 className="form-section-title">География</h4>
-              <div className="form-row">
+            <section className="gse-section" aria-labelledby="gse-section-place">
+              <h4 id="gse-section-place" className="gse-section__title">Местоположение</h4>
+              <div className="gse-grid">
                 <Input
                   type="text"
-                  label="Адрес"
-                  value={editForm.location}
-                  onChange={(e) => setEditForm({...editForm, location: e.target.value})}
-                  placeholder="Улица, дом, корпус"
+                  label="Населённый пункт"
+                  value={editForm.settlement}
+                  onChange={(e) => updateField('settlement', e.target.value)}
+                  placeholder="Например: Нягань"
                   fullWidth
-                  required
-                  name="location"
+                  name="settlement"
                 />
-              </div>
-              <div className="form-row form-row-2">
                 <Input
                   type="text"
                   label="Регион"
                   value={editForm.region}
-                  onChange={(e) => setEditForm({...editForm, region: e.target.value})}
-                  placeholder="Например: Московская область"
+                  onChange={(e) => updateField('region', e.target.value)}
+                  placeholder="Например: ХМАО — Югра"
                   fullWidth
-                  required
                   name="region"
                 />
+              </div>
+              <Input
+                type="text"
+                label="Адрес"
+                value={editForm.location}
+                onChange={(e) => updateField('location', e.target.value)}
+                placeholder="Улица и дом или ориентир: «База АО „УТТ“»"
+                fullWidth
+                name="location"
+              />
+              <div className="gse-coords">
                 <Input
                   type="text"
-                  label="Населенный пункт"
-                  value={editForm.settlement}
-                  onChange={(e) => setEditForm({...editForm, settlement: e.target.value})}
-                  placeholder="Город или деревня"
-                  fullWidth
-                  required
-                  name="settlement"
-                />
-              </div>
-              <div className="form-row form-row-2">
-                <Input
-                  type="number"
-                  step="any"
+                  inputMode="decimal"
                   label="Широта"
                   value={editForm.latitude}
                   onChange={handleLatitudeChange}
-                  placeholder="Например: 55.7558"
-                  fullWidth
+                  onPaste={handleCoordinatesPaste}
+                  placeholder="61.1234"
                   error={formErrors.latitude}
+                  fullWidth
                   name="latitude"
                 />
                 <Input
-                  type="number"
-                  step="any"
+                  type="text"
+                  inputMode="decimal"
                   label="Долгота"
                   value={editForm.longitude}
                   onChange={handleLongitudeChange}
-                  placeholder="Например: 37.6176"
-                  fullWidth
+                  onPaste={handleCoordinatesPaste}
+                  placeholder="65.5678"
                   error={formErrors.longitude}
+                  fullWidth
                   name="longitude"
                 />
-              </div>
-              <div className="form-row">
                 <Button
+                  type="button"
                   variant="secondary"
+                  className="gse-coords__map"
                   onClick={() => setShowMapModal(true)}
-                  icon={Icons.map}
-                  iconPosition="left"
+                  icon={<Icon name="pin" size={16} />}
                 >
-                  Выбрать на карте
+                  На карте
                 </Button>
               </div>
-            </div>
-
-            <div className="form-actions">
-              <Button
-                variant="secondary"
-                onClick={handleCancel}
-                disabled={loading}
-                icon={Icons.close}
-                iconPosition="left"
-              >
-                Отмена
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => editingId && handleSave(editingId)}
-                disabled={loading}
-                loading={loading}
-                icon={Icons.check}
-                iconPosition="left"
-              >
-                {loading ? 'Сохранение...' : 'Сохранить'}
-              </Button>
-            </div>
-          </div>
-        </Modal.Body>
+              <p className="gse-hint">Координаты из карт можно вставить парой, например «61.1234, 65.5678».</p>
+            </section>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button type="button" variant="secondary" onClick={handleCancel} disabled={loading}>
+              Отмена
+            </Button>
+            <Button type="submit" variant="primary" loading={loading} disabled={loading || !isEditDirty}>
+              Сохранить
+            </Button>
+          </Modal.Footer>
+        </form>
       </Modal>
 
       <MapModal

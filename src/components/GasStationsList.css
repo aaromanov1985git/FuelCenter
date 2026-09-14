@@ -769,3 +769,84 @@
   padding-top: 12px;
   border-top: 1px solid var(--border);
 }
+
+/* ---------- Форма редактирования АЗС (gse-) ----------
+   Две смысловые группы без тяжёлых плашек: заголовок-подпись и тонкий разделитель.
+   Обязательны только наименование и номер — по ним АЗС связывается с транзакциями. */
+.gse-form {
+  display: block;
+}
+
+.gse-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gse-section + .gse-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.gse-section__title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--text-3);
+}
+
+.gse-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.gse-coords {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+/* Кнопка стоит на линии полей, а не над подписью */
+.gse-coords__map {
+  margin-top: 24px;
+  white-space: nowrap;
+}
+
+.gse-note,
+.gse-hint {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-3);
+}
+
+.gse-note {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.gse-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+@media (max-width: 560px) {
+  .gse-grid,
+  .gse-coords {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gse-coords__map {
+    margin-top: 0;
+    justify-self: start;
+  }
+}
