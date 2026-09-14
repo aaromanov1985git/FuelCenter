@@ -95,6 +95,55 @@ describe('GasStationsList', () => {
     })
   })
 
+  describe('форма редактирования АЗС', () => {
+    const station = {
+      id: 76, azs_number: '505221', name: '505221', original_name: '505221', provider_id: 2, is_validated: 'valid',
+      location: 'База АО "УТТ"', region: 'ХМАО-Ю', settlement: 'Нягань', latitude: null, longitude: null,
+    }
+
+    const openEditForm = async () => {
+      setupHappyPath({ stations: [station], providers: [{ id: 2, name: 'КАЗС', is_active: true }] })
+      renderWithProviders(<GasStationsList />)
+      const editButtons = await screen.findAllByRole('button', { name: 'Редактировать' })
+      fireEvent.click(editButtons[0])
+      return screen.findByTestId('gas-station-edit-form')
+    }
+
+    const lastPut = () => mockAuthFetch.mock.calls.find(([url, options]) => url.includes('/api/v1/gas-stations/76') && options?.method === 'PUT')
+
+    it('сохранять нечего, пока форма не изменена; адрес и регион не обязательны', async () => {
+      await openEditForm()
+      expect(screen.getByRole('button', { name: 'Сохранить' })).toBeDisabled()
+      expect(screen.queryByLabelText(/Текущее название/)).not.toBeInTheDocument()
+      expect(screen.getByLabelText(/Адрес/)).not.toBeRequired()
+      expect(screen.getByLabelText(/Регион/)).not.toBeRequired()
+      expect(screen.getByLabelText(/Номер АЗС/)).toBeRequired()
+    })
+
+    it('не отправляет форму без номера АЗС и объясняет почему', async () => {
+      await openEditForm()
+      fireEvent.change(screen.getByLabelText(/Номер АЗС/), { target: { value: '  ' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
+      expect(await screen.findByText(/по нему к АЗС привязываются транзакции/)).toBeInTheDocument()
+      expect(lastPut()).toBeUndefined()
+    })
+
+    it('принимает координаты с запятой и раскладывает вставленную пару', async () => {
+      await openEditForm()
+      const latitude = screen.getByLabelText(/Широта/)
+      fireEvent.paste(latitude, { clipboardData: { getData: () => '62.1456, 65.3895' } })
+      expect(latitude).toHaveValue('62.1456')
+      expect(screen.getByLabelText(/Долгота/)).toHaveValue('65.3895')
+
+      fireEvent.change(screen.getByLabelText(/Долгота/), { target: { value: '65,39' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
+
+      await waitFor(() => expect(lastPut()).toBeTruthy())
+      const body = JSON.parse(lastPut()[1].body)
+      expect(body).toMatchObject({ latitude: 62.1456, longitude: 65.39, azs_number: '505221', settlement: 'Нягань' })
+    })
+  })
+
   it('показывает тост при ошибке загрузки', async () => {
     mockAuthFetch.mockImplementation((url) => {
       if (url.includes('/api/v1/gas-stations')) {
