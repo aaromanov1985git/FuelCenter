@@ -1149,7 +1149,7 @@ class WebAdapter:
                         logger.debug(f"Input {i}: type={input_type}, name={input_name}, id={input_id}, placeholder={placeholder}", extra={
                             "index": i,
                             "type": input_type,
-                            "name": input_name,
+                            "input_name": input_name,
                             "id": input_id,
                             "placeholder": placeholder
                         })
