@@ -75,6 +75,20 @@ class TestTankOverview:
         # «ДТ» с бензиновой плотностью и замером трёхдневной давности
         assert set(tanks["snap:2"]["warnings"]) == {"density_mismatch", "stale"}
 
+    def test_fuel_age_is_freshest_with_oldest_alongside(self, client, auth_headers, test_db, mazs):
+        source_now = datetime.now() + timedelta(hours=5)
+        second = Tank(provider_id=mazs["provider"].id, template_id=mazs["template"].id, azs_code="1016201",
+                      source_key="snap:9", tank_number=9, source_fuel="АИ-92", last_volume=Decimal("1000"),
+                      last_density=Decimal("765"), last_measured_at=source_now - timedelta(hours=17))
+        test_db.add(second)
+        test_db.commit()
+
+        body = client.get("/api/v1/tanks", headers=auth_headers).json()
+        station = next(s for s in body["stations"] if s["azs_code"] == "1016201")
+        petrol = next(f for f in station["fuels"] if f["fuel_type"] == "АИ-92")
+        assert petrol["age_minutes"] < 30
+        assert 17 * 60 - 5 <= petrol["oldest_age_minutes"] <= 17 * 60 + 5
+
     def test_inactive_tank_excluded_from_station_totals(self, client, auth_headers, admin_auth_headers, mazs):
         mirror_id = mazs["mirror"].id
         response = client.patch(f"/api/v1/tanks/{mirror_id}", json={"is_active": False}, headers=admin_auth_headers)

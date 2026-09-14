@@ -10,7 +10,21 @@ import pytest
 
 from app.models import CardLimit, Provider, ProviderTemplate, Tank, TankReading, TopazSyncState
 from app.services import topaz_sync_service as sync_module
-from app.services.topaz_sync_service import TopazSyncService, limit_period_start, resolve_fuel_type
+from app.services.topaz_sync_service import (
+    EVENT_ROW_OFFSET, TopazSyncService, limit_period_start, parse_dispense_event, resolve_fuel_type,
+)
+
+# Текст события OnlineTerminal КАЗС как в базе (sysEvents, категория 138)
+DISPENSE_EVENT_TEXT = (
+    "Отпуск топлива из емкости 1 завершен. \r\n\r\n"
+    "Начало: 14.09.2026 14:34:40, длительность 00:01:24. \r\n\r\n"
+    "Отпущено: 40,08 л. \r\n\r\n"
+    "На начало: V=7590,6982 л, p=834,4574 кг/м3, Tср=15,9583 C. \r\n\r\n"
+    "На конец: V=7574,4629 л, p=834,8389 кг/м3, Tср=15,9583 C. \r\n\r\n"
+    "Моточасы: 0, одометр: 0 \r\n\r\n"
+    "Cторона 1, рукав 1, адрес рукава 1, карта 0087AE9C (К059). \r\n\r\n"
+    "ID отпуска в устройстве: 52130, в БД: 60869."
+)
 
 NOW = datetime(2026, 9, 14, 14, 0, 0)
 
@@ -42,6 +56,9 @@ class FakeCursor:
                 for s in d.get("sessions", [])
                 if s["start"] >= since and (s["row_id"] > last_id or s["session_id"] >= min_session)
             ]
+        elif '"sysEvents" e' in sql:
+            _, since, needle = params
+            self._rows = [r for r in d.get("events", []) if r[1] >= since and needle in r[3]]
         elif '"dcLimitRestrictions" l' in sql:
             self._rows = list(d.get("limits", []))
         elif '"rgAmountRests" r' in sql:
@@ -134,6 +151,12 @@ class TestHelpers:
         assert resolve_fuel_type("Бензин", mapping) == "АИ-92"
         assert resolve_fuel_type("АИ-95", mapping) == "АИ-95"
         assert resolve_fuel_type("", mapping) is None
+
+    def test_parse_dispense_event(self):
+        assert parse_dispense_event(DISPENSE_EVENT_TEXT) == (1, Decimal("7574.4629"), Decimal("834.8389"), Decimal("15.9583"))
+        assert parse_dispense_event(DISPENSE_EVENT_TEXT.replace("емкости 1", "ёмкости 3"))[0] == 3
+        assert parse_dispense_event("Event: 198528 >> Разница 100,8 л расходов по ТРК и по емкости 2 с видом топлива 0") is None
+        assert parse_dispense_event(None) is None
 
     def test_limit_period_start(self):
         now = datetime(2026, 9, 16, 10, 30)  # среда
@@ -236,6 +259,33 @@ class TestSessions:
         # Открытая смена дописала замер — перечитываем последние смены и добираем его
         data["sessions"][3].update({"volume": 9080.57, "mass": 6843.26, "density": 753.62, "temp": 16.8})
         assert service.sync_template(template)["readings_added"] == 1
+
+    def test_dispense_events_give_intraday_level(self, test_db, template):
+        day = NOW.replace(hour=0, minute=0, second=0, microsecond=0)
+        data = {
+            "tables": ["flSesTanks", "flSessions", "dcAmounts", "sysEvents"],
+            "now": NOW,
+            "sessions": [
+                {"row_id": 103, "session_id": 51, "azs": "505221", "tank": 1, "fuel": "ДТ1", "start": day,
+                 "volume": 7842.16, "mass": 6536.5, "density": 833.51, "temp": 16.7},
+            ],
+            "events": [
+                (112835, day + timedelta(hours=14, minutes=36, seconds=4), "505221", DISPENSE_EVENT_TEXT),
+                (112833, day + timedelta(hours=11, minutes=56), "505221",
+                 "Event: 198528 >> Разница 100,8 л расходов по ТРК и по емкости 2 с видом топлива 0"),
+            ],
+        }
+        service = TopazSyncService(test_db, make_firebird_class(data))
+        assert service.sync_template(template)["readings_added"] == 2
+
+        tank = test_db.query(Tank).filter_by(source_key="ses:505221:1").one()
+        assert tank.last_measured_at == day + timedelta(hours=14, minutes=36, seconds=4)
+        assert float(tank.last_volume) == 7574.46
+        assert float(tank.last_mass) == 6323.46
+        reading = test_db.query(TankReading).filter_by(source_row_id=EVENT_ROW_OFFSET + 112835).one()
+        assert float(reading.density) == 834.84
+
+        assert service.sync_template(template)["readings_added"] == 0
 
 
 class TestLimits:

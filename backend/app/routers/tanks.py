@@ -141,7 +141,9 @@ def _station_fuels(tanks: List[TankResponse]) -> List[TankStationFuel]:
         masses = [t.last_mass for t in measured if t.last_mass is not None]
         capacities = [t.capacity_liters for t in items]
         capacity = sum(capacities) if capacities and all(capacities) else None
-        oldest = min((t.last_measured_at for t in measured), default=None)
+        # Ёмкости обновляются неравномерно: OnlineTerminal пишет уровень только той,
+        # из которой отпускали. Возраст суммы — по свежему замеру, отставание — отдельно.
+        freshest = max((t.last_measured_at for t in measured), default=None)
         ages = [t.age_minutes for t in measured if t.age_minutes is not None]
         warnings = sorted({w for t in items for w in t.warnings if w != "no_capacity"})
         if capacity is None:
@@ -153,8 +155,9 @@ def _station_fuels(tanks: List[TankResponse]) -> List[TankStationFuel]:
             capacity_liters=capacity,
             fill_percent=round(volume / capacity * 100, 1) if capacity else None,
             tanks_count=len(items),
-            measured_at=oldest,
-            age_minutes=max(ages) if ages else None,
+            measured_at=freshest,
+            age_minutes=min(ages) if ages else None,
+            oldest_age_minutes=max(ages) if ages else None,
             warnings=warnings,
         ))
     fuels.sort(key=lambda f: (f.fuel_type or ""))

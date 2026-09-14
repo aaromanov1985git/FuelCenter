@@ -3,7 +3,9 @@
 
 Источник определяется по таблицам базы:
 - dcSnapshotsTanks — снимки уровнемера, которые Топаз-Офис пишет при отпуске топлива (МАЗС);
-- flSesTanks — замеры резервуаров на открытии смены (OnlineTerminal, КАЗС).
+- flSesTanks — замеры резервуаров на открытии смены (OnlineTerminal, КАЗС), плюс замер
+  ёмкости на конец каждого отпуска из журнала sysEvents: в течение дня OnlineTerminal
+  больше нигде уровень не сохраняет.
 Лимиты карт читаются из dcLimitRestrictions целиком, расход в текущем периоде
 считается по заправкам rgAmountRests (DocTypeID = 3).
 """
@@ -33,6 +35,11 @@ SESSIONS_REREAD = 3
 
 DOC_TYPE_TERMINAL_DEBIT = 3
 
+# Событие «ПО Автоналив. Информация»: «Отпуск топлива из емкости N завершен … На конец: V=…»
+EVENT_CATEGORY_DISPENSE = 138
+# Замеры из событий лежат в том же журнале, что и замеры смен: сдвигаем id, чтобы не пересекались
+EVENT_ROW_OFFSET = 10 ** 12
+
 LIMIT_TYPE_DAYS = 1
 LIMIT_TYPE_WEEK = 2
 LIMIT_TYPE_MONTH = 3
@@ -40,6 +47,34 @@ LIMIT_TYPE_FORBIDDEN = 4
 LIMIT_TYPE_DAY = 7
 
 _TRAILING_NUMBER = re.compile(r"[\s\-]*\d+$")
+_DISPENSE_TANK = re.compile(r"Отпуск топлива из [её]мкости\s+(\d+)", re.IGNORECASE)
+_DISPENSE_END = re.compile(
+    r"На конец:\s*V=(-?[\d\s.,]+?)\s*л,\s*p=(-?[\d\s.,]+?)\s*кг/м3,\s*T\S*?=(-?[\d\s.,]+?)\s*C",
+    re.IGNORECASE,
+)
+
+
+def _event_number(value: str) -> Decimal:
+    return Decimal(value.replace(" ", "").replace(" ", "").replace(",", "."))
+
+
+def parse_dispense_event(text: Optional[str]) -> Optional[Tuple[int, Decimal, Decimal, Decimal]]:
+    """
+    Разобрать событие OnlineTerminal об отпуске топлива.
+
+    Возвращает (номер ёмкости, объём, плотность, температура) на конец отпуска
+    или None, если это событие другого вида.
+    """
+    if not text:
+        return None
+    tank = _DISPENSE_TANK.search(text)
+    end = _DISPENSE_END.search(text)
+    if not tank or not end:
+        return None
+    try:
+        return int(tank.group(1)), _event_number(end.group(1)), _event_number(end.group(2)), _event_number(end.group(3))
+    except (ArithmeticError, ValueError):
+        return None
 
 
 def resolve_fuel_type(raw: Optional[str], mapping: Optional[Dict[str, str]]) -> Optional[str]:
@@ -148,6 +183,8 @@ class TopazSyncService:
             elif "flSesTanks" in tables and "flSessions" in tables:
                 result["source_kind"] = SOURCE_SESSIONS
                 tanks, added = self._sync_sessions(cursor, template, state, mapping, source_now)
+                if "sysEvents" in tables:
+                    added += self._sync_dispense_events(cursor, template, source_now)
             else:
                 tanks, added = 0, 0
             result["tanks_count"] = tanks
@@ -380,6 +417,40 @@ class TopazSyncService:
         state.last_tank_row_id = last_id
         tanks_total = self.db.query(Tank).filter(Tank.template_id == template.id).count()
         return tanks_total, added
+
+    def _sync_dispense_events(self, cursor, template, source_now) -> int:
+        """Замеры ёмкости на конец каждого отпуска из журнала событий OnlineTerminal."""
+        since = source_now - timedelta(days=INITIAL_HISTORY_DAYS)
+        cursor.execute(
+            'SELECT e."EventID", e."DateTime", e."ComputerName", e."EventString" FROM "sysEvents" e '
+            'WHERE e."EventCategoryID" = ? AND e."DateTime" >= ? AND e."EventString" CONTAINING ?',
+            (EVENT_CATEGORY_DISPENSE, since, "Отпуск топлива из"),
+        )
+        tanks: Dict[str, Tank] = {}
+        readings = []
+        for event_id, event_dt, computer, text in cursor.fetchall():
+            azs = _text(computer)
+            parsed = parse_dispense_event(text if isinstance(text, str) else None)
+            if not azs or event_dt is None or parsed is None:
+                continue
+            tank_num, volume, density, temperature = parsed
+            key = f"ses:{azs}:{tank_num}"
+            tank = tanks.get(key)
+            if tank is None:
+                tank = self.db.query(Tank).filter(Tank.template_id == template.id, Tank.source_key == key).first()
+                if tank is None:
+                    tank = self._upsert_tank(template, key, azs, tank_num, f"Резервуар {tank_num}")
+                tanks[key] = tank
+            readings.append((tank, {
+                "measured_at": event_dt,
+                "volume": volume,
+                "mass": (volume * density / Decimal(1000)).quantize(Decimal("0.01")),
+                "density": density,
+                "temperature": temperature,
+                "water": None,
+                "source_row_id": EVENT_ROW_OFFSET + int(event_id),
+            }))
+        return self._insert_readings(readings)
 
     # ---------------------------------------------------------------- limits
 

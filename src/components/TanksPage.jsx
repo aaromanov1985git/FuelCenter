@@ -340,7 +340,13 @@ const StationCard = ({ station, isAdmin, onHistory, onSettings }) => {
                 <span className="t-numeric">
                   {fuel.capacity_liters ? `${formatPercent(fuel.fill_percent)} из ${formatLiters(fuel.capacity_liters)} л` : 'вместимость не задана'}
                 </span>
-                <span>{fuel.tanks_count > 1 ? `${fuel.tanks_count} ёмк. · ` : ''}{formatAge(fuel.age_minutes)}</span>
+                <span>
+                  {fuel.tanks_count > 1 ? `${fuel.tanks_count} ёмк. · ` : ''}
+                  {formatAge(fuel.age_minutes)}
+                  {fuel.oldest_age_minutes !== null && fuel.oldest_age_minutes !== undefined && fuel.age_minutes !== null && fuel.age_minutes !== undefined && fuel.oldest_age_minutes - fuel.age_minutes > 60
+                    ? ` · старейший замер ${formatAge(fuel.oldest_age_minutes)}`
+                    : ''}
+                </span>
               </div>
               <WarningChips warnings={fuel.warnings} skip={['no_capacity']} />
             </li>

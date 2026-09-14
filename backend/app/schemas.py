@@ -1463,8 +1463,9 @@ class TankStationFuel(BaseModel):
     capacity_liters: Optional[float] = None
     fill_percent: Optional[float] = None
     tanks_count: int
-    measured_at: Optional[datetime] = Field(None, description="Самый старый из последних замеров ёмкостей")
-    age_minutes: Optional[int] = None
+    measured_at: Optional[datetime] = Field(None, description="Самый свежий из последних замеров ёмкостей")
+    age_minutes: Optional[int] = Field(None, description="Возраст самого свежего замера")
+    oldest_age_minutes: Optional[int] = Field(None, description="Возраст самого старого из последних замеров ёмкостей")
     warnings: List[str] = Field(default_factory=list)
 
 
