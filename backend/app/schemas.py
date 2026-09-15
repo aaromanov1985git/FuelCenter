@@ -1643,3 +1643,61 @@ class FillsByCardResponse(BaseModel):
     totals: FillsByCardTotals
     providers: List[TopazProviderOption] = Field(default_factory=list)
     fuel_types: List[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Общие ссылки на просмотр АЗС
+# ---------------------------------------------------------------------------
+
+class StationShareCreate(BaseModel):
+    """Новая ссылка на просмотр АЗС. Срок — либо дней, либо до даты."""
+    provider_id: int
+    azs_code: str = Field(..., min_length=1, max_length=50)
+    show_tanks: bool = True
+    show_fills: bool = False
+    show_limits: bool = False
+    expires_in_days: Optional[int] = Field(None, ge=1, le=365, description="Срок действия в днях")
+    expires_at: Optional[datetime] = Field(None, description="Или конкретный момент окончания (UTC)")
+    note: Optional[str] = Field(None, max_length=200, description="Для кого — видно только в GSM")
+
+    @model_validator(mode="after")
+    def check_sections_and_expiry(self):
+        if not (self.show_tanks or self.show_fills or self.show_limits):
+            raise ValueError("Откройте хотя бы один раздел: остатки, заправки или лимиты")
+        if self.expires_in_days is None and self.expires_at is None:
+            raise ValueError("Укажите срок действия ссылки")
+        return self
+
+
+class StationShareResponse(BaseModel):
+    id: int
+    token: str
+    url_path: str
+    provider_id: int
+    provider_name: Optional[str] = None
+    azs_code: str
+    note: Optional[str] = None
+    show_tanks: bool
+    show_fills: bool
+    show_limits: bool
+    expires_at: datetime
+    revoked_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    created_by_name: Optional[str] = None
+    open_count: int = 0
+    last_opened_at: Optional[datetime] = None
+    status: str = Field(..., description="active | expired | revoked")
+
+
+class PublicShareInfo(BaseModel):
+    """Что видит получатель ссылки: АЗС, открытые разделы и срок"""
+    azs_code: str
+    provider_name: Optional[str] = None
+    gas_station_name: Optional[str] = None
+    location: Optional[str] = None
+    settlement: Optional[str] = None
+    region: Optional[str] = None
+    show_tanks: bool
+    show_fills: bool
+    show_limits: bool
+    expires_at: datetime

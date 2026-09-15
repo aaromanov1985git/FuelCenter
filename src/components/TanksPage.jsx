@@ -325,7 +325,7 @@ const TankRow = ({ tank, isAdmin, onHistory, onSettings }) => (
   </li>
 )
 
-const StationCard = ({ station, isAdmin, onHistory, onSettings }) => {
+const StationCard = ({ station, isAdmin, onHistory, onSettings, onShare }) => {
   const [expanded, setExpanded] = useState(station.fuels.length === 0)
   return (
     <article className="tnk-station" data-testid="tank-station">
@@ -345,6 +345,9 @@ const StationCard = ({ station, isAdmin, onHistory, onSettings }) => {
             </div>
           ) : null}
         </div>
+        {isAdmin && (
+          <IconButton icon="share" title="Поделиться" onClick={onShare} />
+        )}
       </header>
 
       {station.fuels.length === 0 ? (
@@ -403,6 +406,7 @@ const TanksPage = () => {
   const [syncing, setSyncing] = useState(false)
   const [historyTank, setHistoryTank] = useState(null)
   const [settingsTank, setSettingsTank] = useState(null)
+  const [shareStation, setShareStation] = useState(null)
   const [showHidden, setShowHidden] = useState(false)
 
   const load = useCallback(async () => {
@@ -548,6 +552,7 @@ const TanksPage = () => {
               isAdmin={isAdmin}
               onHistory={setHistoryTank}
               onSettings={setSettingsTank}
+              onShare={() => setShareStation(station)}
             />
           ))}
         </div>
@@ -555,6 +560,7 @@ const TanksPage = () => {
 
       <TankHistoryModal tank={historyTank} onClose={() => setHistoryTank(null)} />
       <TankSettingsModal tank={settingsTank} onClose={() => setSettingsTank(null)} onSaved={load} />
+      {shareStation && <StationShareModal station={shareStation} onClose={() => setShareStation(null)} />}
     </div>
   )
 }

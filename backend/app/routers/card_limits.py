@@ -90,7 +90,26 @@ def list_card_limits(
     _: Optional[User] = Depends(require_auth_if_enabled),
 ):
     """Лимиты карт с расходом в текущем периоде. Сортировка: сначала самые израсходованные."""
-    all_rows = db.query(CardLimit).options(joinedload(CardLimit.provider)).all()
+    return build_limits_response(
+        db, page=page, limit=limit, search=search, provider_id=provider_id, fuel_type=fuel_type,
+        limit_type_id=limit_type_id, only_enabled=only_enabled, near_limit=near_limit,
+    )
+
+
+def build_limits_response(db: Session, *, page: int = 1, limit: int = 50, search: Optional[str] = None,
+                          provider_id: Optional[int] = None, fuel_type: Optional[str] = None,
+                          limit_type_id: Optional[int] = None, only_enabled: bool = True, near_limit: bool = False,
+                          provider_scope: Optional[int] = None) -> CardLimitListResponse:
+    """
+    Лимиты с фильтрами. provider_scope жёстко ограничивает провайдера (общая ссылка на АЗС):
+    фильтр provider_id внутри области не может её расширить.
+    """
+    if provider_scope is not None:
+        provider_id = provider_scope
+    query = db.query(CardLimit).options(joinedload(CardLimit.provider))
+    if provider_scope is not None:
+        query = query.filter(CardLimit.provider_id == provider_scope)
+    all_rows = query.all()
     fuel_types = sorted({row.fuel_type for row in all_rows if row.fuel_type})
     grouped = _group_limits([row for row in all_rows if not provider_id or row.provider_id == provider_id])
 
@@ -120,13 +139,20 @@ def list_card_limits(
         item.fuel_type or "",
     ))
 
-    synced_at: Optional[datetime] = db.query(func.max(CardLimit.synced_at)).scalar()
+    synced_query = db.query(func.max(CardLimit.synced_at))
+    if provider_scope is not None:
+        synced_query = synced_query.filter(CardLimit.provider_id == provider_scope)
+    synced_at: Optional[datetime] = synced_query.scalar()
+    providers = [
+        TopazProviderOption(id=pid, name=name) for pid, name in topaz_providers(db)
+        if provider_scope is None or pid == provider_scope
+    ]
     start = (page - 1) * limit
     return CardLimitListResponse(
         total=len(items),
         items=items[start:start + limit],
         stats=stats,
         synced_at=synced_at,
-        providers=[TopazProviderOption(id=pid, name=name) for pid, name in topaz_providers(db)],
+        providers=providers,
         fuel_types=fuel_types,
     )

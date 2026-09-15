@@ -286,9 +286,17 @@ def get_tank_overview(
     _: Optional[User] = Depends(require_auth_if_enabled),
 ):
     """Остатки топлива по АЗС: ёмкости с последним замером и суммы по видам топлива."""
+    return build_tank_overview(db, provider_id=provider_id, include_inactive=include_inactive)
+
+
+def build_tank_overview(db: Session, provider_id: Optional[int] = None, azs_code: Optional[str] = None,
+                        include_inactive: bool = True, with_sync: bool = True) -> TankOverviewResponse:
+    """Остатки по АЗС; с azs_code — одна АЗС (так её видит получатель общей ссылки)."""
     query = db.query(Tank).options(joinedload(Tank.provider), joinedload(Tank.gas_station))
     if provider_id:
         query = query.filter(Tank.provider_id == provider_id)
+    if azs_code is not None:
+        query = query.filter(Tank.azs_code == azs_code)
     if not include_inactive:
         query = query.filter(Tank.is_active == True)  # noqa: E712
     tanks = query.order_by(Tank.provider_id, Tank.azs_code, Tank.tank_number, Tank.id).all()
@@ -327,22 +335,12 @@ def get_tank_overview(
             for (prov_id, azs_code), items in stations.items()
         ],
         total_tanks=len(responses),
-        sync=_sync_states(db),
+        sync=_sync_states(db) if with_sync else [],
     )
 
 
-@router.get("/{tank_id}/readings", response_model=TankReadingsResponse)
-def get_tank_readings(
-    tank_id: int,
-    date_from: Optional[datetime] = Query(None, description="С (ISO)"),
-    date_to: Optional[datetime] = Query(None, description="По (ISO)"),
-    limit: int = Query(2000, ge=1, le=10000),
-    db: Session = Depends(get_db),
-    _: Optional[User] = Depends(require_auth_if_enabled),
-):
-    """История замеров резервуара, по возрастанию времени."""
-    if not db.query(Tank.id).filter(Tank.id == tank_id).first():
-        raise HTTPException(status_code=404, detail="Резервуар не найден")
+def readings_for_tank(db: Session, tank_id: int, date_from: Optional[datetime], date_to: Optional[datetime],
+                      limit: int) -> TankReadingsResponse:
     query = db.query(TankReading).filter(TankReading.tank_id == tank_id)
     if date_from:
         query = query.filter(TankReading.measured_at >= date_from)
@@ -367,6 +365,21 @@ def get_tank_readings(
             for row in rows
         ],
     )
+
+
+@router.get("/{tank_id}/readings", response_model=TankReadingsResponse)
+def get_tank_readings(
+    tank_id: int,
+    date_from: Optional[datetime] = Query(None, description="С (ISO)"),
+    date_to: Optional[datetime] = Query(None, description="По (ISO)"),
+    limit: int = Query(2000, ge=1, le=10000),
+    db: Session = Depends(get_db),
+    _: Optional[User] = Depends(require_auth_if_enabled),
+):
+    """История замеров резервуара, по возрастанию времени."""
+    if not db.query(Tank.id).filter(Tank.id == tank_id).first():
+        raise HTTPException(status_code=404, detail="Резервуар не найден")
+    return readings_for_tank(db, tank_id, date_from, date_to, limit)
 
 
 @router.patch("/{tank_id}", response_model=TankResponse)

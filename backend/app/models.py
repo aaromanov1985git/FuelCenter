@@ -1,7 +1,7 @@
 """
 Модели базы данных для транзакций ГСМ
 """
-from sqlalchemy import Column, Integer, BigInteger, String, Numeric, DateTime, Date, Index, ForeignKey, Text, Boolean, Table, true
+from sqlalchemy import Column, Integer, BigInteger, String, Numeric, DateTime, Date, Index, ForeignKey, Text, Boolean, Table, true, false
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -1030,3 +1030,31 @@ class TopazSyncState(Base):
 
     created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления")
+
+
+class StationShare(Base):
+    """
+    Общая ссылка на просмотр АЗС без входа в GSM: секретный токен, набор разделов и срок действия
+    """
+    __tablename__ = "station_shares"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    token = Column(String(64), nullable=False, unique=True, index=True, comment="Секретный токен ссылки")
+
+    provider_id = Column(Integer, ForeignKey("providers.id"), nullable=False, index=True, comment="Провайдер АЗС")
+    azs_code = Column(String(50), nullable=False, index=True, comment="Код АЗС (как у резервуаров и транзакций)")
+    note = Column(String(200), comment="Для кого ссылка — видно только в GSM")
+
+    show_tanks = Column(Boolean, nullable=False, default=True, server_default=true(), comment="Открыты остатки в резервуарах")
+    show_fills = Column(Boolean, nullable=False, default=False, server_default=false(), comment="Открыты заправки по картам")
+    show_limits = Column(Boolean, nullable=False, default=False, server_default=false(), comment="Открыты лимиты карт")
+
+    expires_at = Column(DateTime, nullable=False, comment="Срок действия (UTC)")
+    revoked_at = Column(DateTime, comment="Когда отозвана (UTC)")
+    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="Кто создал")
+    created_by_name = Column(String(100), comment="Логин создателя на момент создания")
+    open_count = Column(Integer, nullable=False, default=0, server_default="0", comment="Сколько раз открывали")
+    last_opened_at = Column(DateTime, comment="Последнее открытие (UTC)")
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
+
+    provider = relationship("Provider")

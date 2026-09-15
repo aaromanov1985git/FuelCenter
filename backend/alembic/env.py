@@ -18,7 +18,7 @@ from app.models import (
     Transaction, Vehicle, Provider, ProviderTemplate, 
     FuelCard, UploadPeriodLock, User, GasStation, NormalizationSettings, CardInfoSchedule,
     VehicleRefuel, VehicleLocation, FuelCardAnalysisResult, Notification, NotificationSettings,
-    Tank, TankReading, CardLimit, TopazSyncState
+    Tank, TankReading, CardLimit, TopazSyncState, StationShare
 )
 
 # Конфигурация Alembic

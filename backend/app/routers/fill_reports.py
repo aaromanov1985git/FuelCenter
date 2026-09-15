@@ -159,8 +159,28 @@ def fills_detail(
     _: Optional[User] = Depends(require_auth_if_enabled),
 ):
     """Детализация «Заправок по картам»: каждая заправка на АЗС Топаза, самые свежие первыми."""
+    return build_fills_detail(db, date_from=date_from, date_to=date_to, provider_id=provider_id, card_number=card_number,
+                              azs_number=azs_number, fuel_type=fuel_type, search=search, limit=limit)
+
+
+def resolve_scope(db: Session, provider_id: Optional[int], provider_scope: Optional[int] = None):
+    """Провайдеры Топаза в области видимости и id для фильтра. provider_scope — жёсткое ограничение ссылки."""
+    topaz = topaz_providers(db)
+    if provider_scope is not None:
+        topaz = [(pid, name) for pid, name in topaz if pid == provider_scope]
+        provider_id = provider_scope
+    scope_ids = [pid for pid, _name in topaz if not provider_id or pid == provider_id]
+    return topaz, scope_ids
+
+
+def build_fills_detail(db: Session, *, date_from: Optional[date], date_to: Optional[date], provider_id: Optional[int],
+                       card_number: Optional[str], azs_number: Optional[str], fuel_type: Optional[str],
+                       search: Optional[str], limit: int, provider_scope: Optional[int] = None,
+                       azs_scope: Optional[str] = None) -> FillsDetailResponse:
     date_from, date_to = _period(date_from, date_to)
-    scope_ids = [pid for pid, _name in topaz_providers(db) if not provider_id or pid == provider_id]
+    _topaz, scope_ids = resolve_scope(db, provider_id, provider_scope)
+    if azs_scope is not None:
+        azs_number = azs_scope
     query = db.query(Transaction).filter(
         *_scope_filters(date_from, date_to, scope_ids, card_number, azs_number, fuel_type, search)
     )
@@ -202,11 +222,19 @@ def fills_by_card(
     _: Optional[User] = Depends(require_auth_if_enabled),
 ):
     """Заправки по картам за период: литры, дни с заправками, максимум в сутки и сравнение с суточным лимитом."""
+    return build_fills_summary(db, date_from=date_from, date_to=date_to, provider_id=provider_id, azs_number=azs_number,
+                               fuel_type=fuel_type, search=search, at_limit_only=at_limit_only)
+
+
+def build_fills_summary(db: Session, *, date_from: Optional[date], date_to: Optional[date], provider_id: Optional[int],
+                        azs_number: Optional[str], fuel_type: Optional[str], search: Optional[str], at_limit_only: bool,
+                        provider_scope: Optional[int] = None, azs_scope: Optional[str] = None) -> FillsByCardResponse:
     date_from, date_to = _period(date_from, date_to)
     # Отчёт — часть блока «АЗС Топаз»: только провайдеры, чьи АЗС читаются из Топаза
-    topaz = topaz_providers(db)
+    topaz, scope_ids = resolve_scope(db, provider_id, provider_scope)
     topaz_ids = [pid for pid, _name in topaz]
-    scope_ids = [pid for pid in topaz_ids if not provider_id or pid == provider_id]
+    if azs_scope is not None:
+        azs_number = azs_scope
 
     items = _summary_items(
         db, _scope_filters(date_from, date_to, scope_ids, None, azs_number, fuel_type, search),
@@ -225,7 +253,10 @@ def fills_by_card(
         providers=[TopazProviderOption(id=pid, name=name) for pid, name in topaz],
         fuel_types=[
             product for (product,) in db.query(Transaction.product)
-            .filter(Transaction.provider_id.in_(topaz_ids), Transaction.product.isnot(None))
+            .filter(
+                Transaction.provider_id.in_(topaz_ids), Transaction.product.isnot(None),
+                *([Transaction.azs_number == azs_scope] if azs_scope is not None else []),
+            )
             .distinct()
             .order_by(Transaction.product)
         ] if topaz_ids else [],
@@ -335,8 +366,18 @@ def export_fills_by_card(
     _: Optional[User] = Depends(require_auth_if_enabled),
 ):
     """XLSX: лист итогов по картам и лист заправок, сгруппированных по карте."""
+    return build_fills_export(db, date_from=date_from, date_to=date_to, provider_id=provider_id, card_number=card_number,
+                              azs_number=azs_number, fuel_type=fuel_type, search=search, at_limit_only=at_limit_only)
+
+
+def build_fills_export(db: Session, *, date_from: Optional[date], date_to: Optional[date], provider_id: Optional[int],
+                       card_number: Optional[str], azs_number: Optional[str], fuel_type: Optional[str],
+                       search: Optional[str], at_limit_only: bool, provider_scope: Optional[int] = None,
+                       azs_scope: Optional[str] = None) -> StreamingResponse:
     date_from, date_to = _period(date_from, date_to)
-    scope_ids = [pid for pid, _name in topaz_providers(db) if not provider_id or pid == provider_id]
+    _topaz, scope_ids = resolve_scope(db, provider_id, provider_scope)
+    if azs_scope is not None:
+        azs_number = azs_scope
     conditions = _scope_filters(date_from, date_to, scope_ids, card_number, azs_number, fuel_type, search)
 
     items = _summary_items(db, conditions, at_limit_only, _daily_limits(db), _provider_names(db))

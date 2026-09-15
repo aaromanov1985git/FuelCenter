@@ -45,7 +45,8 @@ from app.routers import (
     health,
     tanks,
     card_limits,
-    fill_reports
+    fill_reports,
+    station_shares
 )
 
 from app.models import Provider, User
@@ -484,6 +485,7 @@ API использует Redis для кэширования данных:
         {"name": "tanks", "description": "Резервуары АЗС. Остатки топлива по уровнемерам Топаза."},
         {"name": "card-limits", "description": "Лимиты топливных карт из Топаза с расходом в текущем периоде."},
         {"name": "reports", "description": "Отчёты по заправкам."},
+        {"name": "station-shares", "description": "Ссылки на просмотр АЗС без входа: создание, отзыв и публичный доступ по токену."},
     ],
     docs_url="/docs",
     redoc_url="/redoc",
@@ -678,6 +680,8 @@ app.include_router(health.router)
 app.include_router(tanks.router)
 app.include_router(card_limits.router)
 app.include_router(fill_reports.router)
+app.include_router(station_shares.router)
+app.include_router(station_shares.public_router)
 
 
 
