@@ -1,7 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import App from './App'
+import PublicShareView from './components/PublicShareView'
 import { ToastProvider } from './components/ToastContainer'
 import { AuthProvider } from './contexts/AuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -34,11 +35,19 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
       <ToastProvider>
-        <AuthProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/share/:token" element={<PublicShareView />} />
+            <Route
+              path="/*"
+              element={
+                <AuthProvider>
+                  <App />
+                </AuthProvider>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
       </ToastProvider>
     </ErrorBoundary>
   </React.StrictMode>

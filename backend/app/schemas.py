@@ -1421,3 +1421,283 @@ class PushSubscriptionRequest(BaseModel):
     Схема запроса на регистрацию подписки на push-уведомления
     """
     subscription: Dict[str, Any] = Field(..., description="Данные подписки на push-уведомления")
+
+# ---------------------------------------------------------------------------
+# Резервуары и лимиты карт (данные Топаза)
+# ---------------------------------------------------------------------------
+
+class TankResponse(BaseModel):
+    """Резервуар с последним замером"""
+    id: int
+    provider_id: int
+    provider_name: Optional[str] = None
+    template_id: int
+    gas_station_id: Optional[int] = None
+    gas_station_name: Optional[str] = None
+    azs_code: str
+    source_key: str
+    tank_number: Optional[int] = None
+    source_name: Optional[str] = None
+    source_fuel: Optional[str] = None
+    fuel_type: Optional[str] = Field(None, description="Вид топлива с учётом ручной поправки")
+    fuel_type_override: Optional[str] = None
+    capacity_liters: Optional[float] = None
+    overflow_group: Optional[str] = None
+    is_active: bool
+    last_measured_at: Optional[datetime] = None
+    last_volume: Optional[float] = None
+    last_mass: Optional[float] = None
+    last_density: Optional[float] = None
+    last_temperature: Optional[float] = None
+    last_water: Optional[float] = None
+    fill_percent: Optional[float] = None
+    age_minutes: Optional[int] = Field(None, description="Возраст замера по часам сервера Топаза")
+    warnings: List[str] = Field(default_factory=list, description="stale | density_mismatch | no_capacity | over_capacity | no_readings")
+
+
+class TankStationFuel(BaseModel):
+    """Остаток вида топлива на АЗС (сумма активных ёмкостей)"""
+    fuel_type: Optional[str] = None
+    volume: float
+    mass: Optional[float] = None
+    capacity_liters: Optional[float] = None
+    fill_percent: Optional[float] = None
+    tanks_count: int
+    measured_at: Optional[datetime] = Field(None, description="Самый свежий из последних замеров ёмкостей")
+    age_minutes: Optional[int] = Field(None, description="Возраст самого свежего замера")
+    oldest_age_minutes: Optional[int] = Field(None, description="Возраст самого старого из последних замеров ёмкостей")
+    estimate_base_at: Optional[datetime] = Field(None, description="Расчёт: момент общего замера всех ёмкостей (открытие смены)")
+    estimate_base_volume: Optional[float] = Field(None, description="Расчёт: объём на общем замере")
+    estimate_dispensed: Optional[float] = Field(None, description="Расчёт: отпущено этого топлива после общего замера")
+    fills_loaded_at: Optional[datetime] = Field(None, description="Расчёт: заправки загружены на это время (часы Топаза)")
+    warnings: List[str] = Field(default_factory=list)
+
+
+class TankStation(BaseModel):
+    """АЗС с резервуарами"""
+    azs_code: str
+    provider_id: int
+    provider_name: Optional[str] = None
+    gas_station_id: Optional[int] = None
+    gas_station_name: Optional[str] = None
+    location: Optional[str] = Field(None, description="Адрес АЗС из справочника")
+    settlement: Optional[str] = Field(None, description="Населённый пункт")
+    region: Optional[str] = Field(None, description="Регион")
+    fuels: List[TankStationFuel]
+    tanks: List[TankResponse]
+
+
+class TopazSyncStateResponse(BaseModel):
+    """Состояние загрузки из Топаза по шаблону"""
+    template_id: int
+    template_name: Optional[str] = None
+    provider_id: Optional[int] = None
+    provider_name: Optional[str] = None
+    source_kind: Optional[str] = None
+    last_run_at: Optional[datetime] = None
+    last_success_at: Optional[datetime] = None
+    last_status: Optional[str] = None
+    last_error: Optional[str] = None
+    tanks_count: Optional[int] = None
+    readings_added: Optional[int] = None
+    limits_count: Optional[int] = None
+
+
+class TankOverviewResponse(BaseModel):
+    """Остатки по всем АЗС"""
+    stations: List[TankStation]
+    total_tanks: int
+    sync: List[TopazSyncStateResponse]
+
+
+class TankUpdate(BaseModel):
+    """Ручные настройки резервуара. Переданный null очищает поле."""
+    capacity_liters: Optional[float] = Field(None, ge=0, le=1_000_000)
+    fuel_type_override: Optional[str] = Field(None, max_length=100)
+    overflow_group: Optional[str] = Field(None, max_length=50)
+    is_active: Optional[bool] = None
+
+
+class TankReadingPoint(BaseModel):
+    measured_at: datetime
+    volume: Optional[float] = None
+    mass: Optional[float] = None
+    density: Optional[float] = None
+    temperature: Optional[float] = None
+    water: Optional[float] = None
+
+
+class TankReadingsResponse(BaseModel):
+    tank_id: int
+    total: int
+    items: List[TankReadingPoint]
+
+
+class TopazSyncResult(BaseModel):
+    template_id: int
+    template_name: Optional[str] = None
+    provider_id: Optional[int] = None
+    status: str
+    source_kind: Optional[str] = None
+    tanks_count: int = 0
+    readings_added: int = 0
+    limits_count: int = 0
+    error: Optional[str] = None
+
+
+class CardLimitResponse(BaseModel):
+    """Лимит карты с расходом в текущем периоде"""
+    id: int
+    provider_id: int
+    provider_name: Optional[str] = None
+    card_code: Optional[str] = None
+    card_name: Optional[str] = None
+    card_enabled: bool
+    source_fuel: Optional[str] = None
+    fuel_type: Optional[str] = None
+    limit_type_id: Optional[int] = None
+    limit_type_name: Optional[str] = None
+    limit_liters: Optional[float] = None
+    period: Optional[int] = None
+    period_start: Optional[datetime] = None
+    used_liters: Optional[float] = None
+    remaining_liters: Optional[float] = None
+    used_percent: Optional[float] = None
+    synced_at: Optional[datetime] = None
+
+
+class CardLimitStats(BaseModel):
+    total: int
+    enabled: int
+    near_limit: int = Field(..., description="Израсходовано 90 % лимита и больше")
+    exhausted: int = Field(..., description="Лимит выбран полностью")
+    forbidden: int
+    without_period: int = Field(..., description="Лимит задан, но тип периода не выбран")
+
+
+class TopazProviderOption(BaseModel):
+    """Провайдер, чьи АЗС читаются из Топаза — вариант фильтра"""
+    id: int
+    name: str
+
+
+class CardLimitListResponse(BaseModel):
+    total: int
+    items: List[CardLimitResponse]
+    stats: CardLimitStats
+    synced_at: Optional[datetime] = None
+    providers: List[TopazProviderOption] = Field(default_factory=list)
+    fuel_types: List[str] = Field(default_factory=list)
+
+
+class FillsByCardItem(BaseModel):
+    """Строка отчёта «Заправки по картам»"""
+    provider_id: Optional[int] = None
+    provider_name: Optional[str] = None
+    card_number: Optional[str] = None
+    fuel_type: Optional[str] = None
+    fills_count: int
+    liters: float
+    days_with_fills: int
+    max_daily_liters: float
+    avg_daily_liters: float
+    first_fill: Optional[datetime] = None
+    last_fill: Optional[datetime] = None
+    azs_numbers: List[str] = Field(default_factory=list)
+    daily_limit: Optional[float] = Field(None, description="Суточный лимит карты по этому топливу")
+    days_at_limit: Optional[int] = Field(None, description="Дней, когда выбрано 90 % суточного лимита и больше")
+
+
+class FillsByCardTotals(BaseModel):
+    cards: int
+    fills_count: int
+    liters: float
+
+
+class FillDetailItem(BaseModel):
+    """Одна заправка в детализации отчёта"""
+    id: int
+    transaction_date: datetime
+    provider_id: Optional[int] = None
+    provider_name: Optional[str] = None
+    card_number: Optional[str] = None
+    vehicle: Optional[str] = None
+    azs_number: Optional[str] = None
+    fuel_type: Optional[str] = None
+    liters: float
+
+
+class FillsDetailResponse(BaseModel):
+    date_from: date
+    date_to: date
+    total: int
+    truncated: bool = Field(False, description="Строк больше лимита — выдана только часть, самые свежие")
+    items: List[FillDetailItem]
+
+
+class FillsByCardResponse(BaseModel):
+    date_from: date
+    date_to: date
+    total: int
+    items: List[FillsByCardItem]
+    totals: FillsByCardTotals
+    providers: List[TopazProviderOption] = Field(default_factory=list)
+    fuel_types: List[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Общие ссылки на просмотр АЗС
+# ---------------------------------------------------------------------------
+
+class StationShareCreate(BaseModel):
+    """Новая ссылка на просмотр АЗС. Срок — либо дней, либо до даты."""
+    provider_id: int
+    azs_code: str = Field(..., min_length=1, max_length=50)
+    show_tanks: bool = True
+    show_fills: bool = False
+    show_limits: bool = False
+    expires_in_days: Optional[int] = Field(None, ge=1, le=365, description="Срок действия в днях")
+    expires_at: Optional[datetime] = Field(None, description="Или конкретный момент окончания (UTC)")
+    note: Optional[str] = Field(None, max_length=200, description="Для кого — видно только в GSM")
+
+    @model_validator(mode="after")
+    def check_sections_and_expiry(self):
+        if not (self.show_tanks or self.show_fills or self.show_limits):
+            raise ValueError("Откройте хотя бы один раздел: остатки, заправки или лимиты")
+        if self.expires_in_days is None and self.expires_at is None:
+            raise ValueError("Укажите срок действия ссылки")
+        return self
+
+
+class StationShareResponse(BaseModel):
+    id: int
+    token: str
+    url_path: str
+    provider_id: int
+    provider_name: Optional[str] = None
+    azs_code: str
+    note: Optional[str] = None
+    show_tanks: bool
+    show_fills: bool
+    show_limits: bool
+    expires_at: datetime
+    revoked_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    created_by_name: Optional[str] = None
+    open_count: int = 0
+    last_opened_at: Optional[datetime] = None
+    status: str = Field(..., description="active | expired | revoked")
+
+
+class PublicShareInfo(BaseModel):
+    """Что видит получатель ссылки: АЗС, открытые разделы и срок"""
+    azs_code: str
+    provider_name: Optional[str] = None
+    gas_station_name: Optional[str] = None
+    location: Optional[str] = None
+    settlement: Optional[str] = None
+    region: Optional[str] = None
+    show_tanks: bool
+    show_fills: bool
+    show_limits: bool
+    expires_at: datetime

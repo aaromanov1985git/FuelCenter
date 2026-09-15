@@ -1505,8 +1505,8 @@ async def load_from_firebird(
             logger.warning("Не удалось зафиксировать событие загрузки из Firebird", exc_info=True)
         
         logger.info("Загрузка данных из Firebird завершена", extra={
-            "created": created_count,
-            "skipped": skipped_count,
+            "created_count": created_count,
+            "skipped_count": skipped_count,
             "template_id": template_id
         })
         

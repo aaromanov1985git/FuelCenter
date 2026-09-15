@@ -22,6 +22,16 @@ const NAV_GROUPS = [
     ],
   },
   {
+    // Данные собственных АЗС из баз Топаза: остатки, заправки и лимиты карт
+    id: 'topaz',
+    title: 'АЗС Топаз',
+    items: [
+      { tab: 'tanks', icon: 'tank', label: 'Резервуары' },
+      { tab: 'fills-report', icon: 'file', label: 'Заправки' },
+      { tab: 'card-limits', icon: 'gauge', label: 'Лимиты карт' },
+    ],
+  },
+  {
     id: 'registry',
     title: 'Справочники',
     items: [

@@ -6,7 +6,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from apscheduler.triggers.date import DateTrigger
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Dict
 from sqlalchemy.orm import Session
 from app.models import ProviderTemplate, CardInfoSchedule
@@ -132,6 +132,9 @@ class SchedulerService:
             
             # Добавляем задачу автоматического бэкапа БД
             self._add_backup_schedule()
+
+            # Добавляем загрузку резервуаров и лимитов карт из Топаза
+            self._add_topaz_sync_schedule()
             
         except Exception as e:
             logger.error("Ошибка при загрузке расписаний", extra={"error": str(e)}, exc_info=True)
@@ -712,6 +715,64 @@ class SchedulerService:
             "event_category": "startup"
         })
     
+    def _add_topaz_sync_schedule(self):
+        """
+        Добавить задачу загрузки резервуаров и лимитов карт из баз Топаза
+        """
+        import os
+
+        if os.getenv("TOPAZ_SYNC_ENABLED", "true").lower() != "true":
+            logger.info("Загрузка резервуаров и лимитов из Топаза отключена (TOPAZ_SYNC_ENABLED=false)")
+            return
+
+        interval_minutes = max(1, int(os.getenv("TOPAZ_SYNC_INTERVAL_MINUTES", "15")))
+        job_id = "topaz_tanks_limits_sync"
+
+        if self._scheduler.get_job(job_id):
+            self._scheduler.remove_job(job_id)
+
+        def run_sync():
+            db = SessionLocal()
+            try:
+                from app.services.topaz_sync_service import TopazSyncService
+                from app.services.firebird_service import FDB_AVAILABLE
+                if not FDB_AVAILABLE:
+                    logger.warning("Загрузка из Топаза пропущена: библиотека fdb недоступна")
+                    return
+                TopazSyncService(db).sync_all()
+            except Exception as e:
+                logger.error(f"Ошибка загрузки резервуаров и лимитов из Топаза: {e}", extra={
+                    "event_type": "topaz_sync",
+                    "event_category": "scheduled"
+                }, exc_info=True)
+            finally:
+                db.close()
+
+        import asyncio
+        async def run_sync_async():
+            try:
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, run_sync)
+            except Exception as e:
+                logger.error(f"Ошибка в асинхронной обертке загрузки из Топаза: {e}", exc_info=True)
+
+        self._scheduler.add_job(
+            func=run_sync_async,
+            trigger=IntervalTrigger(minutes=interval_minutes),
+            id=job_id,
+            replace_existing=True,
+            max_instances=1,
+            misfire_grace_time=300,
+            next_run_time=datetime.now() + timedelta(minutes=1),
+        )
+
+        logger.info("Добавлена задача загрузки резервуаров и лимитов из Топаза", extra={
+            "job_id": job_id,
+            "interval_minutes": interval_minutes,
+            "event_type": "scheduler",
+            "event_category": "startup"
+        })
+
     def get_scheduled_jobs(self) -> Dict:
         """
         Получить список запланированных задач

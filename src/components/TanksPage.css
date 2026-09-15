@@ -1,0 +1,384 @@
+/* ============================================================
+   TanksPage — остатки топлива по уровнемерам Топаза.
+   Токены из src/styles/tokens.css. Префикс: tnk-
+   Цвет полосы — состояние остатка (мало / внимание / норма),
+   вид топлива — нейтральный ярлык.
+   ============================================================ */
+
+.tnk-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0;
+}
+
+.tnk-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tnk-header__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -0.2px;
+}
+
+.tnk-header__subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-3);
+  max-width: 72ch;
+}
+
+.tnk-header__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tnk-header__actions .select-wrapper,
+.tnk-header__actions > div:first-child {
+  min-width: 200px;
+}
+
+.tnk-muted {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.tnk-alert {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--amber-soft);
+  color: var(--text-1);
+  font-size: 13px;
+}
+
+.tnk-alert svg {
+  color: var(--amber-ink);
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+/* ---------- Stations ---------- */
+.tnk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.tnk-station {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+.tnk-station__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.tnk-station__code {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.tnk-station__title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tnk-station__name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tnk-station__provider {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.tnk-station__label {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.tnk-station__place {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.tnk-station__place svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--text-3);
+}
+
+.tnk-fuels,
+.tnk-tanks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tnk-fuel-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tnk-fuel-row__head,
+.tnk-fuel-row__meta,
+.tnk-tank__head,
+.tnk-tank__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tnk-fuel-row__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.tnk-fuel-row__volume {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.tnk-fuel-row__meta,
+.tnk-tank__meta {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* ---------- Fill bar ---------- */
+.tnk-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.tnk-bar__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+  background: var(--text-3);
+  transition: width 0.3s ease;
+}
+
+.tnk-bar[data-tone="ok"] .tnk-bar__fill { background: var(--green); }
+.tnk-bar[data-tone="warn"] .tnk-bar__fill { background: var(--amber); }
+.tnk-bar[data-tone="low"] .tnk-bar__fill { background: var(--red); }
+.tnk-bar[data-tone="neutral"] .tnk-bar__fill { background: var(--border-strong); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tnk-bar__fill { transition: none; }
+}
+
+/* ---------- Chips ---------- */
+.tnk-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tnk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.tnk-chip[data-tone="warn"] {
+  background: var(--amber-soft);
+  color: var(--amber-ink);
+}
+
+.tnk-fuel {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+/* ---------- Tanks ---------- */
+.tnk-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tnk-tanks {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.tnk-tank {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tnk-tank.is-inactive {
+  opacity: 0.6;
+}
+
+.tnk-tank__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+.tnk-tank__volume {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.tnk-tank__percent {
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.tnk-tank__actions {
+  display: inline-flex;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.tnk-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tnk-link:hover,
+.tnk-toggle:hover {
+  text-decoration: underline;
+}
+
+.tnk-link:focus-visible,
+.tnk-toggle:focus-visible,
+.tnk-segmented__option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------- History ---------- */
+.tnk-history-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.tnk-segmented {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.tnk-segmented__option {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tnk-segmented__option.is-active {
+  background: var(--surface);
+  color: var(--text-1);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.tnk-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.tnk-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (max-width: 480px) {
+  .tnk-grid { grid-template-columns: 1fr; }
+  .tnk-header__actions { width: 100%; }
+}
