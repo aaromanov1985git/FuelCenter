@@ -2,6 +2,9 @@
  * Модальное окно создания ссылки на просмотр АЗС без входа.
  * Администратор настраивает открытые разделы и срок, получает готовую ссылку для копирования.
  * Список уже выданных ссылок по этой АЗС показывается ниже с кнопками отзыва.
+ * Он ограничен по количеству (SHARE_PREVIEW_COUNT строк, дальше «Показать все»)
+ * и по высоте (.ssm-list в CSS): ссылок может быть до 200, и без предела они
+ * растягивали тело модалки в бесконечную прокрутку, вытесняя форму создания.
  *
  * Раскладка — через слоты ui/Modal: содержимое в Modal.Body, действия в Modal.Footer.
  * Отступы тела и панель действий (разделитель, выравнивание вправо, поведение на мобильных)
@@ -22,11 +25,16 @@ const EXPIRY_OPTIONS = [
   { days: 30, label: '30 дней' },
 ]
 
+// Сколько строк списка видно, пока не нажали «Показать все»: список приходит
+// целиком (API отдаёт до 200 ссылок), и без предела он растягивал тело модалки.
+const SHARE_PREVIEW_COUNT = 3
+
 export default function StationShareModal({ station, onClose }) {
   const { error: showError, success } = useToast()
   const [loading, setLoading] = useState(false)
   const [existingShares, setExistingShares] = useState([])
   const [loadingShares, setLoadingShares] = useState(true)
+  const [showAllShares, setShowAllShares] = useState(false)
 
   const [showTanks, setShowTanks] = useState(true)
   const [showFills, setShowFills] = useState(false)
@@ -121,6 +129,9 @@ export default function StationShareModal({ station, onClose }) {
       .filter(Boolean)
       .join(', ')
 
+  const hiddenShares = existingShares.length - SHARE_PREVIEW_COUNT
+  const visibleShares = showAllShares ? existingShares : existingShares.slice(0, SHARE_PREVIEW_COUNT)
+
   return (
     <Modal isOpen onClose={onClose} title={`Поделиться АЗС ${station.azs_code}`} className="ssm">
       <Modal.Body className="ssm-body">
@@ -190,9 +201,22 @@ export default function StationShareModal({ station, onClose }) {
 
         {!loadingShares && existingShares.length > 0 && (
           <div className="ssm-existing">
-            <div className="t-label">Выданные ссылки ({existingShares.length})</div>
-            <ul className="ssm-list">
-              {existingShares.map((share) => (
+            <div className="ssm-existing__head">
+              <div className="t-label">Выданные ссылки ({existingShares.length})</div>
+              {hiddenShares > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAllShares((value) => !value)}
+                  aria-expanded={showAllShares}
+                  aria-controls="ssm-shares-list"
+                >
+                  {showAllShares ? 'Свернуть' : `Показать все (${existingShares.length})`}
+                </Button>
+              )}
+            </div>
+            <ul className="ssm-list" id="ssm-shares-list">
+              {visibleShares.map((share) => (
                 <li key={share.id} className={`ssm-item ssm-item--${share.status}`}>
                   <div className="ssm-item__main">
                     <div className="ssm-item__note">{share.note || 'Без пометки'}</div>
