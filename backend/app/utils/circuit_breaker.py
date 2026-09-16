@@ -76,7 +76,7 @@ class CircuitBreaker:
                     elapsed = (datetime.now() - self.last_failure_time).total_seconds()
                     if elapsed >= self.recovery_timeout:
                         logger.info(f"Circuit Breaker '{self.name}' переходит в HALF_OPEN", extra={
-                            "name": self.name,
+                            "breaker_name": self.name,
                             "elapsed_seconds": elapsed
                         })
                         self.state = CircuitState.HALF_OPEN
@@ -111,7 +111,7 @@ class CircuitBreaker:
         
         if self.state == CircuitState.HALF_OPEN:
             logger.info(f"Circuit Breaker '{self.name}' переходит в CLOSED после успешного запроса", extra={
-                "name": self.name
+                "breaker_name": self.name
             })
             self.state = CircuitState.CLOSED
             self.failure_count = 0
@@ -126,7 +126,7 @@ class CircuitBreaker:
         self.failure_count += 1
         
         logger.warning(f"Circuit Breaker '{self.name}': ошибка #{self.failure_count}/{self.failure_threshold}", extra={
-            "name": self.name,
+            "breaker_name": self.name,
             "failure_count": self.failure_count,
             "failure_threshold": self.failure_threshold,
             "state": self.state.value
@@ -135,7 +135,7 @@ class CircuitBreaker:
         if self.failure_count >= self.failure_threshold:
             if self.state != CircuitState.OPEN:
                 logger.error(f"Circuit Breaker '{self.name}' переходит в OPEN после {self.failure_count} ошибок", extra={
-                    "name": self.name,
+                    "breaker_name": self.name,
                     "failure_count": self.failure_count,
                     "recovery_timeout": self.recovery_timeout
                 })
@@ -143,7 +143,7 @@ class CircuitBreaker:
         elif self.state == CircuitState.HALF_OPEN:
             # В HALF_OPEN любая ошибка возвращает в OPEN
             logger.error(f"Circuit Breaker '{self.name}' возвращается в OPEN из HALF_OPEN", extra={
-                "name": self.name
+                "breaker_name": self.name
             })
             self.state = CircuitState.OPEN
     
@@ -157,7 +157,7 @@ class CircuitBreaker:
         self.failure_count = 0
         self.last_failure_time = None
         self.last_success_time = None
-        logger.info(f"Circuit Breaker '{self.name}' сброшен", extra={"name": self.name})
+        logger.info(f"Circuit Breaker '{self.name}' сброшен", extra={"breaker_name": self.name})
 
 
 class CircuitBreakerOpenError(Exception):

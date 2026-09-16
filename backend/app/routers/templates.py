@@ -644,7 +644,7 @@ async def test_api_connection_direct(
         logger.info(f"Тест подключения к {connection_type.upper()} выполнен (без шаблона)", extra={
             "success": result["success"],
             "connection_type": connection_type,
-            "message": result.get("message")
+            "result_message": result.get("message")
         })
         
         return result

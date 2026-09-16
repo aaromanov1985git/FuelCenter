@@ -1,0 +1,195 @@
+/* ============================================================
+   Лимиты карт и отчёт «Заправки по картам».
+   Токены из src/styles/tokens.css. Префикс: tpz-
+   ============================================================ */
+
+.tpz-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0;
+}
+
+.tpz-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tpz-header__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -0.2px;
+}
+
+.tpz-header__subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-3);
+  max-width: 76ch;
+}
+
+.tpz-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.tpz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Внимание кодируется рамкой, а не цветом числа */
+.tpz-stat[data-tone="warn"] {
+  border-color: var(--amber);
+}
+
+.tpz-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+.tpz-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  overflow: clip;
+}
+
+.tpz-card__state {
+  padding: 24px;
+}
+
+.tpz-card td {
+  vertical-align: top;
+}
+
+.tpz-primary {
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.tpz-muted {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.tpz-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.tpz-chip[data-tone="warn"] {
+  background: var(--amber-soft);
+  color: var(--amber-ink);
+}
+
+.tpz-usage {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+}
+
+.tpz-usage__text {
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.tpz-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.tpz-bar__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+  background: var(--border-strong);
+}
+
+.tpz-bar[data-tone="ok"] .tpz-bar__fill { background: var(--green); }
+.tpz-bar[data-tone="warn"] .tpz-bar__fill { background: var(--amber); }
+.tpz-bar[data-tone="low"] .tpz-bar__fill { background: var(--red); }
+
+.tpz-header__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Детализация заправок карты ---------- */
+.tpz-detail__lead {
+  margin: 0 0 12px;
+  font-size: 12px;
+}
+
+.tpz-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.tpz-detail__day {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: clip;
+}
+
+.tpz-detail__day-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.tpz-detail__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tpz-detail__table td {
+  padding: 6px 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text-1);
+}
+
+.tpz-detail__liters {
+  text-align: right;
+  white-space: nowrap;
+}

@@ -42,7 +42,11 @@ from app.routers import (
     notifications,
     system_settings,
     backup,
-    health
+    health,
+    tanks,
+    card_limits,
+    fill_reports,
+    station_shares
 )
 
 from app.models import Provider, User
@@ -478,6 +482,10 @@ API использует Redis для кэширования данных:
         {"name": "PPR API", "description": "Эмуляция API ППР для интеграции с 1С. Совместимость с оригинальным API."},
         {"name": "1C Integration", "description": "Интеграция с 1С ERP. Формат данных для модуля уатЗагрузкаПЦ."},
         {"name": "fuel-card-analysis", "description": "Анализ топливных карт. Выявление аномалий, статистика."},
+        {"name": "tanks", "description": "Резервуары АЗС. Остатки топлива по уровнемерам Топаза."},
+        {"name": "card-limits", "description": "Лимиты топливных карт из Топаза с расходом в текущем периоде."},
+        {"name": "reports", "description": "Отчёты по заправкам."},
+        {"name": "station-shares", "description": "Ссылки на просмотр АЗС без входа: создание, отзыв и публичный доступ по токену."},
     ],
     docs_url="/docs",
     redoc_url="/redoc",
@@ -669,6 +677,11 @@ app.include_router(notifications.router)
 app.include_router(system_settings.router)
 app.include_router(backup.router)
 app.include_router(health.router)
+app.include_router(tanks.router)
+app.include_router(card_limits.router)
+app.include_router(fill_reports.router)
+app.include_router(station_shares.router)
+app.include_router(station_shares.public_router)
 
 
 

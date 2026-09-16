@@ -1,7 +1,7 @@
 """
 Модели базы данных для транзакций ГСМ
 """
-from sqlalchemy import Column, Integer, String, Numeric, DateTime, Date, Index, ForeignKey, Text, Boolean, Table
+from sqlalchemy import Column, Integer, BigInteger, String, Numeric, DateTime, Date, Index, ForeignKey, Text, Boolean, Table, true, false
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -901,3 +901,160 @@ class SystemSettings(Base):
     # Метаданные
     created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления")
+
+class Tank(Base):
+    """
+    Резервуар (ёмкость) АЗС, прочитанный из базы Топаза.
+    Ручные поля (вместимость, поправка вида топлива, группа перелива) заполняются в GSM.
+    """
+    __tablename__ = "tanks"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+
+    provider_id = Column(Integer, ForeignKey("providers.id"), nullable=False, index=True, comment="ID провайдера")
+    template_id = Column(Integer, ForeignKey("provider_templates.id"), nullable=False, index=True, comment="Шаблон-источник подключения")
+    gas_station_id = Column(Integer, ForeignKey("gas_stations.id"), nullable=True, index=True, comment="АЗС в справочнике GSM")
+
+    azs_code = Column(String(50), nullable=False, index=True, comment="Код АЗС (торговой точки) в Топазе")
+    source_key = Column(String(100), nullable=False, comment="Ключ резервуара в источнике: snap:<TankID> или ses:<АЗС>:<номер>")
+    tank_number = Column(Integer, comment="Номер ёмкости")
+    source_name = Column(String(200), comment="Наименование ёмкости в Топазе")
+    source_fuel = Column(String(100), comment="Вид топлива по данным Топаза")
+
+    fuel_type_override = Column(String(100), comment="Вид топлива, заданный вручную")
+    capacity_liters = Column(Numeric(12, 2), comment="Вместимость, л")
+    overflow_group = Column(String(50), comment="Группа перелива: ёмкости с одинаковой группой соединены")
+    is_active = Column(Boolean, nullable=False, default=True, server_default=true(), comment="Учитывать ёмкость в остатках")
+
+    last_measured_at = Column(DateTime, comment="Время последнего замера")
+    last_volume = Column(Numeric(12, 2), comment="Объём на последнем замере, л")
+    last_mass = Column(Numeric(12, 2), comment="Масса на последнем замере, кг")
+    last_density = Column(Numeric(8, 2), comment="Плотность на последнем замере, кг/м3")
+    last_temperature = Column(Numeric(6, 2), comment="Температура на последнем замере, °C")
+    last_water = Column(Numeric(10, 2), comment="Подтоварная вода на последнем замере")
+
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления")
+
+    provider = relationship("Provider")
+    gas_station = relationship("GasStation")
+    readings = relationship("TankReading", back_populates="tank", cascade="all, delete-orphan", passive_deletes=True)
+
+    __table_args__ = (
+        Index('idx_tank_template_source', 'template_id', 'source_key', unique=True),
+    )
+
+
+class TankReading(Base):
+    """
+    Замер уровнемера по резервуару
+    """
+    __tablename__ = "tank_readings"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    tank_id = Column(Integer, ForeignKey("tanks.id", ondelete="CASCADE"), nullable=False, comment="ID резервуара")
+    measured_at = Column(DateTime, nullable=False, comment="Время замера (по часам базы Топаза)")
+    volume = Column(Numeric(12, 2), comment="Объём, л")
+    mass = Column(Numeric(12, 2), comment="Масса, кг")
+    density = Column(Numeric(8, 2), comment="Плотность, кг/м3")
+    temperature = Column(Numeric(6, 2), comment="Температура, °C")
+    water = Column(Numeric(10, 2), comment="Подтоварная вода")
+    source_row_id = Column(BigInteger, nullable=False, comment="ID строки в источнике")
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата загрузки")
+
+    tank = relationship("Tank", back_populates="readings")
+
+    __table_args__ = (
+        Index('idx_tank_reading_source', 'tank_id', 'source_row_id', unique=True),
+        Index('idx_tank_reading_time', 'tank_id', 'measured_at'),
+    )
+
+
+class CardLimit(Base):
+    """
+    Лимит топливной карты из базы Топаза с расходом в текущем периоде
+    """
+    __tablename__ = "card_limits"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+
+    provider_id = Column(Integer, ForeignKey("providers.id"), nullable=False, index=True, comment="ID провайдера")
+    template_id = Column(Integer, ForeignKey("provider_templates.id"), nullable=False, index=True, comment="Шаблон-источник подключения")
+
+    source_card_id = Column(Integer, nullable=False, comment="CardID в Топазе")
+    source_fuel_id = Column(Integer, nullable=False, comment="AmountID (вид топлива) в Топазе")
+    card_code = Column(String(50), index=True, comment="Код карты")
+    card_name = Column(String(200), index=True, comment="Наименование карты")
+    card_enabled = Column(Boolean, nullable=False, default=True, comment="Карта включена в Топазе")
+
+    source_fuel = Column(String(100), comment="Вид топлива по данным Топаза")
+    fuel_type = Column(String(100), index=True, comment="Вид топлива после нормализации")
+
+    limit_type_id = Column(Integer, comment="Тип периода лимита (sysLimitTypes)")
+    limit_type_name = Column(String(100), comment="Название типа периода")
+    limit_liters = Column(Numeric(12, 2), comment="Лимит, л")
+    period = Column(Integer, comment="Параметр периода")
+
+    period_start = Column(DateTime, comment="Начало текущего периода лимита")
+    used_liters = Column(Numeric(12, 2), comment="Израсходовано в текущем периоде, л")
+    synced_at = Column(DateTime, comment="Когда данные прочитаны из Топаза")
+
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления")
+
+    provider = relationship("Provider")
+
+    __table_args__ = (
+        Index('idx_card_limit_source', 'template_id', 'source_card_id', 'source_fuel_id', unique=True),
+    )
+
+
+class TopazSyncState(Base):
+    """
+    Состояние загрузки резервуаров и лимитов из Топаза по шаблону
+    """
+    __tablename__ = "topaz_sync_states"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    template_id = Column(Integer, ForeignKey("provider_templates.id"), nullable=False, unique=True, comment="Шаблон подключения")
+    source_kind = Column(String(20), comment="snapshots — снимки уровнемера, sessions — замеры смен")
+    last_tank_row_id = Column(BigInteger, nullable=False, default=0, server_default="0", comment="Последний загруженный ID строки замеров")
+    last_run_at = Column(DateTime, comment="Последний запуск")
+    source_clock = Column(DateTime, comment="Время на часах сервера Топаза в момент last_run_at")
+    last_success_at = Column(DateTime, comment="Последний успешный запуск")
+    last_status = Column(String(20), comment="success | failed")
+    last_error = Column(Text, comment="Текст последней ошибки")
+    tanks_count = Column(Integer, comment="Резервуаров в источнике")
+    readings_added = Column(Integer, comment="Замеров добавлено за последний запуск")
+    limits_count = Column(Integer, comment="Лимитов прочитано за последний запуск")
+
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), comment="Дата обновления")
+
+
+class StationShare(Base):
+    """
+    Общая ссылка на просмотр АЗС без входа в GSM: секретный токен, набор разделов и срок действия
+    """
+    __tablename__ = "station_shares"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    token = Column(String(64), nullable=False, unique=True, index=True, comment="Секретный токен ссылки")
+
+    provider_id = Column(Integer, ForeignKey("providers.id"), nullable=False, index=True, comment="Провайдер АЗС")
+    azs_code = Column(String(50), nullable=False, index=True, comment="Код АЗС (как у резервуаров и транзакций)")
+    note = Column(String(200), comment="Для кого ссылка — видно только в GSM")
+
+    show_tanks = Column(Boolean, nullable=False, default=True, server_default=true(), comment="Открыты остатки в резервуарах")
+    show_fills = Column(Boolean, nullable=False, default=False, server_default=false(), comment="Открыты заправки по картам")
+    show_limits = Column(Boolean, nullable=False, default=False, server_default=false(), comment="Открыты лимиты карт")
+
+    expires_at = Column(DateTime, nullable=False, comment="Срок действия (UTC)")
+    revoked_at = Column(DateTime, comment="Когда отозвана (UTC)")
+    created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, comment="Кто создал")
+    created_by_name = Column(String(100), comment="Логин создателя на момент создания")
+    open_count = Column(Integer, nullable=False, default=0, server_default="0", comment="Сколько раз открывали")
+    last_opened_at = Column(DateTime, comment="Последнее открытие (UTC)")
+    created_at = Column(DateTime, server_default=func.now(), comment="Дата создания")
+
+    provider = relationship("Provider")
