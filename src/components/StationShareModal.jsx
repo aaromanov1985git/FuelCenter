@@ -7,12 +7,21 @@ import { useEffect, useState } from 'react'
 import Modal from './ui/Modal/Modal'
 import Checkbox from './ui/Checkbox/Checkbox'
 import Button from './ui/Button/Button'
-import Icon from './ui/Icon/Icon'
+import Icon from './ui/Icon'
+import Input from './ui/Input/Input'
+import Badge from './ui/Badge/Badge'
+import IconButton from './IconButton'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
 import './StationShareModal.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
+
+const EXPIRY_OPTIONS = [
+  { days: 1, label: '1 день' },
+  { days: 7, label: '7 дней' },
+  { days: 30, label: '30 дней' },
+]
 
 export default function StationShareModal({ station, onClose }) {
   const { error: showError, success } = useToast()
@@ -104,6 +113,15 @@ export default function StationShareModal({ station, onClose }) {
     navigator.clipboard.writeText(url).then(() => success('Ссылка скопирована'))
   }
 
+  const shareSections = (share) =>
+    [
+      share.show_tanks && 'резервуары',
+      share.show_fills && 'заправки',
+      share.show_limits && 'лимиты',
+    ]
+      .filter(Boolean)
+      .join(', ')
+
   return (
     <Modal isOpen onClose={onClose} title={`Поделиться АЗС ${station.azs_code}`} className="ssm">
       <div className="ssm-body">
@@ -126,16 +144,7 @@ export default function StationShareModal({ station, onClose }) {
             </div>
             <div className="ssm-created__meta">
               <p>Доступ до {new Date(createdShare.expires_at).toLocaleString('ru-RU')}</p>
-              <p>
-                Открыты:{' '}
-                {[
-                  createdShare.show_tanks && 'резервуары',
-                  createdShare.show_fills && 'заправки',
-                  createdShare.show_limits && 'лимиты',
-                ]
-                  .filter(Boolean)
-                  .join(', ')}
-              </p>
+              <p>Открыты: {shareSections(createdShare)}</p>
             </div>
             <Button onClick={() => setCreatedShare(null)} variant="secondary">
               Создать ещё
@@ -155,31 +164,30 @@ export default function StationShareModal({ station, onClose }) {
 
               <div className="ssm-section">
                 <h4>Срок действия</h4>
-                <div className="ssm-expiry">
-                  {[1, 7, 30].map((days) => (
+                <div className="ssm-segmented" role="radiogroup" aria-label="Срок действия ссылки">
+                  {EXPIRY_OPTIONS.map(({ days, label }) => (
                     <button
                       key={days}
                       type="button"
-                      className={`ssm-expiry__btn ${expiresInDays === days ? 'ssm-expiry__btn--active' : ''}`}
+                      role="radio"
+                      aria-checked={expiresInDays === days}
+                      className={`ssm-segmented__btn${expiresInDays === days ? ' is-active' : ''}`}
                       onClick={() => setExpiresInDays(days)}
                     >
-                      {days === 1 ? '1 день' : `${days} дней`}
+                      {label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="ssm-section">
-                <label htmlFor="ssm-note">Для кого (видно только в GSM)</label>
-                <input
-                  id="ssm-note"
-                  type="text"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Подрядчик Север"
-                  maxLength={200}
-                />
-              </div>
+              <Input
+                name="ssm-note"
+                label="Для кого (видно только в GSM)"
+                placeholder="Подрядчик Север"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                maxLength={200}
+              />
             </div>
 
             <div className="ssm-actions">
@@ -205,33 +213,17 @@ export default function StationShareModal({ station, onClose }) {
                       {share.status === 'active' && (
                         <>до {new Date(share.expires_at).toLocaleDateString('ru-RU')}</>
                       )}
-                      {share.status === 'expired' && <span className="ssm-badge ssm-badge--expired">истёк</span>}
-                      {share.status === 'revoked' && <span className="ssm-badge ssm-badge--revoked">отозвана</span>}
-                      {' · '}
-                      {[
-                        share.show_tanks && 'резервуары',
-                        share.show_fills && 'заправки',
-                        share.show_limits && 'лимиты',
-                      ]
-                        .filter(Boolean)
-                        .join(', ')}
+                      {share.status === 'expired' && <Badge variant="warning" size="sm">истёк</Badge>}
+                      {share.status === 'revoked' && <Badge variant="error" size="sm">отозвана</Badge>}
                       {share.open_count > 0 && ` · открывали ${share.open_count}`}
+                      <span className="ssm-item__sections">{shareSections(share)}</span>
                     </div>
                   </div>
                   <div className="ssm-item__actions">
                     {share.status === 'active' && (
                       <>
-                        <button type="button" className="ssm-icon-btn" onClick={() => copyLink(share.token)} title="Скопировать">
-                          <Icon name="copy" size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="ssm-icon-btn ssm-icon-btn--danger"
-                          onClick={() => handleRevoke(share.id)}
-                          title="Отозвать"
-                        >
-                          <Icon name="close" size={16} />
-                        </button>
+                        <IconButton icon="copy" title="Скопировать" onClick={() => copyLink(share.token)} />
+                        <IconButton icon="delete" variant="error" title="Отозвать" onClick={() => handleRevoke(share.id)} />
                       </>
                     )}
                   </div>

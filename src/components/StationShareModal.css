@@ -1,144 +1,143 @@
-/* Модальное окно создания ссылки на просмотр АЗС */
+/* Модальное окно «Поделиться АЗС». Поля и кнопки — компоненты ui/,
+   здесь только раскладка секций, сегментный переключатель срока и список ссылок. */
 
 .ssm-body {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.ssm-form {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
+.ssm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ssm-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .ssm-section h4 {
-  margin: 0 0 12px;
-  font-size: 14px;
+  margin: 0;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--text-1);
-}
-
-.ssm-section label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-1);
-}
-
-.ssm-section input[type="text"] {
-  width: 100%;
-  padding: 10px 12px;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-small);
-  font-size: 14px;
-  color: var(--text-1);
-  transition: border-color 0.2s;
-}
-
-.ssm-section input[type="text"]:focus {
-  outline: none;
-  border-color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
 }
 
 .ssm-checkboxes {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.ssm-expiry {
-  display: flex;
-  gap: 8px;
-}
+/* Сегментный переключатель срока действия */
 
-.ssm-expiry__btn {
-  flex: 1;
-  padding: 10px 16px;
-  background: var(--surface-1);
+.ssm-segmented {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  gap: 2px;
+  background: var(--surface-2);
   border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
+}
+
+.ssm-segmented__btn {
+  padding: 7px 14px;
+  border: none;
   border-radius: var(--radius-small);
-  font-size: 14px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-2);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 
-.ssm-expiry__btn:hover {
-  background: var(--surface-2);
-  border-color: var(--primary);
+.ssm-segmented__btn:hover {
   color: var(--text-1);
 }
 
-.ssm-expiry__btn--active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: white;
+.ssm-segmented__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
-.ssm-expiry__btn--active:hover {
-  background: var(--primary-hover);
+.ssm-segmented__btn.is-active {
+  background: var(--surface);
+  color: var(--text-1);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
 }
+
+/* Кнопки формы */
 
 .ssm-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   justify-content: flex-end;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
 }
+
+/* Готовая ссылка */
 
 .ssm-created {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 24px 0;
+  gap: 14px;
+  padding: 12px 0 4px;
   text-align: center;
 }
 
 .ssm-created__icon {
-  width: 64px;
-  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--success-bg);
-  color: var(--success);
-  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green-ink);
 }
 
 .ssm-created__icon svg {
-  width: 36px;
-  height: 36px;
+  width: 22px;
+  height: 22px;
 }
 
 .ssm-created h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-1);
 }
 
 .ssm-link {
-  width: 100%;
   display: flex;
   gap: 8px;
+  width: 100%;
 }
 
 .ssm-link input {
   flex: 1;
-  padding: 10px 12px;
-  background: var(--surface-1);
+  min-width: 0;
+  padding: 9px 12px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-small);
-  font-size: 13px;
-  font-family: var(--font-mono);
+  border-radius: var(--radius-medium);
+  background: var(--surface-2);
   color: var(--text-1);
-  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.ssm-link input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
 }
 
 .ssm-created__meta {
@@ -153,22 +152,29 @@
   margin: 0;
 }
 
+/* Список выданных ссылок */
+
 .ssm-existing {
-  padding-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
   border-top: 1px solid var(--border);
 }
 
 .ssm-existing h4 {
-  margin: 0 0 12px;
-  font-size: 14px;
+  margin: 0;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--text-1);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
 }
 
 .ssm-list {
-  list-style: none;
-  padding: 0;
   margin: 0;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -176,31 +182,30 @@
 
 .ssm-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  padding: 12px;
-  background: var(--surface-1);
+  padding: 10px 12px;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-small);
+  border-radius: var(--radius-medium);
 }
 
-.ssm-item--expired,
-.ssm-item--revoked {
-  opacity: 0.6;
+.ssm-item--revoked,
+.ssm-item--expired {
+  opacity: 0.7;
 }
 
 .ssm-item__main {
-  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 0;
+  gap: 3px;
 }
 
 .ssm-item__note {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-1);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -208,79 +213,21 @@
 }
 
 .ssm-item__meta {
-  font-size: 12px;
-  color: var(--text-3);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-3);
 }
 
-.ssm-badge {
-  padding: 2px 6px;
-  border-radius: var(--radius-small);
+.ssm-item__sections {
   font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.ssm-badge--expired {
-  background: var(--warning-bg);
-  color: var(--warning-text);
-}
-
-.ssm-badge--revoked {
-  background: var(--error-bg);
-  color: var(--error-text);
+  color: var(--text-3);
 }
 
 .ssm-item__actions {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
-}
-
-.ssm-icon-btn {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-small);
-  color: var(--text-2);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.ssm-icon-btn:hover {
-  background: var(--surface-2);
-  color: var(--text-1);
-}
-
-.ssm-icon-btn--danger:hover {
-  background: var(--error-bg);
-  color: var(--error);
-}
-
-@media (max-width: 640px) {
-  .ssm-expiry {
-    flex-direction: column;
-  }
-
-  .ssm-link {
-    flex-direction: column;
-  }
-
-  .ssm-item {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .ssm-item__actions {
-    align-self: stretch;
-    justify-content: flex-end;
-  }
 }

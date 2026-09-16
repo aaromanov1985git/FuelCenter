@@ -1,73 +1,200 @@
-/* --- Секции данных (резервуары / заправки / лимиты) --- */
+/* Публичная страница ссылки: каркас (шапка, вкладки, карточки топлива).
+   Таблицы, плитки статистики и шкалы — общие классы TopazLists.css. */
+
+.psv-root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* --- Шапка станции --- */
+
+.psv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-large);
+  box-shadow: var(--shadow-sm);
+}
+
+.psv-station {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.psv-station__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  border-radius: var(--radius-medium);
+  color: var(--accent);
+}
+
+.psv-station__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.psv-station__name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1);
+  line-height: 1.3;
+}
+
+.psv-station__provider {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.psv-station__location {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.psv-station__location svg {
+  flex-shrink: 0;
+}
+
+.psv-expiry {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.psv-expiry svg {
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+/* --- Вкладки-сегменты --- */
+
+.psv-tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-medium);
+}
+
+.psv-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: var(--radius-small);
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.psv-tab:hover {
+  color: var(--text-1);
+}
+
+.psv-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.psv-tab.is-active {
+  background: var(--surface);
+  color: var(--text-1);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.psv-tab svg {
+  flex-shrink: 0;
+}
+
+/* --- Секции --- */
+
+.psv-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
 .psv-section__title {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 20px;
+  margin: 8px 0 0;
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-1);
 }
 
 .psv-section__title svg {
-  width: 22px;
-  height: 22px;
-  color: var(--primary);
-  flex-shrink: 0;
-}
-
-.psv-section__title + .psv-section__title {
-  margin-top: 28px;
-}
-
-.psv-section__subtitle {
-  margin: 24px 0 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-2);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.psv-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 48px 0;
-  color: var(--text-2);
-  font-size: 15px;
-}
-
-.psv-empty svg {
   width: 20px;
   height: 20px;
   color: var(--text-3);
+  flex-shrink: 0;
 }
 
 .psv-note {
-  margin-top: 12px;
   font-size: 13px;
   color: var(--text-3);
+  font-weight: 400;
 }
 
-/* Остатки по видам топлива */
+/* --- Карточки остатков по видам топлива --- */
 
 .psv-fuels {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  gap: 12px;
 }
 
 .psv-fuel {
-  padding: 16px;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-medium);
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-large);
+  box-shadow: var(--shadow-sm);
 }
 
 .psv-fuel__head {
@@ -89,156 +216,48 @@
 .psv-fuel__name svg {
   width: 18px;
   height: 18px;
-  color: var(--primary);
+  color: var(--text-3);
   flex-shrink: 0;
 }
 
-.psv-fuel__volume {
+.psv-fuel__percent {
   font-size: 14px;
+  font-weight: 600;
   color: var(--text-2);
-  white-space: nowrap;
 }
 
-.psv-fuel__volume strong {
+.psv-fuel__volume {
   font-size: 16px;
+  font-weight: 700;
   color: var(--text-1);
+}
+
+.psv-fuel__capacity {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-3);
 }
 
 .psv-fuel__meta {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-size: 12px;
-  color: var(--text-3);
-}
-
-/* Индикатор заполнения */
-
-.psv-bar {
-  position: relative;
-  height: 20px;
-  background: var(--surface-2);
-  border-radius: var(--radius-small);
-  overflow: hidden;
-  min-width: 120px;
-}
-
-.psv-bar__fill {
-  height: 100%;
-  border-radius: var(--radius-small);
-  transition: width 0.3s;
-}
-
-.psv-bar__fill--ok {
-  background: var(--primary);
-}
-
-.psv-bar__fill--low {
-  background: var(--warning, #e6a700);
-}
-
-.psv-bar__fill--high {
-  background: var(--error);
-}
-
-.psv-bar__label {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 8px;
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-1);
-  text-shadow: 0 0 3px rgba(255, 255, 255, 0.6);
-}
-
-/* Сводные карточки */
-
-.psv-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.psv-stat {
-  padding: 14px 16px;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-medium);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.psv-stat__icon {
-  color: var(--primary);
-}
-
-.psv-stat__icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.psv-stat__value {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-1);
-  letter-spacing: -0.02em;
-}
-
-.psv-stat__label {
-  font-size: 12px;
-  color: var(--text-3);
-}
-
-/* Таблицы */
-
-.psv-table-wrap {
-  overflow-x: auto;
-}
-
-.psv-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.psv-table th {
-  padding: 10px 12px;
-  text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-3);
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-
-.psv-table td {
-  padding: 10px 12px;
-  color: var(--text-1);
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-
-.psv-table tbody tr:hover {
-  background: var(--surface-1);
-}
-
-.psv-row--muted td {
   color: var(--text-3);
 }
 
 @media (max-width: 768px) {
+  .psv-root {
+    padding: 20px 14px 32px;
+    gap: 16px;
+  }
+
   .psv-fuels {
     grid-template-columns: 1fr;
   }
 
-  .psv-stats {
-    grid-template-columns: 1fr 1fr;
+  .psv-tabs {
+    align-self: stretch;
+    overflow-x: auto;
   }
 }

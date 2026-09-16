@@ -1,27 +1,23 @@
 /**
- * Публичная страница просмотра АЗС по ссылке — без входа в GSM
+ * Публичная страница просмотра АЗС по ссылке — без входа в GSM.
+ * Каркас страницы (шапка, вкладки, карточки топлива) — psv-* на токенах
+ * дизайн-системы; таблицы, плитки статистики и шкалы расхода — общие
+ * классы TopazLists.css и ui/Table, те же, что на внутренних страницах.
  */
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import Icon from './ui/Icon/Icon'
+import { Table, Skeleton } from './ui'
+import Icon from './ui/Icon'
+import EmptyState from './EmptyState'
+import { fillTone, formatLiters, formatPercent, formatSourceDateTime, formatSourceDate } from '../utils/topazFormat'
+import './TopazLists.css'
 import './PublicShareView.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
-const fmtNumber = (value, digits = 0) => {
+const fmtNumber = (value) => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return '—'
-  return Number(value).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: digits })
-}
-
-const fmtLiters = (value) => `${fmtNumber(value, 2)} л`
-
-const fmtDateTime = (value) => {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  return date.toLocaleString('ru-RU', {
-    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  })
+  return Number(value).toLocaleString('ru-RU')
 }
 
 async function fetchPublic(path) {
@@ -41,51 +37,83 @@ async function fetchPublic(path) {
 
 function SectionLoading() {
   return (
-    <div className="psv-loading">
-      <div className="psv-spinner" />
-      <p>Загрузка...</p>
+    <div className="tpz-card">
+      <div className="tpz-card__state"><Skeleton.Table rows={5} columns={5} /></div>
     </div>
   )
 }
 
 function SectionError({ message }) {
   return (
-    <div className="psv-error">
-      <Icon name="alert" />
-      <h2>Не удалось загрузить данные</h2>
-      <p>{message}</p>
+    <div className="tpz-card">
+      <div className="tpz-card__state">
+        <EmptyState title="Не удалось загрузить данные" message={message} icon={<Icon name="alert" size={32} />} />
+      </div>
     </div>
   )
 }
 
-function EmptyState({ text }) {
+function SectionEmpty({ text }) {
   return (
-    <div className="psv-empty">
-      <Icon name="info" />
-      <span>{text}</span>
+    <div className="tpz-card">
+      <div className="tpz-card__state">
+        <EmptyState title={text} icon={<Icon name="info" size={32} />} />
+      </div>
     </div>
   )
 }
 
-function StatCard({ icon, label, value }) {
-  return (
-    <div className="psv-stat">
-      <div className="psv-stat__icon"><Icon name={icon} /></div>
-      <div className="psv-stat__value">{value}</div>
-      <div className="psv-stat__label">{label}</div>
-    </div>
-  )
-}
-
-function FillBar({ percent }) {
+/* Шкала заполнения резервуара: тон — состояние остатка, как на внутренних страницах. */
+function FillBar({ percent, label }) {
   const value = Math.max(0, Math.min(100, Number(percent) || 0))
-  let tone = 'ok'
-  if (value >= 95) tone = 'high'
-  else if (value < 20) tone = 'low'
   return (
-    <div className="psv-bar">
-      <div className={`psv-bar__fill psv-bar__fill--${tone}`} style={{ width: `${value}%` }} />
-      <span className="psv-bar__label">{fmtNumber(percent, 1)}%</span>
+    <div
+      className="tpz-bar"
+      data-tone={fillTone(percent)}
+      role="meter"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={percent ?? undefined}
+      aria-label={label}
+    >
+      <span className="tpz-bar__fill" style={{ width: `${value}%` }} />
+    </div>
+  )
+}
+
+function FillCell({ percent }) {
+  return (
+    <div className="tpz-usage">
+      <div className="tpz-usage__text t-numeric">{formatPercent(percent)}</div>
+      <FillBar percent={percent} label="Заполнение" />
+    </div>
+  )
+}
+
+/* Для расхода лимита «много» — плохо: инвертируем шкалу заполнения. */
+const usageTone = (percent) =>
+  (percent === null || percent === undefined ? 'neutral' : fillTone(100 - percent))
+
+function UsageCell({ card }) {
+  if (card.used_percent === null || card.used_percent === undefined) return <span className="tpz-muted">—</span>
+  const width = Math.min(100, Math.max(0, card.used_percent))
+  return (
+    <div className="tpz-usage">
+      <div className="tpz-usage__text t-numeric">
+        {formatLiters(card.used_liters)} из {formatLiters(card.limit_liters)} л
+        <span className="tpz-muted"> · {formatPercent(card.used_percent)}</span>
+      </div>
+      <div
+        className="tpz-bar"
+        data-tone={usageTone(card.used_percent)}
+        role="meter"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={card.used_percent}
+        aria-label="Использование лимита"
+      >
+        <span className="tpz-bar__fill" style={{ width: `${width}%` }} />
+      </div>
     </div>
   )
 }
@@ -138,17 +166,20 @@ export default function PublicShareView() {
   if (error) {
     return (
       <div className="psv-root">
-        <div className="psv-error">
-          <Icon name="alert" />
-          <h2>Не удалось открыть ссылку</h2>
-          <p>{error}</p>
+        <div className="tpz-card">
+          <div className="tpz-card__state">
+            <EmptyState
+              title="Не удалось открыть ссылку"
+              message={error}
+              icon={<Icon name="alert" size={32} />}
+            />
+          </div>
         </div>
       </div>
     )
   }
 
-  const expiresAt = new Date(info.expires_at)
-  const expiresStr = expiresAt.toLocaleDateString('ru-RU', {
+  const expiresStr = new Date(info.expires_at).toLocaleString('ru-RU', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -163,32 +194,34 @@ export default function PublicShareView() {
 
   return (
     <div className="psv-root">
-      <div className="psv-header">
+      <header className="psv-header">
         <div className="psv-station">
-          <div className="psv-station__icon">
-            <Icon name="tank" />
-          </div>
-          <div className="psv-station__info">
-            <div className="psv-station__code">{info.gas_station_name || info.azs_code}</div>
+          <div className="psv-station__icon"><Icon name="tank" /></div>
+          <div>
+            <h1 className="psv-station__name">{info.gas_station_name || info.azs_code}</h1>
             <div className="psv-station__provider">{info.provider_name}</div>
             {(info.settlement || info.location) && (
               <div className="psv-station__location">
-                {[info.settlement, info.location].filter(Boolean).join(', ')}
+                <Icon name="pin" size={14} />
+                <span>{[info.settlement, info.location].filter(Boolean).join(', ')}</span>
               </div>
             )}
           </div>
         </div>
         <div className="psv-expiry">
-          <Icon name="clock" />
+          <Icon name="clock" size={14} />
           <span>Доступ до {expiresStr}</span>
         </div>
-      </div>
+      </header>
 
-      <div className="psv-tabs">
+      <div className="psv-tabs" role="tablist" aria-label="Разделы">
         {tabs.map(tab => (
           <button
             key={tab.key}
-            className={`psv-tab ${activeTab === tab.key ? 'psv-tab--active' : ''}`}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.key}
+            className={`psv-tab${activeTab === tab.key ? ' is-active' : ''}`}
             onClick={() => setActiveTab(tab.key)}
           >
             <Icon name={tab.icon} />
@@ -219,25 +252,45 @@ function ShareTanks({ token }) {
   }, [token])
 
   if (error) {
-    return <div className="psv-section"><SectionError message={error} /></div>
+    return <SectionError message={error} />
   }
   if (!data) {
-    return <div className="psv-section"><SectionLoading /></div>
+    return <SectionLoading />
   }
 
   const station = data.stations && data.stations[0]
   if (!station || !station.fuels.length) {
-    return <div className="psv-section"><EmptyState text="Нет данных по резервуарам" /></div>
+    return <SectionEmpty text="Нет данных по резервуарам" />
   }
 
   const activeTanks = (station.tanks || []).filter(tank => tank.is_active)
 
+  const columns = [
+    { key: 'number', header: '№' },
+    { key: 'fuel', header: 'Топливо' },
+    { key: 'volume', header: 'Остаток', align: 'right' },
+    { key: 'capacity', header: 'Вместимость', align: 'right' },
+    { key: 'fill', header: 'Заполнение' },
+    { key: 'measured', header: 'Последний замер' },
+  ]
+
+  const rows = activeTanks.map(tank => ({
+    id: tank.id,
+    number: <span className="t-numeric">{tank.tank_number ?? '—'}</span>,
+    fuel: tank.fuel_type || tank.source_fuel || '—',
+    volume: <span className="t-numeric">{formatLiters(tank.last_volume)} л</span>,
+    capacity: (
+      <span className="t-numeric">
+        {tank.capacity_liters ? `${fmtNumber(tank.capacity_liters)} л` : '—'}
+      </span>
+    ),
+    fill: <FillCell percent={tank.fill_percent} />,
+    measured: <span className="t-numeric">{formatSourceDateTime(tank.last_measured_at)}</span>,
+  }))
+
   return (
     <div className="psv-section">
-      <div className="psv-section__title">
-        <Icon name="gauge" />
-        <span>Остатки топлива</span>
-      </div>
+      <h2 className="psv-section__title"><Icon name="gauge" />Остатки топлива</h2>
 
       <div className="psv-fuels">
         {station.fuels.map((fuel, index) => (
@@ -247,17 +300,18 @@ function ShareTanks({ token }) {
                 <Icon name="drop" />
                 <span>{fuel.fuel_type || 'Топливо'}</span>
               </div>
-              <div className="psv-fuel__volume">
-                <strong>{fmtLiters(fuel.volume)}</strong>
-                {fuel.capacity_liters
-                  ? <span> из {fmtNumber(fuel.capacity_liters)} л</span>
-                  : null}
-              </div>
+              <span className="psv-fuel__percent t-numeric">{formatPercent(fuel.fill_percent)}</span>
             </div>
-            <FillBar percent={fuel.fill_percent} />
+            <div className="psv-fuel__volume t-numeric">
+              {formatLiters(fuel.volume)} л
+              {fuel.capacity_liters
+                ? <span className="psv-fuel__capacity"> из {fmtNumber(fuel.capacity_liters)} л</span>
+                : null}
+            </div>
+            <FillBar percent={fuel.fill_percent} label={`Заполнение: ${fuel.fuel_type || 'топливо'}`} />
             <div className="psv-fuel__meta">
               <span>Ёмкостей: {fmtNumber(fuel.tanks_count)}</span>
-              {fuel.measured_at && <span>Замер: {fmtDateTime(fuel.measured_at)}</span>}
+              {fuel.measured_at && <span>Замер: {formatSourceDateTime(fuel.measured_at)}</span>}
             </div>
           </div>
         ))}
@@ -265,35 +319,9 @@ function ShareTanks({ token }) {
 
       {activeTanks.length > 0 && (
         <>
-          <div className="psv-section__title">
-            <Icon name="tank" />
-            <span>Резервуары</span>
-          </div>
-          <div className="psv-table-wrap">
-            <table className="psv-table">
-              <thead>
-                <tr>
-                  <th>№</th>
-                  <th>Топливо</th>
-                  <th>Остаток</th>
-                  <th>Вместимость</th>
-                  <th>Заполнение</th>
-                  <th>Последний замер</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activeTanks.map(tank => (
-                  <tr key={tank.id}>
-                    <td>{tank.tank_number ?? '—'}</td>
-                    <td>{tank.fuel_type || tank.source_fuel || '—'}</td>
-                    <td>{fmtLiters(tank.last_volume)}</td>
-                    <td>{tank.capacity_liters ? `${fmtNumber(tank.capacity_liters)} л` : '—'}</td>
-                    <td><FillBar percent={tank.fill_percent} /></td>
-                    <td>{fmtDateTime(tank.last_measured_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <h2 className="psv-section__title"><Icon name="tank" />Резервуары</h2>
+          <div className="tpz-card">
+            <Table columns={columns} data={rows} sortable={false} striped hoverable compact />
           </div>
         </>
       )}
@@ -322,95 +350,97 @@ function ShareFills({ token }) {
   }, [token])
 
   if (error) {
-    return <div className="psv-section"><SectionError message={error} /></div>
+    return <SectionError message={error} />
   }
   if (!detail || !summary) {
-    return <div className="psv-section"><SectionLoading /></div>
+    return <SectionLoading />
   }
 
   const period = [detail.date_from, detail.date_to]
     .filter(Boolean)
-    .map(date => new Date(date).toLocaleDateString('ru-RU'))
+    .map(date => formatSourceDate(date))
     .join(' — ')
 
   const totals = summary.totals || {}
 
+  const tiles = [
+    { label: 'Карт', value: fmtNumber(totals.cards) },
+    { label: 'Заправок', value: fmtNumber(totals.fills_count) },
+    { label: 'Отпущено, л', value: formatLiters(totals.liters) },
+  ]
+
+  const summaryColumns = [
+    { key: 'card', header: 'Карта' },
+    { key: 'fuel', header: 'Топливо' },
+    { key: 'count', header: 'Заправок', align: 'right' },
+    { key: 'liters', header: 'Литров', align: 'right' },
+    { key: 'last', header: 'Последняя заправка' },
+  ]
+
+  const summaryRows = (summary.items || []).map((item, index) => ({
+    id: `${item.card_number}-${item.fuel_type}-${index}`,
+    card: <span className="t-numeric">{item.card_number || '—'}</span>,
+    fuel: item.fuel_type || '—',
+    count: <span className="t-numeric">{fmtNumber(item.fills_count)}</span>,
+    liters: <span className="t-numeric">{formatLiters(item.liters)} л</span>,
+    last: <span className="t-numeric">{formatSourceDateTime(item.last_fill)}</span>,
+  }))
+
+  const detailColumns = [
+    { key: 'date', header: 'Дата и время' },
+    { key: 'card', header: 'Карта' },
+    { key: 'vehicle', header: 'Транспорт' },
+    { key: 'fuel', header: 'Топливо' },
+    { key: 'liters', header: 'Литров', align: 'right' },
+  ]
+
+  const detailRows = (detail.items || []).map(fill => ({
+    id: fill.id,
+    date: <span className="t-numeric">{formatSourceDateTime(fill.transaction_date)}</span>,
+    card: <span className="t-numeric">{fill.card_number || '—'}</span>,
+    vehicle: fill.vehicle || '—',
+    fuel: fill.fuel_type || '—',
+    liters: <span className="t-numeric">{formatLiters(fill.liters)} л</span>,
+  }))
+
   return (
     <div className="psv-section">
-      <div className="psv-section__title">
-        <Icon name="truck" />
-        <span>Заправки по картам{period ? ` (${period})` : ''}</span>
+      <h2 className="psv-section__title">
+        <Icon name="truck" />Заправки по картам{period ? ` (${period})` : ''}
+      </h2>
+
+      <div className="tpz-stats">
+        {tiles.map(tile => (
+          <div key={tile.label} className="tpz-stat">
+            <div className="t-label">{tile.label}</div>
+            <div className="t-value-sm">{tile.value}</div>
+          </div>
+        ))}
       </div>
 
-      <div className="psv-stats">
-        <StatCard icon="card" label="Карт" value={fmtNumber(totals.cards)} />
-        <StatCard icon="truck" label="Заправок" value={fmtNumber(totals.fills_count)} />
-        <StatCard icon="drop" label="Отпущено" value={fmtLiters(totals.liters)} />
-      </div>
-
-      {(summary.items || []).length > 0 && (
+      {summaryRows.length > 0 && (
         <>
-          <div className="psv-section__subtitle">Сводка по картам</div>
-          <div className="psv-table-wrap">
-            <table className="psv-table">
-              <thead>
-                <tr>
-                  <th>Карта</th>
-                  <th>Топливо</th>
-                  <th>Заправок</th>
-                  <th>Литров</th>
-                  <th>Последняя заправка</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.items.map((item, index) => (
-                  <tr key={`${item.card_number}-${item.fuel_type}-${index}`}>
-                    <td>{item.card_number || '—'}</td>
-                    <td>{item.fuel_type || '—'}</td>
-                    <td>{fmtNumber(item.fills_count)}</td>
-                    <td>{fmtLiters(item.liters)}</td>
-                    <td>{fmtDateTime(item.last_fill)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <h3 className="t-caption">Сводка по картам</h3>
+          <div className="tpz-card">
+            <Table columns={summaryColumns} data={summaryRows} sortable={false} striped hoverable compact />
           </div>
         </>
       )}
 
-      {(detail.items || []).length > 0 ? (
+      {detailRows.length > 0 ? (
         <>
-          <div className="psv-section__subtitle">
+          <h3 className="t-caption">
             Детализация
-            {detail.truncated && <span className="psv-note"> — показаны последние {detail.items.length} из {fmtNumber(detail.total)}</span>}
-          </div>
-          <div className="psv-table-wrap">
-            <table className="psv-table">
-              <thead>
-                <tr>
-                  <th>Дата и время</th>
-                  <th>Карта</th>
-                  <th>Транспорт</th>
-                  <th>Топливо</th>
-                  <th>Литров</th>
-                </tr>
-              </thead>
-              <tbody>
-                {detail.items.map(fill => (
-                  <tr key={fill.id}>
-                    <td>{fmtDateTime(fill.transaction_date)}</td>
-                    <td>{fill.card_number || '—'}</td>
-                    <td>{fill.vehicle || '—'}</td>
-                    <td>{fill.fuel_type || '—'}</td>
-                    <td>{fmtLiters(fill.liters)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {detail.truncated && (
+              <span className="psv-note"> — показаны последние {detail.items.length} из {fmtNumber(detail.total)}</span>
+            )}
+          </h3>
+          <div className="tpz-card">
+            <Table columns={detailColumns} data={detailRows} sortable={false} striped hoverable compact />
           </div>
         </>
       ) : (
-        <EmptyState text="За период заправок не было" />
+        <SectionEmpty text="За период заправок не было" />
       )}
     </div>
   )
@@ -429,58 +459,65 @@ function ShareLimits({ token }) {
   }, [token])
 
   if (error) {
-    return <div className="psv-section"><SectionError message={error} /></div>
+    return <SectionError message={error} />
   }
   if (!data) {
-    return <div className="psv-section"><SectionLoading /></div>
+    return <SectionLoading />
   }
 
   if (!data.items || !data.items.length) {
-    return <div className="psv-section"><EmptyState text="Лимиты карт не найдены" /></div>
+    return <SectionEmpty text="Лимиты карт не найдены" />
   }
 
   const stats = data.stats || {}
 
+  const tiles = [
+    { label: 'Карт с лимитами', value: fmtNumber(stats.enabled) },
+    { label: 'Выбрали лимит', value: fmtNumber(stats.exhausted), tone: stats.exhausted ? 'warn' : undefined },
+    { label: 'Близко к лимиту', value: fmtNumber(stats.near_limit), tone: stats.near_limit ? 'warn' : undefined },
+  ]
+
+  const columns = [
+    { key: 'card', header: 'Карта' },
+    { key: 'fuel', header: 'Топливо' },
+    { key: 'limit', header: 'Лимит', align: 'right' },
+    { key: 'used', header: 'Израсходовано', align: 'right' },
+    { key: 'remaining', header: 'Остаток', align: 'right' },
+    { key: 'usage', header: 'Использование' },
+  ]
+
+  const rows = data.items.map(card => ({
+    id: card.id,
+    card: (
+      <div>
+        <div className="tpz-primary">{card.card_name || '—'}</div>
+        <div className="tpz-muted t-numeric">
+          {card.card_code || '—'}{card.card_enabled ? '' : ' · выключена'}
+        </div>
+      </div>
+    ),
+    fuel: card.fuel_type || '—',
+    limit: <span className="t-numeric">{card.limit_liters != null ? `${formatLiters(card.limit_liters)} л` : '—'}</span>,
+    used: <span className="t-numeric">{card.used_liters != null ? `${formatLiters(card.used_liters)} л` : '—'}</span>,
+    remaining: <span className="t-numeric">{card.remaining_liters != null ? `${formatLiters(card.remaining_liters)} л` : '—'}</span>,
+    usage: <UsageCell card={card} />,
+  }))
+
   return (
     <div className="psv-section">
-      <div className="psv-section__title">
-        <Icon name="card" />
-        <span>Лимиты топливных карт</span>
+      <h2 className="psv-section__title"><Icon name="card" />Лимиты топливных карт</h2>
+
+      <div className="tpz-stats">
+        {tiles.map(tile => (
+          <div key={tile.label} className="tpz-stat" data-tone={tile.tone}>
+            <div className="t-label">{tile.label}</div>
+            <div className="t-value-sm">{tile.value}</div>
+          </div>
+        ))}
       </div>
 
-      <div className="psv-stats">
-        <StatCard icon="card" label="Карт с лимитами" value={fmtNumber(stats.enabled)} />
-        <StatCard icon="alert" label="Выбрали лимит" value={fmtNumber(stats.exhausted)} />
-        <StatCard icon="info" label="Близко к лимиту" value={fmtNumber(stats.near_limit)} />
-      </div>
-
-      <div className="psv-table-wrap">
-        <table className="psv-table">
-          <thead>
-            <tr>
-              <th>Карта</th>
-              <th>Название</th>
-              <th>Топливо</th>
-              <th>Лимит</th>
-              <th>Израсходовано</th>
-              <th>Остаток</th>
-              <th>Использование</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.items.map(card => (
-              <tr key={card.id} className={!card.card_enabled ? 'psv-row--muted' : ''}>
-                <td>{card.card_code || '—'}</td>
-                <td>{card.card_name || '—'}</td>
-                <td>{card.fuel_type || '—'}</td>
-                <td>{card.limit_liters != null ? `${fmtNumber(card.limit_liters, 1)} л` : '—'}</td>
-                <td>{card.used_liters != null ? `${fmtNumber(card.used_liters, 1)} л` : '—'}</td>
-                <td>{card.remaining_liters != null ? `${fmtNumber(card.remaining_liters, 1)} л` : '—'}</td>
-                <td><FillBar percent={card.used_percent} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="tpz-card">
+        <Table columns={columns} data={rows} sortable={false} striped hoverable compact />
       </div>
 
       {data.total > data.items.length && (
