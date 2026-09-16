@@ -383,7 +383,12 @@ async def verify_ppr_auth(
     # Метод 1: Проверяем Bearer токен
     if credentials and credentials.credentials:
         try:
-            current_user = await get_current_user(credentials.credentials, db)
+            # Первый параметр get_current_user — request, а не токен. Раньше сюда
+            # уходила строка токена: get_token_from_cookie получал str вместо
+            # Request и падал с AttributeError. Исключение не HTTPException, его
+            # не ловил except ниже, поэтому ЛЮБОЙ запрос к ППР API с заголовком
+            # Authorization: Bearer оборачивался в 500 — и валидный тоже.
+            current_user = await get_current_user(request, credentials.credentials, db)
             return {
                 "auth_type": "bearer",
                 "user": current_user,
@@ -914,8 +919,9 @@ async def ppr_health():
 # ============================================================================
 # Оригинальные пути ППР API (/api/public-api/v2/...)
 # ============================================================================
-
-router_public_api = APIRouter(prefix="/api/public-api/v2", tags=["PPR API"])
+# Роутер объявлен один раз в начале файла. Здесь он раньше создавался заново —
+# все эндпоинты v2 ниже садились на второй экземпляр, и любой эндпоинт,
+# зарегистрированный выше по файлу, молча терялся бы при подключении в main.py.
 
 
 @router_public_api.get("")
@@ -1127,18 +1133,23 @@ async def ppr_public_api_v1_root(request: StarletteRequest):
         }
     )
     
+    # Роутер смонтирован по двум адресам (см. main.py), поэтому базу берём из
+    # самого запроса: иначе диагностика подсказывает путь, по которому клиент
+    # сюда не приходил.
+    base = request.url.path.rstrip("/")
+
     return {
         "status": "ok",
         "service": "PPR API",
         "version": "1.0",
         "api_type": "public-api-v1",
         "endpoints": {
-            "transaction-list": "/public-api/v1/transaction-list"
+            "transaction-list": f"{base}/transaction-list"
         },
         "message": "PPR Public API v1 доступен. Используйте POST запрос к /transaction-list с токеном в теле запроса.",
         "request_format": {
             "method": "POST",
-            "url": "/public-api/v1/transaction-list",
+            "url": f"{base}/transaction-list",
             "body": {
                 "token": "API_KEY",
                 "dateFrom": "YYYY-MM-DD",

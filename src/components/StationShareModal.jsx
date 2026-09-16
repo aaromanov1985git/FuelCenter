@@ -4,11 +4,12 @@
  * Список уже выданных ссылок по этой АЗС показывается ниже с кнопками отзыва.
  */
 import { useEffect, useState } from 'react'
-import Modal from './Modal'
+import Modal from './ui/Modal/Modal'
 import Checkbox from './ui/Checkbox/Checkbox'
 import Button from './ui/Button/Button'
 import Icon from './ui/Icon/Icon'
 import { useToast } from './ToastContainer'
+import { authFetch } from '../utils/api'
 import './StationShareModal.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
@@ -29,7 +30,7 @@ export default function StationShareModal({ station, onClose }) {
   const loadShares = async () => {
     setLoadingShares(true)
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `${API_URL}/api/v1/station-shares?provider_id=${station.provider_id}&azs_code=${encodeURIComponent(station.azs_code)}`,
         { credentials: 'include' }
       )
@@ -54,7 +55,7 @@ export default function StationShareModal({ station, onClose }) {
     }
     setLoading(true)
     try {
-      const response = await fetch(`${API_URL}/api/v1/station-shares`, {
+      const response = await authFetch(`${API_URL}/api/v1/station-shares`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -85,7 +86,7 @@ export default function StationShareModal({ station, onClose }) {
 
   const handleRevoke = async (shareId) => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/station-shares/${shareId}`, {
+      const response = await authFetch(`${API_URL}/api/v1/station-shares/${shareId}`, {
         method: 'DELETE',
         credentials: 'include',
       })
@@ -104,12 +105,12 @@ export default function StationShareModal({ station, onClose }) {
   }
 
   return (
-    <Modal onClose={onClose} title={`Поделиться АЗС ${station.azs_code}`} className="ssm">
+    <Modal isOpen onClose={onClose} title={`Поделиться АЗС ${station.azs_code}`} className="ssm">
       <div className="ssm-body">
         {createdShare ? (
           <div className="ssm-created">
             <div className="ssm-created__icon">
-              <Icon name="check-circle" />
+              <Icon name="check" />
             </div>
             <h3>Ссылка создана</h3>
             <div className="ssm-link">
@@ -119,7 +120,7 @@ export default function StationShareModal({ station, onClose }) {
                 readOnly
                 onClick={(e) => e.target.select()}
               />
-              <Button onClick={() => copyLink(createdShare.token)} icon="copy">
+              <Button onClick={() => copyLink(createdShare.token)} icon={<Icon name="copy" size={16} />}>
                 Скопировать
               </Button>
             </div>
@@ -229,7 +230,7 @@ export default function StationShareModal({ station, onClose }) {
                           onClick={() => handleRevoke(share.id)}
                           title="Отозвать"
                         >
-                          <Icon name="x" size={16} />
+                          <Icon name="close" size={16} />
                         </button>
                       </>
                     )}

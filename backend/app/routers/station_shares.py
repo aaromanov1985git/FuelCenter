@@ -9,7 +9,7 @@ import secrets
 from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_admin
@@ -167,7 +167,7 @@ def _active_share(db: Session, token: str, section: Optional[str] = None) -> Sta
 
 @public_router.get("/{token}", response_model=PublicShareInfo)
 @limiter.limit(PUBLIC_RATE_LIMIT)
-def public_share_info(request: Request, token: str, db: Session = Depends(get_db)):
+def public_share_info(request: Request, response: Response, token: str, db: Session = Depends(get_db)):
     """Что открыто по ссылке. Каждое открытие учитывается в счётчике."""
     share = _active_share(db, token)
     share.open_count = (share.open_count or 0) + 1
@@ -193,7 +193,7 @@ def public_share_info(request: Request, token: str, db: Session = Depends(get_db
 
 @public_router.get("/{token}/tanks", response_model=TankOverviewResponse)
 @limiter.limit(PUBLIC_RATE_LIMIT)
-def public_tanks(request: Request, token: str, db: Session = Depends(get_db)):
+def public_tanks(request: Request, response: Response, token: str, db: Session = Depends(get_db)):
     share = _active_share(db, token, "show_tanks")
     return build_tank_overview(db, provider_id=share.provider_id, azs_code=share.azs_code,
                                include_inactive=False, with_sync=False)
@@ -203,6 +203,7 @@ def public_tanks(request: Request, token: str, db: Session = Depends(get_db)):
 @limiter.limit(PUBLIC_RATE_LIMIT)
 def public_tank_readings(
     request: Request,
+    response: Response,
     token: str,
     tank_id: int,
     date_from: Optional[datetime] = Query(None),
@@ -224,6 +225,7 @@ def public_tank_readings(
 @limiter.limit(PUBLIC_RATE_LIMIT)
 def public_fills_summary(
     request: Request,
+    response: Response,
     token: str,
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -242,6 +244,7 @@ def public_fills_summary(
 @limiter.limit(PUBLIC_RATE_LIMIT)
 def public_fills_detail(
     request: Request,
+    response: Response,
     token: str,
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -261,6 +264,7 @@ def public_fills_detail(
 @limiter.limit(PUBLIC_RATE_LIMIT)
 def public_fills_export(
     request: Request,
+    response: Response,
     token: str,
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
@@ -280,6 +284,7 @@ def public_fills_export(
 @limiter.limit(PUBLIC_RATE_LIMIT)
 def public_card_limits(
     request: Request,
+    response: Response,
     token: str,
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=500),
