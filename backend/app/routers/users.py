@@ -46,7 +46,7 @@ async def list_users(
     cache_key = hashlib.md5(json.dumps(cache_key_data, sort_keys=True).encode()).hexdigest()
     cache_key_full = f"users:list:{cache_key}"
     
-    # Пробуем получить из кэша (TTL 5 минут для справочников)
+    # Пробуем получить из кэша (TTL 30 секунд - справочник часто меняется)
     cached_result = cache.get(cache_key_full, prefix="")
     if cached_result is not None:
         logger.debug("Cache hit для списка пользователей", extra={"cache_key": cache_key})
@@ -88,11 +88,11 @@ async def list_users(
 
     result = {"total": total, "items": user_responses}
     
-    # Кэшируем результат (5 минут)
+    # Кэшируем результат (30 секунд - справочник часто меняется)
     cache.set(
         cache_key_full,
         {"total": result["total"], "items": [item.model_dump() for item in result["items"]]},
-        ttl=300,
+        ttl=30,
         prefix=""
     )
     logger.debug("Cache miss, сохранено в кэш", extra={"cache_key": cache_key})
@@ -135,8 +135,8 @@ async def create_user(
     db.commit()
     db.refresh(new_user)
     
-    # Инвалидируем кэш пользователей
-    cache.delete_pattern("users:*")
+    # Инвалидируем кэш пользователей (prefix="" чтобы совпадал с кэшированием списка)
+    cache.delete_pattern("users:*", prefix="")
     logger.debug("Кэш пользователей инвалидирован после создания")
 
     logger.info(
@@ -201,8 +201,8 @@ async def update_user(
     db.commit()
     db.refresh(user)
     
-    # Инвалидируем кэш пользователей
-    cache.delete_pattern("users:*")
+    # Инвалидируем кэш пользователей (prefix="" чтобы совпадал с кэшированием списка)
+    cache.delete_pattern("users:*", prefix="")
     logger.debug("Кэш пользователей инвалидирован после обновления")
 
     logger.info(
@@ -266,8 +266,8 @@ async def delete_user(
     db.delete(user)
     db.commit()
     
-    # Инвалидируем кэш пользователей
-    cache.delete_pattern("users:*")
+    # Инвалидируем кэш пользователей (prefix="" чтобы совпадал с кэшированием списка)
+    cache.delete_pattern("users:*", prefix="")
     logger.debug("Кэш пользователей инвалидирован после удаления")
 
     logger.info(

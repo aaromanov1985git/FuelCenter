@@ -127,8 +127,8 @@ async def create_provider(
             except Exception as e:
                 logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
         
-        # Инвалидируем кэш провайдеров и дашборда
-        cache.delete_pattern("providers:*")
+        # Инвалидируем кэш провайдеров и дашборда (prefix="" чтобы совпадал с кэшированием списка)
+        cache.delete_pattern("providers:*", prefix="")
         invalidate_dashboard_cache()
         logger.debug("Кэш провайдеров и дашборда инвалидирован после создания провайдера")
         
@@ -176,8 +176,8 @@ async def update_provider(
             except Exception as e:
                 logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
         
-        # Инвалидируем кэш провайдеров и дашборда
-        cache.delete_pattern("providers:*")
+        # Инвалидируем кэш провайдеров и дашборда (prefix="" чтобы совпадал с кэшированием списка)
+        cache.delete_pattern("providers:*", prefix="")
         invalidate_dashboard_cache()
         logger.debug("Кэш провайдеров и дашборда инвалидирован после обновления провайдера")
         
@@ -221,8 +221,8 @@ async def delete_provider(
         except Exception as e:
             logger.error(f"Ошибка при логировании действия пользователя: {e}", exc_info=True)
     
-    # Инвалидируем кэш провайдеров и дашборда
-    cache.delete_pattern("providers:*")
+    # Инвалидируем кэш провайдеров и дашборда (prefix="" чтобы совпадал с кэшированием списка)
+    cache.delete_pattern("providers:*", prefix="")
     invalidate_dashboard_cache()
     logger.debug("Кэш провайдеров и дашборда инвалидирован после удаления провайдера")
     
