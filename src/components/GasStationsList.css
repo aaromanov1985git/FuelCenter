@@ -168,6 +168,11 @@
 
 /* View toggle (cards / list) */
 .gsl-root .gsl-view-toggle {
+  /* Панель переносится по flex-wrap, и на ~1280px переключатель уезжал на
+     отдельную строку к левому краю, оставляя за собой пустую полосу во всю
+     ширину. Прижатый вправо, он и в одну строку стоит там же, и после переноса
+     читается как продолжение панели, а не как забытый элемент. */
+  margin-left: auto;
   display: flex;
   gap: 4px;
   background: var(--surface-2);
@@ -496,6 +501,54 @@
   overflow: clip;
 }
 
+/* ---------- Таблица справочника ----------
+   Раскладка фиксированная. При авторазметке ширину диктовало содержимое:
+   один развёрнутый адрес растягивал «Местоположение» до 652px, таблица
+   раздувалась до 2061px при области 1158px, и «Статус» уезжал за край. Теперь
+   узкие колонки держат заданные пиксели, текстовые делят остаток поровну, а
+   длинное значение обрезается многоточием и целиком показывается подсказкой. */
+.gsl-root .gsl-table-wrap .ui-table {
+  table-layout: fixed;
+}
+
+/* Ячейка не должна расширяться под содержимое: обрезка живёт на .gsl-ellipsis
+   внутри, но без overflow на самой ячейке фиксированная ширина не удержит
+   длинное слово. */
+.gsl-root .gsl-table-wrap .ui-table-cell.gsl-cell-text {
+  overflow: hidden;
+}
+
+.gsl-root .gsl-ellipsis {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Подсказка тут несёт свой смысл (исходное наименование до нормализации), а не
+   повторяет обрезанное, поэтому даём понять, что на строку можно навести. */
+.gsl-root .gsl-ellipsis--hinted {
+  text-decoration: underline dotted var(--border-strong);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.gsl-root .gsl-cell-empty {
+  color: var(--text-3);
+}
+
+.gsl-root .gsl-status-with-hint {
+  display: inline-flex;
+  cursor: help;
+}
+
+/* Ровный шаг строк. Высоты скакали 49–53–71–72px, потому что длинные
+   наименования переносились на две-три строки; теперь перенос исключён. */
+.gsl-root .gsl-table-wrap .ui-table-body .ui-table-cell {
+  height: 44px;
+  vertical-align: middle;
+}
+
 .gsl-root .gsl-pagination-wrap {
   padding: 8px 12px;
   border-top: 1px solid var(--border);
@@ -715,4 +768,85 @@
   margin-top: 16px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+}
+
+/* ---------- Форма редактирования АЗС (gse-) ----------
+   Две смысловые группы без тяжёлых плашек: заголовок-подпись и тонкий разделитель.
+   Обязательны только наименование и номер — по ним АЗС связывается с транзакциями. */
+.gse-form {
+  display: block;
+}
+
+.gse-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gse-section + .gse-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.gse-section__title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--text-3);
+}
+
+.gse-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.gse-coords {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+/* Кнопка стоит на линии полей, а не над подписью */
+.gse-coords__map {
+  margin-top: 24px;
+  white-space: nowrap;
+}
+
+.gse-note,
+.gse-hint {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-3);
+}
+
+.gse-note {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.gse-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+@media (max-width: 560px) {
+  .gse-grid,
+  .gse-coords {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gse-coords__map {
+    margin-top: 0;
+    justify-self: start;
+  }
 }

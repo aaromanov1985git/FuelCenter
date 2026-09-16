@@ -27,6 +27,66 @@ const getProviderAccent = (name) => {
   return 'var(--text-2)'
 }
 
+/**
+ * Набор колонок по умолчанию.
+ *
+ * Раньше показывались все десять сразу, и таблица выходила 2061px при области
+ * 1158px: «Статус», ради которого наверху стоят четыре плитки, не был виден без
+ * горизонтальной прокрутки. При этом «Регион», «Населённый пункт»,
+ * «Координаты» и «Ошибки» пусты на 94–96% строк, а «Исходное наименование»
+ * почти всегда дословно повторяет «Наименование».
+ *
+ * Поэтому по умолчанию открыты только те колонки, что несут значение в каждой
+ * строке. Остальные никуда не делись — включаются в «Настроить поля», и выбор
+ * запоминается.
+ */
+const COLUMN_SETTINGS_VERSION = 2
+
+const DEFAULT_COLUMN_SETTINGS = {
+  __v: COLUMN_SETTINGS_VERSION,
+  name: { visible: true, order: 0 },
+  original_name: { visible: false, order: 1 },
+  provider: { visible: true, order: 2 },
+  azs_number: { visible: true, order: 3 },
+  location: { visible: true, order: 4 },
+  region: { visible: false, order: 5 },
+  settlement: { visible: false, order: 6 },
+  coordinates: { visible: false, order: 7 },
+  status: { visible: true, order: 8 },
+  errors: { visible: false, order: 9 },
+  actions: { visible: true, order: 10 }
+}
+
+/** Пустое значение: приглушённое тире вместо дефиса в общем тоне текста. */
+const emptyCell = <span className="gsl-cell-empty">—</span>
+
+/**
+ * Содержимое текстовой ячейки: одна строка, лишнее срезается многоточием.
+ *
+ * Полное значение отдаём системной подсказкой `title` — на полусотне строк это
+ * втрое дешевле, чем полторы сотни экземпляров Tooltip с обработчиками, и
+ * работает ровно там, где текст обрезан. Оформленный Tooltip оставлен для
+ * случая, когда подсказка несёт отдельный смысл (аргумент hint), а не просто
+ * повторяет обрезанное.
+ *
+ * @param {string|null|undefined} value - значение поля
+ * @param {string} [hint] - пояснение, которое само по себе информативно
+ * @returns {React.ReactNode} Ячейка или приглушённое тире, если значения нет
+ */
+const cellText = (value, hint) => {
+  const text = value === null || value === undefined ? '' : String(value).trim()
+  if (text === '' || text === '-') return emptyCell
+
+  if (hint) {
+    return (
+      <Tooltip content={hint} position="top" maxWidth={360}>
+        <span className="gsl-ellipsis gsl-ellipsis--hinted">{text}</span>
+      </Tooltip>
+    )
+  }
+  return <span className="gsl-ellipsis" title={text}>{text}</span>
+}
+
 /* Здесь лежал локальный набор inline-svg 12-14px со stroke-width 2 — третий
    набор иконок в проекте, со своей геометрией и своими размерами. Все значки
    теперь идут через примитив ui/Icon: контурные 16px в currentColor. */
@@ -64,6 +124,8 @@ const GasStationsList = () => {
     latitude: '',
     longitude: ''
   })
+  // Снимок формы на открытии: «Сохранить» активна, только если что-то изменили
+  const [initialEditForm, setInitialEditForm] = useState(null)
   const [formErrors, setFormErrors] = useState({})
   const [providers, setProviders] = useState([])
   const [filter, setFilter] = useState('all')
@@ -103,24 +165,17 @@ const GasStationsList = () => {
     const saved = localStorage.getItem('gasStationsColumnSettings')
     if (saved) {
       try {
-        return JSON.parse(saved)
+        const parsed = JSON.parse(saved)
+        // Старые сохранённые настройки включали все десять колонок сразу —
+        // именно они и делали таблицу вдвое шире окна. Без метки версии их
+        // нельзя отличить от осознанного выбора пользователя, поэтому
+        // настройки без версии отбрасываем и берём новый набор по умолчанию.
+        if (parsed && parsed.__v === COLUMN_SETTINGS_VERSION) return parsed
       } catch (e) {
         logger.error('Ошибка загрузки настроек колонок:', e)
       }
     }
-    return {
-      original_name: { visible: true, order: 0 },
-      name: { visible: true, order: 1 },
-      provider: { visible: true, order: 2 },
-      azs_number: { visible: true, order: 3 },
-      location: { visible: true, order: 4 },
-      region: { visible: true, order: 5 },
-      settlement: { visible: true, order: 6 },
-      coordinates: { visible: true, order: 7 },
-      status: { visible: true, order: 8 },
-      errors: { visible: true, order: 9 },
-      actions: { visible: true, order: 10 }
-    }
+    return DEFAULT_COLUMN_SETTINGS
   })
   const [draggedColumn, setDraggedColumn] = useState(null)
 
@@ -242,7 +297,7 @@ const GasStationsList = () => {
   const handleEdit = useCallback(async (gasStation) => {
     setEditingId(gasStation.id)
     const providerId = gasStation.provider_id || null
-    setEditForm({
+    const formValues = {
       original_name: gasStation.original_name || '',
       name: gasStation.name || gasStation.original_name || '',
       provider_id: providerId,
@@ -252,7 +307,9 @@ const GasStationsList = () => {
       settlement: gasStation.settlement || '',
       latitude: gasStation.latitude !== null && gasStation.latitude !== undefined ? gasStation.latitude.toString() : '',
       longitude: gasStation.longitude !== null && gasStation.longitude !== undefined ? gasStation.longitude.toString() : ''
-    })
+    }
+    setEditForm(formValues)
+    setInitialEditForm(formValues)
     setOriginalProviderId(providerId)
     setFormErrors({})
     const hasTrans = await checkHasTransactions(gasStation.azs_number)
@@ -423,28 +480,24 @@ const GasStationsList = () => {
   }
 
   const handleSave = async (gasStationId) => {
-    const latError = validateCoordinate(editForm.latitude, 'latitude')
-    const lngError = validateCoordinate(editForm.longitude, 'longitude')
-    if (latError || lngError) {
-      setFormErrors({ latitude: latError || undefined, longitude: lngError || undefined })
-      showError('Исправьте ошибки в координатах перед сохранением')
+    const errors = {
+      name: editForm.name.trim() ? undefined : 'Укажите наименование — оно выводится в отчётах',
+      azs_number: editForm.azs_number.trim() ? undefined : 'Укажите номер — по нему к АЗС привязываются транзакции',
+      latitude: validateCoordinate(editForm.latitude, 'latitude') || undefined,
+      longitude: validateCoordinate(editForm.longitude, 'longitude') || undefined,
+    }
+    if (Object.values(errors).some(Boolean)) {
+      setFormErrors(errors)
       return
     }
     try {
       setLoading(true)
       const { original_name, ...updateData } = editForm
-      if (updateData.latitude !== '') {
-        updateData.latitude = parseFloat(updateData.latitude)
-        if (isNaN(updateData.latitude)) updateData.latitude = null
-      } else {
-        updateData.latitude = null
+      for (const field of ['name', 'azs_number', 'location', 'region', 'settlement']) {
+        updateData[field] = updateData[field].trim()
       }
-      if (updateData.longitude !== '') {
-        updateData.longitude = parseFloat(updateData.longitude)
-        if (isNaN(updateData.longitude)) updateData.longitude = null
-      } else {
-        updateData.longitude = null
-      }
+      updateData.latitude = parseCoordinate(updateData.latitude)
+      updateData.longitude = parseCoordinate(updateData.longitude)
       const response = await authFetch(`${API_URL}/api/v1/gas-stations/${gasStationId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -480,6 +533,7 @@ const GasStationsList = () => {
     setEditingId(null)
     setShowEditModal(false)
     setEditForm({ original_name: '', name: '', provider_id: null, azs_number: '', location: '', region: '', settlement: '', latitude: '', longitude: '' })
+    setInitialEditForm(null)
     setFormErrors({})
     setOriginalProviderId(null)
     setHasTransactions(false)
@@ -499,28 +553,58 @@ const GasStationsList = () => {
     setPendingProviderId(null)
   }
 
+  // Координаты вводят и с точкой, и с запятой (русская раскладка)
+  const parseCoordinate = (value) => {
+    if (value === null || value === undefined || String(value).trim() === '') return null
+    const num = Number(String(value).trim().replace(',', '.'))
+    return Number.isFinite(num) ? num : null
+  }
+
   const validateCoordinate = (value, type) => {
-    if (!value || value.trim() === '') return null
-    const num = parseFloat(value)
-    if (isNaN(num)) return `Введите корректное число`
-    if (type === 'latitude' && (num < -90 || num > 90)) return `Широта должна быть от -90 до 90`
-    if (type === 'longitude' && (num < -180 || num > 180)) return `Долгота должна быть от -180 до 180`
+    if (!value || String(value).trim() === '') return null
+    const num = parseCoordinate(value)
+    if (num === null) return 'Введите число, например 61.1234'
+    if (type === 'latitude' && (num < -90 || num > 90)) return 'Широта — от −90 до 90'
+    if (type === 'longitude' && (num < -180 || num > 180)) return 'Долгота — от −180 до 180'
     return null
+  }
+
+  const updateField = (field, value) => {
+    setEditForm(prev => ({ ...prev, [field]: value }))
+    if (formErrors[field]) setFormErrors(prev => ({ ...prev, [field]: undefined }))
   }
 
   const handleLatitudeChange = (e) => {
     const value = e.target.value
-    setEditForm({...editForm, latitude: value})
-    const error = validateCoordinate(value, 'latitude')
-    setFormErrors(prev => ({ ...prev, latitude: error || undefined }))
+    setEditForm(prev => ({ ...prev, latitude: value }))
+    setFormErrors(prev => ({ ...prev, latitude: validateCoordinate(value, 'latitude') || undefined }))
   }
 
   const handleLongitudeChange = (e) => {
     const value = e.target.value
-    setEditForm({...editForm, longitude: value})
-    const error = validateCoordinate(value, 'longitude')
-    setFormErrors(prev => ({ ...prev, longitude: error || undefined }))
+    setEditForm(prev => ({ ...prev, longitude: value }))
+    setFormErrors(prev => ({ ...prev, longitude: validateCoordinate(value, 'longitude') || undefined }))
   }
+
+  // Пара «61.1234, 65.5678» из карт, вставленная в любое поле координат, раскладывается на широту и долготу
+  const handleCoordinatesPaste = (e) => {
+    const text = (e.clipboardData?.getData('text') || '').trim()
+    // «61.12, 65.33» или «61,12; 65,33»; одиночное «61,12» — это дробь, а не пара
+    const pair = text.match(/^(-?\d+\.\d+)\s*[,;\s]\s*(-?\d+\.\d+)$/) || text.match(/^(-?\d+,\d+)\s*[;\s]\s*(-?\d+,\d+)$/)
+    if (!pair) return
+    e.preventDefault()
+    const [latitude, longitude] = [pair[1], pair[2]]
+    setEditForm(prev => ({ ...prev, latitude, longitude }))
+    setFormErrors(prev => ({
+      ...prev,
+      latitude: validateCoordinate(latitude, 'latitude') || undefined,
+      longitude: validateCoordinate(longitude, 'longitude') || undefined,
+    }))
+  }
+
+  const isEditDirty = Boolean(initialEditForm) && Object.keys(initialEditForm).some(
+    key => String(editForm[key] ?? '') !== String(initialEditForm[key] ?? '')
+  )
 
   const handleMapConfirm = (lat, lng) => {
     setEditForm(prev => ({ ...prev, latitude: lat.toString(), longitude: lng.toString() }))
@@ -555,21 +639,27 @@ const GasStationsList = () => {
   }, [stats])
 
   const tableColumns = useMemo(() => {
+    // Ширины: узким колонкам — пиксели, текстовым — ничего. При
+    // table-layout: fixed (см. .gsl-table в GasStationsList.css) колонки без
+    // ширины делят остаток поровну, поэтому наименование и адрес занимают всё
+    // свободное место и обрезаются многоточием, а не распирают таблицу.
     const allColumns = [
-      { key: 'original_name', header: 'Исходное наименование', sortable: true },
-      { key: 'name', header: 'Наименование', sortable: true },
-      { key: 'provider', header: 'Провайдер', sortable: false },
-      { key: 'azs_number', header: 'Номер АЗС', sortable: true },
-      { key: 'location', header: 'Местоположение', sortable: true },
-      { key: 'region', header: 'Регион', sortable: true },
-      { key: 'settlement', header: 'Населенный пункт', sortable: true },
-      { key: 'coordinates', header: 'Координаты', sortable: false },
-      { key: 'status', header: 'Статус', sortable: true },
-      { key: 'errors', header: 'Ошибки', sortable: false },
-      // Липкая справа: таблица шире области (1262px против 742 при 1024), а
-      // «Действия» — единственный вход в редактирование строки, и при
-      // горизонтальной прокрутке он уезжал за правый край.
-      { key: 'actions', header: 'Действия', sortable: false, sticky: 'right' }
+      { key: 'name', header: 'Наименование', sortable: true, cellClassName: 'gsl-cell-text' },
+      { key: 'original_name', header: 'Исходное наименование', sortable: true, cellClassName: 'gsl-cell-text' },
+      { key: 'provider', header: 'Провайдер', sortable: false, width: 118, cellClassName: 'gsl-cell-text' },
+      { key: 'azs_number', header: 'Номер', sortable: true, width: 128, cellClassName: 'gsl-cell-text' },
+      { key: 'location', header: 'Местоположение', sortable: true, cellClassName: 'gsl-cell-text' },
+      { key: 'region', header: 'Регион', sortable: true, width: 150, cellClassName: 'gsl-cell-text' },
+      { key: 'settlement', header: 'Населенный пункт', sortable: true, width: 170, cellClassName: 'gsl-cell-text' },
+      { key: 'coordinates', header: 'Координаты', sortable: false, width: 150, cellClassName: 'gsl-cell-text' },
+      // 176px, а не 148: в 148 не влезал бейдж «Требует проверки» и его резало
+      // правым краем колонки — ровно в тех строках, ради которых на страницу и
+      // заходят.
+      { key: 'status', header: 'Статус', sortable: true, width: 176 },
+      { key: 'errors', header: 'Ошибки', sortable: false, cellClassName: 'gsl-cell-text' },
+      // Липкая справа: на узких окнах таблица всё ещё может не поместиться, а
+      // «Действия» — единственный вход в редактирование строки.
+      { key: 'actions', header: 'Действия', sortable: false, sticky: 'right', width: 88 }
     ]
     return allColumns
       .filter(col => {
@@ -589,39 +679,41 @@ const GasStationsList = () => {
       const errors = gasStation.validation_errors || ''
       const originalName = gasStation.original_name || '-'
       const name = gasStation.name || originalName || '-'
+      // Номер АЗС у части провайдеров приходит равным наименованию — тогда
+      // колонка печатала третью копию той же строки и ничего не сообщала.
+      // Показываем номер, только когда он отличается от наименований.
+      const rawNumber = (gasStation.azs_number || '').trim()
+      const numberIsName = rawNumber !== '' && (rawNumber === name.trim() || rawNumber === originalName.trim())
+
+      // Исходное наименование по умолчанию скрыто, поэтому расхождение с
+      // нормализованным показываем подсказкой — иначе оно теряется совсем.
+      const nameDiffers = originalName !== '-' && originalName.trim() !== name.trim()
+
       return {
         id: gasStation.id,
-        original_name: originalName !== '-' && originalName.length > 40 ? (
-          <Tooltip content={originalName} position="top" maxWidth={400}>
-            <span className="text-truncate">{originalName}</span>
-          </Tooltip>
-        ) : originalName,
-        name: name !== '-' && name.length > 40 ? (
-          <Tooltip content={name} position="top" maxWidth={400}>
-            <span className="text-truncate">{name}</span>
-          </Tooltip>
-        ) : name,
-        provider: getProviderName(gasStation.provider_id),
-        azs_number: gasStation.azs_number || '-',
-        location: location !== '-' && location.length > 50 ? (
-          <Tooltip content={location} position="top" maxWidth={400}>
-            <span className="text-truncate">{location}</span>
-          </Tooltip>
-        ) : location,
-        region: gasStation.region || '-',
-        settlement: gasStation.settlement || '-',
+        original_name: cellText(originalName),
+        name: nameDiffers
+          ? cellText(name, `Нормализовано из «${originalName}»`)
+          : cellText(name),
+        provider: cellText(getProviderName(gasStation.provider_id)),
+        azs_number: numberIsName || rawNumber === ''
+          ? emptyCell
+          : cellText(rawNumber),
+        location: cellText(location),
+        region: cellText(gasStation.region),
+        settlement: cellText(gasStation.settlement),
         coordinates: gasStation.latitude !== null && gasStation.longitude !== null
-          ? `${gasStation.latitude}, ${gasStation.longitude}` : '-',
-        status: getStatusBadge(gasStation.is_validated),
-        errors: errors ? (
-          errors.length > 50 ? (
-            <Tooltip content={errors} position="top" maxWidth={400}>
-              <span className="error-text text-truncate">{errors}</span>
-            </Tooltip>
-          ) : (
-            <span className="error-text" title={errors}>{errors}</span>
-          )
-        ) : '-',
+          ? cellText(`${gasStation.latitude}, ${gasStation.longitude}`)
+          : emptyCell,
+        // Текст ошибки живёт в подсказке к статусу: колонка «Ошибки» пуста у
+        // 94% строк и по умолчанию скрыта, а сама ошибка нужна ровно там, где
+        // видно, что запись невалидна.
+        status: errors ? (
+          <Tooltip content={errors} position="top" maxWidth={360}>
+            <span className="gsl-status-with-hint">{getStatusBadge(gasStation.is_validated)}</span>
+          </Tooltip>
+        ) : getStatusBadge(gasStation.is_validated),
+        errors: errors ? cellText(errors) : emptyCell,
         actions: (
           <div style={{ display: 'flex', gap: '8px' }}>
             <IconButton icon="edit" variant="primary" onClick={() => handleEdit(gasStation)} title="Редактировать" size="small"/>
@@ -891,40 +983,42 @@ const GasStationsList = () => {
       <Modal
         isOpen={showEditModal}
         onClose={handleCancel}
-        title={editForm.name ? `Редактирование АЗС: "${editForm.name}"` : `Редактирование АЗС №${editForm.azs_number || '?'}`}
+        title={`АЗС ${editForm.azs_number || initialEditForm?.azs_number || ''}`.trim()}
         size="md"
-        closeOnOverlayClick={true}
+        closeOnOverlayClick={!isEditDirty}
         closeOnEsc={true}
         showCloseButton={true}
       >
-        <Modal.Body>
-          <div className="gas-station-edit-form">
-            <div className="form-section">
-              <h4 className="form-section-title">Основная информация</h4>
-              <div className="form-row">
-                <Input
-                  type="text"
-                  label="Текущее название (для справки)"
-                  value={editForm.original_name}
-                  onChange={(e) => setEditForm({...editForm, original_name: e.target.value})}
-                  disabled
-                  fullWidth
-                  name="original_name"
-                />
-              </div>
-              <div className="form-row">
-                <Input
-                  type="text"
-                  label="Новое название АЗС"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                  fullWidth
-                  placeholder="Введите наименование АЗС"
-                  required
-                  name="name"
-                />
-              </div>
-              <div className="form-row form-row-2">
+        <form
+          className="gse-form"
+          data-testid="gas-station-edit-form"
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (editingId && isEditDirty && !loading) handleSave(editingId)
+          }}
+        >
+          <Modal.Body>
+            <section className="gse-section" aria-labelledby="gse-section-station">
+              <h4 id="gse-section-station" className="gse-section__title">АЗС</h4>
+              <Input
+                type="text"
+                label="Наименование"
+                value={editForm.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                placeholder="Как АЗС называется в отчётах"
+                helperText={
+                  editForm.original_name && editForm.original_name !== editForm.name
+                    ? `В данных провайдера: ${editForm.original_name}`
+                    : undefined
+                }
+                error={formErrors.name}
+                required
+                fullWidth
+                name="name"
+                autoFocus
+              />
+              <div className="gse-grid">
                 <Select
                   label="Провайдер"
                   value={editForm.provider_id ? editForm.provider_id.toString() : ''}
@@ -934,7 +1028,7 @@ const GasStationsList = () => {
                       setPendingProviderId(newProviderId)
                       setShowProviderChangeConfirm(true)
                     } else {
-                      setEditForm({...editForm, provider_id: newProviderId})
+                      setEditForm(prev => ({ ...prev, provider_id: newProviderId }))
                     }
                   }}
                   options={[
@@ -945,116 +1039,106 @@ const GasStationsList = () => {
                     }))
                   ]}
                   fullWidth
-                  required
                 />
                 <Input
                   type="text"
                   label="Номер АЗС"
                   value={editForm.azs_number}
-                  onChange={(e) => setEditForm({...editForm, azs_number: e.target.value})}
-                  placeholder="Номер АЗС"
-                  fullWidth
+                  onChange={(e) => updateField('azs_number', e.target.value)}
+                  placeholder="Например: 505221"
+                  error={formErrors.azs_number}
                   required
+                  fullWidth
                   name="azs_number"
+                  inputMode="numeric"
                 />
               </div>
-            </div>
+              {hasTransactions ? (
+                <p className="gse-note">
+                  <Icon name="info" size={14} />
+                  По АЗС уже есть транзакции: смену провайдера нужно будет подтвердить.
+                </p>
+              ) : null}
+            </section>
 
-            <div className="form-section">
-              <h4 className="form-section-title">География</h4>
-              <div className="form-row">
+            <section className="gse-section" aria-labelledby="gse-section-place">
+              <h4 id="gse-section-place" className="gse-section__title">Местоположение</h4>
+              <div className="gse-grid">
                 <Input
                   type="text"
-                  label="Адрес"
-                  value={editForm.location}
-                  onChange={(e) => setEditForm({...editForm, location: e.target.value})}
-                  placeholder="Улица, дом, корпус"
+                  label="Населённый пункт"
+                  value={editForm.settlement}
+                  onChange={(e) => updateField('settlement', e.target.value)}
+                  placeholder="Например: Нягань"
                   fullWidth
-                  required
-                  name="location"
+                  name="settlement"
                 />
-              </div>
-              <div className="form-row form-row-2">
                 <Input
                   type="text"
                   label="Регион"
                   value={editForm.region}
-                  onChange={(e) => setEditForm({...editForm, region: e.target.value})}
-                  placeholder="Например: Московская область"
+                  onChange={(e) => updateField('region', e.target.value)}
+                  placeholder="Например: ХМАО — Югра"
                   fullWidth
-                  required
                   name="region"
                 />
+              </div>
+              <Input
+                type="text"
+                label="Адрес"
+                value={editForm.location}
+                onChange={(e) => updateField('location', e.target.value)}
+                placeholder="Улица и дом или ориентир: «База АО „УТТ“»"
+                fullWidth
+                name="location"
+              />
+              <div className="gse-coords">
                 <Input
                   type="text"
-                  label="Населенный пункт"
-                  value={editForm.settlement}
-                  onChange={(e) => setEditForm({...editForm, settlement: e.target.value})}
-                  placeholder="Город или деревня"
-                  fullWidth
-                  required
-                  name="settlement"
-                />
-              </div>
-              <div className="form-row form-row-2">
-                <Input
-                  type="number"
-                  step="any"
+                  inputMode="decimal"
                   label="Широта"
                   value={editForm.latitude}
                   onChange={handleLatitudeChange}
-                  placeholder="Например: 55.7558"
-                  fullWidth
+                  onPaste={handleCoordinatesPaste}
+                  placeholder="61.1234"
                   error={formErrors.latitude}
+                  fullWidth
                   name="latitude"
                 />
                 <Input
-                  type="number"
-                  step="any"
+                  type="text"
+                  inputMode="decimal"
                   label="Долгота"
                   value={editForm.longitude}
                   onChange={handleLongitudeChange}
-                  placeholder="Например: 37.6176"
-                  fullWidth
+                  onPaste={handleCoordinatesPaste}
+                  placeholder="65.5678"
                   error={formErrors.longitude}
+                  fullWidth
                   name="longitude"
                 />
-              </div>
-              <div className="form-row">
                 <Button
+                  type="button"
                   variant="secondary"
+                  className="gse-coords__map"
                   onClick={() => setShowMapModal(true)}
-                  icon={Icons.map}
-                  iconPosition="left"
+                  icon={<Icon name="pin" size={16} />}
                 >
-                  Выбрать на карте
+                  На карте
                 </Button>
               </div>
-            </div>
-
-            <div className="form-actions">
-              <Button
-                variant="secondary"
-                onClick={handleCancel}
-                disabled={loading}
-                icon={Icons.close}
-                iconPosition="left"
-              >
-                Отмена
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => editingId && handleSave(editingId)}
-                disabled={loading}
-                loading={loading}
-                icon={Icons.check}
-                iconPosition="left"
-              >
-                {loading ? 'Сохранение...' : 'Сохранить'}
-              </Button>
-            </div>
-          </div>
-        </Modal.Body>
+              <p className="gse-hint">Координаты из карт можно вставить парой, например «61.1234, 65.5678».</p>
+            </section>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button type="button" variant="secondary" onClick={handleCancel} disabled={loading}>
+              Отмена
+            </Button>
+            <Button type="submit" variant="primary" loading={loading} disabled={loading || !isEditDirty}>
+              Сохранить
+            </Button>
+          </Modal.Footer>
+        </form>
       </Modal>
 
       <MapModal
@@ -1079,6 +1163,8 @@ const GasStationsList = () => {
             </p>
             <ul className="column-settings-list">
               {Object.entries(columnSettings)
+                // __v — метка версии набора, а не колонка
+                .filter(([key, settings]) => key !== '__v' && settings && typeof settings === 'object')
                 .sort(([, a], [, b]) => a.order - b.order)
                 .map(([key, settings]) => {
                   const columnLabels = {
@@ -1115,6 +1201,8 @@ const GasStationsList = () => {
                           setColumnSettings(prev => {
                             const newSettings = { ...prev }
                             Object.keys(newSettings).forEach(k => {
+                              // __v — метка версии, у неё нет order
+                              if (k === '__v') return
                               if (k === draggedColumn) {
                                 newSettings[k] = { ...newSettings[k], order: targetOrder }
                               } else if (newSettings[k].order === targetOrder && k !== draggedColumn) {
@@ -1150,21 +1238,11 @@ const GasStationsList = () => {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => {
-                  setColumnSettings({
-                    original_name: { visible: true, order: 0 },
-                    name: { visible: true, order: 1 },
-                    provider: { visible: true, order: 2 },
-                    azs_number: { visible: true, order: 3 },
-                    location: { visible: true, order: 4 },
-                    region: { visible: true, order: 5 },
-                    settlement: { visible: true, order: 6 },
-                    coordinates: { visible: true, order: 7 },
-                    status: { visible: true, order: 8 },
-                    errors: { visible: true, order: 9 },
-                    actions: { visible: true, order: 10 }
-                  })
-                }}
+                // Сброс возвращает набор по умолчанию, а не собственный
+                // список: раньше здесь был зашит второй, устаревший перечень
+                // со всеми десятью колонками — одно нажатие возвращало таблицу
+                // вдвое шире окна, да ещё и без метки версии.
+                onClick={() => setColumnSettings(DEFAULT_COLUMN_SETTINGS)}
               >
                 Сбросить
               </Button>

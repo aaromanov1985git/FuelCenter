@@ -6,29 +6,10 @@ import { useToast } from './ToastContainer'
 import AdvancedSearch from './AdvancedSearch'
 import { useDebounce } from '../hooks/useDebounce'
 import { authFetch } from '../utils/api'
-import { Card, Table, Skeleton, Alert } from './ui'
+import { Card, Table, Skeleton, Alert, Icon } from './ui'
 import './FuelCardsList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
-
-// Градиенты для провайдеров (соответствуют redesign_fuel_cards.html)
-const PROVIDER_STYLES = {
-  'Газпромнефть':  { grad: 'linear-gradient(135deg,#7c5cff,#4338ca)', accent: '#b16cff' },
-  'Газпром нефть': { grad: 'linear-gradient(135deg,#7c5cff,#4338ca)', accent: '#b16cff' },
-  'ГПН':           { grad: 'linear-gradient(135deg,#7c5cff,#4338ca)', accent: '#b16cff' },
-  'Лукойл':        { grad: 'linear-gradient(135deg,#ef4444,#b91c1c)', accent: '#fca5a5' },
-  'Роснефть':      { grad: 'linear-gradient(135deg,#ffb547,#b45309)', accent: '#fde68a' },
-  'РН':            { grad: 'linear-gradient(135deg,#ffb547,#b45309)', accent: '#fde68a' },
-  'Татнефть':      { grad: 'linear-gradient(135deg,#22d3a7,#065f46)', accent: '#6ee7b7' },
-  'default':       { grad: 'linear-gradient(135deg,#4fd1ff,#1e40af)', accent: '#7dd3fc' },
-}
-
-const getProviderStyle = (providerName) => {
-  if (!providerName) return PROVIDER_STYLES.default
-  const keys = Object.keys(PROVIDER_STYLES)
-  const match = keys.find(k => providerName.toLowerCase().includes(k.toLowerCase()))
-  return match ? PROVIDER_STYLES[match] : PROVIDER_STYLES.default
-}
 
 // Форматирование номера карты группами по 4
 const formatCardNumber = (num) => {
@@ -161,14 +142,12 @@ const FuelCardsList = () => {
     const blocked = allCards.filter(c => c.is_blocked).length
     const active = total - blocked
     const assigned = allCards.filter(c => c.vehicle_id).length
-    const unassigned = total - assigned
 
     return {
       total,
       blocked,
       active,
-      assigned,
-      unassigned
+      assigned
     }
   }, [allCards])
 
@@ -264,10 +243,7 @@ const FuelCardsList = () => {
     ),
     provider: (
       <span className="fc-cell-provider">
-        <span
-          className="fc-provider-dot"
-          style={{ background: getProviderStyle(getProviderName(card.provider_id)).accent }}
-        />
+        <span className="fc-provider-dot" aria-hidden="true" />
         {getProviderName(card.provider_id)}
       </span>
     ),
@@ -290,15 +266,17 @@ const FuelCardsList = () => {
     className: card.is_blocked ? 'fc-row-blocked' : ''
   }))
 
-  // Отрисовка визуальной карточки (3D-ish фуэл-карта)
+  // Одна панель данных вместо «пластиковой карты»: блок .fc-card-top занимал
+  // 150px из 284px карточки и нёс 73.5px строчных боксов — 51% высоты было
+  // заливкой, а белый текст на градиенте давал 1.81–3.30:1 при пороге 4.5.
   const renderFuelCard = (card) => {
     const providerName = getProviderName(card.provider_id)
-    const ps = getProviderStyle(providerName)
     const isBlocked = card.is_blocked
     const statusLabel = isBlocked ? 'Заблокирована' : 'Активна'
     const statusClass = isBlocked ? 'fc-chip fc-chip-red' : 'fc-chip fc-chip-green'
     const vehicleLabel = getVehicleName(card.vehicle_id)
     const ownerLabel = card.normalized_owner || card.original_owner_name || '—'
+    const numberLabel = formatCardNumber(card.card_number) || '—'
 
     return (
       <div
@@ -307,54 +285,35 @@ const FuelCardsList = () => {
         data-testid={`fuel-card-${card.id}`}
       >
         <div className="fc-card">
-          {/* Верхняя «физическая» карта */}
-          <div
-            className="fc-card-top"
-            style={{ background: ps.grad }}
-          >
-            <div
-              className="fc-card-glow"
-              style={{ background: ps.accent }}
-            />
-            <div className="fc-card-top-header">
-              <div>
-                <div className="fc-card-provider">{providerName}</div>
-                <div className="fc-card-holder">{ownerLabel}</div>
-              </div>
-              <div className="fc-card-chip" aria-hidden="true">
-                <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-                  <path d="M1 4h14M1 6h14M1 8h14" stroke="#fff" strokeWidth="1" opacity=".6" />
-                </svg>
-              </div>
+          <div className="fc-card-row">
+            <span className="fc-card-number" title={numberLabel}>{numberLabel}</span>
+            <span className="fc-card-id">#{card.id}</span>
+          </div>
+          <div className="fc-card-row">
+            <span className="fc-card-provider">
+              <span className="fc-provider-dot" aria-hidden="true" />
+              <span className="fc-card-provider-name" title={providerName}>{providerName}</span>
+            </span>
+            <span className={statusClass}>{statusLabel}</span>
+          </div>
+          <div className="fc-card-meta">
+            <div className="fc-card-meta-item">
+              <span className="fc-card-meta-label">Держатель</span>
+              <span className="fc-card-meta-value" title={ownerLabel}>{ownerLabel}</span>
             </div>
-            <div className="fc-card-number">{formatCardNumber(card.card_number)}</div>
-            <div className="fc-card-footer-top">
-              <span>ID</span>
-              <span className="fc-card-id-value">#{card.id}</span>
+            <div className="fc-card-meta-item">
+              <span className="fc-card-meta-label">Автомобиль</span>
+              <span className="fc-card-meta-value" title={vehicleLabel}>{vehicleLabel}</span>
             </div>
           </div>
-
-          {/* Нижняя инфо-панель */}
-          <div className="fc-card-bottom">
-            <div className="fc-card-row">
-              <span className={statusClass}>{statusLabel}</span>
-              <span className="fc-card-vehicle" title={vehicleLabel}>{vehicleLabel}</span>
-            </div>
-            <div className="fc-card-meta">
-              <div className="fc-card-meta-item">
-                <span className="fc-card-meta-label">Держатель</span>
-                <span className="fc-card-meta-value">{ownerLabel}</span>
-              </div>
-            </div>
-            <div className="fc-card-actions">
-              <IconButton
-                icon="edit"
-                variant="primary"
-                onClick={() => handleEdit(card)}
-                title="Редактировать"
-                size="small"
-              />
-            </div>
+          <div className="fc-card-actions">
+            <IconButton
+              icon="edit"
+              variant="primary"
+              onClick={() => handleEdit(card)}
+              title="Редактировать"
+              size="small"
+            />
           </div>
         </div>
       </div>
@@ -365,11 +324,13 @@ const FuelCardsList = () => {
 
   return (
     <div className="fc-root">
-      {/* Компактный дашборд */}
+      {/* Четыре плитки вместо пяти, шесть чисел вместо девяти: «Не закреплённых»
+          = «Всего» − «Закреплённых», а проценты активных и заблокированных
+          давали в сумме ровно 100.0%. Независимых чисел в полосе — три. */}
       {stats && (
         <div className="fc-stats-grid">
           <div className="fc-stat">
-            <div className="fc-stat-bar fc-stat-bar-neutral" />
+            <div className="fc-stat-bar" />
             <div>
               <div className="fc-stat-label">Всего карт</div>
               <div className="fc-stat-value">{stats.total}</div>
@@ -377,21 +338,18 @@ const FuelCardsList = () => {
           </div>
 
           <div className="fc-stat">
-            <div className="fc-stat-bar fc-stat-bar-green" />
+            <div className="fc-stat-bar" />
             <div>
               <div className="fc-stat-label">Активных</div>
-              <div className="fc-stat-value fc-stat-value-green">{stats.active}</div>
-              <div className="fc-stat-sub">
-                {stats.total > 0 ? ((stats.active / stats.total) * 100).toFixed(1) : 0}%
-              </div>
+              <div className="fc-stat-value">{stats.active}</div>
             </div>
           </div>
 
           <div className="fc-stat">
-            <div className="fc-stat-bar fc-stat-bar-red" />
+            <div className="fc-stat-bar" />
             <div>
               <div className="fc-stat-label">Заблокировано</div>
-              <div className="fc-stat-value fc-stat-value-red">{stats.blocked}</div>
+              <div className="fc-stat-value">{stats.blocked}</div>
               <div className="fc-stat-sub">
                 {stats.total > 0 ? ((stats.blocked / stats.total) * 100).toFixed(1) : 0}%
               </div>
@@ -399,24 +357,11 @@ const FuelCardsList = () => {
           </div>
 
           <div className="fc-stat">
-            <div className="fc-stat-bar fc-stat-bar-accent" />
+            <div className="fc-stat-bar" />
             <div>
-              <div className="fc-stat-label">Закреплённых</div>
-              <div className="fc-stat-value fc-stat-value-accent">{stats.assigned}</div>
-              <div className="fc-stat-sub">
-                {stats.total > 0 ? ((stats.assigned / stats.total) * 100).toFixed(1) : 0}%
-              </div>
-            </div>
-          </div>
-
-          <div className="fc-stat">
-            <div className="fc-stat-bar fc-stat-bar-amber" />
-            <div>
-              <div className="fc-stat-label">Не закреплённых</div>
-              <div className="fc-stat-value fc-stat-value-amber">{stats.unassigned}</div>
-              <div className="fc-stat-sub">
-                {stats.total > 0 ? ((stats.unassigned / stats.total) * 100).toFixed(1) : 0}%
-              </div>
+              <div className="fc-stat-label">Закреплено</div>
+              <div className="fc-stat-value">{stats.assigned}</div>
+              <div className="fc-stat-sub">из {stats.total}</div>
             </div>
           </div>
         </div>
@@ -435,12 +380,7 @@ const FuelCardsList = () => {
                 aria-pressed={view === 'grid'}
                 title="Плиткой"
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                  <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
-                  <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
-                  <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
-                  <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.4" />
-                </svg>
+                <Icon name="grid" size={14} />
                 <span>Плитка</span>
               </button>
               <button
@@ -451,9 +391,7 @@ const FuelCardsList = () => {
                 aria-pressed={view === 'list'}
                 title="Списком"
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                  <path d="M1 3h12M1 7h12M1 11h12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                </svg>
+                <Icon name="rows" size={14} />
                 <span>Список</span>
               </button>
             </div>

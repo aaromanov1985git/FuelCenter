@@ -1,4 +1,5 @@
 import FuelTypeMapping from './FuelTypeMapping'
+import Icon from '../ui/Icon'
 import { SYSTEM_FIELDS } from '../../utils/templateModel'
 
 /** Как называется колонка источника у каждого типа подключения. */
@@ -17,12 +18,6 @@ const DESCRIPTION = {
   api: 'Для API подключения используйте кнопку "Загрузить поля из API" для получения списка доступных полей из API ответа. Затем выберите соответствующие поля из выпадающего списка или введите вручную.'
 }
 
-const CheckIcon = ({ className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
-    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-  </svg>
-)
-
 /**
  * Состояние сопоставления одного поля: авто, вручную или пусто.
  */
@@ -35,15 +30,15 @@ const MappingStatus = ({ isMapped, isAutoMapped }) => {
     <span className={`status-badge ${isAutoMapped ? 'status-auto' : 'status-manual'}`}>
       {isAutoMapped ? (
         <>
-          <CheckIcon className="icon-tiny" />
+          <Icon name="check" className="icon-tiny" size={12} strokeWidth={2} />
           Авто
         </>
       ) : (
         <>
-          <svg xmlns="http://www.w3.org/2000/svg" className="icon-tiny" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-            <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
-          </svg>
+          {/* Планшет со списком: «заполнено руками». Класс icon-tiny держит 12px,
+              strokeWidth 2 при 12px даёт отрисованный штрих 1.5px — иначе на самом
+              мелком глифе интерфейса он упал бы до 1.2px. */}
+          <Icon name="clipboard" className="icon-tiny" size={12} strokeWidth={2} />
           Вручную
         </>
       )}
@@ -86,7 +81,7 @@ const FieldMapping = ({
       </p>
       {allowsManualInput && connectionType !== 'firebird' && columns.length > 0 && (
         <div className="success-badge mapping-fields-loaded">
-          <CheckIcon className="icon-small" />
+          <Icon name="check" className="icon-small" size={16} />
           Загружено полей из API: {columns.length}
         </div>
       )}

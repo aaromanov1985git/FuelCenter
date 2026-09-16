@@ -13,7 +13,9 @@ function walk(d, out) {
   for (const e of fs.readdirSync(d, { withFileTypes: true })) {
     const p = path.join(d, e.name);
     if (e.isDirectory()) { if (e.name === 'node_modules') continue; walk(p, out); }
-    else if (/\.jsx?$/.test(e.name)) out.push(p);
+    // Тесты пропускаем: они намеренно передают несуществующее имя, чтобы проверить
+    // поведение примитива на неизвестном глифе. Сторож следит за интерфейсом, не за ними.
+    else if (/\.jsx?$/.test(e.name) && !/\.test\.jsx?$/.test(e.name)) out.push(p);
   }
   return out;
 }

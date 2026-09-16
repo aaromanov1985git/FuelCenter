@@ -16,6 +16,10 @@ import '@fontsource/golos-text/600.css'
 import '@fontsource/golos-text/700.css'
 import '@fontsource/ibm-plex-mono/400.css'
 import '@fontsource/ibm-plex-mono/500.css'
+// Узкий гротеск — только для госномера (.veh-plate): сжатые пропорции знака
+// ничем из основной пары не заменяются. Раньше CSS просил 'Roboto Condensed',
+// но шрифт нигде не подключался, и знак рисовался системным запасным.
+import '@fontsource/roboto-condensed/800.css'
 
 import './styles/tokens.css'
 import './index.css'

@@ -91,10 +91,13 @@
   justify-content: center;
 }
 
+/* Подпись кнопки — ТЕКСТ, значит роль --accent-text: --accent на подложке
+   --accent-soft поверх --surface даёт 3.64:1 в тёмной теме при пороге 4.5,
+   --accent-text — 4.72. В светлой обе роли совпадают (5.40). */
 .pagination-button:hover:not(:disabled) {
   background: var(--accent-soft);
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .pagination-button:active:not(:disabled) {
@@ -107,17 +110,16 @@
   background: var(--surface-2);
 }
 
-.pagination-button-active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-  font-weight: var(--font-weight-semibold);
-}
-
+/* Текущая страница — сплошная заливка под белой подписью, то есть роль
+   --accent-solid, а подпись --ink-on-accent вместо литерала #fff: белое на
+   --accent давало 4.35:1 при пороге 4.5, на --accent-solid — 5.49 в тёмной и
+   6.08 в светлой. */
+.pagination-button-active,
 .pagination-button-active:hover:not(:disabled) {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--accent-solid);
+  border-color: var(--accent-solid);
+  color: var(--ink-on-accent);
+  font-weight: var(--font-weight-semibold);
 }
 
 .pagination-pages {

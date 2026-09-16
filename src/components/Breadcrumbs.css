@@ -50,7 +50,16 @@
   border-radius: var(--radius-small);
   transition: background var(--duration-fast) var(--ease-out),
               color var(--duration-fast) var(--ease-out);
-  display: inline-block;
+  /* Было display:inline-block — и это гасило gap самой кнопки (.btn задаёт
+     inline-flex и gap: var(--spacing-small)), потому что gap работает только на
+     flex- и grid-контейнере. Первый элемент крошек кликабельный, то есть рисуется
+     кнопкой, и значок «домой» стоял вплотную к слову: 0px вместо 8px. Правило с
+     зазором ниже написано только для .breadcrumbs-text и .breadcrumbs-current,
+     кнопку оно не покрывало. Зазор задаём здесь же, чтобы не зависеть от порядка
+     импорта Button.css и Breadcrumbs.css — специфичность у них равная. */
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-small);
 }
 
 .breadcrumbs-link:hover {

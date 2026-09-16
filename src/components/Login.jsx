@@ -2,44 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from './ToastContainer'
 import { useFormValidation } from '../hooks/useFormValidation'
+import Icon from './ui/Icon'
 import Register from './Register'
 import ForgotPassword from './ForgotPassword'
 import './Login.css'
-
-// Иконки SVG, имитирующие стиль reference
-const UserIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.4" />
-    <path d="M2 14c0-3 2.5-5 6-5s6 2 6 5" stroke="currentColor" strokeWidth="1.4" />
-  </svg>
-)
-
-const LockIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
-    <path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="currentColor" strokeWidth="1.4" />
-  </svg>
-)
-
-const EyeIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path d="M1.5 8s2.5-5 6.5-5 6.5 5 6.5 5-2.5 5-6.5 5S1.5 8 1.5 8z" stroke="currentColor" strokeWidth="1.4" />
-    <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.4" />
-  </svg>
-)
-
-const EyeOffIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path d="M2 2l12 12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-    <path d="M6.5 3.5A7.5 7.5 0 018 3.5c4 0 6.5 4.5 6.5 4.5a12.7 12.7 0 01-1.9 2.4M10 10a2 2 0 01-2.8-2.8M3.4 5.4A12.3 12.3 0 001.5 8s2.5 5 6.5 5c1 0 1.9-.2 2.7-.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-  </svg>
-)
-
-const CloseIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-  </svg>
-)
 
 const Login = ({ onSuccess }) => {
   const { login } = useAuth()
@@ -151,7 +117,9 @@ const Login = ({ onSuccess }) => {
 
         {bannerError && (
           <div className="login-alert" role="alert" data-testid="login-error">
-            <span className="login-alert-icon"><CloseIcon /></span>
+            {/* Маркер ошибки — alert, а не close: крестик здесь не кликабелен и
+                читался как кнопка «закрыть баннер». */}
+            <span className="login-alert-icon"><Icon name="alert" size={16} /></span>
             <span>{bannerError}</span>
           </div>
         )}
@@ -160,7 +128,7 @@ const Login = ({ onSuccess }) => {
           <div className="login-field">
             <label className="login-label" htmlFor="login-username">Логин</label>
             <div className={`input-wrap ${touched.username && errors.username ? 'is-error' : ''}`}>
-              <span className="icon"><UserIcon /></span>
+              <span className="icon"><Icon name="user" size={14} strokeWidth={1.8} /></span>
               <input
                 id="login-username"
                 name="username"
@@ -191,7 +159,7 @@ const Login = ({ onSuccess }) => {
               </button>
             </div>
             <div className={`input-wrap ${touched.password && errors.password ? 'is-error' : ''}`}>
-              <span className="icon"><LockIcon /></span>
+              <span className="icon"><Icon name="lock" size={14} strokeWidth={1.8} /></span>
               <input
                 id="login-password"
                 name="password"
@@ -212,7 +180,7 @@ const Login = ({ onSuccess }) => {
                 aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
                 data-testid="login-toggle-password"
               >
-                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                {showPassword ? <Icon name="eye-off" size={16} /> : <Icon name="eye" size={16} />}
               </button>
             </div>
           </div>

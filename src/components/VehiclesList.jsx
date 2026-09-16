@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Button, Input, Card, Badge, Table, Alert, useToast, Select, Modal } from './ui'
+import Icon from './ui/Icon'
 import { authFetch } from '../utils/api'
 import { useAuth } from '../contexts/AuthContext'
 import { logger } from '../utils/logger'
@@ -7,13 +8,45 @@ import './VehiclesList.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
-// License plate pill — matches redesign_vehicles.html
-// Simple monospace pill on surface-2, used inline in tables and forms.
+/**
+ * Отделяет код региона от основной части номера.
+ *
+ * Регион — это последние 2–3 цифры, но брать «последние три» вслепую нельзя:
+ * у «8689УН86» три последних знака — «Н86». Поэтому группа цифр якорится к
+ * концу строки, и ленивая основная часть отдаёт ей столько цифр, сколько там
+ * реально есть. Разделитель между частями может быть пробелом или дефисом.
+ *
+ * @param {string} plate - номер в верхнем регистре, без крайних пробелов
+ * @returns {{main: string, region: string}} Части знака; region пуст, если не распознан
+ */
+const splitRegion = (plate) => {
+  const match = plate.match(/^(.+?)[\s-]?(\d{2,3})$/)
+  return match ? { main: match[1].trim(), region: match[2] } : { main: plate, region: '' }
+}
+
+/**
+ * Госномер в виде знака: основная часть, код региона и блок с флагом РФ.
+ *
+ * Разметка собрана под давно написанный CSS (.veh-plate__main / __region /
+ * __flag). Одно время компонент отдавал номер одной строкой, и тогда знак
+ * ломался: горизонтальные отступы заданы на .veh-plate__main, без него буквы
+ * упирались прямо в рамку, а правила региона и флага лежали мёртвым грузом.
+ */
 const LicensePlate = ({ value }) => {
   if (!value) return <span className="veh-plate veh-plate--empty">—</span>
+
+  const { main, region } = splitRegion(String(value).trim().toUpperCase())
+
   return (
     <span className="veh-plate" title={value}>
-      {String(value).trim().toUpperCase()}
+      <span className="veh-plate__main">{main}</span>
+      {region && <span className="veh-plate__region">{region}</span>}
+      <span className="veh-plate__flag" aria-hidden="true">
+        <span className="veh-plate__flag-stripe veh-plate__flag-stripe--white" />
+        <span className="veh-plate__flag-stripe veh-plate__flag-stripe--blue" />
+        <span className="veh-plate__flag-stripe veh-plate__flag-stripe--red" />
+        <span className="veh-plate__flag-code">RUS</span>
+      </span>
     </span>
   )
 }
@@ -287,7 +320,10 @@ const VehiclesList = () => {
           title="Редактировать"
           data-testid={`vehicle-edit-${row.id}`}
         >
-          <span aria-hidden="true">⋯</span>
+          {/* Было текстовое ⋯ 18px (штрих ~1.1px против 1.6px у примитива) — и
+              формой «ещё», хотя действие одно: редактирование. В семи других
+              списках это карандаш. */}
+          <Icon name="edit" size={16} />
         </button>
       )
     }
@@ -345,10 +381,7 @@ const VehiclesList = () => {
       {/* Filter/search row */}
       <div className="veh-toolbar" data-testid="vehicles-toolbar">
         <div className="veh-search">
-          <svg className="veh-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-            <circle cx="11" cy="11" r="7" />
-            <path d="M21 21l-4.35-4.35" />
-          </svg>
+          <Icon name="search" className="veh-search__icon" size={16} />
           <input
             type="text"
             className="veh-search__input"

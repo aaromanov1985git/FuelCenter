@@ -98,9 +98,39 @@ const FIXTURES = [
   [/\/transactions/, { total: 85249, items: txRows(100) }],
   [/\/providers/, { total: 8, items: PROVIDERS.map((name, i) => ({ id: i + 1, name, code: name, is_active: true, templates_count: i === 0 ? 1 : 0 })) }],
   [/\/templates/, { total: 1, items: [{ id: 2, name: 'РП Газпром', provider_id: 1, connection_type: 'file', is_active: true, auto_load_enabled: false, field_mapping: {}, created_at: '2026-09-01T10:00:00' }] }],
-  [/\/vehicles/, { total: 42, items: named(42, 'ТС') }],
+  // Номера обязаны быть в фикстуре: без license_plate знак рисуется пустым
+  // прочерком, и прогон не видит колонку госномера вовсе. Набор намеренно
+  // смешанный — двузначные и трёхзначные регионы, буквенные и цифровые серии,
+  // одна запись без номера ради состояния «—».
+  [/\/vehicles/, {
+    total: 42,
+    items: named(42, 'ТС').map((v, i) => ({
+      ...v,
+      garage_number: `${4100 + i}`,
+      license_plate: ['8689УН86', 'В331КМ186', 'К178РМ186', 'Н328УХ86', 'К914ТН186', '9485УХ86', ''][i % 7],
+    })),
+  }],
   [/\/fuel-cards/, { total: 709, items: named(60, 'Карта') }],
-  [/\/gas-stations/, { total: 102, items: named(40, 'АЗС') }],
+  // Как и у ТС, ровные выдуманные строки («АЗС 1», «АЗС 2») прятали дефект:
+  // страница ломалась именно на боевой форме данных — длинные наименования с
+  // юрлицом и ИНН, у единиц развёрнутый адрес, у большинства пустые регион,
+  // населённый пункт и координаты. Подробный прогон — qa/_azs-shot.mjs.
+  [/\/gas-stations/, {
+    total: 102,
+    items: named(40, 'АЗС').map((s, i) => ({
+      ...s,
+      original_name: ['Сибирь Нефть Сервис ООО (ХМАО)', 'ТАИФ-НК АЗС ООО ИНН 1639028805', 'АЗС Коммунистический', 'контроллер КАЗС08 Аи-92 (сломан)', 'АЗС 37 км'][i % 5],
+      provider_id: (i % 3) + 1,
+      azs_number: ['Сибирь Нефть Сервис ООО (ХМАО)', '1639028805', 'АЗС Коммунистический', '08', '37'][i % 5],
+      location: i % 5 < 2 ? 'Р404, 750км, ХМАО, Нефтеюганский район, п. Сингапай, ул. Энтузиастов, строение 1, АЗС №2, Сингапай' : null,
+      region: null,
+      settlement: null,
+      latitude: null,
+      longitude: null,
+      validation_errors: i % 5 === 3 ? 'Не удалось определить населённый пункт по наименованию' : '',
+      is_validated: ['valid', 'valid', 'pending', 'invalid', 'valid'][i % 5],
+    })),
+  }],
   [/\/fuel-types/, { total: 9, items: FUELS.map((name, i) => ({ id: i + 1, original_name: name, normalized_name: name, is_active: true })) }],
   [/\/organizations/, { total: 12, items: named(12, 'ООО') }],
   [/\/users/, { total: 4, items: [{ id: 1, username: 'admin', full_name: 'Администратор', role: 'admin', is_active: true }, ...named(3, 'Пользователь')] }],
@@ -114,7 +144,7 @@ const FIXTURES = [
     leaders_by_count: named(10, 'Карта').map((r, i) => ({ ...r, card_number: `1100018800${5000 + i}`, vehicle: `В ${200 + i} КМ`, quantity: 8000 - i * 600, count: 140 - i * 9 })),
     products: FUELS.map((name, i) => ({ name, quantity: 1800000 - i * 300000, count: 20000 - i * 3000 })),
   }],
-  [/\/dashboard\/auto-load-stats/, { total_transactions: 1240, total_liters: 96500.5, transactions_with_errors: 3, enabled_templates: 2, last_run: '2026-09-12T02:00:00', total: 0, items: [] }],
+  [/\/dashboard\/auto-load-stats/, { period_hours: 24, has_errors: true, total_transactions: 1240, total_liters: 96500.5, transactions_with_errors: 3, enabled_templates: 2, last_run: '2026-09-12T02:00:00', providers: [ { name: 'РН-Карт ООО УТТ', transactions_count: 612, liters: 48210.5, status: 'success' }, { name: 'ГПН-УТК', transactions_count: 431, liters: 33940.0, status: 'success' }, { name: 'KAZS', transactions_count: 197, liters: 14350.0, status: 'error' } ], total: 0, items: [] }],
   [/\/anomalies/, { total: 0, items: [] }],
   [/\/settings|\/system-settings|\/email/, { items: [], total: 0, settings: {} }],
 ]

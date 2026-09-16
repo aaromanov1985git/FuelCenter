@@ -237,12 +237,8 @@ h1 {
   z-index: -1;
 }
 
-.icon-large {
-  width: 36px;
-  height: 36px;
-  color: var(--accent);
-  margin-bottom: 12px;
-}
+/* .icon-large удалён: 0 потребителей в разметке, одно мёртвое обращение
+   к --accent. */
 
 .file-info {
   display: flex;
@@ -258,36 +254,27 @@ h1 {
   font-weight: 500;
 }
 
-.match-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: var(--accent-soft);
-  border-radius: 6px;
-  font-size: 0.875rem;
-}
-
 .match-label {
   color: var(--text-2);
   font-weight: 500;
 }
 
-.match-value {
-  color: var(--accent);
-  font-weight: var(--font-weight-semibold);
-}
+/* .match-info (подложка --accent-soft) и .match-value (текст --accent) удалены:
+   оба класса встречаются в разметке 0 раз. */
 
 .match-template {
   color: var(--text-2);
   font-size: 0.8125rem;
 }
 
+/* Подпись состояния — ТЕКСТ, значит роль --accent-text: сам --accent даёт
+   4.20:1 на --surface в тёмной теме при пороге 4.5, --accent-text — 5.45.
+   В светлой обе роли совпадают (6.08). */
 .loading {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 500;
 }
 
@@ -394,10 +381,8 @@ h1 {
   box-shadow: var(--shadow-md);
 }
 
-.upload-dashboard-card-highlight {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
+/* .upload-dashboard-card-highlight удалён: 0 потребителей, 2 обращения
+   к акценту. */
 
 .upload-dashboard-label {
   font-size: 11px;
@@ -487,73 +472,11 @@ h1 {
   flex-wrap: wrap;
 }
 
-.refresh-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-}
-
-.refresh-button:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-  transform: translateY(-1px);
-}
-
-.refresh-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
-}
-
-.refresh-button:disabled {
-  background: var(--border);
-  color: var(--text-3);
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-}
-
-.clear-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-}
-
-.clear-button:hover {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-  transform: translateY(-1px);
-}
-
-.clear-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
-}
-
-.clear-button:disabled {
-  background: var(--border);
-  color: var(--text-3);
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-}
+/* Здесь были .refresh-button и .clear-button: 8 правил, 4 hex-градиента и 6
+   теней на литералах (#6366f1/#4f46e5/#4338ca, #ef4444/#dc2626/#b91c1c) мимо
+   токенов. Потребителей у обоих классов 0 в src/**/*.jsx и *.js — мёртвый CSS,
+   который попадал в любой grep по цвету и маскировал живые нарушения.
+   Живые кнопки берут цвет из ui/Button/Button.css. */
 
 @keyframes pulse {
   0%, 100% {
@@ -590,7 +513,9 @@ h1 {
   background: var(--accent-solid);
   color: var(--ink-on-accent);
   border-color: var(--accent-solid);
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);
+  /* Тень — штатный тир --shadow-sm: литерал rgba(99,102,241,.2) был цветным
+     индиго мимо токенов и по теме не переключался. */
+  box-shadow: var(--shadow-sm);
 }
 
 .page-button:disabled {
@@ -616,31 +541,9 @@ h1 {
   margin: 0;
 }
 
-.download-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-}
-
-.download-button:hover {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-  transform: translateY(-1px);
-}
-
-.download-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
-}
+/* .download-button удалён по той же причине, что .refresh-button/.clear-button:
+   0 потребителей в разметке, 2 hex-градиента (#10b981/#059669/#047857) и 3 тени
+   на литералах. */
 
 .icon {
   width: 20px;
@@ -737,8 +640,11 @@ h1 {
   background-color: var(--surface-2);
 }
 
+/* Подпись колонки под курсором — текст 12px: --accent 4.20:1 на --surface-2
+   (порог 4.5), --accent-text 4.92. Иконка сортировки ниже остаётся на --accent:
+   у графического объекта порог 3:1, и 3.79 его берёт. */
 .data-table th.sortable:hover .th-content {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .data-table th .th-content {
@@ -805,10 +711,9 @@ h1 {
   color: var(--text-1);
 }
 
-[data-theme="dark"] .upload-dashboard-value,
-[data-theme="dark"] .upload-dashboard-value {
-  color: var(--accent);
-}
+/* Перекрытие [data-theme="dark"] .upload-dashboard-value с color: var(--accent)
+   удалено: класс в разметке 0 раз. Всего по файлу снято 6 мёртвых обращений
+   к акценту — на экране не изменилось ничего. */
 
 [data-theme="dark"] .upload-dashboard-value-small,
 [data-theme="dark"] .upload-dashboard-value-small {
@@ -820,42 +725,10 @@ h1 {
    Убрано в том числе [data-theme="dark"] .nav-item.active { color: var(--surface) } —
    активный пункт в тёмной теме терял акцентный цвет. */
 
-/* Улучшение кнопок на темных темах */
-[data-theme="dark"] .download-button,
-[data-theme="dark"] .download-button {
-  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
-  box-shadow: 0 2px 8px rgba(52, 211, 153, 0.4);
-}
-
-[data-theme="dark"] .download-button:hover,
-[data-theme="dark"] .download-button:hover {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.5);
-}
-
-[data-theme="dark"] .refresh-button,
-[data-theme="dark"] .refresh-button {
-  background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
-  box-shadow: 0 2px 8px rgba(129, 140, 248, 0.4);
-}
-
-[data-theme="dark"] .refresh-button:hover,
-[data-theme="dark"] .refresh-button:hover {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-  box-shadow: 0 4px 12px rgba(129, 140, 248, 0.5);
-}
-
-[data-theme="dark"] .clear-button,
-[data-theme="dark"] .clear-button {
-  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
-  box-shadow: 0 2px 8px rgba(248, 113, 113, 0.4);
-}
-
-[data-theme="dark"] .clear-button:hover,
-[data-theme="dark"] .clear-button:hover {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  box-shadow: 0 4px 12px rgba(248, 113, 113, 0.5);
-}
+/* Тёмных перекрытий для .download-button / .refresh-button / .clear-button тоже
+   нет: вместе с самими классами ушли последние 6 из 12 hex-градиентов этого
+   файла (#34d399, #818cf8, #f87171 и пары к ним) и 6 теней на литералах.
+   Итого по файлу: 12 градиентов и 15 теней мимо токенов -> 0. */
 
 .data-table tbody tr:hover {
   background: var(--surface-2);
@@ -1532,14 +1405,15 @@ h1 {
   background: var(--surface-2);
 }
 /* Колонка ID — идентификатор: моноширинный приходит классом .t-numeric из
-   разметки, здесь только цвет и вес.
-   Цвет — --accent-text, а не --accent: это ТЕКСТ акцентом (12px, 100 строк
-   подряд в липкой колонке), и сам --accent даёт на подложке --surface-2 3.79:1
-   при пороге 4.5. --accent-text: 4.92 на surface-2, 5.62 в светлой теме
-   (qa/_frame-contrast.mjs; роль введена в tokens.css:26-33 ровно под этот
-   случай). В светлой теме значение не меняется. */
+   разметки, здесь только вес и цвет.
+   Акцент снят: цвет был ОДИНАКОВ у всех 100 значений колонки, то есть не
+   различал их — это самая длинная непрерывная акцентная вертикаль в продукте
+   (колонка x 100 строк). Различимость колонки держат var(--font-mono) из
+   .t-numeric и вес 500. Контраст при этом вырос: --accent-text давал 5.45 на
+   --surface и 4.92 на --surface-2 в тёмной теме, --text-1 даёт 15.02 и 13.54
+   (в светлой 6.08 -> 17.97 и 16.60). */
 .tx-root .data-table tbody tr td:first-child {
-  color: var(--accent-text);
+  color: var(--text-1);
   font-weight: var(--font-weight-medium);
 }
 /* Липкая колонка ID на строке с ошибкой: подложка должна быть НЕПРОЗРАЧНОЙ,
