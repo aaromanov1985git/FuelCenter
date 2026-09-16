@@ -1476,6 +1476,7 @@ class TankStationFuel(BaseModel):
 class TankStation(BaseModel):
     """АЗС с резервуарами"""
     azs_code: str
+    azs_codes: List[str] = Field(default_factory=list, description="Все коды контроллеров АЗС, основной первым")
     provider_id: int
     provider_name: Optional[str] = None
     gas_station_id: Optional[int] = None
@@ -1516,6 +1517,7 @@ class TankUpdate(BaseModel):
     fuel_type_override: Optional[str] = Field(None, max_length=100)
     overflow_group: Optional[str] = Field(None, max_length=50)
     is_active: Optional[bool] = None
+    gas_station_id: Optional[int] = Field(None, description="АЗС справочника: ёмкости одной АЗС показываются вместе")
 
 
 class TankReadingPoint(BaseModel):
@@ -1692,6 +1694,7 @@ class StationShareResponse(BaseModel):
 class PublicShareInfo(BaseModel):
     """Что видит получатель ссылки: АЗС, открытые разделы и срок"""
     azs_code: str
+    azs_codes: List[str] = Field(default_factory=list, description="Все коды контроллеров АЗС")
     provider_name: Optional[str] = None
     gas_station_name: Optional[str] = None
     location: Optional[str] = None

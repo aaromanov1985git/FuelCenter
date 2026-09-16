@@ -147,6 +147,34 @@ class TestPublicAccess:
 
         assert client.get(f"/api/v1/public/shares/{token}/tanks").status_code == 403
 
+    def test_share_covers_all_controllers_of_one_station(self, client, admin_auth_headers, topaz, test_db):
+        from app.models import GasStation
+        station = GasStation(provider_id=topaz["mazs"].id, original_name="1016201", name="1016201", azs_number="1016201")
+        test_db.add(station)
+        test_db.flush()
+        for tank in (topaz["shared_tank"], topaz["hidden_tank"], topaz["other_tank"]):
+            tank.gas_station_id = station.id
+        test_db.commit()
+
+        token = create_share(client, admin_auth_headers, topaz["mazs"].id, show_fills=True).json()["token"]
+        info = client.get(f"/api/v1/public/shares/{token}").json()
+        assert info["azs_codes"] == ["1016201", "807211"]
+
+        body = client.get(f"/api/v1/public/shares/{token}/tanks").json()
+        assert len(body["stations"]) == 1
+        assert {t["source_key"] for t in body["stations"][0]["tanks"]} == {"snap:1", "snap:2"}
+        assert client.get(f"/api/v1/public/shares/{token}/tanks/{topaz['other_tank'].id}/readings").status_code == 200
+        assert client.get(f"/api/v1/public/shares/{token}/tanks/{topaz['hidden_tank'].id}/readings").status_code == 404
+
+        detail = client.get(f"/api/v1/public/shares/{token}/fills").json()
+        assert {item["azs_number"] for item in detail["items"]} == {"1016201", "807211"}
+
+        # Ссылка, выданная на второй код, видна в окне «Поделиться» основного кода
+        create_share(client, admin_auth_headers, topaz["mazs"].id, azs_code="807211")
+        listed = client.get("/api/v1/station-shares", params={"provider_id": topaz["mazs"].id, "azs_code": "1016201"},
+                            headers=admin_auth_headers).json()
+        assert sorted(item["azs_code"] for item in listed) == ["1016201", "807211"]
+
     def test_expired_and_unknown_links(self, client, admin_auth_headers, topaz, test_db):
         token = create_share(client, admin_auth_headers, topaz["mazs"].id).json()["token"]
         share = test_db.query(StationShare).filter_by(token=token).one()

@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_admin, require_auth_if_enabled
 from app.database import get_db
-from app.models import Provider, ProviderTemplate, Tank, TankReading, TopazSyncState, Transaction, UploadEvent, User
+from app.models import (
+    GasStation, Provider, ProviderTemplate, Tank, TankReading, TopazSyncState, Transaction, UploadEvent, User,
+)
 from app.schemas import (
     TankOverviewResponse, TankReadingPoint, TankReadingsResponse, TankResponse, TankStation,
     TankStationFuel, TankUpdate, TopazSyncResult, TopazSyncStateResponse,
@@ -79,6 +81,26 @@ class _SourceClock:
             return None
         offset = self._offsets.get(template_id)
         return server_time + offset if offset is not None else server_time
+
+
+def station_azs_codes(db: Session, provider_id: int, azs_code: str) -> List[str]:
+    """
+    Коды АЗС, входящие в ту же АЗС справочника, что и этот код.
+
+    Одна физическая АЗС может отдавать данные с нескольких контроллеров Топаза под разными
+    кодами (МАЗС: АИ-92 на 1016201, ДТ на 807211). Объединяет их общая АЗС справочника у ёмкостей.
+    """
+    station_ids = [
+        station_id for (station_id,) in db.query(Tank.gas_station_id).filter(
+            Tank.provider_id == provider_id, Tank.azs_code == azs_code, Tank.gas_station_id.isnot(None),
+        ).distinct()
+    ]
+    codes = {azs_code}
+    if station_ids:
+        codes.update(code for (code,) in db.query(Tank.azs_code).filter(
+            Tank.provider_id == provider_id, Tank.gas_station_id.in_(station_ids),
+        ).distinct())
+    return sorted(codes)
 
 
 def _age_minutes(measured_at: Optional[datetime], source_now: datetime) -> Optional[int]:
@@ -168,7 +190,7 @@ def _session_estimate(db: Session, items: List[TankResponse], fuel_type: Optiona
     first = items[0]
     dispensed = db.query(func.coalesce(func.sum(Transaction.quantity), 0)).filter(
         Transaction.provider_id == first.provider_id,
-        Transaction.azs_number == first.azs_code,
+        Transaction.azs_number.in_(sorted({t.azs_code for t in items})),
         Transaction.product == fuel_type,
         Transaction.transaction_date >= base_at,
         Transaction.quantity > 0,
@@ -296,7 +318,8 @@ def build_tank_overview(db: Session, provider_id: Optional[int] = None, azs_code
     if provider_id:
         query = query.filter(Tank.provider_id == provider_id)
     if azs_code is not None:
-        query = query.filter(Tank.azs_code == azs_code)
+        codes = station_azs_codes(db, provider_id, azs_code) if provider_id else [azs_code]
+        query = query.filter(Tank.azs_code.in_(codes))
     if not include_inactive:
         query = query.filter(Tank.is_active == True)  # noqa: E712
     tanks = query.order_by(Tank.provider_id, Tank.azs_code, Tank.tank_number, Tank.id).all()
@@ -313,27 +336,41 @@ def build_tank_overview(db: Session, provider_id: Optional[int] = None, azs_code
     mappings = _mapping_by_template(db, {t.template_id for t in tanks})
     responses = [_tank_response(tank, mappings, clock) for tank in tanks]
 
+    # Карточка — АЗС справочника: несколько контроллеров одной АЗС показываются вместе.
+    # Ёмкость без АЗС в справочнике идёт по АЗС своего кода, а если её нет — отдельно по коду.
+    code_station = {}
+    for item in responses:
+        if item.gas_station_id is not None:
+            code_station.setdefault((item.provider_id, item.azs_code), item.gas_station_id)
     stations: Dict[tuple, List[TankResponse]] = {}
     for item in responses:
-        stations.setdefault((item.provider_id, item.azs_code), []).append(item)
+        station_id = item.gas_station_id or code_station.get((item.provider_id, item.azs_code))
+        key = (item.provider_id, "station", station_id) if station_id else (item.provider_id, "code", item.azs_code)
+        stations.setdefault(key, []).append(item)
     station_places = {tank.gas_station_id: tank.gas_station for tank in tanks if tank.gas_station is not None}
 
+    def build_station(key: tuple, items: List[TankResponse]) -> TankStation:
+        station_id = key[2] if key[1] == "station" else None
+        place = station_places.get(station_id)
+        codes = sorted({item.azs_code for item in items})
+        # Основной код — номер АЗС из справочника, иначе первый по порядку ёмкостей
+        primary = place.azs_number if place is not None and place.azs_number in codes else items[0].azs_code
+        return TankStation(
+            azs_code=primary,
+            azs_codes=[primary] + [code for code in codes if code != primary],
+            provider_id=key[0],
+            provider_name=items[0].provider_name,
+            gas_station_id=station_id,
+            gas_station_name=place.name if place is not None else None,
+            location=getattr(place, "location", None),
+            settlement=getattr(place, "settlement", None),
+            region=getattr(place, "region", None),
+            fuels=_station_fuels(items, db, clock, session_templates, fills_loaded_at),
+            tanks=items,
+        )
+
     return TankOverviewResponse(
-        stations=[
-            TankStation(
-                azs_code=azs_code,
-                provider_id=prov_id,
-                provider_name=items[0].provider_name,
-                gas_station_id=items[0].gas_station_id,
-                gas_station_name=items[0].gas_station_name,
-                location=getattr(station_places.get(items[0].gas_station_id), "location", None),
-                settlement=getattr(station_places.get(items[0].gas_station_id), "settlement", None),
-                region=getattr(station_places.get(items[0].gas_station_id), "region", None),
-                fuels=_station_fuels(items, db, clock, session_templates, fills_loaded_at),
-                tanks=items,
-            )
-            for (prov_id, azs_code), items in stations.items()
-        ],
+        stations=[build_station(key, items) for key, items in stations.items()],
         total_tanks=len(responses),
         sync=_sync_states(db) if with_sync else [],
     )
@@ -389,12 +426,17 @@ def update_tank(
     db: Session = Depends(get_db),
     _: Optional[User] = Depends(require_admin),
 ):
-    """Изменить вместимость, вид топлива, группу перелива или участие ёмкости в остатках."""
+    """Изменить вместимость, вид топлива, группу перелива, АЗС или участие ёмкости в остатках."""
     tank = db.query(Tank).options(joinedload(Tank.provider), joinedload(Tank.gas_station)).filter(Tank.id == tank_id).first()
     if tank is None:
         raise HTTPException(status_code=404, detail="Резервуар не найден")
 
     changes = payload.model_dump(exclude_unset=True)
+    if changes.get("gas_station_id") is not None:
+        station = db.query(GasStation).filter(GasStation.id == changes["gas_station_id"]).first()
+        if station is None or (station.provider_id is not None and station.provider_id != tank.provider_id):
+            raise HTTPException(status_code=400, detail="АЗС не найдена у провайдера этой ёмкости")
+        tank.gas_station_id = station.id
     if "capacity_liters" in changes:
         value = changes["capacity_liters"]
         tank.capacity_liters = Decimal(str(value)) if value else None

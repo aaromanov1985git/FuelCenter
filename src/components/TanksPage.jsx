@@ -185,8 +185,28 @@ const TankHistoryModal = ({ tank, onClose }) => {
 
 const TankSettingsModal = ({ tank, onClose, onSaved }) => {
   const { success, error: showError } = useToast()
-  const [form, setForm] = useState({ capacity: '', fuel: '', group: '', active: 'true' })
+  const [form, setForm] = useState({ capacity: '', fuel: '', group: '', active: 'true', station: '' })
   const [saving, setSaving] = useState(false)
+  const [providerStations, setProviderStations] = useState([])
+
+  useEffect(() => {
+    if (!tank) return
+    let cancelled = false
+    const loadStations = async () => {
+      try {
+        const params = new URLSearchParams({ provider_id: String(tank.provider_id), limit: '1000' })
+        const response = await authFetch(`${API_URL}/api/v1/gas-stations?${params}`)
+        if (!response.ok) throw await readError(response, 'Не удалось загрузить список АЗС')
+        const data = await response.json()
+        if (!cancelled) setProviderStations(data.items || [])
+      } catch (err) {
+        // Без списка окно работает как раньше: выбор АЗС просто не показывается
+        if (!err.isUnauthorized) logger.warn('Список АЗС для ёмкости не загружен', err)
+      }
+    }
+    loadStations()
+    return () => { cancelled = true }
+  }, [tank])
 
   useEffect(() => {
     if (!tank) return
@@ -195,6 +215,7 @@ const TankSettingsModal = ({ tank, onClose, onSaved }) => {
       fuel: tank.fuel_type_override || '',
       group: tank.overflow_group || '',
       active: tank.is_active ? 'true' : 'false',
+      station: tank.gas_station_id ? String(tank.gas_station_id) : '',
     })
   }, [tank])
 
@@ -202,6 +223,11 @@ const TankSettingsModal = ({ tank, onClose, onSaved }) => {
 
   const capacityValue = form.capacity.trim() === '' ? null : Number(form.capacity.replace(',', '.'))
   const capacityInvalid = capacityValue !== null && (!Number.isFinite(capacityValue) || capacityValue < 0)
+  // АЗС справочника того же провайдера, к которым можно отнести ёмкость
+  const stationOptions = providerStations.map((s) => ({
+    value: String(s.id),
+    label: [s.azs_number || s.name, stationPlace(s)].filter(Boolean).join(' — '),
+  }))
 
   const save = async () => {
     setSaving(true)
@@ -214,6 +240,7 @@ const TankSettingsModal = ({ tank, onClose, onSaved }) => {
           fuel_type_override: form.fuel.trim() || null,
           overflow_group: form.group.trim() || null,
           is_active: form.active === 'true',
+          ...(form.station && form.station !== String(tank.gas_station_id || '') ? { gas_station_id: Number(form.station) } : {}),
         }),
       })
       if (!response.ok) throw await readError(response, 'Не удалось сохранить настройки ёмкости')
@@ -257,6 +284,16 @@ const TankSettingsModal = ({ tank, onClose, onSaved }) => {
             helperText="Ёмкости, соединённые переливом, отмечаются одной группой"
             fullWidth
           />
+          {stationOptions.length > 1 ? (
+            <Select
+              label="АЗС"
+              value={form.station}
+              onChange={(value) => setForm((prev) => ({ ...prev, station: value || prev.station }))}
+              options={stationOptions}
+              helperText="Если у АЗС несколько контроллеров Топаза (МАЗС), отнесите их ёмкости к одной АЗС — они покажутся одной карточкой"
+              fullWidth
+            />
+          ) : null}
           <Select
             label="Показывать на странице и учитывать в остатках"
             value={form.active}
@@ -279,6 +316,8 @@ const TankSettingsModal = ({ tank, onClose, onSaved }) => {
 }
 
 const stationPlace = (station) => [station.settlement, station.location].filter(Boolean).join(', ')
+
+const stationCodes = (station) => (station.azs_codes?.length ? station.azs_codes : [station.azs_code]).join(' · ')
 
 const fuelAgeHint = (fuel) => {
   if (fuel.estimate_base_at) {
@@ -334,10 +373,10 @@ const StationCard = ({ station, isAdmin, onHistory, onSettings, onShare }) => {
       <header className="tnk-station__head">
         <div className="tnk-station__title">
           <div className="tnk-station__name-row">
-            <h3 className="tnk-station__code t-numeric">{station.azs_code}</h3>
+            <h3 className="tnk-station__code t-numeric">{stationCodes(station)}</h3>
             <span className="tnk-station__provider">{station.provider_name}</span>
           </div>
-          {station.gas_station_name && station.gas_station_name !== station.azs_code ? (
+          {station.gas_station_name && !(station.azs_codes || [station.azs_code]).includes(station.gas_station_name) ? (
             <div className="tnk-station__label">{station.gas_station_name}</div>
           ) : null}
           {stationPlace(station) ? (

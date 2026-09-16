@@ -109,6 +109,52 @@ class TestTankOverview:
         station = next(s for s in body["stations"] if s["azs_code"] == "807211")
         assert station["fuels"] == []
 
+    def test_controllers_of_one_station_form_one_card(self, client, auth_headers, admin_auth_headers, test_db, mazs):
+        from app.models import GasStation
+        stations = {}
+        for code in ("1016201", "807211"):
+            stations[code] = GasStation(provider_id=mazs["provider"].id, original_name=code, name=code, azs_number=code,
+                                        settlement="М/Р Усть-Тегус")
+            test_db.add(stations[code])
+        test_db.flush()
+        for tank in (mazs["petrol"], mazs["diesel"]):
+            tank.gas_station_id = stations["1016201"].id
+        mazs["mirror"].gas_station_id = stations["807211"].id
+        test_db.commit()
+
+        body = client.get("/api/v1/tanks", headers=auth_headers).json()
+        assert sorted(s["azs_code"] for s in body["stations"]) == ["1016201", "807211"]
+
+        # МАЗС: второй контроллер переносится в АЗС первого — карточка одна, оба кода в ней
+        response = client.patch(f"/api/v1/tanks/{mazs['mirror'].id}", json={"gas_station_id": stations["1016201"].id},
+                                headers=admin_auth_headers)
+        assert response.status_code == 200
+        assert response.json()["gas_station_id"] == stations["1016201"].id
+
+        body = client.get("/api/v1/tanks", headers=auth_headers).json()
+        assert len(body["stations"]) == 1
+        station = body["stations"][0]
+        assert station["azs_code"] == "1016201"
+        assert station["azs_codes"] == ["1016201", "807211"]
+        assert station["settlement"] == "М/Р Усть-Тегус"
+        assert {t["source_key"] for t in station["tanks"]} == {"snap:1", "snap:2", "snap:3"}
+        assert {f["fuel_type"]: f["tanks_count"] for f in station["fuels"]} == {"АИ-92": 1, "ДТ": 2}
+
+    def test_station_of_other_provider_is_rejected(self, client, admin_auth_headers, test_db, mazs):
+        from app.models import GasStation
+        other = Provider(name="Чужой", code="OTHER")
+        test_db.add(other)
+        test_db.flush()
+        foreign = GasStation(provider_id=other.id, original_name="X-1", name="X-1", azs_number="X-1")
+        test_db.add(foreign)
+        test_db.commit()
+
+        response = client.patch(f"/api/v1/tanks/{mazs['mirror'].id}", json={"gas_station_id": foreign.id},
+                                headers=admin_auth_headers)
+        assert response.status_code == 400
+        assert client.patch(f"/api/v1/tanks/{mazs['mirror'].id}", json={"gas_station_id": 999999},
+                            headers=admin_auth_headers).status_code == 400
+
 
 class TestSessionEstimate:
     def test_overflow_pair_uses_shift_reading_minus_dispensed(self, client, auth_headers, test_db):
