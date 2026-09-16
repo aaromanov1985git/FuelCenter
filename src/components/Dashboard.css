@@ -246,9 +246,14 @@
 }
 
 /* ============ Main grid (chart + top) ============ */
+/* График динамики занимает всю строку, «Топ-5» встаёт под ним. В двух третях
+   строки (596px при 1440) тринадцать месяцев требовали 980px: шесть столбцов
+   из тринадцати оказывались целиком за правым краем, причём без полосы
+   прокрутки — их нельзя было ни увидеть, ни достать. Во всю ширину тот же ряд
+   укладывается без прокрутки. */
 .dash-main-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1fr;
   gap: 14px;
 }
 
@@ -266,11 +271,14 @@
   overflow: visible;
 }
 
+/* Границы совпадают с областью самих столбцов: 16 отступа карточки + 6 запаса
+   сверху = 22; снизу 8 отступа карточки + 74 блока подписей = 82. Иначе нулевая
+   отметка оси стоит не на основании столбцов. */
 .dash-chart-y-axis {
   position: absolute;
   left: 0;
-  top: 16px;
-  bottom: 72px;
+  top: 22px;
+  bottom: 82px;
   width: 60px;
   display: flex;
   flex-direction: column;
@@ -291,10 +299,23 @@
 .dash-chart-bars {
   display: flex;
   align-items: flex-end;
-  gap: 12px;
-  min-height: 300px;
-  height: 300px;
-  padding: 0 4px;
+  /* 10px, а не 12: с двенадцатью тринадцать месяцев требовали 984px при
+     области 974px — последний столбец не помещался ровно на 10px. */
+  gap: 10px;
+  /* 380 = 6 на подъём при наведении + 300 на столбец + 74 на блок подписей
+     (подпись 10+32, две строки мета по 4+12). Раньше высота была 300 на всё
+     сразу, и столбец делил её с подписями: как только сумма не влезала, flex
+     ужимал именно столбец — тем сильнее, чем длиннее название месяца. График
+     из-за этого искажал значения. Запас сверху нужен ещё и потому, что при
+     overflow-x: auto вертикаль перестаёт быть visible. */
+  min-height: 380px;
+  height: 380px;
+  padding: 6px 4px 0;
+  /* Страховка на случаи, когда столбцов заведомо больше ширины — например
+     разрез «По дням» на тридцать точек. Раньше лишние столбцы просто выходили
+     за карточку и пропадали без следа: ни увидеть, ни прокрутить. */
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .dash-chart-bar-wrapper {
@@ -315,6 +336,8 @@
 .dash-chart-bar-stacked {
   width: 100%;
   position: relative;
+  /* Высота столбца вычислена по значению — flex не имеет права её ужимать. */
+  flex: 0 0 auto;
   min-height: 6px;
   transition: all .3s ease;
   cursor: pointer;
@@ -349,6 +372,8 @@
 .dash-chart-bar-simple {
   width: 100%;
   position: relative;
+  /* Как и у составного столбца: высота задана значением, ужимать нельзя. */
+  flex: 0 0 auto;
   min-height: 6px;
   border-radius: 6px 6px 0 0;
   background: var(--text-3);
@@ -383,9 +408,19 @@
 
 .dash-chart-bar-wrapper:hover .dash-chart-value { opacity: 1; }
 
+/* Постоянная высота под две строки. Названия месяцев занимают то одну строку
+   («Март 2026»), то две («Сентябрь 2025»), и пока блок подписей был плавающим,
+   основания столбцов стояли на разной высоте, а сами столбцы сжимались
+   по-разному — график искажал значения. */
 .dash-chart-label {
   margin-top: 10px;
+  height: 32px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   font-size: 11px;
+  line-height: 1.25;
   color: var(--text-2);
   text-align: center;
   font-weight: 500;
@@ -395,6 +430,8 @@
 
 .dash-chart-meta {
   margin-top: 4px;
+  flex: 0 0 auto;
+  white-space: nowrap;
   font-size: 10px;
   color: var(--text-3);
   text-align: center;

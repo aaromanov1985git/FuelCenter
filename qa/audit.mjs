@@ -139,7 +139,20 @@ const FIXTURES = [
   [/\/dashboard\/stats/, {
     total_transactions: 85249, total_amount: 41230500.25, total_volume: 7315020.5,
     period_data: Array.from({ length: 12 }, (_, i) => ({ period: `${String(i + 1).padStart(2, '0')}.2026`, quantity: 400000 + i * 31000, count: 5000 + i * 420 })),
-    providers: PROVIDERS.map((name, i) => ({ name, quantity: 900000 - i * 90000, count: 11000 - i * 900 })),
+    // Поле именно provider_name — так отдаёт backend/app/routers/dashboard.py.
+    // С «name» легенда графика падает на a.provider_name.localeCompare(...),
+    // и весь дашборд уходит в ErrorBoundary.
+    providers: PROVIDERS.map((name, i) => ({ provider_id: i + 1, provider_name: name, quantity: 900000 - i * 90000, count: 11000 - i * 900 })),
+    // Разрез по провайдерам: без него рисуется простой график, а ветка со
+    // стопкой и легендой не проверяется вовсе. Месяцы намеренно идут вразнобой
+    // и охватывают два года — порядок столбцов задаёт фронтенд, и сортировку
+    // по ключу «ММ.ГГГГ» надо ловить прогоном.
+    period_providers: Object.fromEntries(
+      ['10.2025', '11.2025', '12.2025', '09.2025', '02.2026', '01.2026'].map((m, i) => [
+        m,
+        Object.fromEntries(PROVIDERS.map((name, j) => [name, { quantity: 90000 - j * 9000 + i * 2500, count: 900 - j * 90 + i * 25 }])),
+      ])
+    ),
     leaders_by_quantity: named(10, 'Карта').map((r, i) => ({ ...r, card_number: `1100018800${4000 + i}`, vehicle: `А ${100 + i} ВС`, quantity: 9000 - i * 700, count: 120 - i * 8 })),
     leaders_by_count: named(10, 'Карта').map((r, i) => ({ ...r, card_number: `1100018800${5000 + i}`, vehicle: `В ${200 + i} КМ`, quantity: 8000 - i * 600, count: 140 - i * 9 })),
     products: FUELS.map((name, i) => ({ name, quantity: 1800000 - i * 300000, count: 20000 - i * 3000 })),
