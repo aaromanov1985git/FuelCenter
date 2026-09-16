@@ -185,8 +185,8 @@ GSM/
 ├── docker-compose.yml    # Docker Compose конфигурация
 ├── package.json
 ├── vite.config.js
-├── TODO.md               # Глобальная система задач
-├── TECHDEBT.md           # Технический долг
+├── docs/development/TODO.md      # Глобальная система задач
+├── docs/development/TECHDEBT.md  # Технический долг
 └── README.md
 ```
 
