@@ -2,14 +2,13 @@
  * Модальное окно создания ссылки на просмотр АЗС без входа.
  * Администратор настраивает открытые разделы и срок, получает готовую ссылку для копирования.
  * Список уже выданных ссылок по этой АЗС показывается ниже с кнопками отзыва.
+ *
+ * Раскладка — через слоты ui/Modal: содержимое в Modal.Body, действия в Modal.Footer.
+ * Отступы тела и панель действий (разделитель, выравнивание вправо, поведение на мобильных)
+ * приходят из Modal.css, поэтому своих .ssm-actions и отступов у тела здесь нет.
  */
 import { useEffect, useState } from 'react'
-import Modal from './ui/Modal/Modal'
-import Checkbox from './ui/Checkbox/Checkbox'
-import Button from './ui/Button/Button'
-import Icon from './ui/Icon'
-import Input from './ui/Input/Input'
-import Badge from './ui/Badge/Badge'
+import { Badge, Button, Checkbox, Icon, Input, Modal } from './ui'
 import IconButton from './IconButton'
 import { useToast } from './ToastContainer'
 import { authFetch } from '../utils/api'
@@ -124,7 +123,7 @@ export default function StationShareModal({ station, onClose }) {
 
   return (
     <Modal isOpen onClose={onClose} title={`Поделиться АЗС ${station.azs_code}`} className="ssm">
-      <div className="ssm-body">
+      <Modal.Body className="ssm-body">
         {createdShare ? (
           <div className="ssm-created">
             <div className="ssm-created__icon">
@@ -132,11 +131,13 @@ export default function StationShareModal({ station, onClose }) {
             </div>
             <h3>Ссылка создана</h3>
             <div className="ssm-link">
-              <input
-                type="text"
+              <Input
+                name="ssm-link"
+                className="ssm-link__field"
                 value={`${window.location.origin}${createdShare.url_path}`}
                 readOnly
                 onClick={(e) => e.target.select()}
+                aria-label="Ссылка для просмотра АЗС"
               />
               <Button onClick={() => copyLink(createdShare.token)} icon={<Icon name="copy" size={16} />}>
                 Скопировать
@@ -146,64 +147,50 @@ export default function StationShareModal({ station, onClose }) {
               <p>Доступ до {new Date(createdShare.expires_at).toLocaleString('ru-RU')}</p>
               <p>Открыты: {shareSections(createdShare)}</p>
             </div>
-            <Button onClick={() => setCreatedShare(null)} variant="secondary">
-              Создать ещё
-            </Button>
           </div>
         ) : (
-          <>
-            <div className="ssm-form">
-              <div className="ssm-section">
-                <h4>Что открыто</h4>
-                <div className="ssm-checkboxes">
-                  <Checkbox checked={showTanks} onChange={setShowTanks} label="Остатки в резервуарах" />
-                  <Checkbox checked={showFills} onChange={setShowFills} label="Заправки по картам" />
-                  <Checkbox checked={showLimits} onChange={setShowLimits} label="Лимиты карт" />
-                </div>
+          <div className="ssm-form">
+            <div className="ssm-section">
+              <div className="t-label">Что открыто</div>
+              <div className="ssm-checkboxes">
+                <Checkbox checked={showTanks} onChange={setShowTanks} label="Остатки в резервуарах" />
+                <Checkbox checked={showFills} onChange={setShowFills} label="Заправки по картам" />
+                <Checkbox checked={showLimits} onChange={setShowLimits} label="Лимиты карт" />
               </div>
-
-              <div className="ssm-section">
-                <h4>Срок действия</h4>
-                <div className="ssm-segmented" role="radiogroup" aria-label="Срок действия ссылки">
-                  {EXPIRY_OPTIONS.map(({ days, label }) => (
-                    <button
-                      key={days}
-                      type="button"
-                      role="radio"
-                      aria-checked={expiresInDays === days}
-                      className={`ssm-segmented__btn${expiresInDays === days ? ' is-active' : ''}`}
-                      onClick={() => setExpiresInDays(days)}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <Input
-                name="ssm-note"
-                label="Для кого (видно только в GSM)"
-                placeholder="Подрядчик Север"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                maxLength={200}
-              />
             </div>
 
-            <div className="ssm-actions">
-              <Button onClick={handleCreate} loading={loading} disabled={loading}>
-                Создать ссылку
-              </Button>
-              <Button onClick={onClose} variant="secondary">
-                Отменить
-              </Button>
+            <div className="ssm-section">
+              <div className="t-label" id="ssm-expiry-label">Срок действия</div>
+              <div className="ssm-segmented" role="radiogroup" aria-labelledby="ssm-expiry-label">
+                {EXPIRY_OPTIONS.map(({ days, label }) => (
+                  <button
+                    key={days}
+                    type="button"
+                    role="radio"
+                    aria-checked={expiresInDays === days}
+                    className={`ssm-segmented__btn${expiresInDays === days ? ' is-active' : ''}`}
+                    onClick={() => setExpiresInDays(days)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </>
+
+            <Input
+              name="ssm-note"
+              label="Для кого (видно только в GSM)"
+              placeholder="Подрядчик Север"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={200}
+            />
+          </div>
         )}
 
         {!loadingShares && existingShares.length > 0 && (
           <div className="ssm-existing">
-            <h4>Выданные ссылки ({existingShares.length})</h4>
+            <div className="t-label">Выданные ссылки ({existingShares.length})</div>
             <ul className="ssm-list">
               {existingShares.map((share) => (
                 <li key={share.id} className={`ssm-item ssm-item--${share.status}`}>
@@ -232,7 +219,27 @@ export default function StationShareModal({ station, onClose }) {
             </ul>
           </div>
         )}
-      </div>
+      </Modal.Body>
+
+      <Modal.Footer>
+        {createdShare ? (
+          <>
+            <Button variant="secondary" onClick={() => setCreatedShare(null)}>
+              Создать ещё
+            </Button>
+            <Button onClick={onClose}>Готово</Button>
+          </>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={onClose}>
+              Отменить
+            </Button>
+            <Button onClick={handleCreate} loading={loading} disabled={loading}>
+              Создать ссылку
+            </Button>
+          </>
+        )}
+      </Modal.Footer>
     </Modal>
   )
 }

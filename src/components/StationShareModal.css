@@ -1,62 +1,57 @@
-/* Модальное окно «Поделиться АЗС». Поля и кнопки — компоненты ui/,
-   здесь только раскладка секций, сегментный переключатель срока и список ссылок. */
+/* Модальное окно «Поделиться АЗС». Раскладка секций, сегментный переключатель
+   срока и список ссылок. Поля и кнопки — компоненты ui/, отступ тела и панель
+   действий — слоты ui/Modal (.ui-modal-body / .ui-modal-footer), поэтому
+   собственных .ssm-actions и padding у тела здесь нет.
+   Кегли и отступы — из шкалы токенов, не пикселями. */
 
 .ssm-body {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--padding-section);
 }
 
 .ssm-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: var(--spacing-large);
 }
 
 .ssm-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.ssm-section h4 {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-3);
+  gap: var(--spacing-small);
 }
 
 .ssm-checkboxes {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--spacing-small);
 }
 
-/* Сегментный переключатель срока действия */
+/* Сегментный переключатель срока действия — та же геометрия, что у
+   .dash-period-selector на дашборде (сверен с эталоном redesign_dashboard.html). */
 
 .ssm-segmented {
   display: inline-flex;
   align-self: flex-start;
   padding: 3px;
-  gap: 2px;
+  gap: var(--spacing-tiny);
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-medium);
 }
 
 .ssm-segmented__btn {
-  padding: 7px 14px;
+  padding: var(--spacing-small) var(--spacing-medium);
   border: none;
   border-radius: var(--radius-small);
   background: transparent;
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   color: var(--text-2);
   cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: color .15s ease, background .15s ease;
 }
 
 .ssm-segmented__btn:hover {
@@ -71,16 +66,8 @@
 .ssm-segmented__btn.is-active {
   background: var(--surface);
   color: var(--text-1);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   box-shadow: var(--shadow-sm);
-}
-
-/* Кнопки формы */
-
-.ssm-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
 }
 
 /* Готовая ссылка */
@@ -89,8 +76,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 12px 0 4px;
+  gap: var(--spacing-medium);
+  padding: var(--spacing-medium) 0 var(--spacing-tiny);
   text-align: center;
 }
 
@@ -100,7 +87,7 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: 999px;
+  border-radius: 50%;
   background: var(--green-soft);
   color: var(--green-ink);
 }
@@ -112,39 +99,36 @@
 
 .ssm-created h3 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-1);
 }
 
 .ssm-link {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: var(--spacing-small);
   width: 100%;
 }
 
-.ssm-link input {
+/* Поле ссылки — ui/Input: токен читают посимвольно, поэтому моноширинный.
+   .ssm-link__field ложится на обёртку .input-wrapper, сам input — внутри. */
+
+.ssm-link__field {
   flex: 1;
   min-width: 0;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-medium);
-  background: var(--surface-2);
-  color: var(--text-1);
-  font-family: var(--font-mono);
-  font-size: 13px;
 }
 
-.ssm-link input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
+.ssm-link__field .input-field {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
 }
 
 .ssm-created__meta {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
+  gap: var(--spacing-tiny);
+  font-size: var(--font-size-sm);
   color: var(--text-3);
 }
 
@@ -157,18 +141,9 @@
 .ssm-existing {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-top: 16px;
+  gap: var(--spacing-small);
+  padding-top: var(--spacing-large);
   border-top: 1px solid var(--border);
-}
-
-.ssm-existing h4 {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-3);
 }
 
 .ssm-list {
@@ -177,16 +152,19 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-small);
 }
+
+/* Строка ссылки на --surface-2: фон модалки — уже --surface, на нём строка
+   читалась бы только по рамке. Тот же тон, что у сегмента и поля ссылки выше. */
 
 .ssm-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  background: var(--surface);
+  gap: var(--spacing-medium);
+  padding: var(--spacing-medium);
+  background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-medium);
 }
@@ -200,12 +178,12 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--spacing-tiny);
 }
 
 .ssm-item__note {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-1);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -215,19 +193,19 @@
 .ssm-item__meta {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--spacing-tiny);
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--text-3);
 }
 
 .ssm-item__sections {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--text-3);
 }
 
 .ssm-item__actions {
   display: flex;
-  gap: 6px;
+  gap: var(--spacing-tiny);
   flex-shrink: 0;
 }
