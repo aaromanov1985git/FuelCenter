@@ -506,11 +506,11 @@
 
 ## 🔗 Связанные документы
 
-- [TECHNICAL_AUDIT_REPORT.md](./TECHNICAL_AUDIT_REPORT.md) - Полный технический аудит проекта
+- [TECHNICAL_AUDIT_REPORT.md](../archive/reports/TECHNICAL_AUDIT_REPORT_2025-12.md) - Полный технический аудит проекта
 - [TECHDEBT.md](./TECHDEBT.md) - Технический долг
-- [README.md](./README.md) - Общая информация о проекте
-- [docs/README.md](./docs/README.md) - Документация проекта
-- [COMPLETE_WORK_SUMMARY.md](./COMPLETE_WORK_SUMMARY.md) - Отчёт о выполненной работе
+- [README.md](../../README.md) - Общая информация о проекте
+- [docs/README.md](../README.md) - Документация проекта
+- [COMPLETE_WORK_SUMMARY.md](../archive/reports/COMPLETE_WORK_SUMMARY.md) - Отчёт о выполненной работе
 
 ---
 
