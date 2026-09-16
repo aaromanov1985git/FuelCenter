@@ -54,6 +54,7 @@ const SVG_ALLOWED = {
   'Dashboard.jsx': 1,                  // спарклайн: график из данных, градиент, preserveAspectRatio
   'ProviderAnalysisDashboard.jsx': 1,  // маркер Leaflet: html-строка вне React
   'FuelCardsList.jsx': 1,              // чип платёжной карты: иллюстрация в сетке 16x12
+  'TanksPage.jsx': 1,                  // график объёма ёмкости из данных: оси, сетка, динамический path
 }
 
 const collectJsx = (dir, acc = []) => {
