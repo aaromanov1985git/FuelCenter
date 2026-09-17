@@ -166,6 +166,27 @@ describe('TankLevelsModal', () => {
     expect(screen.getByRole('img', { name: 'АИ-92: заполнено на 25%, низкий уровень' })).toBeInTheDocument()
   })
 
+  it('весь ДТ в одном составном резервуаре — одна карточка без повторяющей её сводки', () => {
+    const kazsTank = (overrides) => tank({ provider_id: 2, template_id: 3, azs_code: '505221', capacity_liters: 10000, ...overrides })
+    const kazs = {
+      azs_code: '505221', azs_codes: ['505221'], provider_id: 2, provider_name: 'КАЗС', live_available: false, fuels: [],
+      tanks: [
+        kazsTank({ id: 1, tank_number: 1, source_name: 'Резервуар 1', fuel_type: 'ДТ', overflow_group: '1-3', last_volume: 6898.68 }),
+        kazsTank({ id: 2, tank_number: 2, source_name: 'Резервуар 2', fuel_type: 'ДТ', overflow_group: '1-3', last_volume: 6844.97 }),
+        kazsTank({ id: 3, tank_number: 3, source_name: 'Резервуар 3', fuel_type: 'ДТ', overflow_group: '1-3', last_volume: 6854.74 }),
+        kazsTank({ id: 4, tank_number: 4, source_name: 'Резервуар 4', fuel_type: 'АИ-92', last_volume: 8946.04 }),
+      ],
+    }
+    renderWithProviders(<TankLevelsModal station={kazs} isOpen onClose={vi.fn()} onStationUpdate={vi.fn()} />)
+
+    const group = screen.getByTestId('tank-group')
+    expect(group).toHaveTextContent('Составной резервуар · перелив 1-3')
+    expect(group).toHaveTextContent(/20\s598,39/)
+    expect(group).toHaveTextContent(/30\s000/)
+    expect(within(group).getAllByTestId('tank-level')).toHaveLength(3)
+    expect(screen.queryByTestId('fuel-total')).not.toBeInTheDocument()
+  })
+
   it('сообщает, если уровнемеры не ответили', async () => {
     mockAuthFetch.mockResolvedValue(makeResponse({
       station: station(),

@@ -270,6 +270,17 @@ const TankLevelsModal = ({ station, isOpen, onClose, onStationUpdate }) => {
     return [...byFuel.entries()].map(([fuel, tanks]) => ({ fuel, count: tanks.length, ...summarize(tanks, watch.baseline) }))
   }, [allTanks, watch.baseline])
 
+  // Сколько карточек у каждого вида топлива: составной резервуар — одна карточка
+  const cardsPerFuel = useMemo(() => {
+    const counts = new Map()
+    layout.forEach((item) => {
+      const tanks = item.kind === 'group' ? item.tanks : [item.tank]
+      new Set(tanks.filter((t) => t.is_active).map((t) => t.fuel_type || 'Топливо'))
+        .forEach((fuel) => counts.set(fuel, (counts.get(fuel) || 0) + 1))
+    })
+    return counts
+  }, [layout])
+
   const readNow = useCallback(async ({ quiet = false } = {}) => {
     if (!station || loadingRef.current) return
     loadingRef.current = true
@@ -452,8 +463,8 @@ const TankLevelsModal = ({ station, isOpen, onClose, onStationUpdate }) => {
           </div>
         ) : null}
 
-        {/* Итог по топливу нужен, когда у топлива несколько ёмкостей; иначе он повторяет карточку */}
-        {fuels.some((item) => item.count > 1) ? (
+        {/* Итог по топливу нужен, когда топливо разнесено по нескольким карточкам; иначе он повторяет карточку */}
+        {fuels.some((item) => (cardsPerFuel.get(item.fuel) || 0) > 1) ? (
           <section className="tlm-summary" aria-label="Итого по видам топлива">
             {fuels.map((item) => (
               <div key={item.fuel} className="tlm-total" data-testid="fuel-total">
