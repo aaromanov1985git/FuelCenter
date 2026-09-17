@@ -55,6 +55,7 @@ const SVG_ALLOWED = {
   'ProviderAnalysisDashboard.jsx': 1,  // маркер Leaflet: html-строка вне React
   'FuelCardsList.jsx': 1,              // чип платёжной карты: иллюстрация в сетке 16x12
   'TanksPage.jsx': 1,                  // график объёма ёмкости из данных: оси, сетка, динамический path
+  'TankLevelsModal.jsx': 1,            // ёмкость с заливкой по данным уровнемера, как в «Мониторе емкостей»
 }
 
 const collectJsx = (dir, acc = []) => {

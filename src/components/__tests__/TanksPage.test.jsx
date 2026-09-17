@@ -190,74 +190,16 @@ describe('TanksPage', () => {
     })
   })
 
-  describe('живые показания уровнемера', () => {
-    const liveStation = { ...overview.stations[0], azs_codes: ['1016201', '807211'], live_available: true }
-    const refreshed = {
-      ...liveStation,
-      fuels: [
-        { ...liveStation.fuels[0], volume: 16377.93 },
-        { ...liveStation.fuels[1], volume: 12533.45 },
-      ],
-    }
+  it('по кнопке «Уровнемеры» открывает окно показаний АЗС', async () => {
+    setup({ ...overview, stations: [{ ...overview.stations[0], live_available: false }] })
+    renderWithProviders(<TanksPage />)
 
-    const setupLive = (liveBody, ok = true) => {
-      setup({ ...overview, stations: [liveStation, { ...overview.stations[0], azs_code: '505221', provider_id: 2, live_available: false }] })
-      const baseImpl = mockAuthFetch.getMockImplementation()
-      mockAuthFetch.mockImplementation((url, options) => {
-        if (url.includes('/api/v1/tanks/live')) return Promise.resolve(makeResponse(liveBody, ok))
-        return baseImpl(url, options)
-      })
-    }
-
-    it('показывает кнопки только у АЗС с Сервером-186 и обновляет остатки по кнопке', async () => {
-      setupLive({
-        station: refreshed,
-        devices: [
-          { azs_code: '1016201', status: 'success', tanks_updated: 2 },
-          { azs_code: '807211', status: 'success', tanks_updated: 1 },
-        ],
-      })
-      renderWithProviders(<TanksPage />)
-
-      await screen.findByText('1016201 · 807211')
-      expect(screen.getAllByTestId('tank-live')).toHaveLength(1)
-
-      fireEvent.click(screen.getByRole('button', { name: /Уровнемер/ }))
-      await waitFor(() => expect(screen.getByText(/^12\s533 л$/)).toBeInTheDocument())
-      const call = mockAuthFetch.mock.calls.find(([url]) => url.includes('/api/v1/tanks/live'))
-      expect(call[0]).toContain('provider_id=3')
-      expect(call[0]).toContain('azs_code=1016201')
-      expect(call[1]).toMatchObject({ method: 'POST' })
-      expect(screen.getByTestId('tank-live')).toHaveTextContent('Уровнемер: только что')
-    })
-
-    it('режим «Следить» сразу читает уровнемер и переключает кнопку', async () => {
-      setupLive({ station: refreshed, devices: [{ azs_code: '1016201', status: 'success', tanks_updated: 2 }] })
-      renderWithProviders(<TanksPage />)
-
-      fireEvent.click(await screen.findByRole('button', { name: /Следить/ }))
-      const stop = await screen.findByRole('button', { name: /Остановить/ })
-      expect(stop).toHaveAttribute('aria-pressed', 'true')
-      await waitFor(() => expect(mockAuthFetch.mock.calls.some(([url]) => url.includes('/api/v1/tanks/live'))).toBe(true))
-
-      fireEvent.click(stop)
-      expect(await screen.findByRole('button', { name: /Следить/ })).toHaveAttribute('aria-pressed', 'false')
-    })
-
-    it('сообщает, если контроллеры не ответили', async () => {
-      setupLive({
-        station: liveStation,
-        devices: [
-          { azs_code: '1016201', status: 'failed', error: 'Контроллер 1016201 не ответил за 20 с — возможно, нет связи с АЗС' },
-          { azs_code: '807211', status: 'failed', error: 'Контроллер 807211 не ответил за 20 с — возможно, нет связи с АЗС' },
-        ],
-      })
-      renderWithProviders(<TanksPage />)
-
-      fireEvent.click(await screen.findByRole('button', { name: /Уровнемер/ }))
-      await waitFor(() => expect(screen.getByTestId('tank-live')).toHaveTextContent('Контроллер 1016201 не ответил'))
-      expect(mockError).toHaveBeenCalled()
-    })
+    const station = await screen.findByTestId('tank-station')
+    fireEvent.click(within(station).getByRole('button', { name: /Уровнемеры/ }))
+    expect(await screen.findByText('Показания уровнемеров — 1016201')).toBeInTheDocument()
+    expect(screen.getAllByTestId('tank-level')).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+    expect(screen.queryByText('Показания уровнемеров — 1016201')).not.toBeInTheDocument()
   })
 
   it('для замеров смены показывает расчёт от замера и отпуска', async () => {

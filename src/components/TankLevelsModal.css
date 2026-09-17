@@ -1,0 +1,211 @@
+/* Окно «Показания уровнемеров»: ёмкости с заливкой, показания и слежение за наливом */
+
+.tlm-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 14px;
+}
+
+.tlm-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tlm-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.tlm-status[data-tone="muted"] {
+  color: var(--text-3);
+}
+
+.tlm-status[data-tone="warn"] {
+  color: var(--amber-ink);
+}
+
+.tlm-status__dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: tlm-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes tlm-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.tlm-watch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.tlm-watch__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.tlm-watch__total {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.tlm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.tlm-tank {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.tlm-tank__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tlm-tank__fuel {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.tlm-tank__name {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tlm-tank__body {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.tlm-gauge {
+  flex: 0 0 auto;
+  width: 96px;
+  height: 150px;
+}
+
+.tlm-readings {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+}
+
+.tlm-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.tlm-row dt {
+  color: var(--text-3);
+}
+
+.tlm-row dd {
+  margin: 0;
+  color: var(--text-1);
+  text-align: right;
+}
+
+.tlm-arrival {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.tlm-arrival__main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tlm-arrival__label {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.tlm-arrival__value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.tlm-arrival[data-positive="true"] .tlm-arrival__value {
+  color: var(--green);
+}
+
+.tlm-arrival__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.tlm-empty {
+  color: var(--text-3);
+}
+
+.tlm-unused {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+@media (max-width: 480px) {
+  .tlm-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tlm-gauge {
+    width: 72px;
+    height: 112px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tlm-status__dot {
+    animation: none;
+  }
+}
