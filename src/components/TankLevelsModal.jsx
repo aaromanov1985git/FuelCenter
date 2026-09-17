@@ -3,7 +3,7 @@ import { Button, Modal } from './ui'
 import Icon from './ui/Icon'
 import { authFetch } from '../utils/api'
 import { useToast } from './ToastContainer'
-import { formatAge, formatDecimal, formatLiters, formatSourceDateTime } from '../utils/topazFormat'
+import { fillTone, formatAge, formatDecimal, formatLiters, formatSourceDateTime } from '../utils/topazFormat'
 import './TankLevelsModal.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
@@ -12,7 +12,13 @@ const API_URL = import.meta.env.VITE_API_URL || ''
 export const WATCH_INTERVAL_MS = 15 * 1000
 const WATCH_MAX_MS = 2 * 60 * 60 * 1000
 
-const fuelFamily = (fuel) => (/дт|диз/i.test(fuel || '') ? 'diesel' : 'petrol')
+const TONE_LABELS = { ok: 'норма', warn: 'низкий уровень', low: 'критический уровень', neutral: 'вместимость не задана' }
+
+const hasVolume = (tank) => tank.last_volume !== null && tank.last_volume !== undefined
+
+const percentOf = (volume, capacity) => (capacity && volume !== null && volume !== undefined
+  ? Math.max(0, Math.min(100, (volume / capacity) * 100))
+  : null)
 
 const formatSigned = (value, unit) => {
   if (value === null || value === undefined) return '—'
@@ -30,47 +36,72 @@ const formatDuration = (ms) => {
   return hours ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
 }
 
-/* Ёмкость как в «Мониторе емкостей»: заливка по доле от вместимости, риски по четвертям. */
-export const TankGauge = ({ tank }) => {
-  const width = 96
-  const height = 150
-  const pad = 6
-  const capacity = tank.capacity_liters
-  const percent = capacity && tank.last_volume !== null && tank.last_volume !== undefined
-    ? Math.max(0, Math.min(100, (tank.last_volume / capacity) * 100))
-    : null
+/* «17.09.2026 11:59» → «11:59 · только что» */
+const measuredText = (tank) => {
+  if (!tank.last_measured_at) return '—'
+  const full = formatSourceDateTime(tank.last_measured_at)
+  return `${full.slice(-5)} · ${formatAge(tank.age_minutes)}`
+}
+
+/* Сводка по набору ёмкостей: общий объём, вместимость, масса и приход с начала слежения */
+const summarize = (tanks, baseline) => {
+  const measured = tanks.filter(hasVolume)
+  const volume = measured.reduce((sum, t) => sum + t.last_volume, 0)
+  const capacities = tanks.map((t) => t.capacity_liters)
+  const capacity = capacities.length && capacities.every(Boolean) ? capacities.reduce((a, b) => a + b, 0) : null
+  const withBase = measured.filter((t) => baseline?.[t.id])
+  const arrived = withBase.length ? withBase.reduce((sum, t) => sum + (t.last_volume - baseline[t.id].volume), 0) : null
+  return {
+    volume: measured.length ? volume : null,
+    capacity,
+    percent: percentOf(measured.length ? volume : null, capacity),
+    free: capacity !== null && measured.length ? Math.max(0, capacity - volume) : null,
+    arrived,
+  }
+}
+
+/* Ёмкость как в «Мониторе емкостей»: заливка по доле от вместимости, цвет — по уровню. */
+export const TankGauge = ({ volume, capacity, label, size = 'md' }) => {
+  const width = size === 'lg' ? 112 : 88
+  const height = size === 'lg' ? 176 : 132
+  const pad = 5
+  const percent = percentOf(volume, capacity)
+  const tone = fillTone(percent)
   const innerHeight = height - pad * 2
-  const fillHeight = percent === null ? 0 : (innerHeight * percent) / 100
-  const family = fuelFamily(tank.fuel_type)
-  const low = percent !== null && percent < 10
-  const fillColor = low ? 'var(--red)' : family === 'diesel' ? 'var(--amber)' : 'var(--accent)'
+  const fillHeight = percent === null ? 0 : Math.max(percent > 0 ? 3 : 0, (innerHeight * percent) / 100)
+  const fill = { ok: 'var(--green)', warn: 'var(--amber)', low: 'var(--red)', neutral: 'var(--border-strong)' }[tone]
 
   return (
     <svg
       className="tlm-gauge"
+      data-size={size}
+      data-tone={tone}
       viewBox={`0 0 ${width} ${height}`}
       role="img"
-      aria-label={`${tank.fuel_type || 'Топливо'}: ${percent === null ? 'заполнение неизвестно' : `заполнено на ${Math.round(percent)}%`}`}
+      aria-label={`${label}: ${percent === null ? 'заполнение неизвестно' : `заполнено на ${Math.round(percent)}%, ${TONE_LABELS[tone]}`}`}
     >
       <rect
-        x={1} y={1} width={width - 2} height={height - 2} rx={10}
-        style={{ fill: 'var(--surface-2)', stroke: 'var(--border-strong)', strokeWidth: 2 }}
+        x={1} y={1} width={width - 2} height={height - 2} rx={12}
+        style={{ fill: 'var(--surface-2)', stroke: 'var(--border-strong)', strokeWidth: 1.5 }}
       />
       {fillHeight > 0 ? (
         <rect
-          x={pad} y={height - pad - fillHeight} width={width - pad * 2} height={fillHeight} rx={6}
-          style={{ fill: fillColor, opacity: 0.85 }}
+          className="tlm-gauge__fill"
+          x={pad} y={height - pad - fillHeight} width={width - pad * 2} height={fillHeight} rx={8}
+          style={{ fill }}
         />
       ) : null}
       {[25, 50, 75].map((mark) => {
         const y = height - pad - (innerHeight * mark) / 100
         return (
-          <line key={mark} x1={width - pad - 12} x2={width - pad} y1={y} y2={y} style={{ stroke: 'var(--text-3)', strokeWidth: 1 }} />
+          <g key={mark}>
+            <line x1={width - pad - 14} x2={width - pad - 2} y1={y} y2={y} style={{ stroke: 'var(--text-1)', strokeWidth: 1, opacity: 0.35 }} />
+          </g>
         )
       })}
       <text
-        x={width / 2} y={height / 2 + 6} textAnchor="middle"
-        style={{ fill: 'var(--text-1)', fontSize: 18, fontWeight: 700 }}
+        x={width / 2} y={height / 2 + 7} textAnchor="middle"
+        style={{ fill: 'var(--text-1)', fontSize: size === 'lg' ? 22 : 18, fontWeight: 700, paintOrder: 'stroke', stroke: 'var(--surface)', strokeWidth: 3, strokeLinejoin: 'round' }}
       >
         {percent === null ? '—' : `${Math.round(percent)}%`}
       </text>
@@ -78,54 +109,112 @@ export const TankGauge = ({ tank }) => {
   )
 }
 
-const ReadingRow = ({ label, value }) => (
-  <div className="tlm-row">
+const LevelBar = ({ percent, label }) => {
+  const tone = fillTone(percent)
+  return (
+    <div className="tlm-bar" data-tone={tone} role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent ?? undefined} aria-label={label}>
+      <span className="tlm-bar__fill" style={{ width: `${percent === null ? 0 : percent}%` }} />
+    </div>
+  )
+}
+
+const FuelChip = ({ fuel }) => (
+  <span className="tlm-fuel" data-family={/дт|диз/i.test(fuel || '') ? 'diesel' : 'petrol'}>{fuel || 'Топливо'}</span>
+)
+
+const Reading = ({ label, value, strong = false }) => (
+  <div className="tlm-row" data-strong={strong ? 'true' : undefined}>
     <dt>{label}</dt>
     <dd className="t-numeric">{value}</dd>
   </div>
 )
 
-const TankPanel = ({ tank, watch, now }) => {
-  const base = watch?.baseline?.[tank.id]
-  const arrived = base && tank.last_volume !== null && tank.last_volume !== undefined ? tank.last_volume - base.volume : null
-  const arrivedMass = base && base.mass !== null && tank.last_mass !== null && tank.last_mass !== undefined
-    ? tank.last_mass - base.mass
-    : null
-  const elapsedMs = base ? (watch.active ? now : watch.stoppedAt || now) - base.at : 0
-  const perMinute = arrived !== null && elapsedMs > 60 * 1000 ? arrived / (elapsedMs / 60000) : null
-
+const ArrivalLine = ({ arrived, watch, since, now }) => {
+  if (arrived === null || arrived === undefined) return null
+  const elapsedMs = since ? (watch.active ? now : watch.stoppedAt || now) - since : 0
+  const perMinute = elapsedMs > 60 * 1000 ? arrived / (elapsedMs / 60000) : null
   return (
-    <article className="tlm-tank" data-testid="tank-level">
-      <header className="tlm-tank__head">
-        <span className="tlm-tank__fuel" data-family={fuelFamily(tank.fuel_type)}>{tank.fuel_type || 'Вид не определён'}</span>
-        <span className="tlm-tank__name">{tank.source_name || `Ёмкость ${tank.tank_number}`}</span>
+    <div className="tlm-arrival" data-testid="tank-arrival" data-positive={arrived > 0.5 ? 'true' : 'false'}>
+      <span className="tlm-arrival__label">{watch.active ? 'Пришло' : 'Итог налива'}</span>
+      <span className="tlm-arrival__value t-numeric">{formatSigned(arrived, 'л')}</span>
+      <span className="tlm-arrival__meta t-numeric">
+        {formatDuration(elapsedMs)}{perMinute !== null ? ` · ${formatLiters(perMinute)} л/мин` : ''}
+      </span>
+    </div>
+  )
+}
+
+/* Отдельная ёмкость */
+const TankCard = ({ tank, watch, now }) => {
+  const base = watch.baseline[tank.id]
+  const free = tank.capacity_liters && hasVolume(tank) ? Math.max(0, tank.capacity_liters - tank.last_volume) : null
+  return (
+    <article className="tlm-card" data-testid="tank-level" data-inactive={tank.is_active ? undefined : 'true'}>
+      <header className="tlm-card__head">
+        <FuelChip fuel={tank.fuel_type} />
+        <span className="tlm-card__name">{tank.source_name || `Ёмкость ${tank.tank_number}`}</span>
+        {!tank.is_active ? <span className="tlm-card__tag">не учитывается</span> : null}
       </header>
-      <div className="tlm-tank__body">
-        <TankGauge tank={tank} />
+      <div className="tlm-card__body">
+        <TankGauge volume={tank.last_volume} capacity={tank.capacity_liters} label={tank.fuel_type || 'Топливо'} />
         <dl className="tlm-readings">
-          <ReadingRow label="Объём, л" value={formatDecimal(tank.last_volume)} />
-          <ReadingRow label="Масса, кг" value={formatDecimal(tank.last_mass)} />
-          <ReadingRow label="Плотность, кг/м³" value={formatDecimal(tank.last_density)} />
-          <ReadingRow label="Температура, °C" value={formatDecimal(tank.last_temperature)} />
-          <ReadingRow label="Подтоварная вода" value={formatDecimal(tank.last_water)} />
-          <ReadingRow label="Вместимость, л" value={tank.capacity_liters ? formatLiters(tank.capacity_liters) : 'не задана'} />
-          <ReadingRow label="Замер" value={tank.last_measured_at ? `${formatSourceDateTime(tank.last_measured_at)} (${formatAge(tank.age_minutes)})` : '—'} />
+          <Reading label="Объём, л" value={formatDecimal(tank.last_volume)} strong />
+          <Reading label="Свободно, л" value={free === null ? '—' : formatLiters(free)} />
+          <Reading label="Масса, кг" value={formatDecimal(tank.last_mass)} />
+          <Reading label="Плотность" value={formatDecimal(tank.last_density)} />
+          <Reading label="Температура, °C" value={formatDecimal(tank.last_temperature)} />
+          <Reading label="Вода" value={formatDecimal(tank.last_water)} />
+          <Reading label="Вместимость, л" value={tank.capacity_liters ? formatLiters(tank.capacity_liters) : 'не задана'} />
+          <Reading label="Замер" value={measuredText(tank)} />
         </dl>
       </div>
-      {base ? (
-        <div className="tlm-arrival" data-testid="tank-arrival" data-positive={arrived > 0.5 ? 'true' : 'false'}>
-          <div className="tlm-arrival__main">
-            <span className="tlm-arrival__label">{watch.active ? 'Пришло с начала слежения' : 'Итог налива'}</span>
-            <span className="tlm-arrival__value t-numeric">{formatSigned(arrived, 'л')}</span>
-          </div>
-          <div className="tlm-arrival__meta t-numeric">
-            <span>было {formatLiters(base.volume)} л</span>
-            {arrivedMass !== null ? <span>{formatSigned(arrivedMass, 'кг')}</span> : null}
-            <span>{formatDuration(elapsedMs)}</span>
-            {perMinute !== null ? <span>{formatLiters(perMinute)} л/мин</span> : null}
-          </div>
+      {base ? <ArrivalLine arrived={hasVolume(tank) ? tank.last_volume - base.volume : null} watch={watch} since={base.at} now={now} /> : null}
+    </article>
+  )
+}
+
+/* Составной резервуар: ёмкости одной группы перелива показываются общим объёмом */
+const GroupCard = ({ group, tanks, watch, now }) => {
+  const total = summarize(tanks, watch.baseline)
+  const since = Math.min(...tanks.map((t) => watch.baseline[t.id]?.at).filter(Boolean))
+  const fuels = [...new Set(tanks.map((t) => t.fuel_type).filter(Boolean))]
+  return (
+    <article className="tlm-card tlm-card--group" data-testid="tank-group">
+      <header className="tlm-card__head">
+        {fuels.map((fuel) => <FuelChip key={fuel} fuel={fuel} />)}
+        <span className="tlm-card__name">Составной резервуар · перелив {group}</span>
+      </header>
+      <div className="tlm-card__body">
+        <TankGauge volume={total.volume} capacity={total.capacity} label={`Перелив ${group}`} size="lg" />
+        <div className="tlm-group">
+          <dl className="tlm-readings">
+            <Reading label="Общий объём, л" value={formatDecimal(total.volume)} strong />
+            <Reading label="Свободно, л" value={total.free === null ? '—' : formatLiters(total.free)} />
+            <Reading label="Вместимость, л" value={total.capacity ? formatLiters(total.capacity) : 'не задана'} />
+          </dl>
+          <ul className="tlm-members">
+            {tanks.map((tank) => {
+              const percent = percentOf(tank.last_volume, tank.capacity_liters)
+              return (
+                <li key={tank.id} className="tlm-member" data-testid="tank-level">
+                  <div className="tlm-member__head">
+                    <span className="tlm-member__name">{tank.source_name || `Ёмкость ${tank.tank_number}`}</span>
+                    <span className="tlm-member__volume t-numeric">{formatDecimal(tank.last_volume)} л</span>
+                  </div>
+                  <LevelBar percent={percent} label={`${tank.source_name || 'Ёмкость'}: заполнение`} />
+                  <div className="tlm-member__meta t-numeric">
+                    <span>{percent === null ? '—' : `${Math.round(percent)}%`}</span>
+                    <span>{formatDecimal(tank.last_density)} кг/м³</span>
+                    <span>{formatDecimal(tank.last_temperature)} °C</span>
+                    <span>{measuredText(tank)}</span>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
         </div>
-      ) : null}
+      </div>
+      {total.arrived !== null ? <ArrivalLine arrived={total.arrived} watch={watch} since={since} now={now} /> : null}
     </article>
   )
 }
@@ -146,11 +235,40 @@ const TankLevelsModal = ({ station, isOpen, onClose, onStationUpdate }) => {
   const loadingRef = useRef(false)
 
   const liveAvailable = Boolean(station?.live_available)
-  const tanks = useMemo(
-    () => (station?.tanks || []).filter((tank) => showUnused || tank.is_active),
-    [station, showUnused],
-  )
-  const hiddenCount = (station?.tanks || []).filter((tank) => !tank.is_active).length
+  const allTanks = station?.tanks || []
+  const hiddenCount = allTanks.filter((tank) => !tank.is_active).length
+
+  const layout = useMemo(() => {
+    const visible = allTanks.filter((tank) => showUnused || tank.is_active)
+    const groups = new Map()
+    const singles = []
+    visible.forEach((tank) => {
+      if (tank.is_active && tank.overflow_group) {
+        if (!groups.has(tank.overflow_group)) groups.set(tank.overflow_group, [])
+        groups.get(tank.overflow_group).push(tank)
+      } else {
+        singles.push(tank)
+      }
+    })
+    const items = []
+    groups.forEach((tanks, group) => {
+      if (tanks.length > 1) items.push({ kind: 'group', group, tanks, order: Math.min(...tanks.map((t) => t.tank_number || 0)) })
+      else singles.push(tanks[0])
+    })
+    singles.forEach((tank) => items.push({ kind: 'tank', tank, order: tank.tank_number || 0 }))
+    items.sort((a, b) => a.order - b.order)
+    return items
+  }, [allTanks, showUnused])
+
+  const fuels = useMemo(() => {
+    const byFuel = new Map()
+    allTanks.filter((tank) => tank.is_active).forEach((tank) => {
+      const key = tank.fuel_type || 'Топливо'
+      if (!byFuel.has(key)) byFuel.set(key, [])
+      byFuel.get(key).push(tank)
+    })
+    return [...byFuel.entries()].map(([fuel, tanks]) => ({ fuel, count: tanks.length, ...summarize(tanks, watch.baseline) }))
+  }, [allTanks, watch.baseline])
 
   const readNow = useCallback(async ({ quiet = false } = {}) => {
     if (!station || loadingRef.current) return
@@ -174,7 +292,7 @@ const TankLevelsModal = ({ station, isOpen, onClose, onStationUpdate }) => {
           setWatch((prev) => {
             const baseline = { ...prev.baseline }
             data.station.tanks.forEach((tank) => {
-              if (!baseline[tank.id] && tank.last_volume !== null && tank.last_volume !== undefined) {
+              if (!baseline[tank.id] && hasVolume(tank)) {
                 baseline[tank.id] = { volume: tank.last_volume, mass: tank.last_mass, at: Date.now() }
               }
             })
@@ -206,8 +324,9 @@ const TankLevelsModal = ({ station, isOpen, onClose, onStationUpdate }) => {
   }, [])
 
   const startWatch = () => {
-    setWatch({ active: true, baseline: {}, startedAt: Date.now(), stoppedAt: null })
-    watchRef.current = { active: true, baseline: {}, startedAt: Date.now(), stoppedAt: null }
+    const next = { active: true, baseline: {}, startedAt: Date.now(), stoppedAt: null }
+    setWatch(next)
+    watchRef.current = next
     readNow()
   }
 
@@ -250,29 +369,28 @@ const TankLevelsModal = ({ station, isOpen, onClose, onStationUpdate }) => {
   const codes = (station.azs_codes?.length ? station.azs_codes : [station.azs_code]).join(' · ')
   const failed = devices.filter((d) => d.status === 'failed')
   const secondsAgo = readAt ? Math.round((now - readAt) / 1000) : null
+  const watching = watch.active || watch.stoppedAt
 
   let status
+  let tone = 'ok'
   if (!liveAvailable) {
-    status = 'На этой АЗС опрос уровнемеров по запросу пока недоступен — показаны последние замеры из базы Топаза.'
-  } else if (loading && !readAt) {
+    status = 'Опрос по запросу для этой АЗС недоступен — показаны последние замеры из базы Топаза'
+    tone = 'muted'
+  } else if (loading) {
     status = 'Опрашиваем уровнемеры…'
+    tone = 'busy'
   } else if (error) {
     status = error
+    tone = 'warn'
   } else if (readAt !== null) {
     status = `Показания получены ${secondsAgo < 5 ? 'только что' : `${secondsAgo} с назад`}`
-    if (failed.length) status += ` · нет ответа: ${failed.map((d) => d.azs_code).join(', ')}`
+    if (failed.length) {
+      status += ` · нет ответа: ${failed.map((d) => d.azs_code).join(', ')}`
+      tone = 'warn'
+    }
   } else {
     status = 'Нажмите «Запросить показания»'
-  }
-
-  const totals = {}
-  if (Object.keys(watch.baseline).length) {
-    tanks.forEach((tank) => {
-      const base = watch.baseline[tank.id]
-      if (!base || !tank.is_active || tank.last_volume === null || tank.last_volume === undefined) return
-      const key = tank.fuel_type || 'Топливо'
-      totals[key] = (totals[key] || 0) + (tank.last_volume - base.volume)
-    })
+    tone = 'muted'
   }
 
   const close = () => {
@@ -313,49 +431,74 @@ const TankLevelsModal = ({ station, isOpen, onClose, onStationUpdate }) => {
           </div>
           <div
             className="tlm-status"
-            data-tone={!liveAvailable ? 'muted' : error || failed.length ? 'warn' : 'ok'}
+            data-tone={tone}
             data-testid="levels-status"
             title={failed.map((d) => `${d.azs_code}: ${d.error}`).join('\n') || undefined}
           >
-            {watch.active ? <span className="tlm-status__dot" aria-hidden="true" /> : null}
+            {watch.active || tone === 'busy' ? <span className="tlm-status__dot" data-tone={tone} aria-hidden="true" /> : null}
             {status}
           </div>
         </div>
 
-        {watch.active || watch.stoppedAt ? (
-          <div className="tlm-watch" data-testid="watch-summary">
+        {watching ? (
+          <div className="tlm-watch" data-active={watch.active ? 'true' : 'false'} data-testid="watch-summary">
+            <Icon name={watch.active ? 'play' : 'pause'} size={16} />
             <span className="tlm-watch__title">
               {watch.active
                 ? `Слежение за наливом · ${formatDuration(now - watch.startedAt)}`
                 : `Слежение остановлено · ${formatDuration(watch.stoppedAt - watch.startedAt)}`}
             </span>
-            {Object.keys(totals).length ? (
-              Object.entries(totals).map(([fuel, value]) => (
-                <span key={fuel} className="tlm-watch__total t-numeric">{fuel}: {formatSigned(value, 'л')}</span>
-              ))
-            ) : (
-              <span className="tlm-watch__total">ждём первое показание…</span>
-            )}
+            {Object.keys(watch.baseline).length === 0 ? <span className="tlm-watch__hint">ждём первое показание…</span> : null}
           </div>
         ) : null}
 
-        {tanks.length === 0 ? (
+        {/* Итог по топливу нужен, когда у топлива несколько ёмкостей; иначе он повторяет карточку */}
+        {fuels.some((item) => item.count > 1) ? (
+          <section className="tlm-summary" aria-label="Итого по видам топлива">
+            {fuels.map((item) => (
+              <div key={item.fuel} className="tlm-total" data-testid="fuel-total">
+                <div className="tlm-total__head">
+                  <FuelChip fuel={item.fuel} />
+                  <span className="tlm-total__count">{item.count > 1 ? `${item.count} ёмкости` : '1 ёмкость'}</span>
+                </div>
+                <div className="tlm-total__volume t-numeric">{formatLiters(item.volume)} л</div>
+                <LevelBar percent={item.percent} label={`${item.fuel}: заполнение`} />
+                <div className="tlm-total__meta t-numeric">
+                  <span>{item.capacity ? `${Math.round(item.percent)}% из ${formatLiters(item.capacity)} л` : 'вместимость не задана'}</span>
+                  {item.free !== null ? <span>свободно {formatLiters(item.free)} л</span> : null}
+                </div>
+                {item.arrived !== null ? (
+                  <div className="tlm-total__arrival t-numeric" data-positive={item.arrived > 0.5 ? 'true' : 'false'}>
+                    {watch.active ? 'пришло' : 'итог налива'} {formatSigned(item.arrived, 'л')}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </section>
+        ) : null}
+
+        {layout.length === 0 ? (
           <p className="tlm-empty">Нет ёмкостей для показа.</p>
         ) : (
           <div className="tlm-grid">
-            {tanks.map((tank) => (
-              <TankPanel key={tank.id} tank={tank} watch={watch} now={now} />
-            ))}
+            {layout.map((item) => (item.kind === 'group'
+              ? <GroupCard key={`g-${item.group}`} group={item.group} tanks={item.tanks} watch={watch} now={now} />
+              : <TankCard key={item.tank.id} tank={item.tank} watch={watch} now={now} />))}
           </div>
         )}
       </Modal.Body>
       <Modal.Footer>
+        <div className="tlm-legend" aria-label="Цвет уровня">
+          <span data-tone="ok">от 35%</span>
+          <span data-tone="warn">20–35%</span>
+          <span data-tone="low">меньше 20%</span>
+        </div>
         {hiddenCount ? (
           <label className="tlm-unused">
             <input type="checkbox" checked={showUnused} onChange={(e) => setShowUnused(e.target.checked)} />
-            Отображать неиспользуемые ёмкости ({hiddenCount})
+            Неиспользуемые ёмкости ({hiddenCount})
           </label>
-        ) : <span />}
+        ) : null}
         <Button variant="secondary" onClick={close}>Закрыть</Button>
       </Modal.Footer>
     </Modal>

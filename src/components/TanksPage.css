@@ -73,16 +73,16 @@
 /* ---------- Stations ---------- */
 .tnk-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 16px;
-  align-items: start;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 20px;
+  align-items: stretch;
 }
 
 .tnk-station {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 16px 18px;
+  gap: 16px;
+  padding: 20px 22px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -98,7 +98,8 @@
 
 .tnk-station__code {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
+  white-space: nowrap;
   font-weight: 600;
   color: var(--text-1);
 }
@@ -170,14 +171,14 @@
 }
 
 .tnk-fuel-row__name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-1);
 }
 
 .tnk-fuel-row__volume {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 24px;
+  font-weight: 700;
   color: var(--text-1);
 }
 
@@ -383,9 +384,13 @@
   .tnk-header__actions { width: 100%; }
 }
 
-.tnk-station__actions {
+/* Нижняя панель карточки: всегда у нижнего края, чтобы плитки в ряду выглядели одинаково */
+.tnk-station__foot {
   display: flex;
-  flex: 0 0 auto;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }

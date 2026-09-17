@@ -389,22 +389,9 @@ const StationCard = ({ station, isAdmin, onHistory, onSettings, onShare, onLevel
             </div>
           ) : null}
         </div>
-        <div className="tnk-station__actions">
-          <Button
-            size="sm"
-            variant={station.live_available ? 'secondary' : 'ghost'}
-            icon={<Icon name="gauge" size={14} />}
-            onClick={onLevels}
-            title={station.live_available
-              ? 'Живые показания уровнемеров и слежение за наливом'
-              : 'Последние показания уровнемеров из базы Топаза'}
-          >
-            Уровнемеры
-          </Button>
-          {isAdmin && (
-            <IconButton icon="share" title="Поделиться" onClick={onShare} />
-          )}
-        </div>
+        {isAdmin && (
+          <IconButton icon="share" title="Поделиться" onClick={onShare} />
+        )}
       </header>
 
       {station.fuels.length === 0 ? (
@@ -431,15 +418,28 @@ const StationCard = ({ station, isAdmin, onHistory, onSettings, onShare, onLevel
         </ul>
       )}
 
-      <button
-        type="button"
-        className="tnk-toggle"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((value) => !value)}
-      >
-        <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={14} />
-        Ёмкости ({station.tanks.length})
-      </button>
+      <div className="tnk-station__foot">
+        <button
+          type="button"
+          className="tnk-toggle"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={14} />
+          Ёмкости ({station.tanks.length})
+        </button>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<Icon name="gauge" size={14} />}
+          onClick={onLevels}
+          title={station.live_available
+            ? 'Живые показания уровнемеров и слежение за наливом'
+            : 'Последние показания уровнемеров из базы Топаза'}
+        >
+          Уровнемеры
+        </Button>
+      </div>
       {expanded ? (
         <ul className="tnk-tanks">
           {station.tanks.map((tank) => (

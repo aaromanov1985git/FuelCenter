@@ -87,10 +87,12 @@ describe('TankLevelsModal', () => {
     const panels = screen.getAllByTestId('tank-level')
     expect(panels).toHaveLength(2)
     expect(within(panels[1]).getByText('ДТ')).toBeInTheDocument()
-    expect(within(panels[1]).getByRole('img', { name: 'ДТ: заполнено на 42%' })).toBeInTheDocument()
+    expect(within(panels[1]).getByRole('img', { name: 'ДТ: заполнено на 42%, норма' })).toBeInTheDocument()
+    // По одной ёмкости на топливо — сводка повторяла бы карточки и не показывается
+    expect(screen.queryByTestId('fuel-total')).not.toBeInTheDocument()
     expect(screen.getByTestId('levels-status')).toHaveTextContent('Показания получены только что')
 
-    fireEvent.click(screen.getByLabelText(/Отображать неиспользуемые ёмкости \(1\)/))
+    fireEvent.click(screen.getByLabelText(/Неиспользуемые ёмкости \(1\)/))
     expect(screen.getAllByTestId('tank-level')).toHaveLength(3)
   })
 
@@ -115,11 +117,10 @@ describe('TankLevelsModal', () => {
     rerender(<TankLevelsModal station={current} isOpen onClose={vi.fn()} onStationUpdate={(s) => { current = s }} />)
 
     await waitFor(() => {
-      const arrivals = screen.getAllByTestId('tank-arrival')
-      const diesel = arrivals.find((node) => node.textContent.includes('было 12'))
-      expect(diesel).toHaveTextContent(/\+1\s250 л/)
+      const diesel = screen.getAllByTestId('tank-level').find((node) => node.textContent.includes('Емкость 1 - 807211'))
+      expect(within(diesel).getByTestId('tank-arrival')).toHaveTextContent(/Пришло\s*\+1\s250 л/)
     })
-    expect(screen.getByTestId('watch-summary')).toHaveTextContent(/ДТ: \+1\s250 л/)
+    expect(screen.getByTestId('watch-summary')).toHaveTextContent('Слежение за наливом')
 
     fireEvent.click(screen.getByRole('button', { name: /Остановить слежение/ }))
     expect(screen.getByTestId('watch-summary')).toHaveTextContent('Слежение остановлено')
@@ -132,9 +133,37 @@ describe('TankLevelsModal', () => {
     )
     expect(screen.getByRole('button', { name: /Запросить показания/ })).toBeDisabled()
     expect(screen.getByRole('button', { name: /Следить за наливом/ })).toBeDisabled()
-    expect(screen.getByTestId('levels-status')).toHaveTextContent('опрос уровнемеров по запросу пока недоступен')
+    expect(screen.getByTestId('levels-status')).toHaveTextContent('Опрос по запросу для этой АЗС недоступен')
     expect(screen.getAllByTestId('tank-level')).toHaveLength(2)
     expect(mockAuthFetch).not.toHaveBeenCalled()
+  })
+
+  it('показывает составной резервуар общим объёмом, итог по топливу и цвет по уровню', async () => {
+    const kazsTank = (overrides) => tank({ provider_id: 2, template_id: 3, azs_code: '505221', capacity_liters: 10000, ...overrides })
+    const kazs = {
+      azs_code: '505221', azs_codes: ['505221'], provider_id: 2, provider_name: 'КАЗС', live_available: false, fuels: [],
+      tanks: [
+        kazsTank({ id: 1, tank_number: 1, source_name: 'Резервуар 1', fuel_type: 'ДТ', overflow_group: '1-2', last_volume: 6898.68 }),
+        kazsTank({ id: 2, tank_number: 2, source_name: 'Резервуар 2', fuel_type: 'ДТ', overflow_group: '1-2', last_volume: 6844.97 }),
+        kazsTank({ id: 3, tank_number: 3, source_name: 'Резервуар 3', fuel_type: 'ДТ', last_volume: 1754.74 }),
+        kazsTank({ id: 4, tank_number: 4, source_name: 'Резервуар 4', fuel_type: 'АИ-92', last_volume: 2500 }),
+      ],
+    }
+    renderWithProviders(<TankLevelsModal station={kazs} isOpen onClose={vi.fn()} onStationUpdate={vi.fn()} />)
+
+    const group = screen.getByTestId('tank-group')
+    expect(group).toHaveTextContent('Составной резервуар · перелив 1-2')
+    expect(group).toHaveTextContent(/13\s743,65/)
+    expect(within(group).getByRole('img', { name: 'Перелив 1-2: заполнено на 69%, норма' })).toBeInTheDocument()
+    expect(within(group).getAllByTestId('tank-level')).toHaveLength(2)
+
+    const totals = screen.getAllByTestId('fuel-total')
+    expect(totals[0]).toHaveTextContent('ДТ')
+    expect(totals[0]).toHaveTextContent(/15\s498 л/)
+    expect(totals[0]).toHaveTextContent(/свободно 14\s502 л/)
+
+    expect(screen.getByRole('img', { name: 'ДТ: заполнено на 18%, критический уровень' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'АИ-92: заполнено на 25%, низкий уровень' })).toBeInTheDocument()
   })
 
   it('сообщает, если уровнемеры не ответили', async () => {
