@@ -210,6 +210,44 @@ class TestSessionEstimate:
         assert 15 <= diesel["age_minutes"] <= 25
         assert diesel["oldest_age_minutes"] is None
 
+    def test_live_reading_of_all_tanks_becomes_estimate_base(self, client, auth_headers, test_db):
+        from app.services.topaz_live_service import LIVE_ROW_OFFSET
+
+        provider = Provider(name="КАЗС", code="KAZS")
+        test_db.add(provider)
+        test_db.flush()
+        template = ProviderTemplate(provider_id=provider.id, name="KAZS", connection_type="firebird", field_mapping="{}",
+                                    connection_settings="{}", fuel_type_mapping=json.dumps({"ДТ1": "ДТ"}))
+        test_db.add(template)
+        test_db.flush()
+        run_at = datetime.now()
+        test_db.add(TopazSyncState(template_id=template.id, source_kind="sessions", last_run_at=run_at,
+                                   source_clock=run_at, last_status="success"))
+        shift = run_at.replace(hour=0, minute=0, second=0, microsecond=0)
+        live_at = (run_at - timedelta(minutes=10)).replace(microsecond=0)
+        live_row = LIVE_ROW_OFFSET + int(live_at.timestamp())
+        for num, at_shift, live in ((1, "7000", "6946.17"), (2, "7000", "6881.59")):
+            item = Tank(provider_id=provider.id, template_id=template.id, azs_code="505221",
+                        source_key=f"ses:505221:{num}", tank_number=num, source_fuel="ДТ1",
+                        capacity_liters=Decimal("10000"), last_volume=Decimal(live), last_measured_at=live_at)
+            test_db.add(item)
+            test_db.flush()
+            test_db.add(TankReading(tank_id=item.id, measured_at=shift, volume=Decimal(at_shift), source_row_id=100 + num))
+            test_db.add(TankReading(tank_id=item.id, measured_at=live_at, volume=Decimal(live), source_row_id=live_row))
+        # Отпуск до живого замера уже учтён в нём, после — вычитается
+        test_db.add(Transaction(provider_id=provider.id, azs_number="505221", product="ДТ", card_number="К1",
+                                transaction_date=live_at - timedelta(minutes=5), quantity=Decimal("150")))
+        test_db.add(Transaction(provider_id=provider.id, azs_number="505221", product="ДТ", card_number="К1",
+                                transaction_date=live_at + timedelta(minutes=2), quantity=Decimal("27.76")))
+        test_db.commit()
+
+        body = client.get("/api/v1/tanks", params={"provider_id": provider.id}, headers=auth_headers).json()
+        diesel = body["stations"][0]["fuels"][0]
+        assert diesel["estimate_base_at"].startswith(live_at.isoformat()[:16])
+        assert diesel["estimate_base_volume"] == 13827.76
+        assert diesel["estimate_dispensed"] == 27.76
+        assert diesel["volume"] == 13800.0
+
 
 class TestTankUpdate:
     def test_admin_sets_capacity_override_and_group(self, client, admin_auth_headers, mazs):

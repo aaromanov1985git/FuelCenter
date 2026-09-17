@@ -1,0 +1,483 @@
+/* Окно «Показания уровнемеров»: итоги по топливу, ёмкости с заливкой по уровню, слежение за наливом */
+
+.tlm-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+}
+
+.tlm-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tlm-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--green-ink);
+  background: var(--green-soft);
+}
+
+.tlm-status[data-tone="muted"] {
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+
+.tlm-status[data-tone="busy"] {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.tlm-status[data-tone="warn"] {
+  color: var(--amber-ink);
+  background: var(--amber-soft);
+}
+
+.tlm-status__dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: tlm-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes tlm-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ---------- Слежение ---------- */
+.tlm-watch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+
+.tlm-watch[data-active="true"] {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.tlm-watch__title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tlm-watch__hint {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+/* ---------- Итоги по видам топлива ---------- */
+.tlm-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.tlm-total {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.tlm-total__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tlm-total__count {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.tlm-total__volume {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text-1);
+}
+
+.tlm-total__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.tlm-total__arrival {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.tlm-total__arrival[data-positive="true"] {
+  color: var(--green-ink);
+}
+
+/* ---------- Полоса уровня ---------- */
+.tlm-bar {
+  position: relative;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.tlm-card .tlm-bar {
+  height: 6px;
+  background: var(--surface-2);
+  box-shadow: none;
+}
+
+.tlm-bar__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--border-strong);
+  transition: width 0.4s ease;
+}
+
+.tlm-bar[data-tone="ok"] .tlm-bar__fill { background: var(--green); }
+.tlm-bar[data-tone="warn"] .tlm-bar__fill { background: var(--amber); }
+.tlm-bar[data-tone="low"] .tlm-bar__fill { background: var(--red); }
+
+/* ---------- Метка топлива ---------- */
+.tlm-fuel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-1);
+  background: var(--surface);
+  white-space: nowrap;
+}
+
+.tlm-fuel::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.tlm-fuel[data-family="diesel"]::before {
+  background: var(--text-1);
+}
+
+/* ---------- Карточки ёмкостей ---------- */
+.tlm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.tlm-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.tlm-card--group {
+  grid-column: 1 / -1;
+}
+
+.tlm-card[data-inactive="true"] {
+  opacity: 0.6;
+}
+
+.tlm-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.tlm-card__name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--text-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tlm-card__tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--text-2);
+  background: var(--surface-2);
+}
+
+.tlm-card__body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.tlm-gauge {
+  flex: 0 0 auto;
+  width: 88px;
+  height: 132px;
+}
+
+.tlm-gauge[data-size="lg"] {
+  width: 112px;
+  height: 176px;
+}
+
+.tlm-gauge__fill {
+  transition: y 0.4s ease, height 0.4s ease;
+}
+
+.tlm-readings {
+  display: grid;
+  flex: 1 1 auto;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  margin: 0;
+}
+
+.tlm-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.tlm-row dt {
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.tlm-row dd {
+  margin: 0;
+  color: var(--text-1);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tlm-row[data-strong="true"] {
+  font-size: 15px;
+}
+
+.tlm-row[data-strong="true"] dd {
+  font-weight: 700;
+}
+
+/* ---------- Составной резервуар ---------- */
+.tlm-group {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) 1fr;
+  flex: 1 1 auto;
+  gap: 16px;
+  min-width: 0;
+}
+
+.tlm-members {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tlm-member {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.tlm-member__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tlm-member__name {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.tlm-member__volume {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.tlm-member .tlm-bar {
+  background: var(--surface);
+}
+
+.tlm-member__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* ---------- Приход за налив ---------- */
+.tlm-arrival {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.tlm-arrival[data-positive="true"] {
+  background: var(--green-soft);
+}
+
+.tlm-arrival__label {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.tlm-arrival__value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.tlm-arrival[data-positive="true"] .tlm-arrival__value {
+  color: var(--green-ink);
+}
+
+.tlm-arrival__meta {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.tlm-empty {
+  color: var(--text-3);
+}
+
+/* ---------- Подвал ---------- */
+.tlm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.tlm-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tlm-legend span::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.tlm-legend span[data-tone="ok"]::before { background: var(--green); }
+.tlm-legend span[data-tone="warn"]::before { background: var(--amber); }
+.tlm-legend span[data-tone="low"]::before { background: var(--red); }
+
+.tlm-unused {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+/* Цифры — в Golos Text с цифрами одной ширины: у моноширинного шрифта подключены только 400/500,
+   и жирные цифры браузер дорисовывал сам — отсюда «мутный» текст */
+.tlm-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+@media (max-width: 720px) {
+  .tlm-group {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .tlm-grid,
+  .tlm-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .tlm-card__body {
+    gap: 12px;
+  }
+
+  .tlm-gauge {
+    width: 72px;
+    height: 108px;
+  }
+
+  .tlm-gauge[data-size="lg"] {
+    width: 84px;
+    height: 132px;
+  }
+
+  .tlm-total__volume {
+    font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tlm-status__dot {
+    animation: none;
+  }
+
+  .tlm-bar__fill,
+  .tlm-gauge__fill {
+    transition: none;
+  }
+}

@@ -4,6 +4,7 @@ import Icon from './ui/Icon'
 import EmptyState from './EmptyState'
 import IconButton from './IconButton'
 import StationShareModal from './StationShareModal'
+import TankLevelsModal from './TankLevelsModal'
 import { authFetch } from '../utils/api'
 import { useToast } from './ToastContainer'
 import { useAuth } from '../contexts/AuthContext'
@@ -339,7 +340,7 @@ const TankRow = ({ tank, isAdmin, onHistory, onSettings }) => (
         {tank.overflow_group ? <span className="tnk-chip" data-tone="neutral">Перелив {tank.overflow_group}</span> : null}
         {!tank.is_active ? <span className="tnk-chip" data-tone="neutral">Не учитывается</span> : null}
       </div>
-      <div className="tnk-tank__volume t-numeric">
+      <div className="tnk-tank__volume tnk-num">
         {formatLiters(tank.last_volume)} л
         {tank.fill_percent !== null && tank.fill_percent !== undefined ? (
           <span className="tnk-tank__percent">{formatPercent(tank.fill_percent)}</span>
@@ -348,8 +349,8 @@ const TankRow = ({ tank, isAdmin, onHistory, onSettings }) => (
     </div>
     <FillBar percent={tank.fill_percent} label={`Заполнение ёмкости ${tank.tank_number}`} />
     <div className="tnk-tank__meta">
-      <span className="t-numeric">{formatDecimal(tank.last_density)} кг/м³</span>
-      <span className="t-numeric">{formatDecimal(tank.last_temperature)} °C</span>
+      <span className="tnk-num">{formatDecimal(tank.last_density)} кг/м³</span>
+      <span className="tnk-num">{formatDecimal(tank.last_temperature)} °C</span>
       <span title={formatSourceDateTime(tank.last_measured_at)}>{formatAge(tank.age_minutes)}</span>
       <span className="tnk-tank__actions">
         <button type="button" className="tnk-link" onClick={() => onHistory(tank)}>
@@ -366,14 +367,16 @@ const TankRow = ({ tank, isAdmin, onHistory, onSettings }) => (
   </li>
 )
 
-const StationCard = ({ station, isAdmin, onHistory, onSettings, onShare }) => {
+const stationKey = (station) => `${station.provider_id}-${station.azs_code}`
+
+const StationCard = ({ station, isAdmin, onHistory, onSettings, onShare, onLevels }) => {
   const [expanded, setExpanded] = useState(station.fuels.length === 0)
   return (
     <article className="tnk-station" data-testid="tank-station">
       <header className="tnk-station__head">
         <div className="tnk-station__title">
           <div className="tnk-station__name-row">
-            <h3 className="tnk-station__code t-numeric">{stationCodes(station)}</h3>
+            <h3 className="tnk-station__code tnk-num">{stationCodes(station)}</h3>
             <span className="tnk-station__provider">{station.provider_name}</span>
           </div>
           {station.gas_station_name && !(station.azs_codes || [station.azs_code]).includes(station.gas_station_name) ? (
@@ -399,11 +402,11 @@ const StationCard = ({ station, isAdmin, onHistory, onSettings, onShare }) => {
             <li key={fuel.fuel_type || 'unknown'} className="tnk-fuel-row">
               <div className="tnk-fuel-row__head">
                 <span className="tnk-fuel-row__name">{fuel.fuel_type || 'Вид не определён'}</span>
-                <span className="tnk-fuel-row__volume t-numeric">{formatLiters(fuel.volume)} л</span>
+                <span className="tnk-fuel-row__volume tnk-num">{formatLiters(fuel.volume)} л</span>
               </div>
               <FillBar percent={fuel.fill_percent} label={`Заполнение: ${fuel.fuel_type || 'топливо'}`} />
               <div className="tnk-fuel-row__meta">
-                <span className="t-numeric">
+                <span className="tnk-num">
                   {fuel.capacity_liters ? `${formatPercent(fuel.fill_percent)} из ${formatLiters(fuel.capacity_liters)} л` : 'вместимость не задана'}
                 </span>
                 {/* Как считан остаток — только в подсказке: на КАЗС это замер на открытии смены минус отпуск */}
@@ -415,15 +418,28 @@ const StationCard = ({ station, isAdmin, onHistory, onSettings, onShare }) => {
         </ul>
       )}
 
-      <button
-        type="button"
-        className="tnk-toggle"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((value) => !value)}
-      >
-        <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={14} />
-        Ёмкости ({station.tanks.length})
-      </button>
+      <div className="tnk-station__foot">
+        <button
+          type="button"
+          className="tnk-toggle"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          <Icon name={expanded ? 'chevron-up' : 'chevron-down'} size={14} />
+          Ёмкости ({station.tanks.length})
+        </button>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<Icon name="gauge" size={14} />}
+          onClick={onLevels}
+          title={station.live_available
+            ? 'Живые показания уровнемеров и слежение за наливом'
+            : 'Последние показания уровнемеров из базы Топаза'}
+        >
+          Уровнемеры
+        </Button>
+      </div>
       {expanded ? (
         <ul className="tnk-tanks">
           {station.tanks.map((tank) => (
@@ -448,6 +464,15 @@ const TanksPage = () => {
   const [historyTank, setHistoryTank] = useState(null)
   const [settingsTank, setSettingsTank] = useState(null)
   const [shareStation, setShareStation] = useState(null)
+  const [levelsKey, setLevelsKey] = useState(null)
+  const levelsStation = overview.stations.find((station) => stationKey(station) === levelsKey) || null
+
+  const replaceStation = useCallback((updated) => {
+    setOverview((prev) => ({
+      ...prev,
+      stations: prev.stations.map((station) => (stationKey(station) === stationKey(updated) ? updated : station)),
+    }))
+  }, [])
   const [showHidden, setShowHidden] = useState(false)
 
   const load = useCallback(async () => {
@@ -594,6 +619,7 @@ const TanksPage = () => {
               onHistory={setHistoryTank}
               onSettings={setSettingsTank}
               onShare={() => setShareStation(station)}
+              onLevels={() => setLevelsKey(stationKey(station))}
             />
           ))}
         </div>
@@ -602,6 +628,12 @@ const TanksPage = () => {
       <TankHistoryModal tank={historyTank} onClose={() => setHistoryTank(null)} />
       <TankSettingsModal tank={settingsTank} onClose={() => setSettingsTank(null)} onSaved={load} />
       {shareStation && <StationShareModal station={shareStation} onClose={() => setShareStation(null)} />}
+      <TankLevelsModal
+        station={levelsStation}
+        isOpen={Boolean(levelsStation)}
+        onClose={() => setLevelsKey(null)}
+        onStationUpdate={replaceStation}
+      />
     </div>
   )
 }

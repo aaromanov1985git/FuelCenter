@@ -1486,6 +1486,7 @@ class TankStation(BaseModel):
     region: Optional[str] = Field(None, description="Регион")
     fuels: List[TankStationFuel]
     tanks: List[TankResponse]
+    live_available: bool = Field(False, description="Уровнемеры можно прочитать прямо сейчас (Сервер-186)")
 
 
 class TopazSyncStateResponse(BaseModel):
@@ -1509,6 +1510,21 @@ class TankOverviewResponse(BaseModel):
     stations: List[TankStation]
     total_tanks: int
     sync: List[TopazSyncStateResponse]
+
+
+class TankLiveDevice(BaseModel):
+    """Результат живого опроса одного контроллера"""
+    azs_code: str
+    status: str = Field(..., description="success | failed | unsupported")
+    error: Optional[str] = None
+    measured_at: Optional[datetime] = Field(None, description="Время показаний по часам сервера Топаза")
+    tanks_updated: int = 0
+
+
+class TankLiveResponse(BaseModel):
+    """Живые показания уровнемеров АЗС: обновлённая карточка и статус по контроллерам"""
+    station: Optional[TankStation] = None
+    devices: List[TankLiveDevice]
 
 
 class TankUpdate(BaseModel):

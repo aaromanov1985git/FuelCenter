@@ -190,6 +190,18 @@ describe('TanksPage', () => {
     })
   })
 
+  it('по кнопке «Уровнемеры» открывает окно показаний АЗС', async () => {
+    setup({ ...overview, stations: [{ ...overview.stations[0], live_available: false }] })
+    renderWithProviders(<TanksPage />)
+
+    const station = await screen.findByTestId('tank-station')
+    fireEvent.click(within(station).getByRole('button', { name: /Уровнемеры/ }))
+    expect(await screen.findByText('Показания уровнемеров — 1016201')).toBeInTheDocument()
+    expect(screen.getAllByTestId('tank-level')).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть' }))
+    expect(screen.queryByText('Показания уровнемеров — 1016201')).not.toBeInTheDocument()
+  })
+
   it('для замеров смены показывает расчёт от замера и отпуска', async () => {
     setup({
       ...overview,

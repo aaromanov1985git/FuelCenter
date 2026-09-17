@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_admin, require_auth_if_enabled
@@ -15,9 +15,10 @@ from app.models import (
     GasStation, Provider, ProviderTemplate, Tank, TankReading, TopazSyncState, Transaction, UploadEvent, User,
 )
 from app.schemas import (
-    TankOverviewResponse, TankReadingPoint, TankReadingsResponse, TankResponse, TankStation,
-    TankStationFuel, TankUpdate, TopazSyncResult, TopazSyncStateResponse,
+    TankLiveDevice, TankLiveResponse, TankOverviewResponse, TankReadingPoint, TankReadingsResponse, TankResponse,
+    TankStation, TankStationFuel, TankUpdate, TopazSyncResult, TopazSyncStateResponse,
 )
+from app.services.topaz_live_service import LIVE_ROW_OFFSET, TopazLiveError, TopazLiveService, live_templates
 from app.services.topaz_sync_service import EVENT_ROW_OFFSET, SOURCE_SESSIONS, TopazSyncService, resolve_fuel_type
 from app.utils.firebird_utils import get_firebird_service
 from app.utils.json_utils import parse_template_json
@@ -158,6 +159,10 @@ def _tank_response(tank: Tank, mapping_by_template: Dict[int, dict], clock: _Sou
     )
 
 
+# Замеры всех ёмкостей в один момент: смена и живой опрос; замеры из журнала отпусков — по одной ёмкости
+_same_moment_reading = or_(TankReading.source_row_id < EVENT_ROW_OFFSET, TankReading.source_row_id >= LIVE_ROW_OFFSET)
+
+
 def _session_estimate(db: Session, items: List[TankResponse], fuel_type: Optional[str],
                       clock: _SourceClock, fills_loaded_at: Dict[int, datetime]) -> Optional[dict]:
     """
@@ -166,14 +171,15 @@ def _session_estimate(db: Session, items: List[TankResponse], fuel_type: Optiona
     В течение дня Топаз пишет уровень только ёмкости, из которой отпускали, а ёмкости,
     соединённые переливом, перетекают друг в друга. Сумма последних замеров разных
     моментов поэтому врёт на объём перелива. Считаем от момента, когда замер есть
-    у всех ёмкостей сразу (открытие смены), и вычитаем отпуск этого топлива с тех пор.
+    у всех ёмкостей сразу (открытие смены или живой опрос уровнемеров), и вычитаем
+    отпуск этого топлива с тех пор.
     """
     if not fuel_type or not items:
         return None
     tank_ids = [t.id for t in items]
     base_rows = (
         db.query(TankReading.tank_id, func.max(TankReading.measured_at))
-        .filter(TankReading.tank_id.in_(tank_ids), TankReading.source_row_id < EVENT_ROW_OFFSET)
+        .filter(TankReading.tank_id.in_(tank_ids), _same_moment_reading)
         .group_by(TankReading.tank_id)
         .all()
     )
@@ -184,7 +190,7 @@ def _session_estimate(db: Session, items: List[TankResponse], fuel_type: Optiona
     base_volume = sum(
         float(volume or 0) for (volume,) in db.query(TankReading.volume).filter(
             TankReading.tank_id.in_(tank_ids), TankReading.measured_at == base_at,
-            TankReading.source_row_id < EVENT_ROW_OFFSET,
+            _same_moment_reading,
         )
     )
     first = items[0]
@@ -348,6 +354,7 @@ def build_tank_overview(db: Session, provider_id: Optional[int] = None, azs_code
         key = (item.provider_id, "station", station_id) if station_id else (item.provider_id, "code", item.azs_code)
         stations.setdefault(key, []).append(item)
     station_places = {tank.gas_station_id: tank.gas_station for tank in tanks if tank.gas_station is not None}
+    live_template_ids = live_templates(db)
 
     def build_station(key: tuple, items: List[TankResponse]) -> TankStation:
         station_id = key[2] if key[1] == "station" else None
@@ -367,6 +374,7 @@ def build_tank_overview(db: Session, provider_id: Optional[int] = None, azs_code
             region=getattr(place, "region", None),
             fuels=_station_fuels(items, db, clock, session_templates, fills_loaded_at),
             tanks=items,
+            live_available=any(item.template_id in live_template_ids for item in items),
         )
 
     return TankOverviewResponse(
@@ -451,6 +459,29 @@ def update_tank(
 
     clock = _SourceClock(db.query(TopazSyncState).all())
     return _tank_response(tank, _mapping_by_template(db, {tank.template_id}), clock)
+
+
+@router.post("/live", response_model=TankLiveResponse)
+def read_live(
+    provider_id: int = Query(..., description="Провайдер АЗС"),
+    azs_code: str = Query(..., min_length=1, max_length=50, description="Код АЗС (любой из кодов её контроллеров)"),
+    db: Session = Depends(get_db),
+    _: Optional[User] = Depends(require_auth_if_enabled),
+):
+    """
+    Прочитать уровнемеры АЗС прямо сейчас — как «Монитор емкостей» Топаза.
+
+    Опрашиваются все контроллеры АЗС, показания записываются в историю ёмкостей.
+    Повторный запрос в течение нескольких секунд отдаёт уже прочитанные данные без опроса контроллера.
+    """
+    codes = station_azs_codes(db, provider_id, azs_code)
+    try:
+        devices = TopazLiveService(db).read_codes(provider_id, codes)
+    except TopazLiveError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    overview = build_tank_overview(db, provider_id=provider_id, azs_code=azs_code, with_sync=False)
+    station = next((s for s in overview.stations if azs_code in s.azs_codes), None)
+    return TankLiveResponse(station=station, devices=[TankLiveDevice(**device) for device in devices])
 
 
 @router.post("/sync", response_model=List[TopazSyncResult])
