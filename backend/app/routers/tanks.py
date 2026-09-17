@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.auth import require_admin, require_auth_if_enabled
@@ -18,7 +18,7 @@ from app.schemas import (
     TankLiveDevice, TankLiveResponse, TankOverviewResponse, TankReadingPoint, TankReadingsResponse, TankResponse,
     TankStation, TankStationFuel, TankUpdate, TopazSyncResult, TopazSyncStateResponse,
 )
-from app.services.topaz_live_service import TopazLiveError, TopazLiveService, live_templates
+from app.services.topaz_live_service import LIVE_ROW_OFFSET, TopazLiveError, TopazLiveService, live_templates
 from app.services.topaz_sync_service import EVENT_ROW_OFFSET, SOURCE_SESSIONS, TopazSyncService, resolve_fuel_type
 from app.utils.firebird_utils import get_firebird_service
 from app.utils.json_utils import parse_template_json
@@ -159,6 +159,10 @@ def _tank_response(tank: Tank, mapping_by_template: Dict[int, dict], clock: _Sou
     )
 
 
+# Замеры всех ёмкостей в один момент: смена и живой опрос; замеры из журнала отпусков — по одной ёмкости
+_same_moment_reading = or_(TankReading.source_row_id < EVENT_ROW_OFFSET, TankReading.source_row_id >= LIVE_ROW_OFFSET)
+
+
 def _session_estimate(db: Session, items: List[TankResponse], fuel_type: Optional[str],
                       clock: _SourceClock, fills_loaded_at: Dict[int, datetime]) -> Optional[dict]:
     """
@@ -167,14 +171,15 @@ def _session_estimate(db: Session, items: List[TankResponse], fuel_type: Optiona
     В течение дня Топаз пишет уровень только ёмкости, из которой отпускали, а ёмкости,
     соединённые переливом, перетекают друг в друга. Сумма последних замеров разных
     моментов поэтому врёт на объём перелива. Считаем от момента, когда замер есть
-    у всех ёмкостей сразу (открытие смены), и вычитаем отпуск этого топлива с тех пор.
+    у всех ёмкостей сразу (открытие смены или живой опрос уровнемеров), и вычитаем
+    отпуск этого топлива с тех пор.
     """
     if not fuel_type or not items:
         return None
     tank_ids = [t.id for t in items]
     base_rows = (
         db.query(TankReading.tank_id, func.max(TankReading.measured_at))
-        .filter(TankReading.tank_id.in_(tank_ids), TankReading.source_row_id < EVENT_ROW_OFFSET)
+        .filter(TankReading.tank_id.in_(tank_ids), _same_moment_reading)
         .group_by(TankReading.tank_id)
         .all()
     )
@@ -185,7 +190,7 @@ def _session_estimate(db: Session, items: List[TankResponse], fuel_type: Optiona
     base_volume = sum(
         float(volume or 0) for (volume,) in db.query(TankReading.volume).filter(
             TankReading.tank_id.in_(tank_ids), TankReading.measured_at == base_at,
-            TankReading.source_row_id < EVENT_ROW_OFFSET,
+            _same_moment_reading,
         )
     )
     first = items[0]

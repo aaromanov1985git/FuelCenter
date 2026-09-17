@@ -152,23 +152,100 @@ def parse_tanks_state(xml_text: str, device_code: str) -> Optional[LiveTanksStat
         error = (cmd.get("Error") or "").strip()
         if error:
             raise TopazLiveError(f"Сервер-186: {error}")
-        last_update = tanks_node.get("lastUpdate")
-        measured_at = datetime.fromisoformat(last_update) if last_update else datetime.now()
-        tanks = []
-        for node in tanks_node.iter("tank"):
-            values = {item.get("ID"): item.text for item in node.iter("data")}
-            tanks.append(LiveTank(
-                number=int(node.get("num")),
-                active=node.get("active") == "1",
-                fuel=(values.get(PARAM_FUEL) or "").strip() or None,
-                volume=_decimal(values.get(PARAM_VOLUME)),
-                mass=_decimal(values.get(PARAM_MASS)),
-                density=_decimal(values.get(PARAM_DENSITY)),
-                temperature=_decimal(values.get(PARAM_TEMPERATURE)),
-                level=_decimal(values.get(PARAM_LEVEL)),
-                water=_decimal(values.get(PARAM_WATER)),
-            ))
-        return LiveTanksState(device_code=device_code, measured_at=measured_at.replace(microsecond=0), tanks=tanks)
+        return _tanks_state(tanks_node, device_code)
+    return None
+
+
+def _parse_last_update(value: Optional[str]) -> datetime:
+    if not value:
+        return datetime.now()
+    # v18: 2026-09-17T09:59:47; v1.45: 2026-09-17T11-40-27
+    date_part, _, time_part = value.partition("T")
+    return datetime.fromisoformat(f"{date_part}T{time_part.replace('-', ':')}")
+
+
+def _tanks_state(tanks_node, device_code: str) -> LiveTanksState:
+    measured_at = _parse_last_update(tanks_node.get("lastUpdate"))
+    tanks = []
+    for node in tanks_node.iter("tank"):
+        values = {item.get("ID"): item.text for item in node.iter("data")}
+        tanks.append(LiveTank(
+            number=int(node.get("num")),
+            active=node.get("active") == "1",
+            fuel=(values.get(PARAM_FUEL) or "").strip() or None,
+            volume=_decimal(values.get(PARAM_VOLUME)),
+            mass=_decimal(values.get(PARAM_MASS)),
+            density=_decimal(values.get(PARAM_DENSITY)),
+            temperature=_decimal(values.get(PARAM_TEMPERATURE)),
+            level=_decimal(values.get(PARAM_LEVEL)),
+            water=_decimal(values.get(PARAM_WATER)),
+        ))
+    return LiveTanksState(device_code=device_code, measured_at=measured_at.replace(microsecond=0), tanks=tanks)
+
+
+# ---------------------------------------------------------------- Сервер-186 v1.45 (КАЗС)
+#
+# Старая версия «Автономного налива» (OnlineTerminal) говорит иначе: кадр — uint32 0 |
+# длина XML uint32 LE | XML в UTF-8, без CRC. Клиент представляется
+# <CLIENTINFO mode="manager"/>, после чего сервер раз в секунду шлёт <STATE> с последними
+# показаниями в CDATA. <TANKSINFO devId=.../> заставляет опросить уровнемер: пока идёт
+# опрос, у устройства busy="1", готовые показания приходят с новым lastUpdate.
+
+def build_legacy_frame(xml_text: str) -> bytes:
+    payload = xml_text.encode("utf-8")
+    return struct.pack("<II", 0, len(payload)) + payload
+
+
+def split_legacy_frames(buffer: bytes) -> Tuple[List[str], bytes]:
+    messages: List[str] = []
+    while len(buffer) >= 8:
+        size = struct.unpack("<I", buffer[4:8])[0]
+        if len(buffer) < 8 + size:
+            break
+        messages.append(buffer[8:8 + size].decode("utf-8", "replace"))
+        buffer = buffer[8 + size:]
+    return messages, buffer
+
+
+LEGACY_HELLO = '<?xml version="1.0" encoding="utf-8"?>\r\n<DATA>\r\n\t<CLIENTINFO mode="manager"/>\r\n</DATA>'
+
+
+def legacy_tanks_request(device_code: str) -> str:
+    return (f'<?xml version="1.0" encoding="utf-8"?>\r\n<DATA>\r\n\t<TANKSINFO devId="{_xml_attr(device_code)}"/>'
+            '\r\n</DATA>')
+
+
+@dataclass
+class LegacyDeviceState:
+    device_code: str
+    online: bool
+    busy: bool
+    error: Optional[str]
+    tanks: Optional[LiveTanksState]
+
+
+def parse_legacy_state(xml_text: str, device_code: str) -> Optional[LegacyDeviceState]:
+    """Состояние устройства из рассылки <STATE>; None — устройства в сообщении нет."""
+    if "<STATE" not in xml_text:
+        return None
+    root = ET.fromstring(re.sub(r"^\s*<\?xml[^>]*\?>", "", xml_text))
+    for device in root.iter("DEVICE"):
+        if device.get("ID") != device_code:
+            continue
+        tanks = None
+        tanks_node = device.find("Tanks")
+        if tanks_node is not None and (tanks_node.text or "").strip():
+            inner = ET.fromstring(re.sub(r"^\s*<\?xml[^>]*\?>", "", tanks_node.text.strip()))
+            node = inner.find(".//TANKS")
+            if node is not None:
+                tanks = _tanks_state(node, device_code)
+        return LegacyDeviceState(
+            device_code=device_code,
+            online=device.get("online") == "1",
+            busy=device.get("busy") == "1",
+            error=(device.get("error") or "").strip() or None,
+            tanks=tanks,
+        )
     return None
 
 
@@ -220,6 +297,58 @@ class S186Client:
         )
 
 
+class S186LegacyClient(S186Client):
+    """Подключение к клиентскому порту «Сервер-186» v1.45."""
+
+    def __enter__(self):
+        super().__enter__()
+        try:
+            self._sock.sendall(build_legacy_frame(LEGACY_HELLO))
+        except OSError as exc:
+            raise TopazLiveError(f"Обрыв связи с Сервером-186: {exc}") from exc
+        return self
+
+    def _next_state(self, device_code: str, deadline: float) -> LegacyDeviceState:
+        pending = self.__dict__.setdefault("_pending", [])
+        while time.monotonic() < deadline:
+            while pending:
+                state = parse_legacy_state(pending.pop(0), device_code)
+                if state is not None:
+                    return state
+            try:
+                chunk = self._sock.recv(65536)
+            except socket.timeout:
+                continue
+            except OSError as exc:
+                raise TopazLiveError(f"Обрыв связи с Сервером-186: {exc}") from exc
+            if not chunk:
+                raise TopazLiveError("Сервер-186 закрыл соединение")
+            messages, self._buffer = split_legacy_frames(self._buffer + chunk)
+            pending.extend(messages)
+        raise TopazLiveError(
+            f"Контроллер {device_code} не ответил за {int(self.timeout)} с — возможно, нет связи с АЗС"
+        )
+
+    def read_tanks(self, device_code: str) -> LiveTanksState:
+        deadline = time.monotonic() + self.timeout
+        before = self._next_state(device_code, deadline)
+        if not before.online:
+            raise TopazLiveError(f"Нет связи Сервера-186 с контроллером {device_code}")
+        previous = before.tanks.measured_at if before.tanks else None
+        try:
+            self._sock.sendall(build_legacy_frame(legacy_tanks_request(device_code)))
+        except OSError as exc:
+            raise TopazLiveError(f"Обрыв связи с Сервером-186: {exc}") from exc
+        while True:
+            state = self._next_state(device_code, deadline)
+            if state.error:
+                raise TopazLiveError(f"Сервер-186: {state.error}")
+            if state.busy or state.tanks is None:
+                continue
+            if previous is None or state.tanks.measured_at != previous:
+                return state.tanks
+
+
 _template_locks: Dict[int, threading.Lock] = {}
 _locks_guard = threading.Lock()
 _recent: Dict[Tuple[int, str], Tuple[float, LiveTanksState]] = {}
@@ -230,22 +359,33 @@ def _template_lock(template_id: int) -> threading.Lock:
         return _template_locks.setdefault(template_id, threading.Lock())
 
 
-def live_templates(db: Session) -> set:
-    """Шаблоны, у которых есть «Сервер-186»: источник — снимки Топаз-Офиса (МАЗС)."""
+PROTOCOL_S186 = "s186"
+PROTOCOL_LEGACY = "legacy"
+DEFAULT_LEGACY_PORT = 4499
+
+
+def live_templates(db: Session) -> Dict[int, str]:
+    """
+    Шаблоны с «Сервер-186» и версия его протокола: снимки Топаз-Офиса — v18 (МАЗС),
+    замеры смен OnlineTerminal — v1.45 (КАЗС).
+    """
     if not live_enabled():
-        return set()
+        return {}
+    protocols = {"snapshots": PROTOCOL_S186, "sessions": PROTOCOL_LEGACY}
     return {
-        template_id for (template_id,) in db.query(TopazSyncState.template_id)
-        .filter(TopazSyncState.source_kind == "snapshots")
+        template_id: protocols[source_kind]
+        for template_id, source_kind in db.query(TopazSyncState.template_id, TopazSyncState.source_kind)
+        if source_kind in protocols
     }
 
 
 class TopazLiveService:
     """Прочитать уровнемеры АЗС прямо сейчас и записать замер в историю ёмкостей."""
 
-    def __init__(self, db: Session, client_factory: Callable[[str, int, float], S186Client] = S186Client):
+    def __init__(self, db: Session, client_factory: Callable[[str, int, float], S186Client] = S186Client,
+                 legacy_client_factory: Callable[[str, int, float], S186Client] = S186LegacyClient):
         self.db = db
-        self.client_factory = client_factory
+        self.client_factories = {PROTOCOL_S186: client_factory, PROTOCOL_LEGACY: legacy_client_factory}
 
     def read_codes(self, provider_id: int, azs_codes: List[str]) -> List[dict]:
         tanks = self.db.query(Tank).filter(Tank.provider_id == provider_id, Tank.azs_code.in_(azs_codes)).all()
@@ -264,14 +404,24 @@ class TopazLiveService:
                                 "tanks_updated": 0} for code in codes)
                 continue
             template = self.db.query(ProviderTemplate).filter(ProviderTemplate.id == template_id).first()
-            devices.extend(self._read_template(template, template_tanks, codes))
+            devices.extend(self._read_template(template, template_tanks, codes, supported[template_id]))
         self.db.commit()
         return devices
 
-    def _read_template(self, template: ProviderTemplate, tanks: List[Tank], codes: List[str]) -> List[dict]:
+    def _read_template(self, template: ProviderTemplate, tanks: List[Tank], codes: List[str],
+                       protocol: str) -> List[dict]:
         settings = parse_template_json(template.connection_settings) or {}
+        protocol = settings.get("live_protocol") or protocol
         host = settings.get("live_host") or settings.get("host")
-        port = int(settings.get("live_port") or os.getenv("TOPAZ_LIVE_PORT", DEFAULT_PORT))
+        if protocol == PROTOCOL_LEGACY:
+            default_port = os.getenv("TOPAZ_LIVE_LEGACY_PORT", DEFAULT_LEGACY_PORT)
+            # v1.45 опрашивает уровнемер через GSM-канал сам: ответ приходит за 10–20 секунд
+            timeout = float(os.getenv("TOPAZ_LIVE_LEGACY_TIMEOUT_SECONDS", "45"))
+        else:
+            default_port = os.getenv("TOPAZ_LIVE_PORT", DEFAULT_PORT)
+            timeout = _timeout_seconds()
+        port = int(settings.get("live_port") or default_port)
+        client_factory = self.client_factories[protocol]
         results: List[dict] = []
         # Один опрос на шаблон за раз: несколько сотрудников не должны дёргать контроллер параллельно
         with _template_lock(template.id):
@@ -289,7 +439,7 @@ class TopazLiveService:
                     errors = {code: "В шаблоне не указан адрес сервера" for code in to_read}
                 else:
                     try:
-                        with self.client_factory(host, port, _timeout_seconds()) as client:
+                        with client_factory(host, port, timeout) as client:
                             for code in to_read:
                                 try:
                                     states[code] = client.read_tanks(code)

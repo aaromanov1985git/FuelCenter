@@ -13,8 +13,8 @@ import pytest
 from app.models import Provider, ProviderTemplate, Tank, TankReading, TopazSyncState
 from app.services import topaz_live_service as live
 from app.services.topaz_live_service import (
-    LIVE_ROW_OFFSET, S186Client, TopazLiveError, TopazLiveService, build_frame, crc16_ccitt_false,
-    parse_tanks_state, split_frames,
+    LIVE_ROW_OFFSET, S186Client, S186LegacyClient, TopazLiveError, TopazLiveService, build_frame,
+    build_legacy_frame, crc16_ccitt_false, parse_legacy_state, parse_tanks_state, split_frames, split_legacy_frames,
 )
 
 
@@ -258,6 +258,8 @@ class TestLiveService:
         assert mazs_live["diesel"].last_volume == Decimal("16615.72")
 
     def test_station_without_server_186_is_rejected(self, test_db, mazs_live):
+        test_db.query(TopazSyncState).filter(TopazSyncState.source_kind == "sessions").update({"source_kind": None})
+        test_db.commit()
         with pytest.raises(TopazLiveError, match="не поддерживается"):
             TopazLiveService(test_db, client_factory=FakeClient({})).read_codes(mazs_live["kazs"].id, ["505221"])
 
@@ -276,10 +278,10 @@ class TestLiveApi:
             "807211": tanks_xml("807211", tanks=[(1, "ДТ", "12533.4473", "10437.7441", "832.7789")]),
         })
         monkeypatch.setattr(live, "S186Client", fake)
-        monkeypatch.setattr(live.TopazLiveService.__init__, "__defaults__", (fake,))
+        monkeypatch.setattr(live.TopazLiveService.__init__, "__defaults__", (fake, fake))
 
         overview = client.get("/api/v1/tanks", headers=auth_headers).json()
-        assert {s["azs_code"]: s["live_available"] for s in overview["stations"]} == {"1016201": True, "505221": False}
+        assert {s["azs_code"]: s["live_available"] for s in overview["stations"]} == {"1016201": True, "505221": True}
 
         response = client.post("/api/v1/tanks/live", params={"provider_id": mazs_live["provider"].id, "azs_code": "807211"},
                                headers=auth_headers)
@@ -291,8 +293,163 @@ class TestLiveApi:
         assert fuels["ДТ"]["volume"] == 12533.45
         assert fuels["АИ-92"]["volume"] == 16377.93
 
-    def test_live_read_for_unsupported_station(self, client, auth_headers, mazs_live):
+    def test_live_read_for_unsupported_station(self, client, auth_headers, test_db, mazs_live):
+        test_db.query(TopazSyncState).filter(TopazSyncState.source_kind == "sessions").update({"source_kind": None})
+        test_db.commit()
         response = client.post("/api/v1/tanks/live", params={"provider_id": mazs_live["kazs"].id, "azs_code": "505221"},
                                headers=auth_headers)
         assert response.status_code == 400
         assert "не поддерживается" in response.json()["detail"]
+
+
+# ---------------------------------------------------------------- Сервер-186 v1.45 (КАЗС)
+
+def legacy_state_xml(device="505221", measured="2026-09-17T11-31-18", volumes=("6946,167", "6882,4463"), busy=False,
+                     online=True, error=""):
+    tanks = "".join(
+        f'<tank num="{num}" active="1"><data ID="627" text="готов">0</data><data ID="622">{volume}</data>'
+        f'<data ID="621">14,3958</data><data ID="623">5812,7441</data><data ID="625">0</data>'
+        f'<data ID="633">10000</data><data ID="676">836,8225</data></tank>'
+        for num, volume in enumerate(volumes, start=1)
+    )
+    inner = ('<?xml version="1.0" encoding="utf-8"?>\r\n<TANKSINFO><TITLES><title ID="622">Общий объем</title></TITLES>'
+             f'<TANKS lastUpdate="{measured}">{tanks}</TANKS></TANKSINFO>')
+    busy_attr = ' busy="1"' if busy else ''
+    error_attr = f' error="{error}"' if error else ''
+    return (
+        '<?xml version="1.0" encoding="utf-8"?>\r\n<DATA>\r\n\t<STATE><SETTINGS ConfirmWrite="0"/>'
+        f'<DEVICE ID="{device}" name="{device}" color="clCream" online="{1 if online else 0}" blocked="0"'
+        f'{busy_attr}{error_attr} active="1">'
+        f'<Tanks><![CDATA[{inner}]]></Tanks></DEVICE></STATE>\r\n</DATA>'
+    )
+
+
+class TestLegacyProtocol:
+    def test_frames_and_state_parsing(self):
+        frame = build_legacy_frame(legacy_state_xml())
+        assert struct.unpack("<II", frame[:8]) == (0, len(frame) - 8)
+        messages, rest = split_legacy_frames(frame + frame[:12])
+        assert len(messages) == 1 and rest == frame[:12]
+
+        state = parse_legacy_state(legacy_state_xml(busy=True), "505221")
+        assert state.online and state.busy and state.error is None
+        assert state.tanks.measured_at == datetime(2026, 9, 17, 11, 31, 18)
+        assert [t.volume for t in state.tanks.tanks] == [Decimal("6946.167"), Decimal("6882.4463")]
+        assert state.tanks.tanks[0].density == Decimal("836.8225") and state.tanks.tanks[0].fuel is None
+        assert parse_legacy_state(legacy_state_xml(), "807211") is None
+        assert parse_legacy_state(legacy_state_xml(online=False), "505221").online is False
+
+
+class FakeLegacyServer:
+    """Сервер-186 v1.45: после CLIENTINFO шлёт STATE, по TANKSINFO — busy, затем свежие показания."""
+
+    def __init__(self, online=True, answer=True):
+        self.online = online
+        self.answer = answer
+        self.requests = []
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.bind(("127.0.0.1", 0))
+        self.sock.listen(1)
+        self.port = self.sock.getsockname()[1]
+        threading.Thread(target=self._serve, daemon=True).start()
+
+    def _serve(self):
+        conn, _ = self.sock.accept()
+        conn.settimeout(0.1)
+        buffer = b""
+        requested_at = None
+        ticks = 0
+        with conn:
+            while ticks < 200:
+                ticks += 1
+                try:
+                    chunk = conn.recv(65536)
+                    if not chunk:
+                        return
+                    messages, buffer = split_legacy_frames(buffer + chunk)
+                    for message in messages:
+                        self.requests.append(message)
+                        if "TANKSINFO" in message:
+                            requested_at = ticks
+                except socket.timeout:
+                    pass
+                except OSError:
+                    return
+                if not any("CLIENTINFO" in r for r in self.requests):
+                    continue
+                if requested_at is None or not self.answer:
+                    xml = legacy_state_xml(online=self.online)
+                elif ticks - requested_at < 4:
+                    xml = legacy_state_xml(busy=True)
+                else:
+                    xml = legacy_state_xml(measured="2026-09-17T11-40-27", volumes=("6946,167", "6881,5918"))
+                try:
+                    # Два сообщения одним пакетом: клиент не должен терять второе
+                    conn.sendall(build_legacy_frame(xml) + build_legacy_frame(xml))
+                except OSError:
+                    return
+
+    def close(self):
+        self.sock.close()
+
+
+class TestLegacyClient:
+    def test_requests_fresh_reading_and_waits_for_new_last_update(self):
+        server = FakeLegacyServer()
+        try:
+            with S186LegacyClient("127.0.0.1", server.port, timeout=10) as client:
+                state = client.read_tanks("505221")
+            assert state.measured_at == datetime(2026, 9, 17, 11, 40, 27)
+            assert state.tanks[1].volume == Decimal("6881.5918")
+            assert 'CLIENTINFO mode="manager"' in server.requests[0]
+            assert any('<TANKSINFO devId="505221"/>' in r for r in server.requests)
+        finally:
+            server.close()
+
+    def test_offline_controller(self):
+        server = FakeLegacyServer(online=False)
+        try:
+            with S186LegacyClient("127.0.0.1", server.port, timeout=5) as client:
+                with pytest.raises(TopazLiveError, match="Нет связи Сервера-186 с контроллером 505221"):
+                    client.read_tanks("505221")
+        finally:
+            server.close()
+
+    def test_no_fresh_reading_times_out(self):
+        server = FakeLegacyServer(answer=False)
+        try:
+            with S186LegacyClient("127.0.0.1", server.port, timeout=2) as client:
+                with pytest.raises(TopazLiveError, match="не ответил"):
+                    client.read_tanks("505221")
+        finally:
+            server.close()
+
+
+class TestLegacyService:
+    def test_kazs_uses_legacy_protocol_on_port_4499(self, test_db, mazs_live):
+        kazs_tank = test_db.query(Tank).filter(Tank.azs_code == "505221").one()
+        calls = []
+
+        class LegacyFake:
+            def __call__(self, host, port, timeout):
+                calls.append((host, port, timeout))
+                return self
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read_tanks(self, code):
+                xml = legacy_state_xml(measured="2026-09-17T11-40-27", volumes=("6946,167",))
+                return parse_legacy_state(xml, code).tanks
+
+        service = TopazLiveService(test_db, client_factory=FakeClient({}), legacy_client_factory=LegacyFake())
+        devices = service.read_codes(mazs_live["kazs"].id, ["505221"])
+
+        assert devices[0]["status"] == "success" and devices[0]["tanks_updated"] == 1
+        assert calls == [("10.30.0.15", 4499, 45.0)]
+        test_db.refresh(kazs_tank)
+        assert kazs_tank.last_volume == Decimal("6946.17")
+        assert kazs_tank.last_measured_at == datetime(2026, 9, 17, 11, 40, 27)
