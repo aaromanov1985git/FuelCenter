@@ -382,3 +382,55 @@
   .tnk-grid { grid-template-columns: 1fr; }
   .tnk-header__actions { width: 100%; }
 }
+
+/* Живые показания уровнемера: разовое чтение и режим «Следить» во время налива */
+.tnk-live {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.tnk-live__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.tnk-live__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.tnk-live__status[data-tone="ok"] {
+  color: var(--text-2);
+}
+
+.tnk-live__status[data-tone="warn"] {
+  color: var(--amber-ink);
+}
+
+.tnk-live__dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: tnk-live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes tnk-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tnk-live__dot { animation: none; }
+}

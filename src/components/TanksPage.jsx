@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Input, Modal, Select, Skeleton } from './ui'
 import Icon from './ui/Icon'
 import EmptyState from './EmptyState'
@@ -20,6 +20,19 @@ import {
 import './TanksPage.css'
 
 const API_URL = import.meta.env.VITE_API_URL || ''
+
+// Режим «Следить» во время налива: опрос уровнемера раз в 20 секунд, не дольше часа
+const LIVE_WATCH_INTERVAL_MS = 20 * 1000
+const LIVE_WATCH_MAX_MS = 60 * 60 * 1000
+
+const stationKey = (station) => `${station.provider_id}-${station.azs_code}`
+
+const liveAgeText = (readAt, now) => {
+  const seconds = Math.max(0, Math.round((now - readAt) / 1000))
+  if (seconds < 5) return 'только что'
+  if (seconds < 60) return `${seconds} с назад`
+  return `${Math.floor(seconds / 60)} мин назад`
+}
 
 const HISTORY_RANGES = [
   { value: '1', label: 'Сутки' },
@@ -366,7 +379,57 @@ const TankRow = ({ tank, isAdmin, onHistory, onSettings }) => (
   </li>
 )
 
-const StationCard = ({ station, isAdmin, onHistory, onSettings, onShare }) => {
+const LiveBar = ({ live = {}, now, onRead, onToggleWatch }) => {
+  const failed = (live.devices || []).filter((d) => d.status === 'failed')
+  let status = 'Уровень в базе Топаза пишется только при наливе — прочитайте уровнемер сейчас'
+  let tone = 'muted'
+  if (live.error) {
+    status = live.error
+    tone = 'warn'
+  } else if (live.readAt) {
+    status = `Уровнемер: ${liveAgeText(live.readAt, now)}`
+    tone = 'ok'
+    if (failed.length) {
+      status += ` · нет ответа: ${failed.map((d) => d.azs_code).join(', ')}`
+      tone = 'warn'
+    }
+  }
+  return (
+    <div className="tnk-live" data-testid="tank-live">
+      <div className="tnk-live__actions">
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<Icon name="gauge" size={14} />}
+          onClick={onRead}
+          loading={Boolean(live.loading)}
+        >
+          Уровнемер
+        </Button>
+        <Button
+          size="sm"
+          variant={live.watching ? 'primary' : 'ghost'}
+          icon={<Icon name={live.watching ? 'pause' : 'play'} size={14} />}
+          onClick={onToggleWatch}
+          aria-pressed={Boolean(live.watching)}
+          title="Обновлять показания каждые 20 секунд — удобно во время налива"
+        >
+          {live.watching ? 'Остановить' : 'Следить'}
+        </Button>
+      </div>
+      <span
+        className="tnk-live__status"
+        data-tone={tone}
+        title={failed.map((d) => `${d.azs_code}: ${d.error}`).join('\n') || undefined}
+      >
+        {live.watching ? <span className="tnk-live__dot" aria-hidden="true" /> : null}
+        {status}
+      </span>
+    </div>
+  )
+}
+
+const StationCard = ({ station, isAdmin, onHistory, onSettings, onShare, live, now, onLiveRead, onLiveWatch }) => {
   const [expanded, setExpanded] = useState(station.fuels.length === 0)
   return (
     <article className="tnk-station" data-testid="tank-station">
@@ -390,6 +453,10 @@ const StationCard = ({ station, isAdmin, onHistory, onSettings, onShare }) => {
           <IconButton icon="share" title="Поделиться" onClick={onShare} />
         )}
       </header>
+
+      {station.live_available ? (
+        <LiveBar live={live} now={now} onRead={onLiveRead} onToggleWatch={onLiveWatch} />
+      ) : null}
 
       {station.fuels.length === 0 ? (
         <p className="tnk-muted">Ни одна ёмкость не учитывается в остатках.</p>
@@ -449,6 +516,73 @@ const TanksPage = () => {
   const [settingsTank, setSettingsTank] = useState(null)
   const [shareStation, setShareStation] = useState(null)
   const [showHidden, setShowHidden] = useState(false)
+  const [live, setLive] = useState({})
+  const [now, setNow] = useState(() => Date.now())
+  const liveRef = useRef(live)
+  liveRef.current = live
+
+  const patchLive = useCallback((key, patch) => {
+    setLive((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }))
+  }, [])
+
+  const readLive = useCallback(async (station, { quiet = false } = {}) => {
+    const key = stationKey(station)
+    if (liveRef.current[key]?.loading) return
+    patchLive(key, { loading: true })
+    try {
+      const params = new URLSearchParams({ provider_id: String(station.provider_id), azs_code: station.azs_code })
+      const response = await authFetch(`${API_URL}/api/v1/tanks/live?${params}`, { method: 'POST' })
+      if (!response.ok) throw await readError(response, 'Не удалось прочитать уровнемер')
+      const data = await response.json()
+      if (data.station) {
+        setOverview((prev) => ({
+          ...prev,
+          stations: prev.stations.map((s) => (stationKey(s) === key ? data.station : s)),
+        }))
+      }
+      const allFailed = data.devices.length > 0 && data.devices.every((d) => d.status !== 'success')
+      patchLive(key, {
+        loading: false,
+        devices: data.devices,
+        readAt: allFailed ? liveRef.current[key]?.readAt : Date.now(),
+        error: allFailed ? data.devices.map((d) => d.error).filter(Boolean)[0] || 'Уровнемер не ответил' : null,
+      })
+      setNow(Date.now())
+      if (allFailed && !quiet) showError(data.devices.map((d) => `${d.azs_code}: ${d.error}`).join('; '))
+    } catch (err) {
+      patchLive(key, { loading: false, error: err.message })
+      if (!err.isUnauthorized && !quiet) showError(err.message)
+    }
+  }, [patchLive, showError])
+
+  const toggleWatch = useCallback((station) => {
+    const key = stationKey(station)
+    const watching = !liveRef.current[key]?.watching
+    patchLive(key, { watching, watchStartedAt: watching ? Date.now() : null })
+    if (watching) readLive(station)
+  }, [patchLive, readLive])
+
+  // Опрос станций в режиме «Следить»; вкладка в фоне не опрашивает, через час режим выключается
+  useEffect(() => {
+    const watched = Object.entries(live).filter(([, state]) => state.watching)
+    const ticker = setInterval(() => setNow(Date.now()), 5000)
+    if (watched.length === 0) return () => clearInterval(ticker)
+    const timer = setInterval(() => {
+      if (document.hidden) return
+      watched.forEach(([key, state]) => {
+        if (Date.now() - state.watchStartedAt > LIVE_WATCH_MAX_MS) {
+          patchLive(key, { watching: false })
+          return
+        }
+        const station = overview.stations.find((s) => stationKey(s) === key)
+        if (station) readLive(station, { quiet: true })
+      })
+    }, LIVE_WATCH_INTERVAL_MS)
+    return () => {
+      clearInterval(timer)
+      clearInterval(ticker)
+    }
+  }, [live, overview.stations, patchLive, readLive])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -594,6 +728,10 @@ const TanksPage = () => {
               onHistory={setHistoryTank}
               onSettings={setSettingsTank}
               onShare={() => setShareStation(station)}
+              live={live[stationKey(station)]}
+              now={now}
+              onLiveRead={() => readLive(station)}
+              onLiveWatch={() => toggleWatch(station)}
             />
           ))}
         </div>

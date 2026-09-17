@@ -15,9 +15,10 @@ from app.models import (
     GasStation, Provider, ProviderTemplate, Tank, TankReading, TopazSyncState, Transaction, UploadEvent, User,
 )
 from app.schemas import (
-    TankOverviewResponse, TankReadingPoint, TankReadingsResponse, TankResponse, TankStation,
-    TankStationFuel, TankUpdate, TopazSyncResult, TopazSyncStateResponse,
+    TankLiveDevice, TankLiveResponse, TankOverviewResponse, TankReadingPoint, TankReadingsResponse, TankResponse,
+    TankStation, TankStationFuel, TankUpdate, TopazSyncResult, TopazSyncStateResponse,
 )
+from app.services.topaz_live_service import TopazLiveError, TopazLiveService, live_templates
 from app.services.topaz_sync_service import EVENT_ROW_OFFSET, SOURCE_SESSIONS, TopazSyncService, resolve_fuel_type
 from app.utils.firebird_utils import get_firebird_service
 from app.utils.json_utils import parse_template_json
@@ -348,6 +349,7 @@ def build_tank_overview(db: Session, provider_id: Optional[int] = None, azs_code
         key = (item.provider_id, "station", station_id) if station_id else (item.provider_id, "code", item.azs_code)
         stations.setdefault(key, []).append(item)
     station_places = {tank.gas_station_id: tank.gas_station for tank in tanks if tank.gas_station is not None}
+    live_template_ids = live_templates(db)
 
     def build_station(key: tuple, items: List[TankResponse]) -> TankStation:
         station_id = key[2] if key[1] == "station" else None
@@ -367,6 +369,7 @@ def build_tank_overview(db: Session, provider_id: Optional[int] = None, azs_code
             region=getattr(place, "region", None),
             fuels=_station_fuels(items, db, clock, session_templates, fills_loaded_at),
             tanks=items,
+            live_available=any(item.template_id in live_template_ids for item in items),
         )
 
     return TankOverviewResponse(
@@ -451,6 +454,29 @@ def update_tank(
 
     clock = _SourceClock(db.query(TopazSyncState).all())
     return _tank_response(tank, _mapping_by_template(db, {tank.template_id}), clock)
+
+
+@router.post("/live", response_model=TankLiveResponse)
+def read_live(
+    provider_id: int = Query(..., description="Провайдер АЗС"),
+    azs_code: str = Query(..., min_length=1, max_length=50, description="Код АЗС (любой из кодов её контроллеров)"),
+    db: Session = Depends(get_db),
+    _: Optional[User] = Depends(require_auth_if_enabled),
+):
+    """
+    Прочитать уровнемеры АЗС прямо сейчас — как «Монитор емкостей» Топаза.
+
+    Опрашиваются все контроллеры АЗС, показания записываются в историю ёмкостей.
+    Повторный запрос в течение нескольких секунд отдаёт уже прочитанные данные без опроса контроллера.
+    """
+    codes = station_azs_codes(db, provider_id, azs_code)
+    try:
+        devices = TopazLiveService(db).read_codes(provider_id, codes)
+    except TopazLiveError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    overview = build_tank_overview(db, provider_id=provider_id, azs_code=azs_code, with_sync=False)
+    station = next((s for s in overview.stations if azs_code in s.azs_codes), None)
+    return TankLiveResponse(station=station, devices=[TankLiveDevice(**device) for device in devices])
 
 
 @router.post("/sync", response_model=List[TopazSyncResult])
