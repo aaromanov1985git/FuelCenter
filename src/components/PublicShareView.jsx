@@ -91,6 +91,13 @@ function FillCell({ percent }) {
 }
 
 /* Для расхода лимита «много» — плохо: инвертируем шкалу заполнения. */
+/* Название АЗС; если в справочнике оно просто код — показываем все коды контроллеров. */
+const stationTitle = (info) => {
+  const codes = info.azs_codes?.length ? info.azs_codes : [info.azs_code]
+  if (info.gas_station_name && !codes.includes(info.gas_station_name)) return info.gas_station_name
+  return codes.join(' · ')
+}
+
 const usageTone = (percent) =>
   (percent === null || percent === undefined ? 'neutral' : fillTone(100 - percent))
 
@@ -198,7 +205,7 @@ export default function PublicShareView() {
         <div className="psv-station">
           <div className="psv-station__icon"><Icon name="tank" /></div>
           <div>
-            <h1 className="psv-station__name">{info.gas_station_name || info.azs_code}</h1>
+            <h1 className="psv-station__name">{stationTitle(info)}</h1>
             <div className="psv-station__provider">{info.provider_name}</div>
             {(info.settlement || info.location) && (
               <div className="psv-station__location">

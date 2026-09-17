@@ -133,7 +133,7 @@ export default function StationShareModal({ station, onClose }) {
   const visibleShares = showAllShares ? existingShares : existingShares.slice(0, SHARE_PREVIEW_COUNT)
 
   return (
-    <Modal isOpen onClose={onClose} title={`Поделиться АЗС ${station.azs_code}`} className="ssm">
+    <Modal isOpen onClose={onClose} title={`Поделиться АЗС ${(station.azs_codes?.length ? station.azs_codes : [station.azs_code]).join(' · ')}`} className="ssm">
       <Modal.Body className="ssm-body">
         {createdShare ? (
           <div className="ssm-created">

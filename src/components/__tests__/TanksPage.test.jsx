@@ -148,6 +148,48 @@ describe('TanksPage', () => {
     })
   })
 
+  it('показывает контроллеры одной АЗС одной карточкой со всеми кодами', async () => {
+    setup({
+      ...overview,
+      stations: [{ ...overview.stations[0], gas_station_id: 87, gas_station_name: '1016201', azs_codes: ['1016201', '807211'] }],
+    })
+    renderWithProviders(<TanksPage />)
+
+    const station = await screen.findByTestId('tank-station')
+    expect(within(station).getByText('1016201 · 807211')).toBeInTheDocument()
+    expect(screen.getAllByTestId('tank-station')).toHaveLength(1)
+  })
+
+  it('предлагает АЗС провайдера в настройках ёмкости и не меняет её без выбора', async () => {
+    setup()
+    const baseImpl = mockAuthFetch.getMockImplementation()
+    mockAuthFetch.mockImplementation((url, options) => {
+      if (url.includes('/api/v1/gas-stations')) {
+        return Promise.resolve(makeResponse({
+          total: 2,
+          items: [
+            { id: 87, name: '1016201', azs_number: '1016201', settlement: 'М/Р Усть-Тегус' },
+            { id: 88, name: '807211', azs_number: '807211', settlement: 'М/Р Усть-Тегус' },
+          ],
+        }))
+      }
+      return baseImpl(url, options)
+    })
+    renderWithProviders(<TanksPage />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /Ёмкости \(2\)/ }))
+    fireEvent.click(screen.getAllByRole('button', { name: /Настроить/ })[0])
+    expect(await screen.findByText(/отнесите их ёмкости к одной АЗС/)).toBeInTheDocument()
+    expect(mockAuthFetch.mock.calls.some(([url]) => url.includes('/api/v1/gas-stations?provider_id=3'))).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => {
+      const patch = mockAuthFetch.mock.calls.find(([, options]) => options?.method === 'PATCH')
+      expect(patch).toBeTruthy()
+      expect(JSON.parse(patch[1].body)).not.toHaveProperty('gas_station_id')
+    })
+  })
+
   it('для замеров смены показывает расчёт от замера и отпуска', async () => {
     setup({
       ...overview,

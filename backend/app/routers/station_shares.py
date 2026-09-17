@@ -19,7 +19,7 @@ from app.middleware.rate_limit import limiter
 from app.models import GasStation, Provider, StationShare, Tank, User
 from app.routers.card_limits import build_limits_response
 from app.routers.fill_reports import build_fills_detail, build_fills_export, build_fills_summary
-from app.routers.tanks import build_tank_overview, readings_for_tank
+from app.routers.tanks import build_tank_overview, readings_for_tank, station_azs_codes
 from app.schemas import (
     CardLimitListResponse, FillsByCardResponse, FillsDetailResponse, PublicShareInfo, StationShareCreate,
     StationShareResponse, TankOverviewResponse, TankReadingsResponse,
@@ -129,7 +129,9 @@ def list_shares(
     if provider_id:
         query = query.filter(StationShare.provider_id == provider_id)
     if azs_code:
-        query = query.filter(StationShare.azs_code == azs_code)
+        # Ссылку могли выдать на любой код объединённой АЗС
+        codes = station_azs_codes(db, provider_id, azs_code) if provider_id else [azs_code]
+        query = query.filter(StationShare.azs_code.in_(codes))
     now = _utcnow()
     return [_share_response(share, now) for share in query.order_by(StationShare.id.desc()).limit(200)]
 
@@ -179,6 +181,7 @@ def public_share_info(request: Request, response: Response, token: str, db: Sess
     ).first()
     return PublicShareInfo(
         azs_code=share.azs_code,
+        azs_codes=station_azs_codes(db, share.provider_id, share.azs_code),
         provider_name=share.provider.name if share.provider else None,
         gas_station_name=station.name if station else None,
         location=station.location if station else None,
@@ -213,7 +216,8 @@ def public_tank_readings(
 ):
     share = _active_share(db, token, "show_tanks")
     tank = db.query(Tank.id).filter(
-        Tank.id == tank_id, Tank.provider_id == share.provider_id, Tank.azs_code == share.azs_code,
+        Tank.id == tank_id, Tank.provider_id == share.provider_id,
+        Tank.azs_code.in_(station_azs_codes(db, share.provider_id, share.azs_code)),
         Tank.is_active == True,  # noqa: E712
     ).first()
     if tank is None:
@@ -237,7 +241,8 @@ def public_fills_summary(
     share = _active_share(db, token, "show_fills")
     return build_fills_summary(db, date_from=date_from, date_to=date_to, provider_id=None, azs_number=None,
                                fuel_type=fuel_type, search=search, at_limit_only=at_limit_only,
-                               provider_scope=share.provider_id, azs_scope=share.azs_code)
+                               provider_scope=share.provider_id,
+                              azs_scope=station_azs_codes(db, share.provider_id, share.azs_code))
 
 
 @public_router.get("/{token}/fills", response_model=FillsDetailResponse)
@@ -257,7 +262,8 @@ def public_fills_detail(
     share = _active_share(db, token, "show_fills")
     return build_fills_detail(db, date_from=date_from, date_to=date_to, provider_id=None, card_number=card_number,
                               azs_number=None, fuel_type=fuel_type, search=search, limit=limit,
-                              provider_scope=share.provider_id, azs_scope=share.azs_code)
+                              provider_scope=share.provider_id,
+                              azs_scope=station_azs_codes(db, share.provider_id, share.azs_code))
 
 
 @public_router.get("/{token}/fills-by-card/export")
@@ -277,7 +283,8 @@ def public_fills_export(
     share = _active_share(db, token, "show_fills")
     return build_fills_export(db, date_from=date_from, date_to=date_to, provider_id=None, card_number=card_number,
                               azs_number=None, fuel_type=fuel_type, search=search, at_limit_only=at_limit_only,
-                              provider_scope=share.provider_id, azs_scope=share.azs_code)
+                              provider_scope=share.provider_id,
+                              azs_scope=station_azs_codes(db, share.provider_id, share.azs_code))
 
 
 @public_router.get("/{token}/card-limits", response_model=CardLimitListResponse)
