@@ -384,6 +384,12 @@
   .tnk-header__actions { width: 100%; }
 }
 
+/* Цифры в карточках — Golos Text с цифрами одной ширины (моноширинный — только для колонок таблиц) */
+.tnk-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
 /* Нижняя панель карточки: всегда у нижнего края, чтобы плитки в ряду выглядели одинаково */
 .tnk-station__foot {
   display: flex;

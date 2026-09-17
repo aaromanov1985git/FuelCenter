@@ -340,7 +340,7 @@ const TankRow = ({ tank, isAdmin, onHistory, onSettings }) => (
         {tank.overflow_group ? <span className="tnk-chip" data-tone="neutral">Перелив {tank.overflow_group}</span> : null}
         {!tank.is_active ? <span className="tnk-chip" data-tone="neutral">Не учитывается</span> : null}
       </div>
-      <div className="tnk-tank__volume t-numeric">
+      <div className="tnk-tank__volume tnk-num">
         {formatLiters(tank.last_volume)} л
         {tank.fill_percent !== null && tank.fill_percent !== undefined ? (
           <span className="tnk-tank__percent">{formatPercent(tank.fill_percent)}</span>
@@ -349,8 +349,8 @@ const TankRow = ({ tank, isAdmin, onHistory, onSettings }) => (
     </div>
     <FillBar percent={tank.fill_percent} label={`Заполнение ёмкости ${tank.tank_number}`} />
     <div className="tnk-tank__meta">
-      <span className="t-numeric">{formatDecimal(tank.last_density)} кг/м³</span>
-      <span className="t-numeric">{formatDecimal(tank.last_temperature)} °C</span>
+      <span className="tnk-num">{formatDecimal(tank.last_density)} кг/м³</span>
+      <span className="tnk-num">{formatDecimal(tank.last_temperature)} °C</span>
       <span title={formatSourceDateTime(tank.last_measured_at)}>{formatAge(tank.age_minutes)}</span>
       <span className="tnk-tank__actions">
         <button type="button" className="tnk-link" onClick={() => onHistory(tank)}>
@@ -376,7 +376,7 @@ const StationCard = ({ station, isAdmin, onHistory, onSettings, onShare, onLevel
       <header className="tnk-station__head">
         <div className="tnk-station__title">
           <div className="tnk-station__name-row">
-            <h3 className="tnk-station__code t-numeric">{stationCodes(station)}</h3>
+            <h3 className="tnk-station__code tnk-num">{stationCodes(station)}</h3>
             <span className="tnk-station__provider">{station.provider_name}</span>
           </div>
           {station.gas_station_name && !(station.azs_codes || [station.azs_code]).includes(station.gas_station_name) ? (
@@ -402,11 +402,11 @@ const StationCard = ({ station, isAdmin, onHistory, onSettings, onShare, onLevel
             <li key={fuel.fuel_type || 'unknown'} className="tnk-fuel-row">
               <div className="tnk-fuel-row__head">
                 <span className="tnk-fuel-row__name">{fuel.fuel_type || 'Вид не определён'}</span>
-                <span className="tnk-fuel-row__volume t-numeric">{formatLiters(fuel.volume)} л</span>
+                <span className="tnk-fuel-row__volume tnk-num">{formatLiters(fuel.volume)} л</span>
               </div>
               <FillBar percent={fuel.fill_percent} label={`Заполнение: ${fuel.fuel_type || 'топливо'}`} />
               <div className="tnk-fuel-row__meta">
-                <span className="t-numeric">
+                <span className="tnk-num">
                   {fuel.capacity_liters ? `${formatPercent(fuel.fill_percent)} из ${formatLiters(fuel.capacity_liters)} л` : 'вместимость не задана'}
                 </span>
                 {/* Как считан остаток — только в подсказке: на КАЗС это замер на открытии смены минус отпуск */}

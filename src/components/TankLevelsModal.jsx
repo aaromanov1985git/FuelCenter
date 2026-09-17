@@ -101,7 +101,7 @@ export const TankGauge = ({ volume, capacity, label, size = 'md' }) => {
       })}
       <text
         x={width / 2} y={height / 2 + 7} textAnchor="middle"
-        style={{ fill: 'var(--text-1)', fontSize: size === 'lg' ? 22 : 18, fontWeight: 700, paintOrder: 'stroke', stroke: 'var(--surface)', strokeWidth: 3, strokeLinejoin: 'round' }}
+        style={{ fill: 'var(--text-1)', fontSize: size === 'lg' ? 22 : 18, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
       >
         {percent === null ? '—' : `${Math.round(percent)}%`}
       </text>
@@ -125,7 +125,7 @@ const FuelChip = ({ fuel }) => (
 const Reading = ({ label, value, strong = false }) => (
   <div className="tlm-row" data-strong={strong ? 'true' : undefined}>
     <dt>{label}</dt>
-    <dd className="t-numeric">{value}</dd>
+    <dd className="tlm-num">{value}</dd>
   </div>
 )
 
@@ -136,8 +136,8 @@ const ArrivalLine = ({ arrived, watch, since, now }) => {
   return (
     <div className="tlm-arrival" data-testid="tank-arrival" data-positive={arrived > 0.5 ? 'true' : 'false'}>
       <span className="tlm-arrival__label">{watch.active ? 'Пришло' : 'Итог налива'}</span>
-      <span className="tlm-arrival__value t-numeric">{formatSigned(arrived, 'л')}</span>
-      <span className="tlm-arrival__meta t-numeric">
+      <span className="tlm-arrival__value tlm-num">{formatSigned(arrived, 'л')}</span>
+      <span className="tlm-arrival__meta tlm-num">
         {formatDuration(elapsedMs)}{perMinute !== null ? ` · ${formatLiters(perMinute)} л/мин` : ''}
       </span>
     </div>
@@ -199,10 +199,10 @@ const GroupCard = ({ group, tanks, watch, now }) => {
                 <li key={tank.id} className="tlm-member" data-testid="tank-level">
                   <div className="tlm-member__head">
                     <span className="tlm-member__name">{tank.source_name || `Ёмкость ${tank.tank_number}`}</span>
-                    <span className="tlm-member__volume t-numeric">{formatDecimal(tank.last_volume)} л</span>
+                    <span className="tlm-member__volume tlm-num">{formatDecimal(tank.last_volume)} л</span>
                   </div>
                   <LevelBar percent={percent} label={`${tank.source_name || 'Ёмкость'}: заполнение`} />
-                  <div className="tlm-member__meta t-numeric">
+                  <div className="tlm-member__meta tlm-num">
                     <span>{percent === null ? '—' : `${Math.round(percent)}%`}</span>
                     <span>{formatDecimal(tank.last_density)} кг/м³</span>
                     <span>{formatDecimal(tank.last_temperature)} °C</span>
@@ -472,14 +472,14 @@ const TankLevelsModal = ({ station, isOpen, onClose, onStationUpdate }) => {
                   <FuelChip fuel={item.fuel} />
                   <span className="tlm-total__count">{item.count > 1 ? `${item.count} ёмкости` : '1 ёмкость'}</span>
                 </div>
-                <div className="tlm-total__volume t-numeric">{formatLiters(item.volume)} л</div>
+                <div className="tlm-total__volume tlm-num">{formatLiters(item.volume)} л</div>
                 <LevelBar percent={item.percent} label={`${item.fuel}: заполнение`} />
-                <div className="tlm-total__meta t-numeric">
+                <div className="tlm-total__meta tlm-num">
                   <span>{item.capacity ? `${Math.round(item.percent)}% из ${formatLiters(item.capacity)} л` : 'вместимость не задана'}</span>
                   {item.free !== null ? <span>свободно {formatLiters(item.free)} л</span> : null}
                 </div>
                 {item.arrived !== null ? (
-                  <div className="tlm-total__arrival t-numeric" data-positive={item.arrived > 0.5 ? 'true' : 'false'}>
+                  <div className="tlm-total__arrival tlm-num" data-positive={item.arrived > 0.5 ? 'true' : 'false'}>
                     {watch.active ? 'пришло' : 'итог налива'} {formatSigned(item.arrived, 'л')}
                   </div>
                 ) : null}

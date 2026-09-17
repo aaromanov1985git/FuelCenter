@@ -433,6 +433,13 @@
   color: var(--text-2);
 }
 
+/* Цифры — в Golos Text с цифрами одной ширины: у моноширинного шрифта подключены только 400/500,
+   и жирные цифры браузер дорисовывал сам — отсюда «мутный» текст */
+.tlm-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
 @media (max-width: 720px) {
   .tlm-group {
     grid-template-columns: 1fr;
